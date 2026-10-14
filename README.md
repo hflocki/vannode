@@ -1,4 +1,5 @@
-ENTWICKLUNG kein fertiges Projekt 
+> [!WARNING]
+> **IN ENTWICKLUNG – kein fertiges Projekt.** Am echten LIN-Bus noch nicht getestet. Nutzung auf eigenes Risiko.
 
 # truma-lin-mqtt
 

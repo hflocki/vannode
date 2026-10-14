@@ -94,7 +94,8 @@ static void publish_state() {
     pub("operating_status", String((uint8_t) h.operating_status));
     pub("operating_status_text", operating_status_to_str(h.operating_status));
     pub("error_code", String(heater::error_code()));
-    pub("heater_error", h.error_code_high != 0 ? "ON" : "OFF");
+    // Either byte marks an error or warning: E212 arrives as low 0xD4 / high 0x00, W255 as low 0xFF.
+    pub("heater_error", heater::error_code() != 0 ? "ON" : "OFF");
     pub("hvac_mode", heater::room_on() ? "heat" : "off");
     pub("hvac_action", heater::hvac_action());
   }

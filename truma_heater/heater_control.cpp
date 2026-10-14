@@ -376,6 +376,15 @@ void loop() {
   g_box->get_state(g_state);
   if (!g_state.heater_valid) return;
 
+  // Log error changes once (also reaches the MQTT log and the web UI log).
+  static int last_error = 0;
+  const int err = error_code();
+  if (err != last_error) {
+    if (err != 0) LOGW(TAG, "Heater error code %d", err);
+    else LOGI(TAG, "Heater error code %d cleared", last_error);
+    last_error = err;
+  }
+
   const auto &h = g_state.heater;
   const float target = temp_code_to_decimal(h.target_temp_room, 0);
 

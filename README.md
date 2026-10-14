@@ -76,8 +76,8 @@ Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zu
 | `el_power_level` | 0 / 900 / 1800 | Elektroleistung |
 | `operating_status` | 0–9 | 0/1 aus, 4 Start/Nachlauf, ≥5 läuft |
 | `operating_status_text` | Text | |
-| `error_code` | Zahl | Truma-Fehlercode (0 = keiner) |
-| `heater_error` | ON / OFF | Fehler aktiv |
+| `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe Anleitung der Heizung |
+| `heater_error` | ON / OFF | Fehler oder Warnung aktiv (jeder Code ≠ 0) |
 | `clock` | hh:mm | Uhrzeit des CP Plus |
 | `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
 | `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |

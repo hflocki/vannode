@@ -1,6 +1,3 @@
-Achtung Projekt ist in Entwicklung und nicht fertig zum Einsatz
-
-
 # truma-lin-mqtt
 
 Truma-Heizung (Combi / Combi D, Vario Heat) per **MQTT** steuern – mit einem ESP32 am LIN-Bus, reines **Arduino**, ohne ESPHome.
@@ -170,6 +167,7 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 
 - Kompiliert mit Arduino-ESP32 3.x für ESP32, ESP32-S3 und ESP32-C3.
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
+- Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): alle Statusframes werden fehlerfrei gelesen, der erzeugte Heizungsbefehl ist im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
 - **Am echten LIN-Bus noch nicht getestet.**
 
 ## Lizenz

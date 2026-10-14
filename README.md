@@ -1,3 +1,6 @@
+Achtung Projekt ist in Entwicklung und nicht fertig zum Einsatz
+
+
 # truma-lin-mqtt
 
 Truma-Heizung (Combi / Combi D, Vario Heat) per **MQTT** steuern – mit einem ESP32 am LIN-Bus, reines **Arduino**, ohne ESPHome.

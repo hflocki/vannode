@@ -1,0 +1,9 @@
+# Build output
+build/
+*.bin
+*.elf
+.pio/
+.vscode/
+.DS_Store
+# Local secrets, never commit
+secrets.h

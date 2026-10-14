@@ -1,0 +1,156 @@
+// Compile-time configuration. Runtime settings (WiFi, MQTT, ...) are edited in the web UI and stored in NVS.
+//
+// Arduino IDE: choose your board below (exactly one line active). Pins of a profile can be changed in
+// its block further down.
+#pragma once
+
+#include <Arduino.h>
+
+// ---------------------------------------------------------------------------------------------
+// >>> BOARD SELECTION <<<
+// ---------------------------------------------------------------------------------------------
+#if !defined(BOARD_SMARTAVAN) && !defined(BOARD_ESP32_GENERIC) && !defined(BOARD_ESP32S3_GENERIC) && \
+    !defined(BOARD_ESP32C3_GENERIC)
+#define BOARD_SMARTAVAN          // smartavan heater controller (Arduino board: "ESP32 Dev Module")
+// #define BOARD_ESP32_GENERIC   // ESP32 DevKit + TJA1020/1021 module (Arduino board: "ESP32 Dev Module")
+// #define BOARD_ESP32S3_GENERIC // ESP32-S3 DevKit + LIN module (Arduino board: "ESP32S3 Dev Module")
+// #define BOARD_ESP32C3_GENERIC // ESP32-C3 + LIN module (Arduino board: "ESP32C3 Dev Module")
+#endif
+
+#define FW_NAME "truma-lin-mqtt"
+#define FW_VERSION "1.0.0"
+
+// ---------------------------------------------------------------------------------------------
+// Board profiles
+// ---------------------------------------------------------------------------------------------
+#if defined(BOARD_SMARTAVAN)
+// smartavan heater controller: ESP32-WROOM-32D with on-board LIN transceiver, RJ12 + JST pass-through
+#define BOARD_NAME "smartavan heater controller"
+#ifndef LIN_UART_NUM
+#define LIN_UART_NUM UART_NUM_2
+#endif
+#ifndef LIN_TX_PIN
+#define LIN_TX_PIN 16
+#endif
+#ifndef LIN_RX_PIN
+#define LIN_RX_PIN 17
+#endif
+
+#elif defined(BOARD_ESP32_GENERIC)
+// Plain ESP32 DevKit + TJA1020/TJA1021 module, wiring as in mc0110/inetbox2mqtt ("ESP32" profile)
+#define BOARD_NAME "ESP32 + LIN module"
+#ifndef LIN_UART_NUM
+#define LIN_UART_NUM UART_NUM_2
+#endif
+#ifndef LIN_TX_PIN
+#define LIN_TX_PIN 17
+#endif
+#ifndef LIN_RX_PIN
+#define LIN_RX_PIN 16
+#endif
+#ifndef MQTT_LED_PIN
+#define MQTT_LED_PIN 4
+#endif
+#ifndef LIN_LED_PIN
+#define LIN_LED_PIN 15
+#endif
+
+#elif defined(BOARD_ESP32S3_GENERIC)
+// ESP32-S3 DevKit + LIN module (any free GPIOs, adjust with build flags)
+#define BOARD_NAME "ESP32-S3 + LIN module"
+#ifndef LIN_UART_NUM
+#define LIN_UART_NUM UART_NUM_1
+#endif
+#ifndef LIN_TX_PIN
+#define LIN_TX_PIN 17
+#endif
+#ifndef LIN_RX_PIN
+#define LIN_RX_PIN 18
+#endif
+
+#elif defined(BOARD_ESP32C3_GENERIC)
+// ESP32-C3 (single core, UART0/1 only) + LIN module
+#define BOARD_NAME "ESP32-C3 + LIN module"
+#ifndef LIN_UART_NUM
+#define LIN_UART_NUM UART_NUM_1
+#endif
+#ifndef LIN_TX_PIN
+#define LIN_TX_PIN 21
+#endif
+#ifndef LIN_RX_PIN
+#define LIN_RX_PIN 20
+#endif
+
+#else
+#error "No board profile selected (see BOARD SELECTION at the top of config.h)."
+#endif
+
+#ifndef LIN_BAUD
+#define LIN_BAUD 9600
+#endif
+// Log output on the USB serial port (115200 baud). Logs are always available in the web UI and via MQTT.
+#ifndef SERIAL_LOG_ENABLED
+#define SERIAL_LOG_ENABLED true
+#endif
+// Optional transceiver pins, -1 = not connected
+#ifndef LIN_CS_PIN
+#define LIN_CS_PIN -1     // driven HIGH to enable the transceiver (TJA1020/1021 SLP/EN)
+#endif
+#ifndef LIN_FAULT_PIN
+#define LIN_FAULT_PIN -1  // active LOW fault output of the transceiver
+#endif
+// Optional status LEDs, -1 = none
+#ifndef MQTT_LED_PIN
+#define MQTT_LED_PIN -1   // on = MQTT connected
+#endif
+#ifndef LIN_LED_PIN
+#define LIN_LED_PIN -1    // flicker = LIN traffic, on = CP Plus polls us
+#endif
+#ifndef LED_ACTIVE_LOW
+#define LED_ACTIVE_LOW false
+#endif
+
+// Set to true to only listen on the bus (never answer). Useful for debugging next to a real iNet Box.
+#ifndef LIN_OBSERVER_MODE
+#define LIN_OBSERVER_MODE false
+#endif
+
+// ---------------------------------------------------------------------------------------------
+// Heater features
+// ---------------------------------------------------------------------------------------------
+// Diesel Combi heaters do not support fan mode BOOST and have no electric heating element.
+#ifndef HEATER_SUPPORTS_BOOST
+#define HEATER_SUPPORTS_BOOST false
+#endif
+#ifndef HEATER_HAS_ELECTRIC
+#define HEATER_HAS_ELECTRIC false
+#endif
+#ifndef WATER_SUPPORTS_BOOST
+#define WATER_SUPPORTS_BOOST false
+#endif
+
+// Decoking ("Freibrennen"): target temperature used while active (fan HIGH, or BOOST if supported)
+#define DECOKE_TARGET_TEMP 30
+#define DECOKE_DEFAULT_MINUTES 30
+
+// ---------------------------------------------------------------------------------------------
+// Defaults for runtime settings
+// ---------------------------------------------------------------------------------------------
+#define DEFAULT_HOSTNAME "truma-heater"
+#define DEFAULT_AP_PASSWORD "truma1234"  // min. 8 characters
+#define DEFAULT_MQTT_PORT 1883
+// "service/truma" keeps the topic layout compatible with mc0110/inetbox2mqtt
+#define DEFAULT_MQTT_BASE "service/truma"
+#define DEFAULT_HA_PREFIX "homeassistant"
+#define DEFAULT_NTP_SERVER "pool.ntp.org"
+#define DEFAULT_TZ "CET-1CEST,M3.5.0,M10.5.0/3"  // Europe/Berlin
+
+// WiFi stability (power save off, 17.5 dBm in 0.25 dBm units)
+#define WIFI_TX_POWER_QDBM 70
+
+// Interval for periodic MQTT full state publish (changes are published within 1 s)
+#define MQTT_PUBLISH_INTERVAL_MS 60000
+// CP Plus is considered disconnected if it did not poll us for this long
+#define CPPLUS_TIMEOUT_MS 60000
+// Re-sync the CP Plus clock every 24 h
+#define CLOCK_RESYNC_INTERVAL_MS (24UL * 3600UL * 1000UL)

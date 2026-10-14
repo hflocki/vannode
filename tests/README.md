@@ -19,8 +19,9 @@ Host-side tests for the LIN / iNet Box protocol code. They run on the Mac or Lin
 
 ## Findings from the captures
 
-- All CP Plus status frames (devices, heater, timer, clock, config) are decoded without checksum errors.
-- The heater update frame we generate for "22 °C, fan high" is byte-identical in its payload to the one of the original iNet Box; only the message counter (and therefore the checksum) differs.
+- All 29 captures (about 6,900 frames): all CP Plus status frames (devices, heater, timer, clock, config) are decoded without checksum errors.
+- For all 14 Truma app commands in the captures (room 13–22 °C, fan eco/high, heating on/off) the heater update frame we generate is byte-identical in its payload to the one of the original iNet Box; only the message counter (and therefore the checksum) differs. `run.sh` checks this automatically.
+- The captures contain no timer command, so the timer update frame (0x3C) is only checked against the ESPHome implementation, not against the original iNet Box.
 - Differences to the original iNet Box (all also present in the proven ESPHome implementation, so they are accepted by the CP Plus):
   - The original pads state-buffer answers to 41 bytes (transport length 0x29), we send the real length (e.g. 0x1D).
   - Read-by-identifier 0x00: the original answers variant `0x00`, we answer `0x01`.

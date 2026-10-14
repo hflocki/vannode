@@ -177,7 +177,7 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 
 - Kompiliert mit Arduino-ESP32 3.x für ESP32, ESP32-S3 und ESP32-C3.
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
-- Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): alle Statusframes werden fehlerfrei gelesen, der erzeugte Heizungsbefehl ist im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
+- Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): 29 Mitschnitte, rund 6.900 Frames, alle fehlerfrei gelesen. Für alle 14 Befehle aus der Truma-App (13–22 °C, Lüfter eco/high, Heizung ein/aus) ist unser Heizungsbefehl im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
 - Timer setzen im Test simuliert (Frame-Aufbau, Prüfsumme), nicht gegen einen Mitschnitt der Original-iNet-Box.
 - **Am echten LIN-Bus noch nicht getestet.**
 

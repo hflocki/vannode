@@ -97,6 +97,7 @@ enum class Device : uint8_t {
 #define STATUS_FRAME_AIRCON_MANUAL 0x35
 #define STATUS_FRAME_AIRCON_AUTO 0x37
 #define STATUS_FRAME_TIMER 0x3D
+#define STATUS_FRAME_TIMER_RESPONSE (STATUS_FRAME_TIMER - 1)
 #define STATUS_FRAME_AIRCON_MANUAL_INIT 0x3F
 #define STATUS_FRAME_AIRCON_AUTO_INIT 0x41
 
@@ -209,6 +210,22 @@ struct StatusFrameAirconManualInit { uint8_t raw[22]; } __attribute__((packed));
 struct StatusFrameAirconAuto { uint8_t raw[18]; } __attribute__((packed));
 struct StatusFrameAirconAutoInit { uint8_t raw[20]; } __attribute__((packed));
 
+// Length 17 (0x11). Sent to the CP Plus to set or disable the timer.
+struct StatusFrameTimerResponse {
+  TargetTemp timer_target_temp_room;
+  HeatingMode timer_heating_mode;
+  ElectricPowerLevel timer_el_power_level_a;
+  TargetTemp timer_target_temp_water;
+  ElectricPowerLevel timer_el_power_level_b;
+  EnergyMix timer_energy_mix_a;
+  EnergyMix timer_energy_mix_b;
+  TimerActive timer_resp_active;
+  uint8_t timer_resp_start_minutes;
+  uint8_t timer_resp_start_hours;
+  uint8_t timer_resp_stop_minutes;
+  uint8_t timer_resp_stop_hours;
+} __attribute__((packed));
+
 union StatusFrame {
   uint8_t raw[41];
   struct {
@@ -217,6 +234,7 @@ union StatusFrame {
       StatusFrameHeater heater;
       StatusFrameHeaterResponse heaterResponse;
       StatusFrameTimer timer;
+      StatusFrameTimerResponse timerResponse;
       StatusFrameResponseAck responseAck;
       StatusFrameClock clock;
       StatusFrameConfig config;
@@ -233,6 +251,7 @@ static_assert(sizeof(StatusFrameHeader) == 17, "header size");
 static_assert(sizeof(StatusFrameHeater) == 20, "heater frame size");
 static_assert(sizeof(StatusFrameHeaterResponse) == 12, "heater response size");
 static_assert(sizeof(StatusFrameTimer) == 24, "timer frame size");
+static_assert(sizeof(StatusFrameTimerResponse) == 17, "timer response size");
 static_assert(sizeof(StatusFrameClock) == 10, "clock frame size");
 static_assert(sizeof(StatusFrameDevice) == 12, "device frame size");
 static_assert(sizeof(StatusFrame) == 41, "status frame size");

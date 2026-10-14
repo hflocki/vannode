@@ -468,6 +468,7 @@ void InetBox::reset_device_() {
   heater_valid_ = false;
   heater_update_prepared_ = heater_update_unsubmitted_ = heater_update_stale_ = false;
   timer_valid_ = false;
+  timer_update_prepared_ = timer_update_unsubmitted_ = timer_update_stale_ = false;
   clock_valid_ = false;
   clock_update_unsubmitted_ = false;
   state_dirty_ = true;
@@ -486,7 +487,7 @@ bool InetBox::has_update_to_submit_() {
     }
     return false;
   }
-  if (heater_update_unsubmitted_ || clock_update_unsubmitted_) {
+  if (heater_update_unsubmitted_ || timer_update_unsubmitted_ || clock_update_unsubmitted_) {
     if (update_time_us_ == 0) {
       update_time_us_ = micros();
       return true;
@@ -546,6 +547,12 @@ const uint8_t *InetBox::on_multiframe_(const uint8_t *msg, uint8_t len, uint8_t 
       update_time_us_ = 0;
       return response;
     }
+    if (timer_update_unsubmitted_) {
+      LOGI(TAG, "CP Plus reads state: sending timer update");
+      timer_create_update_(frame, return_len);
+      update_time_us_ = 0;
+      return response;
+    }
     if (clock_update_unsubmitted_) {
       LOGI(TAG, "CP Plus reads state: sending clock update");
       clock_create_update_(frame, return_len);
@@ -586,6 +593,10 @@ const uint8_t *InetBox::on_multiframe_(const uint8_t *msg, uint8_t len, uint8_t 
     if (!timer_valid_ || memcmp(&timer_, &sf->timer, sizeof(timer_)) != 0) state_dirty_ = true;
     timer_ = sf->timer;
     timer_valid_ = true;
+    timer_update_stale_ = false;
+    LOGD(TAG, "Timer status received (%s %02u:%02u-%02u:%02u)", sf->timer.timer_active == TimerActive::ON ? "on" : "off",
+         sf->timer.timer_start_hours, sf->timer.timer_start_minutes, sf->timer.timer_stop_hours,
+         sf->timer.timer_stop_minutes);
   } else if (type == STATUS_FRAME_CLOCK && mlen == sizeof(StatusFrameClock)) {
     clock_ = sf->clock;
     clock_valid_ = true;
@@ -748,6 +759,99 @@ bool InetBox::cmd_energy_mix_(EnergyMix mix, ElectricPowerLevel level) {
   return true;
 }
 
+// ---- Timer ------------------------------------------------------------------------------------
+// Ported from TrumaiNetBoxAppTimer (Fabian-Schmidt / havanti esphome-truma_inetbox, GPL-3.0).
+
+StatusFrameTimerResponse *InetBox::timer_prepare_() {
+  if (timer_update_prepared_ || timer_update_stale_) return &timer_update_;
+
+  timer_update_ = {};
+  timer_update_.timer_target_temp_room = timer_.timer_target_temp_room;
+  timer_update_.timer_heating_mode = timer_.timer_heating_mode;
+  timer_update_.timer_el_power_level_a = timer_.timer_el_power_level_a;
+  timer_update_.timer_target_temp_water = timer_.timer_target_temp_water;
+  timer_update_.timer_el_power_level_b = timer_.timer_el_power_level_b;
+  timer_update_.timer_energy_mix_a = timer_.timer_energy_mix_a;
+  timer_update_.timer_energy_mix_b = timer_.timer_energy_mix_b;
+  timer_update_.timer_resp_active = timer_.timer_active;
+  timer_update_.timer_resp_start_minutes = timer_.timer_start_minutes;
+  timer_update_.timer_resp_start_hours = timer_.timer_start_hours;
+  timer_update_.timer_resp_stop_minutes = timer_.timer_stop_minutes;
+  timer_update_.timer_resp_stop_hours = timer_.timer_stop_hours;
+  timer_update_prepared_ = true;
+  return &timer_update_;
+}
+
+void InetBox::timer_create_update_(StatusFrame *f, uint8_t *len) {
+  frame_create_empty_(f, STATUS_FRAME_TIMER_RESPONSE, sizeof(StatusFrameTimerResponse));
+  f->timerResponse = timer_update_;
+  // Same as for the heater update: the B fields mirror the A fields.
+  f->timerResponse.timer_energy_mix_b = timer_update_.timer_energy_mix_a;
+  f->timerResponse.timer_el_power_level_b = timer_update_.timer_el_power_level_a;
+  frame_finalize_(f);
+  *len = sizeof(StatusFrameHeader) + sizeof(StatusFrameTimerResponse);
+
+  timer_update_prepared_ = false;
+  timer_update_unsubmitted_ = false;
+  timer_update_stale_ = true;
+  state_dirty_ = true;
+}
+
+bool InetBox::cmd_timer_(uint16_t start, uint16_t stop, float room_temp, HeatingMode mode, float water_temp) {
+  if (!timer_can_update_()) {
+    LOGW(TAG, "Cannot set timer yet (no timer status from CP Plus)");
+    return false;
+  }
+  if (start >= 24 * 60 || stop >= 24 * 60) {
+    LOGW(TAG, "Timer: invalid start/stop");
+    return false;
+  }
+  auto *t = timer_prepare_();
+  t->timer_resp_active = TimerActive::ON;
+  t->timer_resp_start_hours = start / 60;
+  t->timer_resp_start_minutes = start % 60;
+  t->timer_resp_stop_hours = stop / 60;
+  t->timer_resp_stop_minutes = stop % 60;
+  t->timer_target_temp_room = decimal_to_room_temp(room_temp);
+
+  if (t->timer_target_temp_room == TargetTemp::OFF) {
+    t->timer_heating_mode = HeatingMode::MODE_OFF;
+  } else if (heater_device_ == Device::HEATER_VARIO) {
+    if (mode == HeatingMode::MODE_NIGHT || mode == HeatingMode::MODE_AUTO || mode == HeatingMode::MODE_BOOST) {
+      t->timer_heating_mode = mode;
+    } else if (t->timer_heating_mode == HeatingMode::MODE_OFF) {
+      t->timer_heating_mode = HeatingMode::MODE_AUTO;
+    }
+  } else {
+    // Combi
+    if (mode == HeatingMode::MODE_ECO || mode == HeatingMode::MODE_HIGH || mode == HeatingMode::MODE_BOOST) {
+      t->timer_heating_mode = mode;
+    } else if (t->timer_heating_mode == HeatingMode::MODE_OFF) {
+      t->timer_heating_mode = HeatingMode::MODE_ECO;
+    }
+  }
+
+  if (!isnan(water_temp)) t->timer_target_temp_water = decimal_to_water_temp(water_temp);
+  if (t->timer_energy_mix_a == EnergyMix::NONE) t->timer_energy_mix_a = EnergyMix::GAS;
+  if (t->timer_energy_mix_a == EnergyMix::GAS) t->timer_el_power_level_a = ElectricPowerLevel::LEVEL_0;
+
+  timer_update_unsubmitted_ = true;
+  LOGI(TAG, "Timer set %02u:%02u-%02u:%02u", start / 60, start % 60, stop / 60, stop % 60);
+  return true;
+}
+
+bool InetBox::cmd_timer_off_() {
+  if (!timer_can_update_()) {
+    LOGW(TAG, "Cannot change timer yet (no timer status from CP Plus)");
+    return false;
+  }
+  auto *t = timer_prepare_();
+  t->timer_resp_active = TimerActive::OFF;
+  timer_update_unsubmitted_ = true;
+  LOGI(TAG, "Timer off");
+  return true;
+}
+
 // ---- Clock ------------------------------------------------------------------------------------
 
 bool InetBox::system_time_valid() {
@@ -806,6 +910,8 @@ void InetBox::process_command_(const Command &cmd) {
     case CommandType::SET_WATER: ok = cmd_water_(cmd.value); break;
     case CommandType::SET_ENERGY_MIX: ok = cmd_energy_mix_(cmd.mix, cmd.level); break;
     case CommandType::SYNC_CLOCK: ok = cmd_sync_clock_(); break;
+    case CommandType::SET_TIMER: ok = cmd_timer_(cmd.start, cmd.stop, cmd.value, cmd.mode, cmd.water); break;
+    case CommandType::TIMER_OFF: ok = cmd_timer_off_(); break;
   }
   if (ok) state_dirty_ = true;
 }
@@ -844,7 +950,8 @@ void InetBox::publish_state_(bool changed) {
   s.heater_device = heater_device_;
   memcpy(s.cpplus_version, cpplus_version_, sizeof(s.cpplus_version));
   memcpy(s.heater_version, heater_version_, sizeof(s.heater_version));
-  s.update_pending = heater_update_unsubmitted_ || heater_update_stale_ || clock_update_unsubmitted_;
+  s.update_pending = heater_update_unsubmitted_ || heater_update_stale_ || timer_update_unsubmitted_ ||
+                     timer_update_stale_ || clock_update_unsubmitted_;
   s.ack_errors = ack_errors_;
   s.frames_ok = frames_ok_;
   s.crc_errors = crc_errors_;

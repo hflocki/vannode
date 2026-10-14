@@ -107,6 +107,11 @@ static void publish_state() {
     snprintf(b, sizeof(b), "%02u:%02u-%02u:%02u", t.timer_start_hours, t.timer_start_minutes, t.timer_stop_hours,
              t.timer_stop_minutes);
     pub("timer", active ? String(b) : String("off"));
+    // Stored times are kept by the CP Plus while the timer is off.
+    pub("timer_times", b);
+    pub("timer_temp_room", String(temp_code_to_decimal(t.timer_target_temp_room, 0), 1));
+    pub("timer_heating_mode", heating_mode_to_str(t.timer_heating_mode));
+    pub("timer_water_mode", water_mode_to_str(t.timer_target_temp_water));
   }
 
   if (s.clock_valid) {
@@ -301,7 +306,31 @@ static void publish_discovery() {
   disc_sensor("operating_status", "Operating status", "operating_status", nullptr, nullptr, true, AVAIL_HEATER,
               "mdi:state-machine");
   disc_sensor("error_code", "Error code", "error_code", nullptr, nullptr, true, AVAIL_HEATER, "mdi:alert-decagram");
-  disc_sensor("timer", "Timer", "timer", nullptr, nullptr, false, AVAIL_HEATER, "mdi:timer-outline");
+  // The timer used to be a read-only sensor: remove that old entity.
+  pub_raw(g_settings.ha_prefix + "/sensor/" + g_node_id + "/timer/config", "", true);
+  {  // Timer: text entity, "HH:MM-HH:MM[,temp[,fan[,water]]]" or "off"
+    JsonDocument doc;
+    disc_common(doc, "timer", "Timer", AVAIL_HEATER);
+    doc["command_topic"] = topic("set", "timer");
+    doc["state_topic"] = topic("control_status", "timer");
+    doc["max"] = 40;
+    doc["pattern"] = "^(off|on|\\d{1,2}:\\d{2}-\\d{1,2}:\\d{2}(,[^,]*){0,3})$";
+    doc["icon"] = "mdi:timer-outline";
+    disc_publish("text", "timer", doc);
+  }
+  {  // Timer on/off with the stored times
+    JsonDocument doc;
+    disc_common(doc, "timer_switch", "Timer", AVAIL_HEATER);
+    doc["command_topic"] = topic("set", "timer_active");
+    doc["state_topic"] = topic("control_status", "timer_active");
+    doc["payload_on"] = "ON";
+    doc["payload_off"] = "OFF";
+    doc["icon"] = "mdi:timer-play-outline";
+    disc_publish("switch", "timer_switch", doc);
+  }
+  disc_sensor("timer_temp_room", "Timer temperature", "timer_temp_room", "temperature", "°C", false, AVAIL_HEATER);
+  disc_sensor("timer_heating_mode", "Timer fan mode", "timer_heating_mode", nullptr, nullptr, false, AVAIL_HEATER,
+              "mdi:fan-clock");
   disc_sensor("decoke_remaining", "Decoking remaining", "decoke_remaining", nullptr, nullptr, false, AVAIL_HEATER,
               "mdi:timer-sand");
   disc_sensor("clock", "CP Plus clock", "clock", nullptr, nullptr, true, AVAIL_HEATER, "mdi:clock-outline");
@@ -318,7 +347,8 @@ static void publish_discovery() {
   disc_binary("alive", "CP Plus connected", "alive", "connectivity", true, AVAIL_DEVICE);
   disc_binary("lin_traffic", "LIN traffic", "lin_traffic", "connectivity", true, AVAIL_DEVICE);
   disc_binary("heater_error", "Heater error", "heater_error", "problem", false, AVAIL_HEATER);
-  disc_binary("timer_active", "Timer active", "timer_active", nullptr, false, AVAIL_HEATER, "mdi:timer-outline");
+  // Replaced by the timer switch.
+  pub_raw(g_settings.ha_prefix + "/binary_sensor/" + g_node_id + "/timer_active/config", "", true);
 
   disc_button("sync_clock", "Sync CP Plus clock", "sync_clock", nullptr, "mdi:clock-check-outline");
   disc_button("restart", "Restart", "reboot", "restart", nullptr);
@@ -382,6 +412,10 @@ static void on_message(char *t, byte *payload, unsigned int length) {
     heater::set_decoke_minutes(value.toInt());
   } else if (key == "sync_clock") {
     heater::sync_clock();
+  } else if (key == "timer") {
+    heater::set_timer(value);
+  } else if (key == "timer_active") {
+    heater::set_timer_active(value.equalsIgnoreCase("ON") || value == "1");
   } else if (key == "reboot") {
     g_reboot_at = millis() + 1000;
   } else {

@@ -24,6 +24,12 @@ bool set_water_temp(float celsius);         // 0/40/60/200
 bool set_energy_mix(const String &mix, uint16_t power_level);
 bool sync_clock();
 
+// CP Plus timer. spec: "off", "on" (re-activate stored times) or "HH:MM-HH:MM[,temp[,fan[,water]]]".
+// Missing temp/fan fall back to the timer's current values, then to the remembered setpoint and fan mode.
+// water: off/eco/high/boost or °C; missing = unchanged.
+bool set_timer(const String &spec);
+bool set_timer_active(bool on);
+
 // Decoking ("Freibrennen"): max. temperature + fan HIGH for a limited time, then restore.
 bool decoke_start();
 void decoke_stop(bool restore);

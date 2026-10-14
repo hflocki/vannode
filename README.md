@@ -80,6 +80,7 @@ Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zu
 | `heater_error` | ON / OFF | Fehler aktiv |
 | `clock` | hh:mm | Uhrzeit des CP Plus |
 | `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
+| `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |
 | `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat |
 | `decoke`, `decoke_remaining`, `decoke_minutes` | ON/OFF, min, min | Freibrennen |
 | `cpplus_version`, `heater_version`, `release`, `rssi`, `lin_traffic` | | Diagnose |
@@ -101,6 +102,8 @@ Verfügbarkeit: `service/truma/status` = `online` / `offline` (Last Will).
 | `decoke` | ON / OFF | Freibrennen starten / beenden |
 | `decoke_minutes` | 5–120 | Dauer des Freibrennens |
 | `sync_clock` | 1 | Uhrzeit sofort ans CP Plus senden |
+| `timer` | `22:00-06:30[,temp[,eco/high[,off/eco/high]]]`, `on`, `off` | Timer setzen. Fehlende Werte: bisherige Timer-Werte, sonst gemerkte Solltemperatur und Lüfterstufe. Warmwasser ohne Angabe bleibt unverändert |
+| `timer_active` | ON/OFF | Timer mit den gespeicherten Zeiten ein- oder ausschalten |
 | `reboot` | 1 | Neustart |
 
 Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam gesendet werden – fehlende Werte werden sinnvoll ergänzt.
@@ -114,7 +117,11 @@ mosquitto_sub -h <broker> -t 'service/truma/control_status/#' -v
 
 ### Home Assistant
 
-Mit aktivierter Auto-Discovery erscheint ein Gerät **„Truma Heater“** mit Thermostat (Aus/Heizen, Solltemperatur, Lüfter eco/high), Warmwasser-Auswahl, Freibrennen-Schalter, Sensoren und Diagnose. Die Heizungs-Entitäten sind nur verfügbar, wenn der ESP online ist **und** das CP Plus ihn abfragt.
+Mit aktivierter Auto-Discovery erscheint ein Gerät **„Truma Heater“** mit Thermostat (Aus/Heizen, Solltemperatur, Lüfter eco/high), Warmwasser-Auswahl, Timer (Textfeld `22:00-06:30,20,eco` plus Ein/Aus-Schalter), Freibrennen-Schalter, Sensoren und Diagnose. Die Heizungs-Entitäten sind nur verfügbar, wenn der ESP online ist **und** das CP Plus ihn abfragt.
+
+## Timer
+
+Der Timer des CP Plus lässt sich per MQTT (`set/timer`), in Home Assistant und in der Weboberfläche setzen: Start, Ende, Raumtemperatur, Lüfterstufe und optional Warmwasser. Das CP Plus führt den Timer selbst aus, der ESP muss dafür nicht laufen. Das Frame-Format (Typ 0x3C, 17 Byte) stammt aus esphome-truma_inetbox (Fabian-Schmidt / havanti) und ist dort im Einsatz; [danielfett/inetbox.py](https://github.com/danielfett/inetbox.py) schickt stattdessen die vollen 24 Byte des Statusframes. Mit einer Diesel-Heizung noch nicht geprüft.
 
 ## Freibrennen (Diesel)
 
@@ -171,8 +178,9 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 - Kompiliert mit Arduino-ESP32 3.x für ESP32, ESP32-S3 und ESP32-C3.
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
 - Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): alle Statusframes werden fehlerfrei gelesen, der erzeugte Heizungsbefehl ist im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
+- Timer setzen im Test simuliert (Frame-Aufbau, Prüfsumme), nicht gegen einen Mitschnitt der Original-iNet-Box.
 - **Am echten LIN-Bus noch nicht getestet.**
 
 ## Lizenz
 
-GPL-3.0, siehe [LICENSE](LICENSE). Die Protokoll-Logik ist aus [skrebber/esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) (GPL-3.0, Fork von Fabian-Schmidt/esphome-truma_inetbox) portiert.
+GPL-3.0, siehe [LICENSE](LICENSE). Die Protokoll-Logik ist aus [skrebber/esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) (GPL-3.0, Fork von Fabian-Schmidt/esphome-truma_inetbox) portiert, das Setzen des Timers aus [havanti/esphome-truma](https://github.com/havanti/esphome-truma).

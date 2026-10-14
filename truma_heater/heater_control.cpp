@@ -209,6 +209,119 @@ bool sync_clock() {
   return send(c);
 }
 
+// ---- timer --------------------------------------------------------------------------------------
+
+static bool parse_hhmm(const String &s, uint16_t &minutes) {
+  int colon = s.indexOf(':');
+  if (colon < 1) return false;
+  long h = s.substring(0, colon).toInt();
+  long m = s.substring(colon + 1).toInt();
+  if (h < 0 || h > 23 || m < 0 || m > 59) return false;
+  minutes = h * 60 + m;
+  return true;
+}
+
+static bool parse_water(const String &s, float &out) {
+  String w = s;
+  w.trim();
+  w.toLowerCase();
+  if (w.isEmpty()) return false;
+  if (w == "off") out = 0;
+  else if (w == "eco") out = 40;
+  else if (w == "high") out = 60;
+  else if (w == "boost") out = 200;
+  else out = w.toFloat();
+#if !WATER_SUPPORTS_BOOST
+  if (out >= 80) out = 60;
+#endif
+  return true;
+}
+
+// Defaults for a timer command: current timer values if set, else the remembered room settings.
+static void timer_defaults(float &temp, HeatingMode &mode) {
+  temp = g_settings.room_setpoint;
+  mode = remembered_fan_mode();
+  if (!g_state.timer_valid) return;
+  const auto &t = g_state.timer;
+  if (t.timer_target_temp_room != TargetTemp::OFF) temp = temp_code_to_decimal(t.timer_target_temp_room, temp);
+  if (t.timer_heating_mode != HeatingMode::MODE_OFF) mode = t.timer_heating_mode;
+}
+
+static bool send_timer(uint16_t start, uint16_t stop, float temp, HeatingMode mode, float water) {
+  if (start == stop) {
+    LOGW(TAG, "Timer: start and stop are equal");
+    return false;
+  }
+  if (!g_state.timer_valid) {
+    LOGW(TAG, "Timer: no timer status from CP Plus yet");
+    return false;
+  }
+  Command c;
+  c.type = CommandType::SET_TIMER;
+  c.start = start;
+  c.stop = stop;
+  c.value = temp;
+  c.mode = mode;
+  c.water = water;
+  return send(c);
+}
+
+bool set_timer_active(bool on) {
+  if (!on) {
+    Command c;
+    c.type = CommandType::TIMER_OFF;
+    return send(c);
+  }
+  if (!g_state.timer_valid) {
+    LOGW(TAG, "Timer: no timer status from CP Plus yet");
+    return false;
+  }
+  const auto &t = g_state.timer;
+  float temp;
+  HeatingMode mode;
+  timer_defaults(temp, mode);
+  return send_timer(t.timer_start_hours * 60 + t.timer_start_minutes, t.timer_stop_hours * 60 + t.timer_stop_minutes,
+                    temp, mode, NAN);
+}
+
+bool set_timer(const String &spec) {
+  String s = spec;
+  s.trim();
+  if (s.equalsIgnoreCase("off") || s == "0") return set_timer_active(false);
+  if (s.equalsIgnoreCase("on") || s == "1") return set_timer_active(true);
+
+  // Split "HH:MM-HH:MM,temp,fan,water"
+  String parts[4];
+  int n = 0;
+  int from = 0;
+  while (n < 4) {
+    int comma = s.indexOf(',', from);
+    parts[n++] = comma < 0 ? s.substring(from) : s.substring(from, comma);
+    if (comma < 0) break;
+    from = comma + 1;
+  }
+  for (auto &p : parts) p.trim();
+
+  int dash = parts[0].indexOf('-');
+  uint16_t start, stop;
+  if (dash < 0 || !parse_hhmm(parts[0].substring(0, dash), start) || !parse_hhmm(parts[0].substring(dash + 1), stop)) {
+    LOGW(TAG, "Timer: invalid format '%s' (expected HH:MM-HH:MM[,temp[,fan[,water]]])", spec.c_str());
+    return false;
+  }
+
+  float temp;
+  HeatingMode mode;
+  timer_defaults(temp, mode);
+  if (n > 1 && !parts[1].isEmpty()) temp = parts[1].toFloat();
+  if (n > 2 && !parts[2].isEmpty() && !parse_fan_mode(parts[2], mode)) {
+    LOGW(TAG, "Timer: unsupported fan mode '%s'", parts[2].c_str());
+    return false;
+  }
+  float water = NAN;
+  if (n > 3 && !parse_water(parts[3], water)) water = NAN;
+  return send_timer(start, stop, temp, mode, water);
+}
+
 // ---- decoking -----------------------------------------------------------------------------------
 
 bool decoke_start() {

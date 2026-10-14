@@ -83,6 +83,18 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:340px;o
     <div class="row"><div class="seg" id="seg-water"><button data-v="off">Aus</button><button data-v="eco">Eco 40°</button><button data-v="high">Hot 60°</button><button data-v="boost" class="hide" id="water-boost">Boost</button></div></div>
   </div>
   <div class="card">
+    <h2>Timer</h2>
+    <div class="sub" id="timer-text">--</div>
+    <div class="grid">
+      <label>Start<input type="time" id="t-start"></label>
+      <label>Ende<input type="time" id="t-stop"></label>
+      <label>Temperatur °C<input type="number" id="t-temp" min="5" max="30" step="1"></label>
+      <label>Lüfter<select id="t-fan"><option value="eco">Eco</option><option value="high">High</option><option value="boost" id="t-boost">Boost</option></select></label>
+      <label>Warmwasser<select id="t-water"><option value="">unverändert</option><option value="off">Aus</option><option value="eco">Eco 40°</option><option value="high">Hot 60°</option></select></label>
+    </div>
+    <div class="row"><button class="btn primary" id="t-set">Timer setzen</button><button class="btn" id="t-off">Timer aus</button></div>
+  </div>
+  <div class="card">
     <h2>Freibrennen</h2>
     <div class="sub" id="decoke-text">Maximale Temperatur mit Lüfter High, danach werden die vorherigen Einstellungen wiederhergestellt.</div>
     <div class="row">
@@ -195,7 +207,7 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:340px;o
 <div id="toast"></div>
 <script>
 const $=id=>document.getElementById(id);
-let st=null,localSetp=null,setpTimer=null;
+let st=null,localSetp=null,setpTimer=null,timerEdit=false;
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)}
 async function cmd(a,v){const b=new URLSearchParams({a,v:v??''});try{const r=await fetch('/api/cmd',{method:'POST',body:b});if(!r.ok)throw 0;setTimeout(load,400)}catch(e){toast('Befehl fehlgeschlagen')}}
 function seg(id,val){document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
@@ -223,7 +235,11 @@ function render(){
   if(document.activeElement!==$('decoke-min'))$('decoke-min').value=d.minutes;
   setTxt('opstat',h.valid?h.status+' ('+h.status_text+')':'--');
   setTxt('err',h.valid?(h.error?h.error:'keiner'):'--');
-  setTxt('timer',s.timer??'--');setTxt('clock',s.cpplus_clock??'--');
+  setTxt('timer',s.timer??'--');
+  const tc=s.timer_cfg;$('t-boost').classList.toggle('hide',!h.boost);
+  setTxt('timer-text',tc?(tc.active?'Aktiv '+tc.start+'–'+tc.stop+', '+tc.temp+' °C, '+tc.fan:'Aus (gespeichert '+tc.start+'–'+tc.stop+')'):'Noch kein Timer-Status vom CP Plus.');
+  if(tc&&!timerEdit){$('t-start').value=tc.start;$('t-stop').value=tc.stop;$('t-temp').value=tc.temp>=5?tc.temp:Math.round(+h.setpoint);
+    $('t-fan').value=(tc.fan==='off'?h.fan:tc.fan)||'eco';}setTxt('clock',s.cpplus_clock??'--');
   setTxt('s-traffic',l.traffic?'ja':'nein');setTxt('s-cp',l.cpplus?'ja':'nein');
   setTxt('s-cpv',l.cpplus_version||'--');setTxt('s-hv',l.heater_version||'--');
   setTxt('s-frames',l.frames+' / '+l.crc_errors);setTxt('s-ack',l.ack_errors);
@@ -252,6 +268,10 @@ $('minus').onclick=()=>step(-1);$('plus').onclick=()=>step(1);
 $('decoke').onclick=()=>{const on=!st.decoke.active;if(on&&!confirm('Freibrennen jetzt starten?'))return;cmd('decoke',on?'1':'0')};
 for(let m=5;m<=120;m+=5){const o=document.createElement('option');o.value=m;o.textContent=m+' min';$('decoke-min').appendChild(o)}
 $('decoke-min').onchange=e=>cmd('decoke_minutes',e.target.value);
+['t-start','t-stop','t-temp','t-fan','t-water'].forEach(id=>$(id).oninput=()=>timerEdit=true);
+$('t-set').onclick=()=>{const a=$('t-start').value,b=$('t-stop').value;if(!a||!b||a===b){toast('Start und Ende prüfen');return}
+  cmd('timer',a+'-'+b+','+$('t-temp').value+','+$('t-fan').value+($('t-water').value?','+$('t-water').value:''));timerEdit=false;toast('Timer wird gesendet')};
+$('t-off').onclick=()=>{cmd('timer','off');timerEdit=false};
 $('sync').onclick=()=>{cmd('sync_clock');toast('Uhrzeit wird gesendet')};
 $('reboot').onclick=async()=>{if(!confirm('Gerät neu starten?'))return;await fetch('/api/reboot',{method:'POST'});toast('Neustart …')};
 $('loglive').onchange=logLive;

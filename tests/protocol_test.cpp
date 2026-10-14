@@ -79,7 +79,23 @@ int main(){ setvbuf(stdout,nullptr,_IONBF,0);
   uint16_t t = up[17]|(up[18]<<8), m = up[19]|(up[20]<<8);
   printf("target %u (%.0f C) mode 0x%X energy %u\n", t, temp_code_to_decimal(t), m, up[27]);
   assert(t==2940 && m==0xA && up[27]==1);
-  // 8. ignore header nobody answers, then continue
+  // 8. timer status (off, 07:00-08:00), then set timer 22:00-06:30, 20 C, HIGH
+  auto tm=hex("BB.00.1F.00.1E.00.00.22.FF.FF.FF.54.01.18.3D.00.00.00.00.00.00.00.00.00.00.00.01.01.00.00.00.00.00.00.00.00.00.00.07.00.08"); fill(tm);
+  assert(box.timer_valid_ && box.timer_.timer_start_hours==7);
+  Command tc; tc.type=CommandType::SET_TIMER; tc.start=22*60; tc.stop=6*60+30; tc.value=20; tc.mode=HeatingMode::MODE_HIGH;
+  box.process_command_(tc);
+  a = header(0x18); assert(a[0]==0xFF);
+  send_multi(hex("BA.00.1F.00.1E.00.00.22.FF.FF.FF"), 0x05);
+  auto tu = read_multi_response();
+  printf("timer frame len %zu type %02X:", tu.size(), tu[14]); for(size_t i=17;i<tu.size();i++)printf(" %02X",tu[i]); printf("\n");
+  assert(tu.size()==17+17 && tu[13]==17 && tu[14]==0x3C);
+  pad.assign(tu.begin(), tu.end()); pad.resize(41,0); assert(data_checksum(&pad[10],31,0xFF-pad[16])==pad[16]);
+  assert((tu[17]|(tu[18]<<8))==2930 && tu[19]==0xA && tu[27]==1 && tu[29]==1 && tu[30]==0 && tu[31]==22 && tu[32]==30 && tu[33]==6);
+  // timer off
+  Command toff; toff.type=CommandType::TIMER_OFF; box.process_command_(toff);
+  send_multi(hex("BA.00.1F.00.1E.00.00.22.FF.FF.FF"), 0x05);
+  tu = read_multi_response(); assert(tu[14]==0x3C && tu[29]==0 && tu[31]==22);
+  // 9. ignore header nobody answers, then continue
   header(0x20); a = header(0x18); assert(a.size()==9);
   printf("frames ok %u crc errors %u\nALL TESTS PASSED\n", box.frames_ok_, box.crc_errors_);
 }

@@ -56,6 +56,8 @@ enum class CommandType : uint8_t {
   SET_WATER,      // value = °C (0/40/60/200)
   SET_ENERGY_MIX, // mix = EnergyMix, level = ElectricPowerLevel
   SYNC_CLOCK,     // write system time to CP Plus
+  SET_TIMER,      // start/stop = minutes of day, value = room °C, mode = HeatingMode, water = °C
+  TIMER_OFF,      // disable the timer
 };
 
 struct Command {
@@ -64,6 +66,9 @@ struct Command {
   HeatingMode mode = HeatingMode::MODE_OFF;
   EnergyMix mix = EnergyMix::NONE;
   ElectricPowerLevel level = ElectricPowerLevel::LEVEL_0;
+  uint16_t start = 0;  // SET_TIMER: minutes of day 0..1439
+  uint16_t stop = 0;   // SET_TIMER: minutes of day 0..1439
+  float water = NAN;   // SET_TIMER: water °C (0/40/60/200), NAN = keep
 };
 
 class InetBox {
@@ -155,6 +160,10 @@ class InetBox {
 
   bool timer_valid_ = false;
   StatusFrameTimer timer_{};
+  StatusFrameTimerResponse timer_update_{};
+  bool timer_update_prepared_ = false;
+  bool timer_update_unsubmitted_ = false;
+  bool timer_update_stale_ = false;
   bool clock_valid_ = false;
   StatusFrameClock clock_{};
   bool clock_update_unsubmitted_ = false;
@@ -186,6 +195,12 @@ class InetBox {
   void heater_submit_() { heater_update_unsubmitted_ = true; }
   void heater_create_update_(StatusFrame *f, uint8_t *len);
   void clock_create_update_(StatusFrame *f, uint8_t *len);
+
+  bool timer_can_update_() const { return timer_valid_ && heater_device_ != Device::UNKNOWN; }
+  StatusFrameTimerResponse *timer_prepare_();
+  void timer_create_update_(StatusFrame *f, uint8_t *len);
+  bool cmd_timer_(uint16_t start, uint16_t stop, float room_temp, HeatingMode mode, float water_temp);
+  bool cmd_timer_off_();
 
   void process_command_(const Command &cmd);
   bool cmd_room_(float temp, HeatingMode mode);

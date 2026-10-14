@@ -101,6 +101,16 @@ static void render_state() {
     snprintf(b, sizeof(b), "%02u:%02u-%02u:%02u", s.timer.timer_start_hours, s.timer.timer_start_minutes,
              s.timer.timer_stop_hours, s.timer.timer_stop_minutes);
     doc["timer"] = s.timer.timer_active == TimerActive::ON ? b : "off";
+    JsonObject t = doc["timer_cfg"].to<JsonObject>();
+    char hm[6];
+    t["active"] = s.timer.timer_active == TimerActive::ON;
+    snprintf(hm, sizeof(hm), "%02u:%02u", s.timer.timer_start_hours, s.timer.timer_start_minutes);
+    t["start"] = hm;
+    snprintf(hm, sizeof(hm), "%02u:%02u", s.timer.timer_stop_hours, s.timer.timer_stop_minutes);
+    t["stop"] = hm;
+    t["temp"] = temp_code_to_decimal(s.timer.timer_target_temp_room, 0);
+    t["fan"] = heating_mode_to_str(s.timer.timer_heating_mode);
+    t["water"] = water_mode_to_str(s.timer.timer_target_temp_water);
   }
   if (s.clock_valid) {
     char b[8];
@@ -126,6 +136,7 @@ static void handle_command(const WebCommand &c) {
   else if (a == "decoke") v == "1" ? (void) heater::decoke_start() : heater::decoke_stop(true);
   else if (a == "decoke_minutes") heater::set_decoke_minutes(v.toInt());
   else if (a == "sync_clock") heater::sync_clock();
+  else if (a == "timer") heater::set_timer(v);
   else if (a == "log_level") {
     uint8_t lvl = constrain(v.toInt(), 0, 3);
     g_settings.log_level = lvl;

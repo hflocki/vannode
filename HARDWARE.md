@@ -53,6 +53,7 @@ Der Step-down hängt ebenfalls an +12 V und GND und versorgt den ESP über 5V/VI
 | `BOARD_ESP32_GENERIC` | 2 | 17 | 16 | MQTT 4, LIN 15 |
 | `BOARD_ESP32S3_GENERIC` | 1 | 17 | 18 | – |
 | `BOARD_ESP32C3_GENERIC` | 1 | 21 | 20 | – |
+| `BOARD_ESP32C3_SUPERMINI` | 1 | 4 | 3 | LIN 8 (Onboard-LED) |
 
 Andere Pins: In `config.h` im jeweiligen Profilblock ändern. Zusätzlich gibt es optional `LIN_CS_PIN` (SLP/EN), `LIN_FAULT_PIN`, `MQTT_LED_PIN`, `LIN_LED_PIN` und `LED_ACTIVE_LOW`.
 
@@ -136,6 +137,25 @@ Pins, die auf dem N8R8 tabu sind: **GPIO 35–37** (vom PSRAM belegt), **19/20**
    - **RX am LIN-Modul ≈ 3,3 V, niemals 5 V.** Bei 5 V hat das Modul einen eigenen Pull-up auf 5 V. Den entfernen, sonst nimmt der S3 Schaden.
    - LIN-Klemme ≈ 11–12 V (interner Slave-Pull-up des Transceivers)
 3. **Am Bus:** Erst am RJ12-Kabel LIN und GND messen (siehe „Wo an den Bus?“), dann anschließen. In der Weboberfläche muss „LIN-Verkehr: ja“ erscheinen. Danach am CP Plus RESET → PR SET.
+
+## Aufbau mit ESP32-C3 Super Mini
+
+Kleinere Variante desselben Aufbaus: LIN-Modul T151, vergossener DC/DC-Wandler 8–32 V → 5 V, JST- und RJ12-Buchsen durchgeschleift, Platine ca. 8 × 5,5 cm.
+
+- [Schaltplan](docs/schaltplan_c3.png)
+- [Lochraster-Plan mit Verdrahtungsliste](docs/lochraster_c3.png)
+
+Alle benutzten Pins liegen auf der Stiftleiste neben 5V/GND/3V3: **TX = GPIO4, RX = GPIO3**. GPIO20/21 werden absichtlich nicht benutzt, weil der ESP32-C3 beim Start sein Boot-Log auf GPIO21 ausgibt. Das würde bei jedem Neustart auf dem LIN-Bus landen. Die blaue Onboard-LED (GPIO8) zeigt den LIN-Status.
+
+**Firmware:** In `config.h` `BOARD_ESP32C3_SUPERMINI` aktivieren. Das Profil setzt außerdem die WLAN-Sendeleistung auf 8,5 dBm, weil viele Super-Mini-Boards mit voller Leistung keine stabile Verbindung bekommen.
+
+**Arduino IDE:**
+- Board: **ESP32C3 Dev Module**
+- USB CDC On Boot: **Enabled** (Serial Monitor über die USB-C-Buchse)
+- Flash Size: **4MB**
+- Partition Scheme: **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)**
+
+Den Abstand der beiden Stiftleisten nicht abzählen: Buchsenleisten auf den C3 stecken, so auf die Platine setzen und dann löten.
 
 ## USB am Fahrzeug
 

@@ -8,7 +8,7 @@ P = 24                 # pixel per 2.54 mm
 X0, Y0 = 280, 150      # origin: hole (0,0)
 COLS, ROWS = 32, 22
 W, H = 1820, 1060
-LIST_X, LIST_H = 1140, 880
+LIST_X, LIST_H = 1140, 930
 s = []
 a = s.append
 
@@ -81,27 +81,27 @@ for y in range(1, ROWS + 1):
     if y == 1 or y % 5 == 0:
         txt(hx(0.3) - 8, hy(y) + 4, str(y), 11, 'end', '#777')
 
-# ---------------- ESP32-C3 Super Mini (USB up) ----------------
-LX_, RX_, Y1 = 23, 29, 2
-left = ['5V', 'GND', '3V3', 'GPIO4', 'GPIO3', 'GPIO2', 'GPIO1', 'GPIO0']
-right = ['GPIO5', 'GPIO6', 'GPIO7', 'GPIO8', 'GPIO9', 'GPIO10', 'GPIO20', 'GPIO21']
-a(f'<rect x="{hx(LX_-0.7)}" y="{hy(Y1-1.6)}" width="{(RX_-LX_+1.4)*P}" height="{9.2*P}" rx="8" '
-  'fill="#2b5fae" fill-opacity="0.12" stroke="#2b5fae" stroke-width="2" stroke-dasharray="8,5"/>')
-a(f'<rect x="{(hx(LX_)+hx(RX_))/2-26}" y="{hy(Y1-2.3)}" width="52" height="30" rx="5" fill="#bbb" stroke="#777"/>')
-txt((hx(LX_) + hx(RX_)) / 2, hy(Y1 - 1.5), 'USB-C', 11, 'middle', '#333', True)
-tbg((hx(LX_) + hx(RX_)) / 2, hy(Y1 + 8.4), 'ESP32-C3 Super Mini', 13, 'middle', '#2b5fae', True)
-tbg((hx(LX_) + hx(RX_)) / 2, hy(Y1 + 9.2), 'auf Buchsenleisten', 11, 'middle', '#2b5fae', False)
+# ---------------- ESP32-C3 Super Mini (top view, USB up: power pins on the RIGHT) ----------------
+LX_, RX_, Y1 = 25, 31, 1
+left = ['GPIO5', 'GPIO6', 'GPIO7', 'GPIO8', 'GPIO9', 'GPIO10', 'GPIO20', 'GPIO21']
+right = ['5V', 'G', '3.3', '4', '3', '2', '1', '0']
+USED = ('5V', 'G', '3.3', '4', '3')
+a(f'<rect x="{hx(LX_-0.7)}" y="{hy(Y1-0.7)}" width="{(RX_-LX_+1.4)*P}" height="{8.4*P}" rx="8" '
+  'fill="#111" fill-opacity="0.80" stroke="#2b5fae" stroke-width="2"/>')
+a(f'<rect x="{(hx(LX_)+hx(RX_))/2-30}" y="{hy(Y1-1.3)}" width="60" height="34" rx="5" fill="#bbb" stroke="#777"/>')
+txt((hx(LX_) + hx(RX_)) / 2, hy(Y1 - 0.5), 'USB-C', 11, 'middle', '#333', True)
+txt((hx(LX_) + hx(RX_)) / 2, hy(Y1 + 3.6), 'ESP32-C3', 13, 'middle', '#fff', True)
+txt((hx(LX_) + hx(RX_)) / 2, hy(Y1 + 4.4), 'Super Mini', 13, 'middle', '#fff', True)
 for i in range(8):
-    for xx in (LX_, RX_):
-        a(f'<rect x="{hx(xx)-8}" y="{hy(Y1+i)-8}" width="16" height="16" fill="{"#333" if xx == LX_ else "#999"}" rx="2"/>')
-    txt(hx(RX_) + 14, hy(Y1 + i) + 4, right[i], 10, 'start', '#888')
-    txt(hx(LX_) + 14, hy(Y1 + i) + 4, left[i], 10, 'start',
-        '#000' if left[i] in ('5V', 'GND', '3V3', 'GPIO4', 'GPIO3') else '#888',
-        left[i] in ('5V', 'GND', '3V3', 'GPIO4', 'GPIO3'))
-
+    a(f'<rect x="{hx(LX_)-8}" y="{hy(Y1+i)-8}" width="16" height="16" fill="#999" rx="2"/>')
+    a(f'<rect x="{hx(RX_)-8}" y="{hy(Y1+i)-8}" width="16" height="16" fill="{"#e6c200" if right[i] in USED else "#999"}" rx="2"/>')
+    txt(hx(LX_) + 13, hy(Y1 + i) + 4, left[i].replace('GPIO', ''), 10, 'start', '#ccc')
+    txt(hx(RX_) - 13, hy(Y1 + i) + 4, right[i], 11, 'end', '#fff' if right[i] in USED else '#aaa', right[i] in USED)
+txt(hx(RX_) + 30, hy(Y1 + 2.5), 'Lötseite:', 11, 'start', '#7a4a00', True)
+txt(hx(RX_) + 30, hy(Y1 + 3.2), 'gestrichelt', 11, 'start', '#7a4a00')
 # ---------------- GND ----------------
-wire([(23, 3), (24, 3), (24, 21)], CG, 5)                # under the module between the headers
-wire([(2, 14), (2, 21), (24, 21)], CG, 5)                # GND bus row 21
+wire([(30, 10), (30, 21)], CG, 5)
+wire([(2, 14), (2, 21), (30, 21)], CG, 5)                # GND bus row 21
 # ---------------- JST 12 V pass-through ----------------
 for (yy, name) in ((13, 'JST IN (Kabelbaum)'), (17, 'JST OUT (CP Plus)')):
     a(f'<rect x="{hx(1)-62}" y="{hy(yy)-14}" width="52" height="{P+28}" rx="4" fill="#ddd" stroke="#888"/>')
@@ -131,12 +131,22 @@ txt(hx(14) - 2, hy(14) + 2, '+', 12, 'middle', '#fff', True)
 wire([(14, 15), (14, 21)], CG, 4)
 
 # ---------------- ESP side ----------------
-wire([(21, 2), (23, 2)], C5, 5)                          # 5V
-wire([(19, 4), (23, 4)], C33, 4)                         # 3V3 node
-wire([(21, 5), (23, 5)], CTX, 4)                         # TX node -> GPIO4
-wire([(21, 6), (23, 6)], CRX, 4)                         # RX node -> GPIO3
-a(f'<rect x="{hx(20)-7}" y="{hy(4.4)}" width="14" height="{3.2*P}" rx="4" fill="#c9b48a" stroke="#7a5f2a"/>')
-wire([(21, 6), (21, 8), (20, 8)], CRX, 4)                # RX node -> R1 bottom
+# solder side: right header pins -> transfer points in row 10 below the module
+def under(p0, p1, col, bend):
+    (x0, y0), (x1, y1) = (hx(p0[0]), hy(p0[1])), (hx(p1[0]), hy(p1[1]))
+    a(f'<path d="M{x0},{y0} Q{(x0+x1)/2+bend[0]},{(y0+y1)/2+bend[1]} {x1},{y1}" fill="none" stroke="{col}" '
+      'stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>')
+under((31, 1), (32, 10), C5, (20, 0))
+under((31, 2), (30, 10), CG, (12, 0))
+under((31, 3), (29, 10), C33, (6, 0))
+under((31, 4), (28, 10), CTX, (0, 0))
+under((31, 5), (27, 10), CRX, (-6, 0))
+wire([(32, 10), (32, 12)], C5, 5)                        # 5V: converter yellow lands at (32,12)
+wire([(27, 10), (18, 10)], CRX, 4)                       # RX (GPIO3)
+wire([(28, 10), (28, 11), (21, 11)], CTX, 4)             # TX (GPIO4)
+wire([(29, 10), (29, 12), (19, 12)], C33, 4)             # 3V3
+a(f'<rect x="{hx(18)-7}" y="{hy(10.4)}" width="14" height="{3.2*P}" rx="4" fill="#c9b48a" stroke="#7a5f2a"/>')
+wire([(18, 14), (19, 14), (19, 12)], C33, 4)             # R1 bottom -> 3V3
 
 # ---------------- LIN module ----------------
 mx0, my0, mx1, my1 = 4.6, 1.2, 15.4, 9.6
@@ -154,9 +164,9 @@ for n, x in bot.items():
     txt(hx(x), hy(my1 - 1.2), n, 12, 'middle', '#fff', True)
 tp = lambda n: (hx(top[n]), hy(my0 + 0.6))
 bp = lambda n: (hx(bot[n]), hy(my1 - 0.6))
-flying(tp('TX'), (hx(21), hy(5)), CTX, (80, -60))
-flying(tp('RX'), (hx(21), hy(6)), CRX, (120, -150))
-flying(tp('SLP'), (hx(19), hy(4)), C33, (60, -90))
+flying(tp('TX'), (hx(21), hy(11)), CTX, (60, -40))
+flying(tp('RX'), (hx(20), hy(10)), CRX, (120, -90))
+flying(tp('SLP'), (hx(22), hy(12)), C33, (140, -120))
 flying(bp('12V'), (hx(17), hy(13)), C12, (40, 0))
 flying(bp('GND'), (hx(7), hy(21)), CG, (-80, 60))
 
@@ -182,8 +192,8 @@ txt(cx, cy - 4, 'DC/DC Bauer 8–32 V → 5 V', 13, 'middle', '#fff', True)
 txt(cx, cy + 14, '(vergossen, neben der Platine)', 11, 'middle', '#ccc')
 flying((cx - 80, cy - 26), (hx(16), hy(13)), C12, (-150, 0))
 flying((cx - 40, cy - 26), (hx(16), hy(21)), CG)
-flying((cx + 40, cy - 26), (hx(19), hy(21)), CG)
-flying((cx + 80, cy - 26), (hx(21), hy(2)), C5, (520, 40))
+flying((cx + 40, cy - 26), (hx(20), hy(21)), CG)
+flying((cx + 80, cy - 26), (hx(32), hy(12)), C5, (260, 40))
 txt(cx - 80, cy + 44, 'rot', 11, 'middle'); txt(cx - 40, cy + 44, 'schw.', 11, 'middle')
 txt(cx + 40, cy + 44, 'schw.', 11, 'middle'); txt(cx + 80, cy + 44, 'gelb', 11, 'middle')
 
@@ -191,18 +201,20 @@ txt(cx + 40, cy + 44, 'schw.', 11, 'middle'); txt(cx + 80, cy + 44, 'gelb', 11, 
 for x, y, c in [(1, 13, C12), (1, 14, CG), (1, 17, C12), (1, 18, CG), (3, 13, C12), (5, 13, C12), (7, 13, C12),
                 (10, 13, C12), (12, 13, C12), (14, 13, C12), (16, 13, C12), (17, 13, C12),
                 (12, 17, CG), (14, 14, C12), (14, 15, CG), (2, 14, CG), (2, 16, CG), (2, 18, CG), (2, 21, CG),
-                (7, 21, CG), (12, 21, CG), (14, 21, CG), (16, 21, CG), (19, 21, CG), (24, 21, CG),
-                (23, 3, CG), (24, 3, CG), (21, 2, C5), (23, 2, C5), (19, 4, C33), (20, 4, C33), (23, 4, C33),
-                (21, 5, CTX), (23, 5, CTX), (21, 6, CRX), (23, 6, CRX), (21, 8, CRX), (20, 8, CRX)]:
+                (7, 21, CG), (12, 21, CG), (14, 21, CG), (16, 21, CG), (20, 21, CG), (30, 21, CG),
+                (31, 1, C5), (31, 2, CG), (31, 3, C33), (31, 4, CTX), (31, 5, CRX),
+                (32, 10, C5), (32, 12, C5), (30, 10, CG), (29, 10, C33), (28, 10, CTX), (27, 10, CRX),
+                (18, 10, CRX), (20, 10, CRX), (21, 11, CTX), (28, 11, CTX), (29, 12, C33), (19, 12, C33),
+                (22, 12, C33), (18, 14, C33), (19, 14, C33)]:
     solder(x, y, c)
 
 label_hole(10, 13, '12 V abgesichert', -50, -12, C12, 12)
 label_hole(4, 15.6, 'D1: Brücke oder 1N400x (Ring →)', 0, 0, '#555', 11)
 label_hole(12, 17, 'D2 P6KE24A, Ring oben', 12, 10, '#333', 11)
 label_hole(14, 15, 'C1 22 µF/35 V, + oben', 22, 4, '#333', 11)
-label_hole(20, 6, 'R1 10 kΩ', -14, 4, '#333', 11, 'end')
+label_hole(18, 12, 'R1 10 kΩ', -14, 4, '#333', 11, 'end')
 label_hole(8, 22, 'Masse-Bus (Reihe 21)', 0, 5, CG, 12)
-label_hole(24, 14, 'GND unter dem Modul', 10, 4, CG, 11)
+label_hole(23, 9.4, 'Übergabepunkte Reihe 10', 0, 0, '#333', 11)
 
 # ---------------- connection list ----------------
 LX, LY = LIST_X, 120
@@ -218,31 +230,33 @@ rows = [
     ('6', 'D2 P6KE24A: Ring an (12|13), anderes Ende (12|17) → Masse'),
     ('7', 'C1 22 µF: + (14|14) an 12 V, − (14|15) → Masse'),
     ('8', 'Wandler rot → (16|13), schwarz (Eingang) → (16|21)'),
-    ('9', 'Wandler gelb → (21|2) → (23|2) = 5V, schwarz → (19|21)'),
+    ('9', 'Wandler gelb → (32|12), schwarz (Ausgang) → (20|21)'),
     ('Masse', None),
-    ('10', 'Masse-Bus Reihe 21: (2|21) … (24|21)'),
-    ('11', 'ESP GND (23|3) → (24|3) → (24|21), unter dem Modul'),
+    ('10', 'Masse-Bus Reihe 21: (2|21) … (30|21), dazu (30|10)–(30|21)'),
+    ('ESP32-C3 (rechte Leiste, Lötseite)', None),
+    ('11', '5V (31|1) → (32|10) → (32|12)     G (31|2) → (30|10)'),
+    ('12', '3.3 (31|3) → (29|10)   4 (31|4) → (28|10)   3 (31|5) → (27|10)'),
     ('LIN-Modul', None),
-    ('12', '12V-Klemme → (17|13)    GND unten → (7|21)'),
-    ('13', 'LIN-Klemme → RJ12 IN Kontakt 3 (vorher messen)'),
-    ('14', 'TX → (21|5) → (23|5) = GPIO4'),
-    ('15', 'RX → (21|6) → (23|6) = GPIO3'),
-    ('16', 'SLP → (19|4) → (23|4) = 3V3'),
-    ('17', 'INH frei, GND oben frei (intern = GND unten, messen)'),
+    ('13', '12V-Klemme → (17|13)    GND unten → (7|21)'),
+    ('14', 'LIN-Klemme → RJ12 IN Kontakt 3 (vorher messen)'),
+    ('15', 'TX → (21|11); Brücke (21|11)–(28|11)–(28|10) = GPIO4'),
+    ('16', 'RX → (20|10); Brücke (18|10)…(27|10) = GPIO3'),
+    ('17', 'SLP → (22|12); Brücke (19|12)…(29|12)–(29|10) = 3V3'),
+    ('18', 'INH frei, GND oben frei (intern = GND unten, messen)'),
     ('Pull-up', None),
-    ('18', 'R1 10 kΩ von (20|4) nach (20|8); (20|8)–(21|8)–(21|6)'),
+    ('19', 'R1 10 kΩ von (18|10) nach (18|14); (18|14)–(19|14)–(19|12)'),
     ('RJ12', None),
-    ('19', 'RJ12 IN ↔ RJ12 OUT: alle 6 Kontakte 1:1 durch'),
-    ('20', 'RJ12 Kontakt 5 (GND, messen) → Masse (2|16)'),
+    ('20', 'RJ12 IN ↔ RJ12 OUT: alle 6 Kontakte 1:1 durch'),
+    ('21', 'RJ12 Kontakt 5 (GND, messen) → Masse (2|16)'),
     ('Reihenfolge', None),
-    ('a', 'Buchsenleisten auf den C3 stecken, so aufsetzen, löten'),
+    ('a', 'C3 einlöten (USB oben, Power-Pins rechts), Lötseite zuerst'),
     ('b', 'Masse, 12-V-Leitung, D2, C1, R1, Brücken'),
     ('c', 'JST-Buchsen, Sicherungshalter, Wandler-Kabel'),
     ('d', 'LIN-Modul befestigen und verdrahten, RJ12 zuletzt'),
     ('Vor dem ersten Anschluss', None),
     ('✓', 'Kein Durchgang 12 V ↔ Masse, 5 V ↔ Masse, 3V3 ↔ Masse'),
     ('✓', 'Modul: Widerstand 12V↔LIN ≥ 30 kΩ (kein Master-R)'),
-    ('✓', '12 V ohne C3: 5 V an (23|2), RX am Modul ≤ 3,3 V'),
+    ('✓', '12 V anlegen: 5 V an (32|12), RX am Modul ≤ 3,3 V'),
     ('✓', 'Polarität am CP-Plus-Stecker messen, erst dann einstecken'),
 ]
 y = LY + 34

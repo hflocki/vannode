@@ -145,7 +145,7 @@ Kleinere Variante desselben Aufbaus: LIN-Modul T151, vergossener DC/DC-Wandler 8
 - [Schaltplan](docs/schaltplan_c3.png)
 - [Lochraster-Plan mit Verdrahtungsliste](docs/lochraster_c3.png)
 
-Alle benutzten Pins liegen auf der Stiftleiste neben 5V/GND/3V3: **TX = GPIO4, RX = GPIO3**. GPIO20/21 werden absichtlich nicht benutzt, weil der ESP32-C3 beim Start sein Boot-Log auf GPIO21 ausgibt. Das würde bei jedem Neustart auf dem LIN-Bus landen. Die blaue Onboard-LED (GPIO8) zeigt den LIN-Status.
+Alle benutzten Pins liegen auf einer Stiftleiste: in der Draufsicht mit USB oben die **rechte** Leiste mit 5V, G, 3.3, 4, 3, 2, 1, 0. **TX = GPIO4, RX = GPIO3**. Im Lochraster-Plan laufen diese fünf Leitungen auf der Lötseite zu Übergabepunkten unterhalb des Moduls. GPIO20/21 werden absichtlich nicht benutzt, weil der ESP32-C3 beim Start sein Boot-Log auf GPIO21 ausgibt. Das würde bei jedem Neustart auf dem LIN-Bus landen. Die blaue Onboard-LED (GPIO8) zeigt den LIN-Status.
 
 **Firmware:** In `config.h` `BOARD_ESP32C3_SUPERMINI` aktivieren. Das Profil setzt außerdem die WLAN-Sendeleistung auf 8,5 dBm, weil viele Super-Mini-Boards mit voller Leistung keine stabile Verbindung bekommen.
 
@@ -155,7 +155,6 @@ Alle benutzten Pins liegen auf der Stiftleiste neben 5V/GND/3V3: **TX = GPIO4, R
 - Flash Size: **4MB**
 - Partition Scheme: **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)**
 
-Den Abstand der beiden Stiftleisten nicht abzählen: Buchsenleisten auf den C3 stecken, so auf die Platine setzen und dann löten.
 
 ## USB am Fahrzeug
 

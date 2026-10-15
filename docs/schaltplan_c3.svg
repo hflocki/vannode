@@ -84,17 +84,17 @@
 <text x="1222" y="200" font-size="14" text-anchor="start" fill="#ff7f0e" font-weight="bold">5 V</text>
 <rect x="1230" y="230" width="230" height="330" rx="8" fill="#eef4ff" stroke="#1f5fbf" stroke-width="2"/>
 <text x="1345.0" y="220" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">ESP32-C3 Super Mini</text>
-<text x="1345.0" y="578" font-size="12" text-anchor="middle" fill="#555">linke Stiftleiste (USB oben)</text>
+<text x="1345.0" y="578" font-size="12" text-anchor="middle" fill="#555">rechte Stiftleiste (Draufsicht, USB oben)</text>
 <text x="1245" y="275" font-size="14" text-anchor="start" fill="#111">3V3</text>
-<text x="1450" y="275" font-size="12" text-anchor="end" fill="#666">Pin 3</text>
+<text x="1450" y="275" font-size="12" text-anchor="end" fill="#666">„3.3“</text>
 <text x="1245" y="355" font-size="14" text-anchor="start" fill="#111">GPIO4 (TX)</text>
-<text x="1450" y="355" font-size="12" text-anchor="end" fill="#666">Pin 4</text>
+<text x="1450" y="355" font-size="12" text-anchor="end" fill="#666">„4“</text>
 <text x="1245" y="395" font-size="14" text-anchor="start" fill="#111">GPIO3 (RX)</text>
-<text x="1450" y="395" font-size="12" text-anchor="end" fill="#666">Pin 5</text>
+<text x="1450" y="395" font-size="12" text-anchor="end" fill="#666">„3“</text>
 <text x="1245" y="475" font-size="14" text-anchor="start" fill="#111">5V</text>
-<text x="1450" y="475" font-size="12" text-anchor="end" fill="#666">Pin 1</text>
+<text x="1450" y="475" font-size="12" text-anchor="end" fill="#666">„5V“</text>
 <text x="1245" y="525" font-size="14" text-anchor="start" fill="#111">GND</text>
-<text x="1450" y="525" font-size="12" text-anchor="end" fill="#666">Pin 2</text>
+<text x="1450" y="525" font-size="12" text-anchor="end" fill="#666">„G“</text>
 <polyline points="1230,520 1200,520 1200,560" fill="none" stroke="#111" stroke-width="3" stroke-linejoin="round"/>
 <g stroke="#111" stroke-width="3"><line x1="1200" y1="560" x2="1200" y2="572"/><line x1="1186" y1="572" x2="1214" y2="572"/><line x1="1191" y1="578" x2="1209" y2="578"/><line x1="1196" y1="584" x2="1204" y2="584"/></g>
 <rect x="560" y="520" width="320" height="300" rx="8" fill="#f3f3f3" stroke="#333" stroke-width="2"/>

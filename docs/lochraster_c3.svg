@@ -719,47 +719,47 @@
 <text x="279.2" y="394" font-size="11" text-anchor="end" fill="#777">10</text>
 <text x="279.2" y="514" font-size="11" text-anchor="end" fill="#777">15</text>
 <text x="279.2" y="634" font-size="11" text-anchor="end" fill="#777">20</text>
-<rect x="815.2" y="159.6" width="177.60000000000002" height="220.79999999999998" rx="8" fill="#2b5fae" fill-opacity="0.12" stroke="#2b5fae" stroke-width="2" stroke-dasharray="8,5"/>
-<rect x="878.0" y="142.8" width="52" height="30" rx="5" fill="#bbb" stroke="#777"/>
-<text x="904.0" y="162.0" font-size="11" text-anchor="middle" fill="#333" font-weight="bold">USB-C</text>
-<rect x="824.4300000000001" y="386.6" width="159.14" height="18" rx="3" fill="#fff" fill-opacity="0.88"/>
-<text x="904.0" y="399.6" font-size="13" text-anchor="middle" fill="#2b5fae" font-weight="bold">ESP32-C3 Super Mini</text>
-<rect x="839.62" y="407.79999999999995" width="128.76" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
-<text x="904.0" y="418.79999999999995" font-size="11" text-anchor="middle" fill="#2b5fae">auf Buchsenleisten</text>
-<rect x="824" y="190" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="190" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="202" font-size="10" text-anchor="start" fill="#888">GPIO5</text>
-<text x="846" y="202" font-size="10" text-anchor="start" fill="#000" font-weight="bold">5V</text>
-<rect x="824" y="214" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="214" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="226" font-size="10" text-anchor="start" fill="#888">GPIO6</text>
-<text x="846" y="226" font-size="10" text-anchor="start" fill="#000" font-weight="bold">GND</text>
-<rect x="824" y="238" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="238" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="250" font-size="10" text-anchor="start" fill="#888">GPIO7</text>
-<text x="846" y="250" font-size="10" text-anchor="start" fill="#000" font-weight="bold">3V3</text>
-<rect x="824" y="262" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="262" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="274" font-size="10" text-anchor="start" fill="#888">GPIO8</text>
-<text x="846" y="274" font-size="10" text-anchor="start" fill="#000" font-weight="bold">GPIO4</text>
-<rect x="824" y="286" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="286" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="298" font-size="10" text-anchor="start" fill="#888">GPIO9</text>
-<text x="846" y="298" font-size="10" text-anchor="start" fill="#000" font-weight="bold">GPIO3</text>
-<rect x="824" y="310" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="310" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="322" font-size="10" text-anchor="start" fill="#888">GPIO10</text>
-<text x="846" y="322" font-size="10" text-anchor="start" fill="#888">GPIO2</text>
-<rect x="824" y="334" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="334" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="346" font-size="10" text-anchor="start" fill="#888">GPIO20</text>
-<text x="846" y="346" font-size="10" text-anchor="start" fill="#888">GPIO1</text>
-<rect x="824" y="358" width="16" height="16" fill="#333" rx="2"/>
-<rect x="968" y="358" width="16" height="16" fill="#999" rx="2"/>
-<text x="990" y="370" font-size="10" text-anchor="start" fill="#888">GPIO21</text>
-<text x="846" y="370" font-size="10" text-anchor="start" fill="#888">GPIO0</text>
-<polyline points="832,222 856,222 856,654" fill="none" stroke="#111" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<polyline points="328,486 328,654 856,654" fill="none" stroke="#111" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<rect x="863.2" y="157.2" width="177.60000000000002" height="201.60000000000002" rx="8" fill="#111" fill-opacity="0.80" stroke="#2b5fae" stroke-width="2"/>
+<rect x="922.0" y="142.8" width="60" height="34" rx="5" fill="#bbb" stroke="#777"/>
+<text x="952.0" y="162.0" font-size="11" text-anchor="middle" fill="#333" font-weight="bold">USB-C</text>
+<text x="952.0" y="260.4" font-size="13" text-anchor="middle" fill="#fff" font-weight="bold">ESP32-C3</text>
+<text x="952.0" y="279.6" font-size="13" text-anchor="middle" fill="#fff" font-weight="bold">Super Mini</text>
+<rect x="872" y="166" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="166" width="16" height="16" fill="#e6c200" rx="2"/>
+<text x="893" y="178" font-size="10" text-anchor="start" fill="#ccc">5</text>
+<text x="1011" y="178" font-size="11" text-anchor="end" fill="#fff" font-weight="bold">5V</text>
+<rect x="872" y="190" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="190" width="16" height="16" fill="#e6c200" rx="2"/>
+<text x="893" y="202" font-size="10" text-anchor="start" fill="#ccc">6</text>
+<text x="1011" y="202" font-size="11" text-anchor="end" fill="#fff" font-weight="bold">G</text>
+<rect x="872" y="214" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="214" width="16" height="16" fill="#e6c200" rx="2"/>
+<text x="893" y="226" font-size="10" text-anchor="start" fill="#ccc">7</text>
+<text x="1011" y="226" font-size="11" text-anchor="end" fill="#fff" font-weight="bold">3.3</text>
+<rect x="872" y="238" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="238" width="16" height="16" fill="#e6c200" rx="2"/>
+<text x="893" y="250" font-size="10" text-anchor="start" fill="#ccc">8</text>
+<text x="1011" y="250" font-size="11" text-anchor="end" fill="#fff" font-weight="bold">4</text>
+<rect x="872" y="262" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="262" width="16" height="16" fill="#e6c200" rx="2"/>
+<text x="893" y="274" font-size="10" text-anchor="start" fill="#ccc">9</text>
+<text x="1011" y="274" font-size="11" text-anchor="end" fill="#fff" font-weight="bold">3</text>
+<rect x="872" y="286" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="286" width="16" height="16" fill="#999" rx="2"/>
+<text x="893" y="298" font-size="10" text-anchor="start" fill="#ccc">10</text>
+<text x="1011" y="298" font-size="11" text-anchor="end" fill="#aaa">2</text>
+<rect x="872" y="310" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="310" width="16" height="16" fill="#999" rx="2"/>
+<text x="893" y="322" font-size="10" text-anchor="start" fill="#ccc">20</text>
+<text x="1011" y="322" font-size="11" text-anchor="end" fill="#aaa">1</text>
+<rect x="872" y="334" width="16" height="16" fill="#999" rx="2"/>
+<rect x="1016" y="334" width="16" height="16" fill="#999" rx="2"/>
+<text x="893" y="346" font-size="10" text-anchor="start" fill="#ccc">21</text>
+<text x="1011" y="346" font-size="11" text-anchor="end" fill="#aaa">0</text>
+<text x="1054" y="234.0" font-size="11" text-anchor="start" fill="#7a4a00" font-weight="bold">Lötseite:</text>
+<text x="1054" y="250.8" font-size="11" text-anchor="start" fill="#7a4a00">gestrichelt</text>
+<polyline points="1000,390 1000,654" fill="none" stroke="#111" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<polyline points="328,486 328,654 1000,654" fill="none" stroke="#111" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
 <rect x="242" y="448" width="52" height="52" rx="4" fill="#ddd" stroke="#888"/>
 <rect x="198.04000000000002" y="508" width="139.92" height="17" rx="3" fill="#fff" fill-opacity="0.88"/>
 <text x="268" y="520" font-size="12" text-anchor="middle" fill="#333" font-weight="bold">JST IN (Kabelbaum)</text>
@@ -787,12 +787,17 @@
 <circle cx="616" cy="498.0" r="17" fill="#2a2a6a" stroke="#000"/>
 <text x="614" y="488" font-size="12" text-anchor="middle" fill="#fff" font-weight="bold">+</text>
 <polyline points="616,510 616,654" fill="none" stroke="#111" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<polyline points="784,198 832,198" fill="none" stroke="#ff7f0e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<polyline points="736,246 832,246" fill="none" stroke="#c2185b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<polyline points="784,270 832,270" fill="none" stroke="#2ca02c" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<polyline points="784,294 832,294" fill="none" stroke="#17becf" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
-<rect x="753" y="255.60000000000002" width="14" height="76.80000000000001" rx="4" fill="#c9b48a" stroke="#7a5f2a"/>
-<polyline points="784,294 784,342 760,342" fill="none" stroke="#17becf" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<path d="M1024,174 Q1056.0,282.0 1048,390" fill="none" stroke="#ff7f0e" stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>
+<path d="M1024,198 Q1024.0,294.0 1000,390" fill="none" stroke="#111" stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>
+<path d="M1024,222 Q1006.0,306.0 976,390" fill="none" stroke="#c2185b" stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>
+<path d="M1024,246 Q988.0,318.0 952,390" fill="none" stroke="#2ca02c" stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>
+<path d="M1024,270 Q970.0,330.0 928,390" fill="none" stroke="#17becf" stroke-width="4" stroke-dasharray="8,5" stroke-linecap="round"/>
+<polyline points="1048,390 1048,438" fill="none" stroke="#ff7f0e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<polyline points="928,390 712,390" fill="none" stroke="#17becf" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<polyline points="952,390 952,414 784,414" fill="none" stroke="#2ca02c" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<polyline points="976,390 976,438 736,438" fill="none" stroke="#c2185b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+<rect x="705" y="399.6" width="14" height="76.80000000000001" rx="4" fill="#c9b48a" stroke="#7a5f2a"/>
+<polyline points="712,486 736,486 736,438" fill="none" stroke="#c2185b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
 <rect x="390.4" y="178.8" width="259.20000000000005" height="201.60000000000002" rx="8" fill="#2e9e55" fill-opacity="0.85" stroke="#1d6b39" stroke-width="2"/>
 <text x="520.0" y="284.4" font-size="15" text-anchor="middle" fill="#fff" font-weight="bold">LIN-Modul T151</text>
 <text x="520.0" y="306.0" font-size="11" text-anchor="middle" fill="#eafff0">Abstandshalter / Heißkleber</text>
@@ -812,9 +817,9 @@
 <text x="551.2" y="351.6" font-size="12" text-anchor="middle" fill="#fff" font-weight="bold">INH</text>
 <circle cx="616" cy="366.0" r="9" fill="#9be3a9" stroke="#1d6b39" stroke-width="2"/>
 <text x="616" y="351.6" font-size="12" text-anchor="middle" fill="#fff" font-weight="bold">12V</text>
-<path d="M616,193.2 Q780.0,171.6 784,270" fill="none" stroke="#2ca02c" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
-<path d="M488.79999999999995,193.2 Q756.4,93.6 784,294" fill="none" stroke="#17becf" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
-<path d="M551.2,193.2 Q703.6,129.6 736,246" fill="none" stroke="#c2185b" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+<path d="M616,193.2 Q760.0,263.6 784,414" fill="none" stroke="#2ca02c" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+<path d="M488.79999999999995,193.2 Q744.4,201.60000000000002 760,390" fill="none" stroke="#17becf" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+<path d="M551.2,193.2 Q819.6,195.60000000000002 808,438" fill="none" stroke="#c2185b" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 <path d="M616,366.0 Q692.0,414.0 688,462" fill="none" stroke="#d62728" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 <path d="M424,366.0 Q356.0,570.0 448,654" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 <rect x="40" y="183.6" width="96" height="120" rx="6" fill="#3a3a3a"/>
@@ -858,8 +863,8 @@
 <text x="592" y="764.0" font-size="11" text-anchor="middle" fill="#ccc">(vergossen, neben der Platine)</text>
 <path d="M512,724.0 Q438.0,593.0 664,462" fill="none" stroke="#d62728" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 <path d="M552,724.0 Q608.0,689.0 664,654" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
-<path d="M632,724.0 Q684.0,689.0 736,654" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
-<path d="M672,724.0 Q1248.0,501.0 784,198" fill="none" stroke="#ff7f0e" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+<path d="M632,724.0 Q696.0,689.0 760,654" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+<path d="M672,724.0 Q1120.0,621.0 1048,438" fill="none" stroke="#ff7f0e" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 <text x="512" y="794.0" font-size="11" text-anchor="middle" fill="#111">rot</text>
 <text x="552" y="794.0" font-size="11" text-anchor="middle" fill="#111">schw.</text>
 <text x="632" y="794.0" font-size="11" text-anchor="middle" fill="#111">schw.</text>
@@ -887,21 +892,28 @@
 <circle cx="568" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
 <circle cx="616" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
 <circle cx="664" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
-<circle cx="736" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
-<circle cx="856" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
-<circle cx="832" cy="222" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
-<circle cx="856" cy="222" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
-<circle cx="784" cy="198" r="6" fill="#ff7f0e" stroke="#fff" stroke-width="1.5"/>
-<circle cx="832" cy="198" r="6" fill="#ff7f0e" stroke="#fff" stroke-width="1.5"/>
-<circle cx="736" cy="246" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
-<circle cx="760" cy="246" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
-<circle cx="832" cy="246" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
-<circle cx="784" cy="270" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
-<circle cx="832" cy="270" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
-<circle cx="784" cy="294" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
-<circle cx="832" cy="294" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
-<circle cx="784" cy="342" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
-<circle cx="760" cy="342" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
+<circle cx="760" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1000" cy="654" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1024" cy="174" r="6" fill="#ff7f0e" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1024" cy="198" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1024" cy="222" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1024" cy="246" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1024" cy="270" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1048" cy="390" r="6" fill="#ff7f0e" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1048" cy="438" r="6" fill="#ff7f0e" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1000" cy="390" r="6" fill="#111" stroke="#fff" stroke-width="1.5"/>
+<circle cx="976" cy="390" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="952" cy="390" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="928" cy="390" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
+<circle cx="712" cy="390" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
+<circle cx="760" cy="390" r="6" fill="#17becf" stroke="#fff" stroke-width="1.5"/>
+<circle cx="784" cy="414" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="952" cy="414" r="6" fill="#2ca02c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="976" cy="438" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="736" cy="438" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="808" cy="438" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="712" cy="486" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
+<circle cx="736" cy="486" r="6" fill="#c2185b" stroke="#fff" stroke-width="1.5"/>
 <rect x="467" y="438" width="125.03999999999999" height="17" rx="3" fill="#fff" fill-opacity="0.88"/>
 <text x="470" y="450" font-size="12" text-anchor="start" fill="#d62728" font-weight="bold">12 V abgesichert</text>
 <rect x="373" y="513.4" width="217.42" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
@@ -910,13 +922,13 @@
 <text x="580" y="568" font-size="11" text-anchor="start" fill="#333" font-weight="bold">D2 P6KE24A, Ring oben</text>
 <rect x="635" y="503" width="149.22" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
 <text x="638" y="514" font-size="11" text-anchor="start" fill="#333" font-weight="bold">C1 22 µF/35 V, + oben</text>
-<rect x="688.44" y="287" width="60.56" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
-<text x="746" y="298" font-size="11" text-anchor="end" fill="#333" font-weight="bold">R1 10 kΩ</text>
+<rect x="640.44" y="431" width="60.56" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
+<text x="698" y="442" font-size="11" text-anchor="end" fill="#333" font-weight="bold">R1 10 kΩ</text>
 <rect x="469" y="671" width="154.8" height="17" rx="3" fill="#fff" fill-opacity="0.88"/>
 <text x="472" y="683" font-size="12" text-anchor="start" fill="#111" font-weight="bold">Masse-Bus (Reihe 21)</text>
-<rect x="863" y="479" width="135.58" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
-<text x="866" y="490" font-size="11" text-anchor="start" fill="#111" font-weight="bold">GND unter dem Modul</text>
-<rect x="1120" y="90" width="660" height="880" rx="10" fill="#fafafa" stroke="#ddd"/>
+<rect x="829" y="364.6" width="162.85999999999999" height="16" rx="3" fill="#fff" fill-opacity="0.88"/>
+<text x="832" y="375.6" font-size="11" text-anchor="start" fill="#333" font-weight="bold">Übergabepunkte Reihe 10</text>
+<rect x="1120" y="90" width="660" height="930" rx="10" fill="#fafafa" stroke="#ddd"/>
 <text x="1140" y="120" font-size="18" text-anchor="start" fill="#111" font-weight="bold">Verdrahtungsliste</text>
 <text x="1140" y="160" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Versorgung 12 V</text>
 <text x="1144" y="181" font-size="13" text-anchor="start" fill="#111" font-weight="bold">1</text>
@@ -936,49 +948,52 @@
 <text x="1144" y="335" font-size="13" text-anchor="start" fill="#111" font-weight="bold">8</text>
 <text x="1176" y="335" font-size="13" text-anchor="start" fill="#111">Wandler rot → (16|13), schwarz (Eingang) → (16|21)</text>
 <text x="1144" y="357" font-size="13" text-anchor="start" fill="#111" font-weight="bold">9</text>
-<text x="1176" y="357" font-size="13" text-anchor="start" fill="#111">Wandler gelb → (21|2) → (23|2) = 5V, schwarz → (19|21)</text>
+<text x="1176" y="357" font-size="13" text-anchor="start" fill="#111">Wandler gelb → (32|12), schwarz (Ausgang) → (20|21)</text>
 <text x="1140" y="385" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Masse</text>
 <text x="1144" y="406" font-size="13" text-anchor="start" fill="#111" font-weight="bold">10</text>
-<text x="1176" y="406" font-size="13" text-anchor="start" fill="#111">Masse-Bus Reihe 21: (2|21) … (24|21)</text>
-<text x="1144" y="428" font-size="13" text-anchor="start" fill="#111" font-weight="bold">11</text>
-<text x="1176" y="428" font-size="13" text-anchor="start" fill="#111">ESP GND (23|3) → (24|3) → (24|21), unter dem Modul</text>
-<text x="1140" y="456" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">LIN-Modul</text>
+<text x="1176" y="406" font-size="13" text-anchor="start" fill="#111">Masse-Bus Reihe 21: (2|21) … (30|21), dazu (30|10)–(30|21)</text>
+<text x="1140" y="434" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">ESP32-C3 (rechte Leiste, Lötseite)</text>
+<text x="1144" y="455" font-size="13" text-anchor="start" fill="#111" font-weight="bold">11</text>
+<text x="1176" y="455" font-size="13" text-anchor="start" fill="#111">5V (31|1) → (32|10) → (32|12)     G (31|2) → (30|10)</text>
 <text x="1144" y="477" font-size="13" text-anchor="start" fill="#111" font-weight="bold">12</text>
-<text x="1176" y="477" font-size="13" text-anchor="start" fill="#111">12V-Klemme → (17|13)    GND unten → (7|21)</text>
-<text x="1144" y="499" font-size="13" text-anchor="start" fill="#111" font-weight="bold">13</text>
-<text x="1176" y="499" font-size="13" text-anchor="start" fill="#111">LIN-Klemme → RJ12 IN Kontakt 3 (vorher messen)</text>
-<text x="1144" y="521" font-size="13" text-anchor="start" fill="#111" font-weight="bold">14</text>
-<text x="1176" y="521" font-size="13" text-anchor="start" fill="#111">TX → (21|5) → (23|5) = GPIO4</text>
-<text x="1144" y="543" font-size="13" text-anchor="start" fill="#111" font-weight="bold">15</text>
-<text x="1176" y="543" font-size="13" text-anchor="start" fill="#111">RX → (21|6) → (23|6) = GPIO3</text>
-<text x="1144" y="565" font-size="13" text-anchor="start" fill="#111" font-weight="bold">16</text>
-<text x="1176" y="565" font-size="13" text-anchor="start" fill="#111">SLP → (19|4) → (23|4) = 3V3</text>
-<text x="1144" y="587" font-size="13" text-anchor="start" fill="#111" font-weight="bold">17</text>
-<text x="1176" y="587" font-size="13" text-anchor="start" fill="#111">INH frei, GND oben frei (intern = GND unten, messen)</text>
-<text x="1140" y="615" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Pull-up</text>
+<text x="1176" y="477" font-size="13" text-anchor="start" fill="#111">3.3 (31|3) → (29|10)   4 (31|4) → (28|10)   3 (31|5) → (27|10)</text>
+<text x="1140" y="505" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">LIN-Modul</text>
+<text x="1144" y="526" font-size="13" text-anchor="start" fill="#111" font-weight="bold">13</text>
+<text x="1176" y="526" font-size="13" text-anchor="start" fill="#111">12V-Klemme → (17|13)    GND unten → (7|21)</text>
+<text x="1144" y="548" font-size="13" text-anchor="start" fill="#111" font-weight="bold">14</text>
+<text x="1176" y="548" font-size="13" text-anchor="start" fill="#111">LIN-Klemme → RJ12 IN Kontakt 3 (vorher messen)</text>
+<text x="1144" y="570" font-size="13" text-anchor="start" fill="#111" font-weight="bold">15</text>
+<text x="1176" y="570" font-size="13" text-anchor="start" fill="#111">TX → (21|11); Brücke (21|11)–(28|11)–(28|10) = GPIO4</text>
+<text x="1144" y="592" font-size="13" text-anchor="start" fill="#111" font-weight="bold">16</text>
+<text x="1176" y="592" font-size="13" text-anchor="start" fill="#111">RX → (20|10); Brücke (18|10)…(27|10) = GPIO3</text>
+<text x="1144" y="614" font-size="13" text-anchor="start" fill="#111" font-weight="bold">17</text>
+<text x="1176" y="614" font-size="13" text-anchor="start" fill="#111">SLP → (22|12); Brücke (19|12)…(29|12)–(29|10) = 3V3</text>
 <text x="1144" y="636" font-size="13" text-anchor="start" fill="#111" font-weight="bold">18</text>
-<text x="1176" y="636" font-size="13" text-anchor="start" fill="#111">R1 10 kΩ von (20|4) nach (20|8); (20|8)–(21|8)–(21|6)</text>
-<text x="1140" y="664" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">RJ12</text>
+<text x="1176" y="636" font-size="13" text-anchor="start" fill="#111">INH frei, GND oben frei (intern = GND unten, messen)</text>
+<text x="1140" y="664" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Pull-up</text>
 <text x="1144" y="685" font-size="13" text-anchor="start" fill="#111" font-weight="bold">19</text>
-<text x="1176" y="685" font-size="13" text-anchor="start" fill="#111">RJ12 IN ↔ RJ12 OUT: alle 6 Kontakte 1:1 durch</text>
-<text x="1144" y="707" font-size="13" text-anchor="start" fill="#111" font-weight="bold">20</text>
-<text x="1176" y="707" font-size="13" text-anchor="start" fill="#111">RJ12 Kontakt 5 (GND, messen) → Masse (2|16)</text>
-<text x="1140" y="735" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Reihenfolge</text>
-<text x="1144" y="756" font-size="13" text-anchor="start" fill="#111" font-weight="bold">a</text>
-<text x="1176" y="756" font-size="13" text-anchor="start" fill="#111">Buchsenleisten auf den C3 stecken, so aufsetzen, löten</text>
-<text x="1144" y="778" font-size="13" text-anchor="start" fill="#111" font-weight="bold">b</text>
-<text x="1176" y="778" font-size="13" text-anchor="start" fill="#111">Masse, 12-V-Leitung, D2, C1, R1, Brücken</text>
-<text x="1144" y="800" font-size="13" text-anchor="start" fill="#111" font-weight="bold">c</text>
-<text x="1176" y="800" font-size="13" text-anchor="start" fill="#111">JST-Buchsen, Sicherungshalter, Wandler-Kabel</text>
-<text x="1144" y="822" font-size="13" text-anchor="start" fill="#111" font-weight="bold">d</text>
-<text x="1176" y="822" font-size="13" text-anchor="start" fill="#111">LIN-Modul befestigen und verdrahten, RJ12 zuletzt</text>
-<text x="1140" y="850" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Vor dem ersten Anschluss</text>
-<text x="1144" y="871" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
-<text x="1176" y="871" font-size="13" text-anchor="start" fill="#111">Kein Durchgang 12 V ↔ Masse, 5 V ↔ Masse, 3V3 ↔ Masse</text>
-<text x="1144" y="893" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
-<text x="1176" y="893" font-size="13" text-anchor="start" fill="#111">Modul: Widerstand 12V↔LIN ≥ 30 kΩ (kein Master-R)</text>
-<text x="1144" y="915" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
-<text x="1176" y="915" font-size="13" text-anchor="start" fill="#111">12 V ohne C3: 5 V an (23|2), RX am Modul ≤ 3,3 V</text>
-<text x="1144" y="937" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
-<text x="1176" y="937" font-size="13" text-anchor="start" fill="#111">Polarität am CP-Plus-Stecker messen, erst dann einstecken</text>
+<text x="1176" y="685" font-size="13" text-anchor="start" fill="#111">R1 10 kΩ von (18|10) nach (18|14); (18|14)–(19|14)–(19|12)</text>
+<text x="1140" y="713" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">RJ12</text>
+<text x="1144" y="734" font-size="13" text-anchor="start" fill="#111" font-weight="bold">20</text>
+<text x="1176" y="734" font-size="13" text-anchor="start" fill="#111">RJ12 IN ↔ RJ12 OUT: alle 6 Kontakte 1:1 durch</text>
+<text x="1144" y="756" font-size="13" text-anchor="start" fill="#111" font-weight="bold">21</text>
+<text x="1176" y="756" font-size="13" text-anchor="start" fill="#111">RJ12 Kontakt 5 (GND, messen) → Masse (2|16)</text>
+<text x="1140" y="784" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Reihenfolge</text>
+<text x="1144" y="805" font-size="13" text-anchor="start" fill="#111" font-weight="bold">a</text>
+<text x="1176" y="805" font-size="13" text-anchor="start" fill="#111">C3 einlöten (USB oben, Power-Pins rechts), Lötseite zuerst</text>
+<text x="1144" y="827" font-size="13" text-anchor="start" fill="#111" font-weight="bold">b</text>
+<text x="1176" y="827" font-size="13" text-anchor="start" fill="#111">Masse, 12-V-Leitung, D2, C1, R1, Brücken</text>
+<text x="1144" y="849" font-size="13" text-anchor="start" fill="#111" font-weight="bold">c</text>
+<text x="1176" y="849" font-size="13" text-anchor="start" fill="#111">JST-Buchsen, Sicherungshalter, Wandler-Kabel</text>
+<text x="1144" y="871" font-size="13" text-anchor="start" fill="#111" font-weight="bold">d</text>
+<text x="1176" y="871" font-size="13" text-anchor="start" fill="#111">LIN-Modul befestigen und verdrahten, RJ12 zuletzt</text>
+<text x="1140" y="899" font-size="14" text-anchor="start" fill="#2b5fae" font-weight="bold">Vor dem ersten Anschluss</text>
+<text x="1144" y="920" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
+<text x="1176" y="920" font-size="13" text-anchor="start" fill="#111">Kein Durchgang 12 V ↔ Masse, 5 V ↔ Masse, 3V3 ↔ Masse</text>
+<text x="1144" y="942" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
+<text x="1176" y="942" font-size="13" text-anchor="start" fill="#111">Modul: Widerstand 12V↔LIN ≥ 30 kΩ (kein Master-R)</text>
+<text x="1144" y="964" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
+<text x="1176" y="964" font-size="13" text-anchor="start" fill="#111">12 V anlegen: 5 V an (32|12), RX am Modul ≤ 3,3 V</text>
+<text x="1144" y="986" font-size="13" text-anchor="start" fill="#111" font-weight="bold">✓</text>
+<text x="1176" y="986" font-size="13" text-anchor="start" fill="#111">Polarität am CP-Plus-Stecker messen, erst dann einstecken</text>
 </svg>

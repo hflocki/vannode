@@ -111,9 +111,9 @@ line([(1180, 225), (1195, 225), (1195, 232)], CG, 3); gnd(1195, 232)
 txt(1222, 200, '5 V', 14, col=C5, bold=True)
 
 # ---------------- ESP32 ----------------
-box(1230, 230, 230, 330, 'ESP32-C3 Super Mini', '#eef4ff', CL, 'linke Stiftleiste (USB oben)')
-pins = [('3V3', 'Pin 3', 270), ('GPIO4 (TX)', 'Pin 4', 350), ('GPIO3 (RX)', 'Pin 5', 390),
-        ('5V', 'Pin 1', 470), ('GND', 'Pin 2', 520)]
+box(1230, 230, 230, 330, 'ESP32-C3 Super Mini', '#eef4ff', CL, 'rechte Stiftleiste (Draufsicht, USB oben)')
+pins = [('3V3', '„3.3“', 270), ('GPIO4 (TX)', '„4“', 350), ('GPIO3 (RX)', '„3“', 390),
+        ('5V', '„5V“', 470), ('GND', '„G“', 520)]
 for name, pin, y in pins:
     txt(1245, y + 5, name, 14)
     txt(1450, y + 5, pin, 12, 'end', '#666')

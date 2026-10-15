@@ -76,6 +76,13 @@ Konkreter Aufbau aus fertigen Modulen, der zum Profil `BOARD_ESP32S3_GENERIC` pa
 
 ![Verdrahtung](docs/wiring_esp32s3_tja1020.png)
 
+Für den Aufbau mit LIN-Modul T151, vergossenem DC/DC-Wandler (8–32 V → 5 V) und durchgeschleiften JST- und RJ12-Buchsen gibt es einen Schaltplan und einen Lochraster-Plan mit Koordinaten und Verdrahtungsliste:
+
+- [Schaltplan](docs/schaltplan.png)
+- [Lochraster-Plan](docs/lochraster.png)
+
+Beide Bilder werden von `docs/gen_schematic.py` und `docs/gen_layout.py` erzeugt (Python, `pip install cairosvg`).
+
 ### Einkaufsliste
 
 | Teil | Typ | Hinweis |

@@ -70,6 +70,66 @@ Vom RJ12-Kabel werden nur **LIN** und **GND** gebraucht. Die Aderfarben und die 
 - **GND:** 0 V gegen Fahrzeugmasse.
 - **LIN:** im Ruhezustand etwa Bordspannung (≈ 12 V). Mit dem Multimeter springt der Wert leicht, sobald das CP Plus sendet.
 
+## Referenzaufbau: ESP32-S3-DevKitC-1 + TJA1020-Modul auf Lochraster
+
+Konkreter Aufbau aus fertigen Modulen, der zum Profil `BOARD_ESP32S3_GENERIC` passt. Die Firmware muss dafür nicht angepasst werden.
+
+![Verdrahtung](docs/wiring_esp32s3_tja1020.png)
+
+### Einkaufsliste
+
+| Teil | Typ | Hinweis |
+|---|---|---|
+| ESP32-Board | ESP32-S3-DevKitC-1 **N8R8** | 8 MB Flash, 8 MB PSRAM |
+| LIN-Modul | TJA1020- oder TJA1021-Modul | Klemmen 12V/LIN/GND und TX/RX/SLP/GND |
+| Spannungswandler | Traco TSR 1-2450 (12 V → 5 V, 1 A) | verträgt bis 36 V am Eingang |
+| F1 | Flachsicherung 1 A mit fliegendem Halter | so nah wie möglich an der 12-V-Quelle |
+| D1 | 1N5819 (Schottky, bedrahtet) | Verpolschutz in Reihe, kostet nur ca. 0,3 V |
+| D2 | P6KE24A (TVS, bedrahtet, unidirektional) | schluckt Spannungsspitzen; Ring zur 12-V-Seite |
+| C1 | 10 µF / 50 V | Elko oder Keramik, nahe am Wandler-Eingang |
+| R1 | 10 kΩ | Pull-up für RX nach 3,3 V |
+| J1 | RJ12-Buchse 6P6C **auf Breakout-Platine** (Rastermaß 2,54 mm) | normale Print-Buchsen passen nicht ins Lochraster. Alternative: RJ12-Kabel aufschneiden und LIN/GND direkt anlöten |
+| – | RJ12-Y-Verteiler **6-polig, alle 6 Kontakte 1:1** und ein kurzes RJ12-Kabel 6P6C | zwischen CP Plus und Heizung; viele Telefon-Verteiler sind nur 4-polig belegt |
+| J2 | Schraubklemme 2-polig, 5 mm | 12 V und Masse |
+| – | 2 × Buchsenleiste 1 × 22 (DevKit), Stift- oder Buchsenleiste fürs LIN-Modul | Module steckbar, damit sie tauschbar bleiben |
+| – | Lochraster ca. 7 × 9 cm, Gehäuse mit Ausschnitten für RJ12 und USB | |
+| optional | LED + 1 kΩ an einem freien GPIO (z. B. 4) | Status, in `config.h` als `LIN_LED_PIN` eintragen |
+
+### Verdrahtung
+
+| Von | Nach |
+|---|---|
+| 12 V → F1 → D1 (Anode) | D1 (Kathode) = „+12 V geschützt“ |
+| +12 V geschützt | D2 und C1 nach GND, Traco **Vin**, LIN-Modul **12V** |
+| Traco **Vout** | DevKit **5V** |
+| DevKit **GPIO17** | LIN-Modul **TX** |
+| LIN-Modul **RX** | DevKit **GPIO18**, plus R1 nach **3V3** |
+| DevKit **3V3** | LIN-Modul **SLP** |
+| LIN-Modul **LIN** | LIN-Kontakt von J1 (RJ12) |
+| GND | Traco GND, Modul GND (beide Seiten), DevKit GND, Masse-Kontakt von J1, J2 Minus |
+| LIN-Modul **INH** | frei lassen |
+
+Die 12 V kommen **nicht** über das RJ12-Kabel, sondern über J2, z. B. von der Versorgungsleitung des CP Plus oder aus dem Sicherungskasten.
+
+Pins, die auf dem N8R8 tabu sind: **GPIO 35–37** (vom PSRAM belegt), **19/20** (USB), **0, 3, 45, 46** (Strapping).
+
+### Arduino IDE
+
+- Board: **ESP32S3 Dev Module**
+- Flash Size: **8MB**, PSRAM: **OPI PSRAM**
+- Partition Scheme: **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)**, damit OTA geht
+- USB CDC On Boot: **Disabled**, flashen und Serial Monitor über die Buchse **UART**
+- In `config.h`: `BOARD_SMARTAVAN` auskommentieren, `BOARD_ESP32S3_GENERIC` einkommentieren
+
+### Inbetriebnahme in drei Stufen
+
+1. **Nur USB, nichts angeschlossen:** Flashen, Setup-WLAN `truma-heater-XXXX`, WLAN und MQTT einrichten. Die Weboberfläche zeigt „LIN-Verkehr: nein“, das ist hier richtig.
+2. **12 V auf dem Tisch, ohne Bus und ohne USB:** Netzteil oder Batterie an die 12-V-Klemme. Messen:
+   - Traco-Ausgang ≈ 5 V, DevKit 3V3 ≈ 3,3 V
+   - **RX am LIN-Modul ≈ 3,3 V, niemals 5 V.** Bei 5 V hat das Modul einen eigenen Pull-up auf 5 V. Den entfernen, sonst nimmt der S3 Schaden.
+   - LIN-Klemme ≈ 11–12 V (interner Slave-Pull-up des Transceivers)
+3. **Am Bus:** Erst am RJ12-Kabel LIN und GND messen (siehe „Wo an den Bus?“), dann anschließen. In der Weboberfläche muss „LIN-Verkehr: ja“ erscheinen. Danach am CP Plus RESET → PR SET.
+
 ## USB am Fahrzeug
 
 USB nur zum ersten Flashen verwenden und dabei die **12 V abziehen**. Hängt das Board gleichzeitig an 12 V und am Mac:

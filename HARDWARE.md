@@ -140,7 +140,7 @@ Pins, die auf dem N8R8 tabu sind: **GPIO 35–37** (vom PSRAM belegt), **19/20**
 
 ## Aufbau mit ESP32-C3 Super Mini
 
-Kleinere Variante desselben Aufbaus: LIN-Modul T151, vergossener DC/DC-Wandler 8–32 V → 5 V, JST- und RJ12-Buchsen durchgeschleift, Platine ca. 8 × 5,5 cm.
+Kleinere Variante desselben Aufbaus: LIN-Modul T151 in der Mitte, ESP32-C3 Super Mini oben rechts, 12-V-Teile links, vergossener DC/DC-Wandler 8–32 V → 5 V, JST- und RJ12-Buchsen durchgeschleift. Platine 35 × 20 Löcher (ca. 9 × 5 cm).
 
 - [Schaltplan](docs/schaltplan_c3.png)
 - [Lochraster-Plan mit Verdrahtungsliste](docs/lochraster_c3.png)

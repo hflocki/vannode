@@ -51,8 +51,10 @@ bool InetBox::begin(uart_port_t uart_num, int tx_pin, int rx_pin, int cs_pin, in
   time_per_first_byte_us_ = (uint32_t) (us_per_bit * 11 * 5);
 
   if (cs_pin_ >= 0) {
+    // Keep the transceiver awake in observer mode too: with SLP_N/EN low a TJA1020/1021 sleeps and
+    // RXD no longer follows the bus. Observer mode only suppresses our answers (see finish_frame_).
     pinMode(cs_pin_, OUTPUT);
-    digitalWrite(cs_pin_, observer_mode_ ? LOW : HIGH);
+    digitalWrite(cs_pin_, HIGH);
   }
   if (fault_pin_ >= 0) {
     pinMode(fault_pin_, INPUT_PULLUP);

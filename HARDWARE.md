@@ -82,7 +82,7 @@ Konkreter Aufbau aus fertigen Modulen, der zum Profil `BOARD_ESP32S3_GENERIC` pa
 |---|---|---|
 | ESP32-Board | ESP32-S3-DevKitC-1 **N8R8** | 8 MB Flash, 8 MB PSRAM |
 | LIN-Modul | TJA1020- oder TJA1021-Modul | Klemmen 12V/LIN/GND und TX/RX/SLP/GND |
-| Spannungswandler | Traco TSR 1-2450 (12 V → 5 V, 1 A) | verträgt bis 36 V am Eingang |
+| Spannungswandler | Traco TSR 1-2450 (6,5–36 V → 5 V, 1 A) | Schaltregler, stabile 5 V auch bei 14,4 V Ladespannung |
 | F1 | Flachsicherung 1 A mit fliegendem Halter | so nah wie möglich an der 12-V-Quelle |
 | D1 | 1N5819 (Schottky, bedrahtet) | Verpolschutz in Reihe, kostet nur ca. 0,3 V |
 | D2 | P6KE24A (TVS, bedrahtet, unidirektional) | schluckt Spannungsspitzen; Ring zur 12-V-Seite |

@@ -9,7 +9,7 @@ Preise sind grobe Richtwerte (Stand 2026), ohne Versand.
 |---|---|---|---|---|---|---|
 | U1 | 1 | ESP32-S3 Board | Waveshare ESP32-S3-Zero oder ESP32-S3-DevKitC-1 | Modul | Controller, natives USB (kein CH340) | 8–12 |
 | U2 | 1 | LIN-Transceiver | **TJA1021T/20** (NXP) | SOIC-8 | LIN-Slave | 1–2 |
-| U3 | 1 | DC/DC-Wandler | **Traco TSR 1-2450** (4,75–36 V → 5 V / 1 A) | SIP-3 | 12 V → 5 V | 5–7 |
+| U3 | 1 | DC/DC-Wandler | **Traco TSR 1-2450** (6,5–36 V → 5 V / 1 A) | SIP-3 | 12 V → 5 V | 5–7 |
 | D1 | 1 | Schottky-Diode | **SS34** (3 A, 40 V) | SMA | Verpolschutz 12 V | 0,20 |
 | D2 | 1 | TVS-Diode | **SMBJ24A** (unidirektional) | SMB | Schutz vor Spannungsspitzen | 0,30 |
 | F1 | 1 | Polyfuse | 500 mA, ≥ 30 V | 1812 / THT | Absicherung Eingang | 0,30 |

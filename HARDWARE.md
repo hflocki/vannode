@@ -17,7 +17,7 @@ Fertige Platine, nichts zu verdrahten:
 1. RJ12-Kabel vom CP Plus abziehen → in **IN** am smartavan-Board.
 2. Kabel von **OUT** → zum CP Plus.
 3. Genauso das JST-Stromkabel des CP Plus: IN ans Board, OUT zum CP Plus.
-4. In `config.h` ist `BOARD_SMARTAVAN` aktiv (Standard): UART2, TX = GPIO16, RX = GPIO17.
+4. In `config.h` `BOARD_SMARTAVAN` aktivieren (statt des Standards `BOARD_ESP32C3_SUPERMINI`): UART2, TX = GPIO16, RX = GPIO17.
 
 Vorher prüfen: Das Board muss an **12–14 V** stabil laufen, nicht nur an USB. Bei 12 V die 3,3 V am ESP messen, auch während WLAN sendet. Läuft es nur an USB, liegt ein Versorgungsproblem auf der Platine vor (Spannungsregler, Lötstelle, Masse).
 
@@ -127,7 +127,7 @@ Pins, die auf dem N8R8 tabu sind: **GPIO 35–37** (vom PSRAM belegt), **19/20**
 - Flash Size: **8MB**, PSRAM: **OPI PSRAM**
 - Partition Scheme: **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)**, damit OTA geht
 - USB CDC On Boot: **Disabled**, flashen und Serial Monitor über die Buchse **UART**
-- In `config.h`: `BOARD_SMARTAVAN` auskommentieren, `BOARD_ESP32S3_GENERIC` einkommentieren
+- In `config.h`: `BOARD_ESP32C3_SUPERMINI` auskommentieren, `BOARD_ESP32S3_GENERIC` einkommentieren
 
 ### Inbetriebnahme in drei Stufen
 
@@ -147,7 +147,7 @@ Kleinere Variante desselben Aufbaus: LIN-Modul T151 in der Mitte, ESP32-C3 Super
 
 Alle benutzten Pins liegen auf einer Stiftleiste: in der Draufsicht mit USB oben die **rechte** Leiste mit 5V, G, 3.3, 4, 3, 2, 1, 0. **TX = GPIO4, RX = GPIO3**. Im Lochraster-Plan laufen diese fünf Leitungen auf der Lötseite zu Übergabepunkten unterhalb des Moduls. GPIO20/21 werden absichtlich nicht benutzt, weil der ESP32-C3 beim Start sein Boot-Log auf GPIO21 ausgibt. Das würde bei jedem Neustart auf dem LIN-Bus landen. Die blaue Onboard-LED (GPIO8) zeigt den LIN-Status.
 
-**Firmware:** In `config.h` `BOARD_ESP32C3_SUPERMINI` aktivieren. Das Profil setzt außerdem die WLAN-Sendeleistung auf 8,5 dBm, weil viele Super-Mini-Boards mit voller Leistung keine stabile Verbindung bekommen.
+**Firmware:** `BOARD_ESP32C3_SUPERMINI` ist in `config.h` der Standard. Das Profil setzt außerdem die WLAN-Sendeleistung auf 8,5 dBm, weil viele Super-Mini-Boards mit voller Leistung keine stabile Verbindung bekommen.
 
 **Arduino IDE:**
 - Board: **ESP32C3 Dev Module**

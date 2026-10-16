@@ -24,7 +24,8 @@ In `truma_heater/config.h` ganz oben genau ein Board aktivieren:
 
 | Profil | Board | LIN TX / RX | Arduino-Board |
 |---|---|---|---|
-| `BOARD_SMARTAVAN` (Standard) | smartavan heater controller | 16 / 17 | ESP32 Dev Module |
+| `BOARD_ESP32C3_SUPERMINI` (Standard) | ESP32-C3 Super Mini + LIN-Modul (Lochraster-Aufbau, siehe HARDWARE.md) | 4 / 3 | ESP32C3 Dev Module |
+| `BOARD_SMARTAVAN` | smartavan heater controller | 16 / 17 | ESP32 Dev Module |
 | `BOARD_ESP32_GENERIC` | ESP32 DevKit + LIN-Modul (Verdrahtung wie inetbox2mqtt, LEDs 4/15) | 17 / 16 | ESP32 Dev Module |
 | `BOARD_ESP32S3_GENERIC` | ESP32-S3 + LIN-Modul | 17 / 18 | ESP32S3 Dev Module |
 | `BOARD_ESP32C3_GENERIC` | ESP32-C3 + LIN-Modul | 21 / 20 | ESP32C3 Dev Module |
@@ -51,9 +52,8 @@ Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Bin�
 
 1. Nach dem ersten Start öffnet der ESP den Access Point **`truma-heater-XXXX`** (Passwort `truma1234`). Verbinden, die Seite öffnet sich automatisch (sonst `http://192.168.4.1`).
 2. Unter **Einstellungen** WLAN (optional feste IP), MQTT-Broker und ggf. Web-Login eintragen → Speichern & Neustart.
-3. ESP am LIN-Bus anschließen (smartavan: zwischen CP Plus und Heizung durchschleifen, RJ12 und JST jeweils IN/OUT).
+3. ESP am LIN-Bus anschließen (RJ12-Verteiler zwischen CP Plus und Heizung, siehe [HARDWARE.md](HARDWARE.md)).
 4. **Am CP Plus anmelden** (einmalig): Einstellungen → **RESET** → **PR SET** bestätigen. Das Display zeigt „INIT…“ und startet neu. Unter **INDEX** steht danach ein dritter Eintrag **T23.70.0**.
-   - War das Board schon mit der smartavan/ESPHome-Firmware angemeldet, ist das in der Regel nicht nötig – es meldet sich mit derselben Kennung.
    - War vorher eine echte iNet Box angemeldet: zuerst ohne iNet Box einmal INIT ausführen, dann mit diesem Gerät.
 5. In der Weboberfläche muss **„CP Plus verbunden“** grün sein. Nach ca. 30 s kommt der erste Heizungsstatus; die Uhrzeit wird dann automatisch per NTP ans CP Plus übertragen (und einmal täglich).
 

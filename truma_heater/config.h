@@ -11,11 +11,11 @@
 // ---------------------------------------------------------------------------------------------
 #if !defined(BOARD_SMARTAVAN) && !defined(BOARD_ESP32_GENERIC) && !defined(BOARD_ESP32S3_GENERIC) && \
     !defined(BOARD_ESP32C3_GENERIC) && !defined(BOARD_ESP32C3_SUPERMINI)
-#define BOARD_SMARTAVAN          // smartavan heater controller (Arduino board: "ESP32 Dev Module")
+// #define BOARD_SMARTAVAN       // smartavan heater controller (Arduino board: "ESP32 Dev Module")
 // #define BOARD_ESP32_GENERIC   // ESP32 DevKit + TJA1020/1021 module (Arduino board: "ESP32 Dev Module")
 // #define BOARD_ESP32S3_GENERIC // ESP32-S3 DevKit + LIN module (Arduino board: "ESP32S3 Dev Module")
 // #define BOARD_ESP32C3_GENERIC // ESP32-C3 + LIN module (Arduino board: "ESP32C3 Dev Module")
-// #define BOARD_ESP32C3_SUPERMINI // ESP32-C3 Super Mini + LIN module (Arduino board: "ESP32C3 Dev Module")
+#define BOARD_ESP32C3_SUPERMINI  // ESP32-C3 Super Mini + LIN module (Arduino board: "ESP32C3 Dev Module")
 #endif
 
 #define FW_NAME "truma-lin-mqtt"
@@ -86,7 +86,7 @@
 // ESP32-C3 Super Mini (perfboard build, see docs/lochraster_c3.png). All used pins are on the header next to
 // 5V/GND/3V3. GPIO20/21 are avoided: the ROM bootloader prints its boot log on GPIO21, which would end up on
 // the LIN bus during every boot.
-#define BOARD_NAME "ESP32-C3 Super Mini + LIN module"
+#define BOARD_NAME "Truma LIN-MQTT (ESP32-C3 Super Mini)"
 #ifndef LIN_UART_NUM
 #define LIN_UART_NUM UART_NUM_1
 #endif

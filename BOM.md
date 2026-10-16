@@ -1,6 +1,6 @@
 # Stückliste (BOM) – eigener Aufbau
 
-ESP32-S3 als LIN-Slave mit TJA1021, fahrzeugfeste 12-V-Versorgung, RJ12- und JST-Durchschleifung wie beim smartavan-Board.
+ESP32-S3 als LIN-Slave mit TJA1021, fahrzeugfeste 12-V-Versorgung, RJ12- und JST-Durchschleifung.
 Preise sind grobe Richtwerte (Stand 2026), ohne Versand.
 
 ## Kernbauteile

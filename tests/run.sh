@@ -15,6 +15,10 @@ $CXX -std=gnu++17 -Wall -I stub -I "$SRC" -o "$OUT/replay" replay.cpp "$SRC/inet
 for f in captures/*.log; do
   python3 log2replay.py "$f" "$OUT/$(basename "$f" .log).txt" > /dev/null
 done
+mkdir -p "$OUT/community"
+for f in captures/community/*.log; do
+  python3 log2replay.py "$f" "$OUT/community/$(basename "$f" .log).txt" > /dev/null
+done
 
 echo "== protocol_test"
 "$OUT/protocol_test" | tail -2
@@ -28,6 +32,12 @@ echo "== replay: Combi D6 E session, then fan HIGH / 22 C command (compare with 
 echo "== replay: all captures (parser, checksums)"
 for f in "$OUT"/*.txt; do
   r=$("$OUT/replay" "$f" | grep -oE "frames=[0-9]+ crc_err=[0-9]+")
+  printf "  %-36s %s\n" "$(basename "$f" .txt)" "$r"
+done
+
+echo "== replay: community captures (ESPHome observer logs, iNet Box at NAD 0x03)"
+for f in "$OUT"/community/*.txt; do
+  r=$("$OUT/replay" nad:03 "$f" | grep -oE "frames=[0-9]+ crc_err=[0-9]+")
   printf "  %-36s %s\n" "$(basename "$f" .txt)" "$r"
 done
 

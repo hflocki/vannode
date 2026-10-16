@@ -81,7 +81,7 @@ Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zu
 | `clock` | hh:mm | Uhrzeit des CP Plus |
 | `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
 | `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |
-| `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat |
+| `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat; `hvac_action` = `fan`, wenn die Heizung ohne Raum- und Wasserheizung läuft (Lüften am CP Plus oder Nachlauf) |
 | `decoke`, `decoke_remaining`, `decoke_minutes` | ON/OFF, min, min | Freibrennen |
 | `cpplus_version`, `heater_version`, `release`, `rssi`, `lin_traffic` | | Diagnose |
 
@@ -178,6 +178,8 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 - Kompiliert mit Arduino-ESP32 3.x für ESP32, ESP32-S3 und ESP32-C3.
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
 - Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): 29 Mitschnitte, rund 6.900 Frames, alle fehlerfrei gelesen. Für alle 14 Befehle aus der Truma-App (13–22 °C, Lüfter eco/high, Heizung ein/aus) ist unser Heizungsbefehl im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
+- Zusätzlich 8 Community-Mitschnitte (ESPHome-Observer: Lüften Stufe 1–10, Klima AUTO per App und CP Plus) fehlerfrei gelesen.
+- **Reines Lüften** (am CP Plus, Stufe 1–10) ist über die iNet-Box-Schnittstelle nicht steuerbar und die Stufe nicht lesbar – das CP Plus meldet nur „Heizung läuft“ bei Raum und Wasser aus. Laut Mitschnitt sichtbar als `hvac_action = fan`.
 - Timer setzen im Test simuliert (Frame-Aufbau, Prüfsumme), nicht gegen einen Mitschnitt der Original-iNet-Box.
 - **Am echten LIN-Bus noch nicht getestet.**
 

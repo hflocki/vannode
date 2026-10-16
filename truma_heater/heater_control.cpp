@@ -96,10 +96,16 @@ const char *fan_mode() {
 }
 
 const char *hvac_action() {
-  if (!room_on()) return "off";
   uint8_t st = (uint8_t) g_state.heater.operating_status;
-  if (st >= (uint8_t) OperatingStatus::START_OR_COOL_DOWN) return "heating";
-  return "idle";
+  bool running = g_state.heater_valid && st >= (uint8_t) OperatingStatus::START_OR_COOL_DOWN;
+  if (!room_on()) {
+    // Ventilation selected on the CP Plus (or fan after-run): the status frame only shows the
+    // heater running with room and water off; the vent level itself is not reported to the
+    // iNet Box (verified with community captures, levels 1-10).
+    bool water_off = !g_state.heater_valid || g_state.heater.target_temp_water == TargetTemp::OFF;
+    return (running && water_off) ? "fan" : "off";
+  }
+  return running ? "heating" : "idle";
 }
 
 int error_code() {

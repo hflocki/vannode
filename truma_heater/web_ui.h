@@ -224,7 +224,7 @@ function render(){
   setTxt('room',h.room!==undefined?h.room.toFixed(1):'--');
   setTxt('water',h.water!==undefined?h.water.toFixed(0):'--');
   setTxt('target',h.on?h.target_room+' °C':'aus');
-  setTxt('status',h.valid?(h.action==='heating'?'heizt':(h.on?'Temperatur erreicht':'aus')):'--');
+  setTxt('status',h.valid?(h.action==='heating'?'heizt':h.action==='fan'?'Lüfter läuft':(h.on?'Temperatur erreicht':'aus')):'--');
   seg('seg-room',h.on?'1':'0');
   if(localSetp===null)setTxt('setp',(+h.setpoint).toFixed(0)+' °C');
   seg('seg-fan',h.fan);

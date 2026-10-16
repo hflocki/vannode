@@ -1,6 +1,15 @@
 import sys, re, glob, os
+ESPHOME = re.compile(r'\[(\d+):(\d+):([\d.]+)\]\[V\]\[truma_inetbox\.LinBusListener:\d+\]: PID ([0-9A-F]{2})\s+((?:[0-9A-F]{2}\.)*[0-9A-F]{2}) \((\d+)\)')
 def frames(path):
     for line in open(path, errors='replace'):
+        e = ESPHOME.search(line)
+        if e:
+            # ESPHome truma_inetbox verbose log: data bytes followed by the LIN checksum
+            h, mi, sec, pid, data, n = e.groups()
+            d = [int(x, 16) for x in data.split('.')]
+            if len(d) == 9:
+                yield int(h)*3600 + int(mi)*60 + float(sec), int(pid, 16), d[:8]
+            continue
         m = re.match(r'\s*([\d,\.]+)\s+([0-9A-F]{2})\s+((?:[0-9A-F]{2} ){1,8}[0-9A-F]{2}|[0-9A-F]{2})?\s+(\d{4})\s*(.*)$', line.strip())
         if not m: continue
         t, pid, data, baud, err = m.groups()

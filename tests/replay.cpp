@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
     continue;
   }
   if (arg == "-v") continue;
+  if (arg.rfind("nad:", 0) == 0) { box.node_address_ = std::stoul(arg.substr(4), nullptr, 16); continue; }
   std::ifstream in(arg);
   while (std::getline(in, line)) {
     std::istringstream ss(line);

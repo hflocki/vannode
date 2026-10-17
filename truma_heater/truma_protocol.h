@@ -98,7 +98,7 @@ enum class Device : uint8_t {
 #define STATUS_FRAME_AIRCON_AUTO 0x37
 #define STATUS_FRAME_TIMER 0x3D
 #define STATUS_FRAME_TIMER_RESPONSE (STATUS_FRAME_TIMER - 1)
-#define STATUS_FRAME_AIRCON_MANUAL_INIT 0x3F
+#define STATUS_FRAME_AIRCON_MANUAL_INIT 0x3F  // actually the aircon timer status (community captures)
 #define STATUS_FRAME_AIRCON_AUTO_INIT 0x41
 
 struct StatusFrameHeader {
@@ -210,7 +210,9 @@ struct StatusFrameAirconManualInit { uint8_t raw[22]; } __attribute__((packed));
 struct StatusFrameAirconAuto { uint8_t raw[18]; } __attribute__((packed));
 struct StatusFrameAirconAutoInit { uint8_t raw[20]; } __attribute__((packed));
 
-// Length 17 (0x11). Sent to the CP Plus to set or disable the timer.
+// Length 18 (0x12). Sent to the CP Plus to set or disable the timer.
+// Layout and length verified against an original iNet Box (Truma app, community capture):
+// the 17 bytes known from esphome-truma_inetbox plus one trailing zero byte.
 struct StatusFrameTimerResponse {
   TargetTemp timer_target_temp_room;
   HeatingMode timer_heating_mode;
@@ -224,6 +226,7 @@ struct StatusFrameTimerResponse {
   uint8_t timer_resp_start_hours;
   uint8_t timer_resp_stop_minutes;
   uint8_t timer_resp_stop_hours;
+  uint8_t timer_resp_unknown;  // always 0x00 in the original iNet Box frames
 } __attribute__((packed));
 
 union StatusFrame {
@@ -251,7 +254,7 @@ static_assert(sizeof(StatusFrameHeader) == 17, "header size");
 static_assert(sizeof(StatusFrameHeater) == 20, "heater frame size");
 static_assert(sizeof(StatusFrameHeaterResponse) == 12, "heater response size");
 static_assert(sizeof(StatusFrameTimer) == 24, "timer frame size");
-static_assert(sizeof(StatusFrameTimerResponse) == 17, "timer response size");
+static_assert(sizeof(StatusFrameTimerResponse) == 18, "timer response size");
 static_assert(sizeof(StatusFrameClock) == 10, "clock frame size");
 static_assert(sizeof(StatusFrameDevice) == 12, "device frame size");
 static_assert(sizeof(StatusFrame) == 41, "status frame size");

@@ -53,3 +53,21 @@ for f in "$OUT"/truma_app-set_heating_to_*.txt "$OUT"/truma_app-set_fan_*.txt "$
   n=$("$OUT/replay" "$OUT/cp_plus-combi_6d_e-inet_box.txt" "$c" "$f" | grep -cE "^DIFF pid 3D real: 03 2[3-9]" || true)
   printf "  %-36s %-10s %s\n" "$b" "$c" "$([ "$n" = 0 ] && echo identical || echo "$n payload diffs")"
 done
+
+echo "== timer from the Truma app: our timer update vs. original iNet Box (payload)"
+# Base: the app capture (timer status from the CP Plus, state buffer reads). After each command
+# the first state read carries our timer frame; it must equal the last frame the original sent.
+A="$OUT/community/timer_heater-app-off_set20eco_set21eco_water_eco_off.txt"
+ours=$("$OUT/replay" nad:03 dev:02 "$A" timer:22:00-06:30,20,1,0 "$A" timer:22:00-06:30,21,1,40 "$A" timeroff "$A" | sed -n 's/^UPDATE type 3C len 12: //p')
+real=$(printf '%s\n' \
+  "72 0B 01 00 00 00 00 00 00 00 01 01 01 00 16 1E 06 00" \
+  "7C 0B 01 00 00 00 3A 0C 00 00 01 01 01 00 16 1E 06 00" \
+  "7C 0B 01 00 00 00 3A 0C 00 00 01 01 00 00 16 1E 06 00")
+i=0
+for c in "22:00-06:30, 20 C, eco, water off" "22:00-06:30, 21 C, eco, water eco" "timer off"; do
+  i=$((i+1))
+  o=$(echo "$ours" | sed -n "${i}p"); r=$(echo "$real" | sed -n "${i}p")
+  printf "  %-36s %s\n" "$c" "$([ "$o" = "$r" ] && echo identical || echo "DIFF ours: $o")"
+  [ "$o" = "$r" ] || exit 1
+done
+

@@ -121,7 +121,7 @@ Mit aktivierter Auto-Discovery erscheint ein Gerät **„Truma Heater“** mit T
 
 ## Timer
 
-Der Timer des CP Plus lässt sich per MQTT (`set/timer`), in Home Assistant und in der Weboberfläche setzen: Start, Ende, Raumtemperatur, Lüfterstufe und optional Warmwasser. Das CP Plus führt den Timer selbst aus, der ESP muss dafür nicht laufen. Das Frame-Format (Typ 0x3C, 17 Byte) stammt aus esphome-truma_inetbox (Fabian-Schmidt / havanti) und ist dort im Einsatz; [danielfett/inetbox.py](https://github.com/danielfett/inetbox.py) schickt stattdessen die vollen 24 Byte des Statusframes. Mit einer Diesel-Heizung noch nicht geprüft.
+Der Timer des CP Plus lässt sich per MQTT (`set/timer`), in Home Assistant und in der Weboberfläche setzen: Start, Ende, Raumtemperatur, Lüfterstufe und optional Warmwasser. Das CP Plus führt den Timer selbst aus, der ESP muss dafür nicht laufen. Das Frame (Typ 0x3C, 18 Byte) ist gegen Community-Mitschnitte einer Original-iNet-Box (Timer per Truma-App setzen, ändern, ausschalten) geprüft und byte-gleich; esphome-truma_inetbox schickt 17 Byte, inetbox.py 24 Byte. Mit einer Diesel-Heizung noch nicht am Bus getestet.
 
 ## Freibrennen (Diesel)
 
@@ -178,9 +178,10 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 - Kompiliert mit Arduino-ESP32 3.x für ESP32, ESP32-S3 und ESP32-C3.
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
 - Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): 29 Mitschnitte, rund 6.900 Frames, alle fehlerfrei gelesen. Für alle 14 Befehle aus der Truma-App (13–22 °C, Lüfter eco/high, Heizung ein/aus) ist unser Heizungsbefehl im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
-- Zusätzlich 8 Community-Mitschnitte (ESPHome-Observer: Lüften Stufe 1–10, Klima AUTO per App und CP Plus) fehlerfrei gelesen.
+- Zusätzlich 15 Community-Mitschnitte (ESPHome-Observer: Lüften Stufe 1–10, Klima AUTO, Timer Heizung/Klima per App und CP Plus, Uhrzeit) fehlerfrei gelesen.
 - **Reines Lüften** (am CP Plus, Stufe 1–10) ist über die iNet-Box-Schnittstelle nicht steuerbar und die Stufe nicht lesbar – das CP Plus meldet nur „Heizung läuft“ bei Raum und Wasser aus. Laut Mitschnitt sichtbar als `hvac_action = fan`.
-- Timer setzen im Test simuliert (Frame-Aufbau, Prüfsumme), nicht gegen einen Mitschnitt der Original-iNet-Box.
+- Timer setzen: unser Frame ist für Setzen (mit/ohne Warmwasser) und Ausschalten byte-gleich mit dem der Original-iNet-Box (Community-Mitschnitt, Truma-App).
+- Uhrzeit: Die Original-iNet-Box stellt die Uhr nie selbst; das CP Plus meldet Änderungen sofort. Unser NTP-Uhrzeit-Setzen (Frame 0x14) ist nur gegen ESPHome geprüft.
 - **Am echten LIN-Bus noch nicht getestet.**
 
 ## Lizenz

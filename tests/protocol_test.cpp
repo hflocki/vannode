@@ -88,7 +88,7 @@ int main(){ setvbuf(stdout,nullptr,_IONBF,0);
   send_multi(hex("BA.00.1F.00.1E.00.00.22.FF.FF.FF"), 0x05);
   auto tu = read_multi_response();
   printf("timer frame len %zu type %02X:", tu.size(), tu[14]); for(size_t i=17;i<tu.size();i++)printf(" %02X",tu[i]); printf("\n");
-  assert(tu.size()==17+17 && tu[13]==17 && tu[14]==0x3C);
+  assert(tu.size()==17+18 && tu[13]==18 && tu[14]==0x3C && tu[34]==0);
   pad.assign(tu.begin(), tu.end()); pad.resize(41,0); assert(data_checksum(&pad[10],31,0xFF-pad[16])==pad[16]);
   assert((tu[17]|(tu[18]<<8))==2930 && tu[19]==0xA && tu[27]==1 && tu[29]==1 && tu[30]==0 && tu[31]==22 && tu[32]==30 && tu[33]==6);
   // timer off

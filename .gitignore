@@ -8,3 +8,5 @@ build/
 # Local secrets, never commit
 secrets.h
 *.patch
+truma-patches/
+patches/

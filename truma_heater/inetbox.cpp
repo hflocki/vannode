@@ -252,9 +252,46 @@ void InetBox::finish_frame_() {
   last_lin_frame_ms_ = millis();
   if (last_lin_frame_ms_ == 0) last_lin_frame_ms_ = 1;
 
+  if (sniffer_) sniff_frame_(len);
+
   if (from_master) {
     on_master_message_(pid_, data_, len);
   }
+}
+
+// ---- Sniffer ------------------------------------------------------------------------------------
+
+void InetBox::set_sniffer(bool on) {
+  if (on && sniff_queue_ == nullptr) sniff_queue_ = xQueueCreate(32, sizeof(SniffFrame));
+  sniffer_reset_ = true;  // report every PID once after (re)enabling
+  sniffer_ = on && sniff_queue_ != nullptr;
+  LOGI(TAG, "Sniffer %s", sniffer_ ? "on" : "off");
+}
+
+void InetBox::sniff_frame_(uint8_t len) {
+  if (pid_ == PID_TRUMA_INET_BOX || pid_ == PID_DIAG_MASTER || pid_ == PID_DIAG_SLAVE) return;
+  if (sniffer_reset_) {
+    memset(sniff_last_, 0, sizeof(sniff_last_));
+    sniffer_reset_ = false;
+  }
+  if (len > 8) len = 8;
+  uint8_t *last = sniff_last_[pid_ & 0x3F];
+  if (last[0] == len + 1 && memcmp(&last[1], data_, len) == 0) return;  // unchanged
+  last[0] = len + 1;
+  memcpy(&last[1], data_, len);
+
+  SniffFrame f;
+  f.ms = millis();
+  f.pid = pid_;
+  f.len = len;
+  memset(f.data, 0, sizeof(f.data));
+  memcpy(f.data, data_, len);
+  if (xQueueSend(sniff_queue_, &f, 0) != pdTRUE) sniff_dropped_++;
+}
+
+bool InetBox::sniff_pop(SniffFrame &out) {
+  if (sniff_queue_ == nullptr) return false;
+  return xQueueReceive(sniff_queue_, &out, 0) == pdTRUE;
 }
 
 void InetBox::write_answer_(const uint8_t *data, uint8_t len) {

@@ -60,6 +60,14 @@ enum class CommandType : uint8_t {
   TIMER_OFF,      // disable the timer
 };
 
+// One LIN frame seen by the sniffer (any PID, any sender).
+struct SniffFrame {
+  uint32_t ms;
+  uint8_t pid;
+  uint8_t len;
+  uint8_t data[8];
+};
+
 struct Command {
   CommandType type;
   float value = 0;
@@ -83,6 +91,13 @@ class InetBox {
   // System time is valid (set by NTP), used for CP Plus clock sync.
   static bool system_time_valid();
 
+  // Sniffer: report every LIN frame whose content changed (all PIDs except the iNet Box
+  // diagnostic traffic 0x18/0x3C/0x3D). Used to find out where the heater ventilation level
+  // or other values are transported between CP Plus and heater. Thread safe.
+  void set_sniffer(bool on);
+  bool sniffer() const { return sniffer_; }
+  bool sniff_pop(SniffFrame &out);
+
  private:
   // ---- LIN listener ---------------------------------------------------------------------------
   enum ReadState : uint8_t { READ_BREAK, READ_SYNC, READ_PID, READ_DATA, READ_DONE };
@@ -91,6 +106,12 @@ class InetBox {
   int cs_pin_ = -1;
   int fault_pin_ = -1;
   bool observer_mode_ = false;
+  volatile bool sniffer_ = false;
+  volatile bool sniffer_reset_ = false;
+  QueueHandle_t sniff_queue_ = nullptr;
+  uint8_t sniff_last_[64][9] = {};  // [pid][0] = length + 1 (0 = not seen yet), then data
+  uint32_t sniff_dropped_ = 0;
+  void sniff_frame_(uint8_t len);
   QueueHandle_t uart_queue_ = nullptr;
   QueueHandle_t cmd_queue_ = nullptr;
   TaskHandle_t task_ = nullptr;

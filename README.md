@@ -104,6 +104,7 @@ Verfügbarkeit: `service/truma/status` = `online` / `offline` (Last Will).
 | `sync_clock` | 1 | Uhrzeit sofort ans CP Plus senden |
 | `timer` | `22:00-06:30[,temp[,eco/high[,off/eco/high]]]`, `on`, `off` | Timer setzen. Fehlende Werte: bisherige Timer-Werte, sonst gemerkte Solltemperatur und Lüfterstufe. Warmwasser ohne Angabe bleibt unverändert |
 | `timer_active` | ON/OFF | Timer mit den gespeicherten Zeiten ein- oder ausschalten |
+| `sniffer` | ON / OFF | LIN-Sniffer (Diagnose, siehe unten), nach Neustart aus |
 | `reboot` | 1 | Neustart |
 
 Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam gesendet werden – fehlende Werte werden sinnvoll ergänzt.
@@ -145,6 +146,16 @@ Weboberfläche → **System**:
 - **CRC-Fehler steigen ständig** → Störungen oder falsche Baudrate; Masse prüfen.
 - **Abgelehnte Befehle** → das CP Plus hat eine Änderung abgelehnt (z. B. nicht unterstützter Modus).
 - **smartavan-Board läuft an USB, aber nicht an 12–14 V** → das ist ein Hardware-Problem (Spannungsregler / Versorgung), keine Firmware-Frage. 3,3 V am ESP bei 12-V-Betrieb messen, auch während WLAN sendet.
+
+## LIN-Sniffer
+
+Zum Erforschen des Busses: Der Sniffer schreibt jeden Frame der übrigen PIDs (alles außer dem iNet-Box-Verkehr 0x18/0x3C/0x3D) ins Log, aber nur, wenn sich sein Inhalt ändert. Nach dem Einschalten kommt jeder PID einmal. Die Zeilen sind Warnungen (`SNIFF PID 07: 01 00 FF FF FF FF FF FF`), damit sie ohne Umstellen im Web-Log und im MQTT-Log landen.
+
+Einschalten: Weboberfläche → **System → LIN-Sniffer** oder MQTT `set/sniffer` = `ON`. Nach einem Neustart ist er aus.
+
+Bekannt aus den WomoLIN-Mitschnitten (CP Plus + Combi D6 E): PID 0x03 Soll-Raumtemperatur, 0x04 Soll-Wassertemperatur, 0x07 Lüfter (`01` eco, `02` high), 0x16 Ist-Werte (ändert sich ständig).
+
+**Lüftungsstufe suchen:** Sniffer an, am CP Plus Lüften Stufe 1 → 5 → 10 → aus schalten, jeweils ~20 s warten und die Uhrzeit notieren. Danach das Log speichern (System → Log → Speichern).
 
 ## Logs ohne USB
 

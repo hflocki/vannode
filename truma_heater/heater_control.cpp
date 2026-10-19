@@ -377,9 +377,27 @@ void set_decoke_minutes(uint16_t minutes) {
 
 // ---- loop ---------------------------------------------------------------------------------------
 
+void set_sniffer(bool on) {
+  if (g_box != nullptr) g_box->set_sniffer(on);
+}
+
+bool sniffer() { return g_box != nullptr && g_box->sniffer(); }
+
+static void sniffer_loop() {
+  SniffFrame f;
+  for (int i = 0; i < 8 && g_box->sniff_pop(f); i++) {
+    char hex[3 * 8 + 1];
+    char *p = hex;
+    for (uint8_t j = 0; j < f.len; j++) p += snprintf(p, 4, j ? " %02X" : "%02X", f.data[j]);
+    *p = 0;
+    LOGW("sniff", "SNIFF PID %02X: %s", f.pid, hex);
+  }
+}
+
 void loop() {
   if (g_box == nullptr) return;
   g_box->get_state(g_state);
+  sniffer_loop();
   if (!g_state.heater_valid) return;
 
   // Log error changes once (also reaches the MQTT log and the web UI log).

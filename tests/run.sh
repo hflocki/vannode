@@ -71,3 +71,8 @@ for c in "22:00-06:30, 20 C, eco, water off" "22:00-06:30, 21 C, eco, water eco"
   [ "$o" = "$r" ] || exit 1
 done
 
+
+echo "== sniffer: changed frames of the CP Plus <-> heater PIDs (fan eco -> high on the CP Plus)"
+s=$("$OUT/replay" sniff "$OUT/cp_plus-set_fan_high.txt" | grep "^SNIFF PID 07")
+echo "$s" | sed 's/^/  /'
+[ "$(echo "$s" | wc -l)" = 2 ] || exit 1

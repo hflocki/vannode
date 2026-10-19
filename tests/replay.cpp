@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
     continue;
   }
   if (arg.rfind("dev:", 0) == 0) { box.heater_device_ = (Device) std::stoul(arg.substr(4), nullptr, 16); continue; }
+  if (arg == "sniff") { box.set_sniffer(true); continue; }
   if (arg == "timeroff") { Command c; c.type = CommandType::TIMER_OFF; box.process_command_(c); printf(">> command timer off queued\n"); continue; }
   if (arg == "-v") continue;
   if (arg.rfind("nad:", 0) == 0) { box.node_address_ = std::stoul(arg.substr(4), nullptr, 16); box.init_received_us_ = 1; continue; }  // mid-session capture: already registered
@@ -60,10 +61,11 @@ int main(int argc, char **argv) {
     uint8_t pid = std::stoul(pidh, nullptr, 16);
     std::vector<uint8_t> d; std::string t;
     while (ss >> t) if (t != "-") d.push_back(std::stoul(t, nullptr, 16));
-    if (kind == "M") { mframe(pid, d); continue; }
+    if (kind == "M") { mframe(pid, d); SniffFrame f; while (box.sniff_pop(f)) { printf("SNIFF PID %02X:", f.pid); for (int i = 0; i < f.len; i++) printf(" %02X", f.data[i]); printf("\n"); } continue; }
     auto a = hdr(pid);
     std::vector<uint8_t> ours(a.begin(), a.end() - (a.empty() ? 0 : 1));
     slots++;
+    { SniffFrame f; while (box.sniff_pop(f)) { printf("SNIFF PID %02X:", f.pid); for (int i = 0; i < f.len; i++) printf(" %02X", f.data[i]); printf("\n"); } }
     if (pid == 0x3D && ours.size() == 8) {
       static std::vector<uint8_t> tb; static size_t tl = 0;
       if ((ours[1] & 0xF0) == 0x10) { tl = ((ours[1] & 0x0F) << 8) | ours[2]; tb.assign(ours.begin() + 3, ours.end()); }

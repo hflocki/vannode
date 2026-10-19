@@ -64,6 +64,7 @@ static void render_state() {
   lin["fault"] = s.lin_fault;
   lin["frames"] = s.frames_ok;
   lin["crc_errors"] = s.crc_errors;
+  lin["sniffer"] = heater::sniffer();
   lin["ack_errors"] = s.ack_errors;
   lin["pending"] = s.update_pending;
   lin["cpplus_version"] = s.cpplus_version;
@@ -137,6 +138,7 @@ static void handle_command(const WebCommand &c) {
   else if (a == "decoke_minutes") heater::set_decoke_minutes(v.toInt());
   else if (a == "sync_clock") heater::sync_clock();
   else if (a == "timer") heater::set_timer(v);
+  else if (a == "sniffer") heater::set_sniffer(v == "1");
   else if (a == "log_level") {
     uint8_t lvl = constrain(v.toInt(), 0, 3);
     g_settings.log_level = lvl;

@@ -44,4 +44,9 @@ float room_setpoint();      // remembered or current target
 const char *fan_mode();     // current fan mode, or the remembered one while off
 int error_code();
 
+// LIN sniffer (diagnostics): logs every changed frame of all other PIDs as warning "SNIFF ..."
+// so it shows up in the web log and the MQTT log with default settings. Not persisted.
+void set_sniffer(bool on);
+bool sniffer();
+
 }  // namespace heater

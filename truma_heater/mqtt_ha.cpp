@@ -417,6 +417,8 @@ static void on_message(char *t, byte *payload, unsigned int length) {
     heater::set_timer(value);
   } else if (key == "timer_active") {
     heater::set_timer_active(value.equalsIgnoreCase("ON") || value == "1");
+  } else if (key == "sniffer") {
+    heater::set_sniffer(value.equalsIgnoreCase("ON") || value == "1");
   } else if (key == "reboot") {
     g_reboot_at = millis() + 1000;
   } else {

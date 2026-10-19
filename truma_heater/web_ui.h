@@ -126,6 +126,7 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:340px;o
       <div class="kv"><span>Frames ok / CRC-Fehler</span><b id="s-frames">--</b></div>
       <div class="kv"><span>Abgelehnte Befehle</span><b id="s-ack">--</b></div>
     </div>
+    <div class="row"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sniff" style="width:auto">LIN-Sniffer (alle geänderten Frames ins Log)</label></div>
     <div class="hint">Anmeldung am CP Plus: Einstellungen → RESET → PR SET. Danach erscheint im INDEX-Menü ein dritter Eintrag T23.70.0. Eine echte iNet Box darf nicht gleichzeitig am Bus hängen.</div>
   </div>
   <div class="card">
@@ -242,7 +243,7 @@ function render(){
     $('t-fan').value=(tc.fan==='off'?h.fan:tc.fan)||'eco';}setTxt('clock',s.cpplus_clock??'--');
   setTxt('s-traffic',l.traffic?'ja':'nein');setTxt('s-cp',l.cpplus?'ja':'nein');
   setTxt('s-cpv',l.cpplus_version||'--');setTxt('s-hv',l.heater_version||'--');
-  setTxt('s-frames',l.frames+' / '+l.crc_errors);setTxt('s-ack',l.ack_errors);
+  setTxt('s-frames',l.frames+' / '+l.crc_errors);if(document.activeElement!==$('sniff'))$('sniff').checked=!!l.sniffer;setTxt('s-ack',l.ack_errors);
   setTxt('s-fw',s.system.fw);setTxt('s-ip',s.system.ip+(s.system.ap?' (Setup-AP)':''));
   setTxt('s-rssi',s.system.wifi?s.system.rssi+' dBm':'getrennt');setTxt('s-up',fmtUp(s.system.uptime));
   setTxt('s-heap',Math.round(s.system.heap/1024)+' kB');
@@ -278,6 +279,7 @@ $('loglive').onchange=logLive;
 $('logclear').onclick=()=>{logLines=[];$('log').textContent=''};
 $('logsave').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([logLines.join('\n')],{type:'text/plain'}));a.download='truma-log.txt';a.click()};
 $('loglvl').onchange=e=>cmd('log_level',e.target.value);
+$('sniff').onchange=e=>cmd('sniffer',e.target.checked?'1':'0');
 $('upload').onclick=async()=>{const f=$('fw').files[0];if(!f)return;const fd=new FormData();fd.append('firmware',f,f.name);setTxt('up-status','Lade hoch …');
   try{const r=await fetch('/update',{method:'POST',body:fd});setTxt('up-status',r.ok?'Fertig, Neustart …':'Fehlgeschlagen')}catch(e){setTxt('up-status','Fehlgeschlagen')}};
 $('cfg').onsubmit=async e=>{e.preventDefault();if(!confirm('Speichern und neu starten?'))return;

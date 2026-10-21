@@ -76,3 +76,10 @@ echo "== sniffer: changed frames of the CP Plus <-> heater PIDs (fan eco -> high
 s=$("$OUT/replay" sniff "$OUT/cp_plus-set_fan_high.txt" | grep "^SNIFF PID 07")
 echo "$s" | sed 's/^/  /'
 [ "$(echo "$s" | wc -l)" = 2 ] || exit 1
+
+echo "== ventilation level from PID 0x20 (synthetic frames, byte 5 high nibble as in inetbox2mqtt)"
+printf 'M 20 00 00 00 00 00 30 00 00\n' > "$OUT/vent.txt"
+r=$("$OUT/replay" "$OUT/vent.txt" | grep "^vent:")
+echo "  $r"
+[ "$r" = "vent: raw 0x3 (3)" ] || exit 1
+

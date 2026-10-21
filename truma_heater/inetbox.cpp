@@ -254,6 +254,19 @@ void InetBox::finish_frame_() {
 
   if (sniffer_) sniff_frame_(len);
 
+  // CP Plus -> heater command frame (only on some heaters): ventilation level in byte 5, high nibble.
+  // The sender cannot be told apart by checksum here (protected id 0x20 == plain id), so no from_master check.
+  if (pid_ == 0x20 && len >= 6) {
+    const uint8_t v = data_[5] >> 4;
+    if (v != vent_raw_) {
+      if (vent_raw_ == 0xFF) LOGI(TAG, "Heater frame 0x20 seen, ventilation level available");
+      vent_raw_ = v;
+      state_dirty_ = true;
+    }
+    last_vent_ms_ = millis();
+    if (last_vent_ms_ == 0) last_vent_ms_ = 1;
+  }
+
   if (from_master) {
     on_master_message_(pid_, data_, len);
   }
@@ -994,11 +1007,13 @@ void InetBox::publish_state_(bool changed) {
   s.ack_errors = ack_errors_;
   s.frames_ok = frames_ok_;
   s.crc_errors = crc_errors_;
+  s.vent_valid = last_vent_ms_ != 0 && (now - last_vent_ms_) < 10000;
+  s.vent_raw = s.vent_valid ? vent_raw_ : 0;
 
   portENTER_CRITICAL(&state_mux_);
   bool flags_changed = s.cpplus_connected != state_.cpplus_connected || s.lin_traffic != state_.lin_traffic ||
                        s.lin_fault != state_.lin_fault || s.init_received != state_.init_received ||
-                       s.update_pending != state_.update_pending;
+                       s.update_pending != state_.update_pending || s.vent_valid != state_.vent_valid;
   s.change_counter = state_.change_counter + ((changed || state_dirty_ || flags_changed) ? 1 : 0);
   state_ = s;
   portEXIT_CRITICAL(&state_mux_);

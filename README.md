@@ -79,6 +79,8 @@ Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zu
 | `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe Anleitung der Heizung |
 | `heater_error` | ON / OFF | Fehler oder Warnung aktiv (jeder Code ≠ 0) |
 | `clock` | hh:mm | Uhrzeit des CP Plus |
+| `vent_level` | 0–10 | Lüftungsstufe (0 = kein Lüften). Nur bei Heizungen, die den LIN-Frame 0x20 nutzen, sonst nicht gesendet |
+| `vent_mode` | off / 1–10 / eco / high | Rohwert dazu (eco/high = Lüfter beim Heizen) |
 | `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
 | `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |
 | `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat; `hvac_action` = `fan`, wenn die Heizung ohne Raum- und Wasserheizung läuft (Lüften am CP Plus oder Nachlauf) |
@@ -190,7 +192,7 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 - LIN/iNet-Box-Protokoll am PC gegen echte Beispiel-Frames simuliert (Anmeldung, INIT, Status, Befehl).
 - Gegen **echte Mitschnitte** eines CP Plus mit Combi D6 E und Original-iNet-Box geprüft (WomoLIN-Captures): 29 Mitschnitte, rund 6.900 Frames, alle fehlerfrei gelesen. Für alle 14 Befehle aus der Truma-App (13–22 °C, Lüfter eco/high, Heizung ein/aus) ist unser Heizungsbefehl im Inhalt byte-gleich mit dem der Original-iNet-Box. Siehe [tests/](tests/README.md).
 - Zusätzlich 15 Community-Mitschnitte (ESPHome-Observer: Lüften Stufe 1–10, Klima AUTO, Timer Heizung/Klima per App und CP Plus, Uhrzeit) fehlerfrei gelesen.
-- **Reines Lüften** (am CP Plus, Stufe 1–10) ist über die iNet-Box-Schnittstelle nicht steuerbar und die Stufe nicht lesbar – das CP Plus meldet nur „Heizung läuft“ bei Raum und Wasser aus. Laut Mitschnitt sichtbar als `hvac_action = fan`.
+- **Reines Lüften** (am CP Plus, Stufe 1–10) ist über die iNet-Box-Schnittstelle nicht steuerbar. Die Stufe steht nicht in den iNet-Box-Frames (dort nur „Heizung läuft“ → `hvac_action = fan`), aber bei manchen Heizungen im Frame CP Plus → Heizung (PID 0x20). Daraus liest die Firmware `vent_level` mit – in der Community an einer Combi (Gas) mit dem ESPHome-Sensor VENT_MODE für Stufe 1–10 bestätigt. Die Combi D6 E aus den WomoLIN-Mitschnitten nutzt PID 0x20 nicht; ob die eigene Heizung ihn schickt, zeigt der Sniffer.
 - Timer setzen: unser Frame ist für Setzen (mit/ohne Warmwasser) und Ausschalten byte-gleich mit dem der Original-iNet-Box (Community-Mitschnitt, Truma-App).
 - Uhrzeit: Die Original-iNet-Box stellt die Uhr nie selbst; das CP Plus meldet Änderungen sofort. Unser NTP-Uhrzeit-Setzen (Frame 0x14) ist nur gegen ESPHome geprüft.
 - **Am echten LIN-Bus noch nicht getestet.**

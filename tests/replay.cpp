@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
   printf("\nslots=%d answered_by_both=%d identical=%d ours_only=%d real_only=%d\n", slots, both, match, ours_only, real_only);
   printf("NAD=%02X init=%d heater_valid=%d device=%d timer=%d clock=%d frames=%u crc_err=%u ack_err=%u\n", box.node_address_,
          box.init_received_us_ != 0, box.heater_valid_, (int) box.heater_device_, box.timer_valid_, box.clock_valid_, box.frames_ok_, box.crc_errors_, box.ack_errors_);
+  if (box.vent_raw_ != 0xFF) printf("vent: raw 0x%X (%s)\n", box.vent_raw_, vent_mode_to_str(box.vent_raw_));
   if (box.heater_valid_) {
     auto &h = box.heater_;
     printf("heater: room target %.1f, mode 0x%X, cur room %.1f, cur water %.1f, status %u, mix %u\n", temp_code_to_decimal(h.target_temp_room, 0),

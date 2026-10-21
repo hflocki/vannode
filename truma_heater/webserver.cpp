@@ -87,6 +87,7 @@ static void render_state() {
     h["on"] = heater::room_on();
     h["action"] = heater::hvac_action();
   }
+  if (s.vent_valid) h["vent"] = vent_level_from_raw(s.vent_raw);
   h["setpoint"] = heater::room_setpoint();
   h["fan"] = heater::fan_mode();
   h["boost"] = (bool) HEATER_SUPPORTS_BOOST;

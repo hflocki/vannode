@@ -45,6 +45,10 @@ struct TrumaState {
   uint32_t frames_ok = 0;
   uint32_t crc_errors = 0;
 
+  // Fan / ventilation nibble from PID 0x20 (CP Plus -> heater). Only valid if the heater uses this frame.
+  bool vent_valid = false;
+  uint8_t vent_raw = 0;
+
   // Incremented whenever heater/timer/clock/connection status changed. Cheap change detection for publishers.
   uint32_t change_counter = 0;
 };
@@ -106,6 +110,8 @@ class InetBox {
   int cs_pin_ = -1;
   int fault_pin_ = -1;
   bool observer_mode_ = false;
+  uint8_t vent_raw_ = 0xFF;
+  uint32_t last_vent_ms_ = 0;
   volatile bool sniffer_ = false;
   volatile bool sniffer_reset_ = false;
   QueueHandle_t sniff_queue_ = nullptr;

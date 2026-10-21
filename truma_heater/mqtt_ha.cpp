@@ -100,6 +100,11 @@ static void publish_state() {
     pub("hvac_action", heater::hvac_action());
   }
 
+  if (s.vent_valid) {
+    pub("vent_mode", vent_mode_to_str(s.vent_raw));
+    pub("vent_level", String(vent_level_from_raw(s.vent_raw)));
+  }
+
   if (s.timer_valid) {
     const auto &t = s.timer;
     bool active = t.timer_active == TimerActive::ON;
@@ -307,6 +312,8 @@ static void publish_discovery() {
   disc_sensor("operating_status", "Operating status", "operating_status", nullptr, nullptr, true, AVAIL_HEATER,
               "mdi:state-machine");
   disc_sensor("error_code", "Error code", "error_code", nullptr, nullptr, true, AVAIL_HEATER, "mdi:alert-decagram");
+  // Only filled on heaters that use LIN frame 0x20 (stays unknown otherwise).
+  disc_sensor("vent_level", "Ventilation level", "vent_level", nullptr, nullptr, false, AVAIL_HEATER, "mdi:fan");
   // The timer used to be a read-only sensor: remove that old entity.
   pub_raw(g_settings.ha_prefix + "/sensor/" + g_node_id + "/timer/config", "", true);
   {  // Timer: text entity, "HH:MM-HH:MM[,temp[,fan[,water]]]" or "off"

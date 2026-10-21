@@ -341,6 +341,19 @@ inline const char *energy_mix_to_str(EnergyMix e) {
   }
 }
 
+// Fan / ventilation nibble of the CP Plus -> heater frame PID 0x20 (byte 5, high nibble), as used by
+// inetbox2mqtt and esphome-truma_inetbox (VENT_MODE). Only some heaters use PID 0x20 (seen on Combi 4 and
+// a Combi gas heater; the Combi D6 E in the WomoLIN captures uses PIDs 0x03-0x07 instead).
+// 0 = off, 1..10 = ventilation level, 0x0B = eco, 0x0D = high (heating).
+inline int vent_level_from_raw(uint8_t raw) { return (raw >= 1 && raw <= 10) ? raw : 0; }
+inline const char *vent_mode_to_str(uint8_t raw) {
+  static const char *levels[] = {"off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+  if (raw <= 10) return levels[raw];
+  if (raw == 0x0B) return "eco";
+  if (raw == 0x0D) return "high";
+  return "unknown";
+}
+
 inline const char *operating_status_to_str(OperatingStatus s) {
   switch (s) {
     case OperatingStatus::OFF: return "off";

@@ -22,7 +22,7 @@ const S={system:{fw:"0.9.0-mock",ip:"192.168.1.50",rssi:-61,ap:false,wifi:true,m
  timer:"off",timer_cfg:{active:false,start:"22:00",stop:"06:30",temp:20,fan:"eco",water:"off"},cpplus_clock:"12:00"};
 const CFG={ssid:"MeinWLAN",hostname:"truma-heater",static_ip:"",gateway:"",subnet:"",dns:"",mqtt_host:"192.168.1.10",mqtt_port:1883,mqtt_user:"",mqtt_base:"camper/truma",ha_discovery:true,ha_prefix:"homeassistant",ntp_server:"pool.ntp.org",tz:"CET-1CEST,M3.5.0,M10.5.0/3",web_user:"",log_level:2,mqtt_log_level:1};
 let logs=[],logN=0;function log(l,m){const d=new Date();logs.push(d.toTimeString().slice(0,8)+' ['+l+'] '+m)}
-log('I','truma-lin-mqtt 0.9.0 on Truma LIN-MQTT (ESP32-C3 Super Mini)');log('I','CP Plus assigned node address 0x03');log('I','Heater status received');
+log('I','camper-heater 0.9.0 on Camper Heater (ESP32-C3 Super Mini)');log('I','CP Plus assigned node address 0x03');log('I','Heater status received');
 function tick(){const h=S.heater,up=(Date.now()-t0)/1000;S.system.uptime=Math.floor(86400+up);S.lin.frames=Math.floor(4200+up*14);
  const d=new Date();S.cpplus_clock=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
  if(h.on&&h.room<h.target_room){h.room=Math.min(h.target_room,h.room+0.05);h.status=7;h.action='heating'}else if(h.on){h.action='idle';h.status=5}

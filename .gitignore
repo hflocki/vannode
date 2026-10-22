@@ -10,3 +10,4 @@ secrets.h
 *.patch
 truma-patches/
 patches/
+truma_heater/config_local.h

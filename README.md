@@ -149,6 +149,8 @@ In `config.h`:
 - `HEATER_HAS_ELECTRIC` – E-Heizstab (Combi E), blendet die Energiequellen-Auswahl in HA ein
 - `LIN_OBSERVER_MODE` – nur mithören, nie antworten (Fehlersuche)
 
+**Eigene Werte ohne `config.h` zu ändern:** `truma_heater/config_local.h.example` nach `truma_heater/config_local.h` kopieren und dort z. B. ein eigenes AP-Passwort (`DEFAULT_AP_PASSWORD`) oder die Board-Auswahl eintragen. Die Datei wird automatisch eingebunden, von Git ignoriert und von Patches nie angefasst. WLAN- und MQTT-Zugangsdaten gehören weiterhin in die Weboberfläche.
+
 ## Fehlersuche
 
 Weboberfläche → **System**:

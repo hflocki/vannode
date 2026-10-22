@@ -6,6 +6,12 @@
 
 #include <Arduino.h>
 
+// Optional personal overrides, not in git (see config_local.h.example). Everything defined there wins over
+// the defaults below, e.g. your own AP password or the board selection.
+#if __has_include("config_local.h")
+#include "config_local.h"
+#endif
+
 // ---------------------------------------------------------------------------------------------
 // >>> BOARD SELECTION <<<
 // ---------------------------------------------------------------------------------------------
@@ -163,14 +169,28 @@
 // ---------------------------------------------------------------------------------------------
 // Defaults for runtime settings
 // ---------------------------------------------------------------------------------------------
+#ifndef DEFAULT_HOSTNAME
 #define DEFAULT_HOSTNAME "truma-heater"
+#endif
+#ifndef DEFAULT_AP_PASSWORD
 #define DEFAULT_AP_PASSWORD "truma1234"  // min. 8 characters
+#endif
+#ifndef DEFAULT_MQTT_PORT
 #define DEFAULT_MQTT_PORT 1883
+#endif
 // "service/truma" keeps the topic layout compatible with mc0110/inetbox2mqtt
+#ifndef DEFAULT_MQTT_BASE
 #define DEFAULT_MQTT_BASE "service/truma"
+#endif
+#ifndef DEFAULT_HA_PREFIX
 #define DEFAULT_HA_PREFIX "homeassistant"
+#endif
+#ifndef DEFAULT_NTP_SERVER
 #define DEFAULT_NTP_SERVER "pool.ntp.org"
+#endif
+#ifndef DEFAULT_TZ
 #define DEFAULT_TZ "CET-1CEST,M3.5.0,M10.5.0/3"  // Europe/Berlin
+#endif
 
 // WiFi stability (power save off, 17.5 dBm in 0.25 dBm units)
 #ifndef WIFI_TX_POWER_QDBM

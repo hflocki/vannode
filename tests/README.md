@@ -30,6 +30,7 @@ Host-side tests for the LIN / iNet Box protocol code. They run on the Mac or Lin
 | `timer_aircon-…` | Aircon timer 20/21 °C cool via app and CP Plus |
 | `clock-cpplus-plus1h_minus1h` | Clock set one hour forward and back on the CP Plus |
 | `aircon_acc-…` | CP Plus climate automatic (ACC, enabled in the service menu): 22 °C, water off/eco, set via CP Plus and app |
+| `shore_power-off_on_off` | Shore power plugged in and removed again (CP Plus with Combi and Aventa aircon) |
 | `heater_vent_sensor-off_1-10_off` | Heater ventilation 1 … 10 on the CP Plus with the ESPHome `VENT_MODE` sensor (values in the log) |
 
 ## Findings from the captures
@@ -41,6 +42,8 @@ Host-side tests for the LIN / iNet Box protocol code. They run on the Mac or Lin
 - Aircon timer: write frame 0x3E (length 0x12: aircon mode, 00, fan, 01, target temp, …, water target, active, start/stop), status frame 0x3F (length 0x16). esphome-truma_inetbox calls 0x3F "aircon manual init"; it is the aircon timer status. Ignored by the firmware.
 - Ventilation level: the ESPHome `VENT_MODE` sensor (PID 0x20, CP Plus → heater) reported exactly the levels 1–10 and 0 set on the CP Plus. The raw 0x20 frames are not in the logs: esphome-truma_inetbox logs PIDs 0x20–0x22 only at VERY_VERBOSE. Byte position (byte 5, high nibble) taken from inetbox2mqtt. The WomoLIN Combi D6 E bus has no PID 0x20 at all (heater commands on 0x03–0x07).
 - ACC (climate automatic of the CP Plus): status frame 0x37 (length 0x12) appears once ACC is enabled; it carries room target and water target. Not used by the firmware.
+- Shore power: no frame carries a "shore power" flag. The Aventa aircon runs on 230 V only, so it appears and disappears on the bus: with shore power it answers its LIN slot (PID 0x17), the CP Plus re-sends the device list (frames 0x0B) with the aircon (device 3/3) `state = 1` (online); after unplugging, the aircon stops answering and the next device list shows it with `state = 0`. The heater status is unchanged. The app most likely derives "shore power" from this aircon state, so without a 230 V device on the bus there is nothing to read.
+- The CP Plus re-sends the device list during a running session when a device comes or goes; the firmware logs each device with its online state.
 - Clock: the original iNet Box never sets the clock (no frame 0x14 in any capture). Changing the time on the CP Plus is reported immediately with a clock status frame (0x15).
 - Community captures: all 19 logs (about 16,000 frames incl. aircon, ACC and timer frames) decode without checksum errors.
 - **Heater ventilation (CP Plus „Lüften“, levels 1–10) is not visible in the heater status frame (0x33).** Room target, heating mode and water target stay 0 for every level; only the operating status changes (4 start → 5 running, back to 4 when switched off). The vent level is therefore neither readable nor settable via the iNet Box interface (esphome-truma_inetbox and inetbox.py have no such mode either; inetbox2mqtt only reads it from the CP Plus ↔ heater frame 0x20, which the iNet Box slot does not see). The firmware reports `hvac_action = fan` when the heater runs with room and water off (ventilation or fan after-run).

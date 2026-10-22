@@ -666,9 +666,10 @@ const uint8_t *InetBox::on_multiframe_(const uint8_t *msg, uint8_t len, uint8_t 
     }
   } else if (type == STATUS_FRAME_DEVICES && mlen == sizeof(StatusFrameDevice)) {
     const auto &dev = sf->device;
-    LOGI(TAG, "Device %u/%u: %u.%02u.%02u hw %04X.%02X", dev.device_id + 1, dev.device_count,
+    // state: 1 = online, 0 = offline (e.g. a 230 V aircon without shore power, see tests/README.md)
+    LOGI(TAG, "Device %u/%u: %u.%02u.%02u hw %04X.%02X %s", dev.device_id + 1, dev.device_count,
          dev.software_revision[0], dev.software_revision[1], dev.software_revision[2], dev.hardware_revision_major,
-         dev.hardware_revision_minor);
+         dev.hardware_revision_minor, dev.state ? "online" : "offline");
     if (dev.device_id == 0) {
       snprintf(cpplus_version_, sizeof(cpplus_version_), "C%u.%02u.%02u", dev.software_revision[0],
                dev.software_revision[1], dev.software_revision[2]);

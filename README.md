@@ -57,6 +57,16 @@ Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Bin�
    - War vorher eine echte iNet Box angemeldet: zuerst ohne iNet Box einmal INIT ausführen, dann mit diesem Gerät.
 5. In der Weboberfläche muss **„CP Plus verbunden“** grün sein. Nach ca. 30 s kommt der erste Heizungsstatus; die Uhrzeit wird dann automatisch per NTP ans CP Plus übertragen (und einmal täglich).
 
+## Weboberfläche
+
+<p>
+<img src="docs/mockup/heizung.png" width="260" alt="Reiter Heizung">
+<img src="docs/mockup/system.png" width="260" alt="Reiter System">
+<img src="docs/mockup/einstellungen.png" width="260" alt="Reiter Einstellungen">
+</p>
+
+Zum Ausprobieren ohne Gerät: [`docs/mockup/truma-heater-mockup.html`](docs/mockup/truma-heater-mockup.html) herunterladen und im Browser öffnen. Das ist die echte Oberfläche aus der Firmware mit simulierten Daten; Knöpfe, Timer, Freibrennen und Sniffer reagieren. Nach Änderungen an `web_ui.h` neu erzeugen mit `python3 docs/gen_mockup.py` (nur Standardbibliothek).
+
 ## MQTT
 
 Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zustände werden **retained** veröffentlicht, Änderungen innerhalb einer Sekunde, alles einmal pro Minute.
@@ -182,6 +192,11 @@ truma_heater/
 ├── wifi_manager.*       WLAN, feste IP, Setup-AP
 ├── settings.*           Einstellungen im NVS
 └── logger.*             Log über Serial + Puffer für die Weboberfläche
+docs/
+├── schaltplan*, lochraster*, wiring_*   Schaltpläne und Lochraster-Layouts (+ Generator-Skripte)
+├── mockup/              klickbares Mockup der Weboberfläche + Screenshots
+└── gen_mockup.py        erzeugt das Mockup aus web_ui.h
+tests/                   Host-Tests und Replay der LIN-Mitschnitte (siehe tests/README.md)
 ```
 
 Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten an das CP Plus rechtzeitig (wenige Millisekunden) rausgehen – unabhängig von WLAN, MQTT und Weboberfläche.

@@ -1,4 +1,4 @@
-// MQTT client, inetbox2mqtt compatible topics and Home Assistant auto discovery.
+// MQTT client, topics in the inetbox2mqtt layout and Home Assistant auto discovery.
 //
 // State:   <base>/control_status/<key>   (retained)
 // Command: <base>/set/<key>

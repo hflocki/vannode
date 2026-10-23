@@ -249,7 +249,7 @@ input[type=file]{font-size:.8rem;color:var(--mute);width:100%}
       <button class="btn" id="logclear">Leeren</button><button class="btn" id="logsave">Speichern</button>
     </div>
     <pre id="log"></pre>
-    <div class="hint">Läuft mit, solange dieser Reiter offen ist. Ohne USB nutzbar – auch per MQTT unter <code id="logtopic">service/truma/log</code>.</div>
+    <div class="hint">Läuft mit, solange dieser Reiter offen ist. Ohne USB nutzbar – auch per MQTT unter <code id="logtopic">camper/heater/log</code>.</div>
   </div>
 </div>
 <div class="toast" id="toast"></div>

@@ -25,7 +25,7 @@
 #endif
 
 #define FW_NAME "camper-heater"
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.1.0"
 
 // ---------------------------------------------------------------------------------------------
 // Board profiles
@@ -178,9 +178,10 @@
 #ifndef DEFAULT_MQTT_PORT
 #define DEFAULT_MQTT_PORT 1883
 #endif
-// "service/truma" keeps the topic layout compatible with mc0110/inetbox2mqtt
+// Same scheme as the other camper devices (camper/tanklevel, camper/maxxfan ...).
+// Set "service/truma" in the web UI if a tool expects the mc0110/inetbox2mqtt topics.
 #ifndef DEFAULT_MQTT_BASE
-#define DEFAULT_MQTT_BASE "service/truma"
+#define DEFAULT_MQTT_BASE "camper/heater"
 #endif
 #ifndef DEFAULT_HA_PREFIX
 #define DEFAULT_HA_PREFIX "homeassistant"

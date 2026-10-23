@@ -7,7 +7,7 @@ Truma-Heizung (Combi / Combi D, Vario Heat) per **MQTT** steuern – mit einem E
 
 - Der ESP ist **LIN-Slave** und meldet sich am CP Plus als **iNet Box** (T23.70.0) an.
 - Das **CP Plus bleibt LIN-Master** und voll bedienbar. Änderungen am CP Plus erscheinen in MQTT, MQTT-Befehle erscheinen am CP Plus.
-- Topics kompatibel zu [mc0110/inetbox2mqtt](https://github.com/mc0110/inetbox2mqtt) (`service/truma/...`), dazu Home-Assistant-Auto-Discovery.
+- Topics unter `camper/heater/...` wie bei den anderen Camper-Geräten, dazu Home-Assistant-Auto-Discovery (Klima-Entität zum Bedienen). Die Unterstruktur `control_status/...` und `set/...` folgt [mc0110/inetbox2mqtt](https://github.com/mc0110/inetbox2mqtt); wer dessen Topics braucht, stellt das Basis-Topic auf `service/truma`.
 - Web-Oberfläche für Bedienung, Einstellungen, Log und Firmware-Update.
 
 Protokoll-Logik portiert aus [skrebber/esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) (Fork von Fabian-Schmidt), basierend auf der Vorarbeit von [danielfett/inetbox.py](https://github.com/danielfett/inetbox.py) und [WomoLIN](https://github.com/muccc/WomoLIN).
@@ -77,9 +77,9 @@ Zum Ausprobieren ohne Gerät: [`docs/mockup/truma-heater-mockup.html`](docs/mock
 
 ## MQTT
 
-Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zustände werden **retained** veröffentlicht, Änderungen innerhalb einer Sekunde, alles einmal pro Minute.
+Basis-Topic standardmäßig `camper/heater` (in den Einstellungen änderbar; bis Version 1.0 war es `service/truma`, bestehende Geräte behalten ihre Einstellung). Zustände werden **retained** veröffentlicht, Änderungen innerhalb einer Sekunde, alles einmal pro Minute.
 
-### Status `service/truma/control_status/<key>`
+### Status `camper/heater/control_status/<key>`
 
 | Key | Werte | Bedeutung |
 |---|---|---|
@@ -105,9 +105,9 @@ Basis-Topic standardmäßig `service/truma` (in den Einstellungen änderbar). Zu
 | `decoke`, `decoke_remaining`, `decoke_minutes` | ON/OFF, min, min | Freibrennen |
 | `cpplus_version`, `heater_version`, `release`, `rssi`, `lin_traffic` | | Diagnose |
 
-Verfügbarkeit: `service/truma/status` = `online` / `offline` (Last Will).
+Verfügbarkeit: `camper/heater/status` = `online` / `offline` (Last Will).
 
-### Befehle `service/truma/set/<key>`
+### Befehle `camper/heater/set/<key>`
 
 | Key | Payload | Wirkung |
 |---|---|---|
@@ -131,9 +131,9 @@ Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam ges
 
 Beispiel:
 ```
-mosquitto_pub -h <broker> -t service/truma/set/target_temp_room -m 21
-mosquitto_pub -h <broker> -t service/truma/set/heating_mode -m high
-mosquitto_sub -h <broker> -t 'service/truma/control_status/#' -v
+mosquitto_pub -h <broker> -t camper/heater/set/target_temp_room -m 21
+mosquitto_pub -h <broker> -t camper/heater/set/heating_mode -m high
+mosquitto_sub -h <broker> -t 'camper/heater/control_status/#' -v
 ```
 
 ### Home Assistant
@@ -182,7 +182,7 @@ Bekannt aus den WomoLIN-Mitschnitten (CP Plus + Combi D6 E): PID 0x03 Soll-Raumt
 ## Logs ohne USB
 
 - **Weboberfläche → System → Log:** läuft live mit (alle 2 s), solange der Reiter offen ist. Log-Level wählbar, Ausgabe lässt sich leeren und als Textdatei speichern.
-- **MQTT:** Logzeilen gehen auf `service/truma/log` (nicht retained). Standard: Warnungen und Fehler. Einstellbar im Reiter **MQTT → Log per MQTT** (Aus / Fehler / Warnungen / Info / Debug). In Home Assistant erscheint die letzte Meldung als Diagnose-Sensor.
+- **MQTT:** Logzeilen gehen auf `camper/heater/log` (nicht retained). Standard: Warnungen und Fehler. Einstellbar im Reiter **MQTT → Log per MQTT** (Aus / Fehler / Warnungen / Info / Debug). In Home Assistant erscheint die letzte Meldung als Diagnose-Sensor.
 - **Seriell (115200 Baud):** nur am Schreibtisch, siehe Hinweis zu USB in [HARDWARE.md](HARDWARE.md).
 
 Zeitstempel sind Uhrzeit (sobald NTP synchronisiert ist), davor Sekunden seit Start (`+12s`).
@@ -221,6 +221,10 @@ Der LIN-Teil läuft in einem eigenen Task mit hoher Priorität, damit Antworten 
 - Timer setzen: unser Frame ist für Setzen (mit/ohne Warmwasser) und Ausschalten byte-gleich mit dem der Original-iNet-Box (Community-Mitschnitt, Truma-App).
 - Uhrzeit: Die Original-iNet-Box stellt die Uhr nie selbst; das CP Plus meldet Änderungen sofort. Unser NTP-Uhrzeit-Setzen (Frame 0x14) ist nur gegen ESPHome geprüft.
 - **Am echten LIN-Bus noch nicht getestet.**
+
+## Fertige Firmware (GitHub Actions)
+
+Jeder Push wird automatisch gebaut (`.github/workflows/build.yml`, Board-Paket und Bibliotheken in den hier genannten Versionen). Das Ergebnis liegt im Reiter **Actions** beim jeweiligen Lauf als Download. Ein Tag `v…` (z. B. `git tag v1.2.0 && git push --tags`) legt zusätzlich ein **Release** mit der `.bin` an, die sich direkt im Web-UI über das Firmware-Update einspielen lässt.
 
 ## Lizenz
 

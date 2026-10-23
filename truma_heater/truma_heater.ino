@@ -3,7 +3,7 @@
 // Modules:
 //   inetbox        LIN slave + Truma iNet Box protocol (own FreeRTOS task)
 //   heater_control setpoint/fan memory, decoking, command mapping
-//   mqtt_ha        MQTT topics (inetbox2mqtt compatible) + Home Assistant discovery
+//   mqtt_ha        MQTT topics (camper/heater, inetbox2mqtt layout) + Home Assistant discovery
 //   webserver      web UI, settings, log, OTA
 //   wifi_manager   station with static IP option, setup access point fallback
 

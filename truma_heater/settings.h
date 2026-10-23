@@ -9,6 +9,9 @@ struct Settings {
   String wifi_pass;
   String hostname;
   String ap_pass;
+  String ap_ssid;                // empty = <hostname>-XXXX
+  bool ap_always = false;        // false = AP only without WiFi (fallback)
+  uint8_t wifi_tx_power = 0;     // 0.25 dBm units, 0 = default of the board profile
   // Static IP, all empty = DHCP
   String static_ip;
   String gateway;

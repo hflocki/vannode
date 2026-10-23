@@ -15,6 +15,9 @@ void settings_load() {
   g_settings.wifi_pass = p.getString("wpass", "");
   g_settings.hostname = p.getString("host", DEFAULT_HOSTNAME);
   g_settings.ap_pass = p.getString("appass", DEFAULT_AP_PASSWORD);
+  g_settings.ap_ssid = p.getString("apssid", "");
+  g_settings.ap_always = p.getBool("apalways", false);
+  g_settings.wifi_tx_power = p.getUChar("txpwr", 0);
   g_settings.static_ip = p.getString("ip", "");
   g_settings.gateway = p.getString("gw", "");
   g_settings.subnet = p.getString("mask", "");
@@ -59,6 +62,9 @@ void settings_save() {
   p.putString("wpass", g_settings.wifi_pass);
   p.putString("host", g_settings.hostname);
   p.putString("appass", g_settings.ap_pass);
+  p.putString("apssid", g_settings.ap_ssid);
+  p.putBool("apalways", g_settings.ap_always);
+  p.putUChar("txpwr", g_settings.wifi_tx_power);
   p.putString("ip", g_settings.static_ip);
   p.putString("gw", g_settings.gateway);
   p.putString("mask", g_settings.subnet);

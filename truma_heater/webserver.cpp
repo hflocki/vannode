@@ -56,6 +56,11 @@ static void render_state() {
   sys["mqtt"] = mqtt::connected();
   sys["uptime"] = millis() / 1000;
   sys["heap"] = ESP.getFreeHeap();
+  sys["wifi_state"] = wifi::state_text();
+  sys["wifi_drops"] = wifi::drops();
+  sys["wifi_reason"] = wifi::last_reason();
+  sys["reset_reason"] = wifi::reset_reason();
+  sys["ssid"] = g_settings.wifi_ssid;
 
   JsonObject lin = doc["lin"].to<JsonObject>();
   lin["traffic"] = s.lin_traffic;
@@ -157,6 +162,9 @@ static void config_json(AsyncWebServerRequest *req) {
   if (!check_auth(req)) return;
   JsonDocument doc;
   doc["ssid"] = g_settings.wifi_ssid;
+  doc["ap_ssid"] = wifi::ap_ssid();
+  doc["ap_always"] = g_settings.ap_always;
+  doc["wifi_tx_power"] = wifi::tx_power();
   doc["hostname"] = g_settings.hostname;
   doc["static_ip"] = g_settings.static_ip;
   doc["gateway"] = g_settings.gateway;
@@ -203,7 +211,14 @@ static void config_save(AsyncWebServerRequest *req) {
   put("mqtt_user", "muser");
   put_secret("mqtt_pass", "mpass");
   put("mqtt_base", "mbase");
-  p.putBool("hadisc", req->hasParam("ha_discovery", true));
+  auto put_bool = [&](const char *param, const char *key) {
+    if (req->hasParam(param, true)) p.putBool(key, req->getParam(param, true)->value() == "1");
+  };
+  put_bool("ha_discovery", "hadisc");
+  put_bool("ap_always", "apalways");
+  put("ap_ssid", "apssid");
+  if (req->hasParam("wifi_tx_power", true))
+    p.putUChar("txpwr", constrain(req->getParam("wifi_tx_power", true)->value().toInt(), 8, 84));
   put("ha_prefix", "hapre");
   put("ntp_server", "ntp");
   put("tz", "tz");
@@ -211,8 +226,11 @@ static void config_save(AsyncWebServerRequest *req) {
   if (req->hasParam("mqtt_log_level", true))
     p.putUChar("mloglvl", constrain(req->getParam("mqtt_log_level", true)->value().toInt(), 0, 4));
   put_secret("web_pass", "wwpass");
-  if (req->hasParam("clear_mqtt_pass", true)) p.putString("mpass", "");
-  if (req->hasParam("clear_web_pass", true)) {
+  auto checked = [&](const char *param) {
+    return req->hasParam(param, true) && req->getParam(param, true)->value() == "1";
+  };
+  if (checked("clear_mqtt_pass")) p.putString("mpass", "");
+  if (checked("clear_web_pass")) {
     p.putString("wuser", "");
     p.putString("wwpass", "");
   }

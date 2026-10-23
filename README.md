@@ -51,8 +51,9 @@ Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Bin�
 ## Inbetriebnahme
 
 1. Nach dem ersten Start öffnet der ESP den Access Point **`truma-heater-XXXX`** (Passwort `truma1234`). Verbinden, die Seite öffnet sich automatisch (sonst `http://192.168.4.1`).
-2. Unter **Einstellungen** WLAN (optional feste IP), MQTT-Broker und ggf. Web-Login eintragen → **Speichern & Neustart** (zweimal tippen zum Bestätigen). Der ESP32 kann nur **2,4-GHz-WLAN**.
-   - Der Access Point läuft nur, solange kein WLAN eingerichtet ist oder das WLAN 60 s nicht erreichbar ist. Sobald der ESP verbunden ist, schaltet er ihn ab. Solange ein Handy am Access Point hängt, pausiert der ESP die WLAN-Versuche, damit die Verbindung nicht abreißt.
+2. Im Reiter **WiFi** WLAN (optional feste IP) eintragen → **Speichern & Verbinden**, danach im Reiter **MQTT** den Broker → **Speichern**. Der ESP32 kann nur **2,4-GHz-WLAN**.
+   - Der Access Point läuft nur, solange kein WLAN eingerichtet ist oder das WLAN 60 s nicht erreichbar ist (Reiter **WiFi**: Name, Passwort und „Access Point immer an“ einstellbar). Im Notfall-Modus versucht der ESP alle 30 s für 10 s das WLAN, aber nie, solange ein Handy am Access Point hängt.
+   - Bricht das WLAN oft ab: im Reiter **WiFi** die Sendeleistung auf 8,5 dBm stellen. Dort stehen auch Abbrüche, letzter Abbruchgrund und der Grund des letzten Neustarts.
 3. ESP am LIN-Bus anschließen (RJ12-Verteiler zwischen CP Plus und Heizung, siehe [HARDWARE.md](HARDWARE.md)).
 4. **Am CP Plus anmelden** (einmalig): Einstellungen → **RESET** → **PR SET** bestätigen. Das Display zeigt „INIT…“ und startet neu. Unter **INDEX** steht danach ein dritter Eintrag **T23.70.0**.
    - War vorher eine echte iNet Box angemeldet: zuerst ohne iNet Box einmal INIT ausführen, dann mit diesem Gerät.
@@ -60,11 +61,17 @@ Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Bin�
 
 ## Weboberfläche
 
-<p>
-<img src="docs/mockup/heizung.png" width="260" alt="Reiter Heizung">
-<img src="docs/mockup/system.png" width="260" alt="Reiter System">
-<img src="docs/mockup/einstellungen.png" width="260" alt="Reiter Einstellungen">
-</p>
+Aufbau und Optik wie bei [camper-tanklevel](https://github.com/hflocki/camper-tanklevel): Heizung, Timer, MQTT, WiFi, System.
+
+| Heizung | Timer | WiFi |
+| --- | --- | --- |
+| <img src="docs/mockup/ui-heat.png" width="220"> | <img src="docs/mockup/ui-timer.png" width="220"> | <img src="docs/mockup/ui-wifi.png" width="220"> |
+
+| MQTT | System |
+| --- | --- |
+| <img src="docs/mockup/ui-mqtt.png" width="220"> | <img src="docs/mockup/ui-sys.png" width="220"> |
+
+Jeder Reiter speichert nur seine eigenen Felder, danach startet das Gerät neu. Leere Passwortfelder behalten den gespeicherten Wert.
 
 Zum Ausprobieren ohne Gerät: [`docs/mockup/truma-heater-mockup.html`](docs/mockup/truma-heater-mockup.html) herunterladen und im Browser öffnen. Das ist die echte Oberfläche aus der Firmware mit simulierten Daten; Knöpfe, Timer, Freibrennen und Sniffer reagieren. Nach Änderungen an `web_ui.h` neu erzeugen mit `python3 docs/gen_mockup.py` (nur Standardbibliothek).
 
@@ -175,7 +182,7 @@ Bekannt aus den WomoLIN-Mitschnitten (CP Plus + Combi D6 E): PID 0x03 Soll-Raumt
 ## Logs ohne USB
 
 - **Weboberfläche → System → Log:** läuft live mit (alle 2 s), solange der Reiter offen ist. Log-Level wählbar, Ausgabe lässt sich leeren und als Textdatei speichern.
-- **MQTT:** Logzeilen gehen auf `service/truma/log` (nicht retained). Standard: Warnungen und Fehler. Einstellbar unter **Einstellungen → MQTT → Log per MQTT** (Aus / Fehler / Warnungen / Info / Debug). In Home Assistant erscheint die letzte Meldung als Diagnose-Sensor.
+- **MQTT:** Logzeilen gehen auf `service/truma/log` (nicht retained). Standard: Warnungen und Fehler. Einstellbar im Reiter **MQTT → Log per MQTT** (Aus / Fehler / Warnungen / Info / Debug). In Home Assistant erscheint die letzte Meldung als Diagnose-Sensor.
 - **Seriell (115200 Baud):** nur am Schreibtisch, siehe Hinweis zu USB in [HARDWARE.md](HARDWARE.md).
 
 Zeitstempel sind Uhrzeit (sobald NTP synchronisiert ist), davor Sekunden seit Start (`+12s`).

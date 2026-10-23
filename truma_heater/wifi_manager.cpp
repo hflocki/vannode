@@ -19,6 +19,7 @@ static bool g_was_connected = false;
 static uint32_t g_connect_start = 0;
 static uint32_t g_last_retry = 0;
 static bool g_mdns = false;
+static bool g_sta_paused = false;
 
 static String ap_ssid() {
   uint8_t mac[6];
@@ -98,7 +99,18 @@ void loop() {
   if (!up && !g_settings.wifi_ssid.isEmpty()) {
     // Fall back to the setup AP after 60 s without connection, keep retrying the station.
     if (!g_ap && millis() - g_connect_start > 60000) start_ap();
-    if (millis() - g_last_retry > 30000 && millis() - g_connect_start > 15000) {
+    // While a phone is connected to the setup AP, do not retry: a station connect attempt makes the
+    // radio scan other channels and drops the AP clients (saving the settings would fail).
+    const bool ap_in_use = g_ap && WiFi.softAPgetStationNum() > 0;
+    if (ap_in_use && !g_sta_paused) {
+      WiFi.disconnect();  // also stops the automatic reconnect of the station
+      g_sta_paused = true;
+      LOGI(TAG, "Setup AP in use, station retries paused");
+    } else if (!ap_in_use && g_sta_paused) {
+      g_sta_paused = false;
+      g_last_retry = 0;  // retry right away
+    }
+    if (!ap_in_use && millis() - g_last_retry > 30000 && millis() - g_connect_start > 15000) {
       g_last_retry = millis();
       WiFi.disconnect();
       connect_sta();

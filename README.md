@@ -51,7 +51,8 @@ Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Bin�
 ## Inbetriebnahme
 
 1. Nach dem ersten Start öffnet der ESP den Access Point **`truma-heater-XXXX`** (Passwort `truma1234`). Verbinden, die Seite öffnet sich automatisch (sonst `http://192.168.4.1`).
-2. Unter **Einstellungen** WLAN (optional feste IP), MQTT-Broker und ggf. Web-Login eintragen → Speichern & Neustart.
+2. Unter **Einstellungen** WLAN (optional feste IP), MQTT-Broker und ggf. Web-Login eintragen → **Speichern & Neustart** (zweimal tippen zum Bestätigen). Der ESP32 kann nur **2,4-GHz-WLAN**.
+   - Der Access Point läuft nur, solange kein WLAN eingerichtet ist oder das WLAN 60 s nicht erreichbar ist. Sobald der ESP verbunden ist, schaltet er ihn ab. Solange ein Handy am Access Point hängt, pausiert der ESP die WLAN-Versuche, damit die Verbindung nicht abreißt.
 3. ESP am LIN-Bus anschließen (RJ12-Verteiler zwischen CP Plus und Heizung, siehe [HARDWARE.md](HARDWARE.md)).
 4. **Am CP Plus anmelden** (einmalig): Einstellungen → **RESET** → **PR SET** bestätigen. Das Display zeigt „INIT…“ und startet neu. Unter **INDEX** steht danach ein dritter Eintrag **T23.70.0**.
    - War vorher eine echte iNet Box angemeldet: zuerst ohne iNet Box einmal INIT ausführen, dann mit diesem Gerät.

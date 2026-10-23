@@ -209,6 +209,10 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:340px;o
 <script>
 const $=id=>document.getElementById(id);
 let st=null,localSetp=null,setpTimer=null,timerEdit=false;
+// Two-tap confirmation. confirm() is blocked silently in the captive portal windows of phones.
+function ask(el,txt,fn){if(el.dataset.arm){delete el.dataset.arm;clearTimeout(el._t);el.textContent=el.dataset.orig;fn();return}
+  el.dataset.orig=el.textContent;el.dataset.arm='1';el.textContent=txt;
+  el._t=setTimeout(()=>{if(el.dataset.arm){delete el.dataset.arm;el.textContent=el.dataset.orig}},4000)}
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)}
 async function cmd(a,v){const b=new URLSearchParams({a,v:v??''});try{const r=await fetch('/api/cmd',{method:'POST',body:b});if(!r.ok)throw 0;setTimeout(load,400)}catch(e){toast('Befehl fehlgeschlagen')}}
 function seg(id,val){document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
@@ -231,7 +235,7 @@ function render(){
   seg('seg-fan',h.fan);
   seg('seg-water',h.water_mode||'');
   $('fan-boost').classList.toggle('hide',!h.boost);$('water-boost').classList.toggle('hide',!h.water_boost);
-  const d=s.decoke;$('decoke').textContent=d.active?'Beenden':'Starten';
+  const d=s.decoke;if(!$('decoke').dataset.arm)$('decoke').textContent=d.active?'Beenden':'Starten';
   setTxt('decoke-text',d.active?('Läuft noch '+Math.ceil(d.remaining/60)+' min.'):'Maximale Temperatur mit Lüfter High, danach werden die vorherigen Einstellungen wiederhergestellt.');
   if(document.activeElement!==$('decoke-min'))$('decoke-min').value=d.minutes;
   setTxt('opstat',h.valid?h.status+' ('+h.status_text+')':'--');
@@ -266,7 +270,7 @@ document.querySelectorAll('#seg-water button').forEach(b=>b.onclick=()=>cmd('wat
 function step(d){const base=localSetp??Math.round(+st.heater.setpoint);localSetp=Math.min(30,Math.max(5,base+d));setTxt('setp',localSetp+' °C');
   clearTimeout(setpTimer);setpTimer=setTimeout(()=>{cmd('setpoint',localSetp);setTimeout(()=>localSetp=null,1500)},900)}
 $('minus').onclick=()=>step(-1);$('plus').onclick=()=>step(1);
-$('decoke').onclick=()=>{const on=!st.decoke.active;if(on&&!confirm('Freibrennen jetzt starten?'))return;cmd('decoke',on?'1':'0')};
+$('decoke').onclick=e=>{const on=!st.decoke.active;if(on)ask(e.target,'Wirklich starten?',()=>cmd('decoke','1'));else cmd('decoke','0')};
 for(let m=5;m<=120;m+=5){const o=document.createElement('option');o.value=m;o.textContent=m+' min';$('decoke-min').appendChild(o)}
 $('decoke-min').onchange=e=>cmd('decoke_minutes',e.target.value);
 ['t-start','t-stop','t-temp','t-fan','t-water'].forEach(id=>$(id).oninput=()=>timerEdit=true);
@@ -274,7 +278,7 @@ $('t-set').onclick=()=>{const a=$('t-start').value,b=$('t-stop').value;if(!a||!b
   cmd('timer',a+'-'+b+','+$('t-temp').value+','+$('t-fan').value+($('t-water').value?','+$('t-water').value:''));timerEdit=false;toast('Timer wird gesendet')};
 $('t-off').onclick=()=>{cmd('timer','off');timerEdit=false};
 $('sync').onclick=()=>{cmd('sync_clock');toast('Uhrzeit wird gesendet')};
-$('reboot').onclick=async()=>{if(!confirm('Gerät neu starten?'))return;await fetch('/api/reboot',{method:'POST'});toast('Neustart …')};
+$('reboot').onclick=e=>ask(e.target,'Wirklich neu starten?',async()=>{await fetch('/api/reboot',{method:'POST'});toast('Neustart …')});
 $('loglive').onchange=logLive;
 $('logclear').onclick=()=>{logLines=[];$('log').textContent=''};
 $('logsave').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([logLines.join('\n')],{type:'text/plain'}));a.download='truma-log.txt';a.click()};
@@ -282,8 +286,9 @@ $('loglvl').onchange=e=>cmd('log_level',e.target.value);
 $('sniff').onchange=e=>cmd('sniffer',e.target.checked?'1':'0');
 $('upload').onclick=async()=>{const f=$('fw').files[0];if(!f)return;const fd=new FormData();fd.append('firmware',f,f.name);setTxt('up-status','Lade hoch …');
   try{const r=await fetch('/update',{method:'POST',body:fd});setTxt('up-status',r.ok?'Fertig, Neustart …':'Fehlgeschlagen')}catch(e){setTxt('up-status','Fehlgeschlagen')}};
-$('cfg').onsubmit=async e=>{e.preventDefault();if(!confirm('Speichern und neu starten?'))return;
-  const r=await fetch('/api/config',{method:'POST',body:new URLSearchParams(new FormData(e.target))});toast(r.ok?'Gespeichert, Neustart …':'Fehler beim Speichern')};
+$('cfg').onsubmit=e=>{e.preventDefault();const f=e.target,b=f.querySelector('button[type=submit]');
+  ask(b,'Wirklich speichern? Nochmal tippen',async()=>{try{const r=await fetch('/api/config',{method:'POST',body:new URLSearchParams(new FormData(f))});
+    if(!r.ok)throw 0;toast('Gespeichert, Neustart …');b.textContent='Gespeichert – Gerät startet neu';b.disabled=true}catch(x){toast('Fehler beim Speichern')}})};
 load();setInterval(load,2000);loadCfg().catch(()=>{});
 </script>
 </body>

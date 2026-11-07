@@ -101,13 +101,6 @@ jobs:
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
-          # BLE node with every plugin switched on (no release): keeps the optional plugins compiling
-          - device: ble-all
-            target: esp32c3
-            fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
-            sketch: firmware/ble/ble_node
-            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
-            flags: -DPLUGIN_DIMES=1 -DPLUGIN_MOPEKA_PRO=1 -DPLUGIN_MOPEKA_STD=1 -DPLUGIN_CARAWATER=1 -DPLUGIN_RVTECH=1 -DPLUGIN_WCS_FRIDGE=1
           # Template for new devices (firmware/_template/ANLEITUNG.md), built so it always compiles
           - device: template
             target: esp32c3

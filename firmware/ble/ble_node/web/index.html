@@ -161,6 +161,7 @@
       .fwu-chk.ok { color: var(--ok); }
       .fwu-chk.warn { color: var(--warn); }
       .fwu-chk.bad { color: var(--bad); }
+      .f label:has(input:disabled) { opacity: 0.4; cursor: not-allowed; }
       .fwu-force { display: flex; gap: 8px; align-items: center; font-size: 0.8rem; margin: 0 0 8px; }
       .fwu-log { font-size: 0.75rem; line-height: 1.4; max-height: 320px; overflow-y: auto; }
       .fwu-ev { padding: 4px 0; border-bottom: 1px solid var(--line); }
@@ -957,9 +958,11 @@ nav button .ico{display:inline-flex}
       }
       function renderPlugins() {
         if (!CFG.plugins.length) return;
-        const boxes = CFG.plugins.map((p) => {
+        const max = CFG.max_links || 3;
+        const mk = (p) => {
           const i = el("input", { type: "checkbox", checked: p.cfg.enabled });
           i.dataset.id = p.id;
+          i.dataset.link = p.ble === 2 ? "1" : "";
           return el(
             "div",
             { className: "f" },
@@ -971,13 +974,40 @@ nav button .ico{display:inline-flex}
               el("span", { className: "mute", textContent: p.type_name }),
             ),
           );
-        });
+        };
+        const listen = CFG.plugins.filter((p) => p.ble !== 2).map(mk);
+        const link = CFG.plugins.filter((p) => p.ble === 2).map(mk);
+        const boxes = [...listen, ...link];
+        const count = el("span", { className: "mute" });
+        // Connections: at most `max` at the same time, further boxes are locked
+        const check = () => {
+          const ins = link.map((b) => b.querySelector("input"));
+          const on = ins.filter((i) => i.checked).length;
+          count.textContent = `${on} von ${max}`;
+          for (const i of ins) i.disabled = !i.checked && on >= max;
+        };
+        for (const b of link) b.querySelector("input").addEventListener("change", check);
+        check();
+        const group = (title, hint, items, extra) =>
+          items.length
+            ? [
+                el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
+                el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
+                ...items,
+              ]
+            : [];
         $("#main").append(
           el(
             "div",
             { className: "card" },
             el("h2", {}, "Plugins"),
-            ...boxes,
+            ...group("Mithören", "Sensoren, die nur senden (Gas). Beliebig viele.", listen),
+            ...group(
+              "Verbinden",
+              `Geräte mit fester Bluetooth-Verbindung. Höchstens ${max} gleichzeitig – für mehr einen zweiten BLE-Node mit eigenem Topic (z. B. camper/ble2) nehmen.`,
+              link,
+              count,
+            ),
             el(
               "small",
               { className: "mute" },

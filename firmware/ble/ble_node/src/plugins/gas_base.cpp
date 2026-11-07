@@ -18,8 +18,8 @@ static const Entity GAS_ENTITIES[] = {
     {E_SENSOR, "quality",     "Messqualität",    nullptr, nullptr,         "measurement", "mdi:signal", EF_DIAG, nullptr},
 };
 
-GasPlugin::GasPlugin(const char* type_, const char* typeName_, uint8_t index_)
-    : Plugin(type_, typeName_, "Gas", index_) {
+GasPlugin::GasPlugin(const char* type_, const char* typeName_, const char* title_, uint8_t index_)
+    : Plugin(type_, typeName_, title_, index_) {
     portMUX_INITIALIZE(&mux);
 }
 

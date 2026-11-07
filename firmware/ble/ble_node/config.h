@@ -10,41 +10,45 @@
 #endif
 
 // ============================================================
-// >>> PLUGINS - choose what this ESP should do <<<
+// >>> PLUGINS - slots per device type <<<
 // ------------------------------------------------------------
-// The number is the count of instances of that plugin:
-//   0 = not compiled in (saves flash and RAM)
-//   1 = one device, e.g. one gas bottle
+// The number is the count of slots of that plugin:
+//   0 = not compiled in
+//   1 = one device, e.g. one fridge
 //   2 = two devices of the same kind, e.g. two gas bottles ("Gas" and "Gas 2")
-// Several plugins can run on one ESP at the same time. Every compiled-in instance
-// can additionally be switched on / off in the web UI (the device then restarts).
-//
 // Bluetooth limits of one ESP32:
 //   - passive sensors (DIMES, Mopeka) only listen, any number works
 //   - connecting devices (pump, roof hatch, fridge) keep a BLE connection each:
-//     PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE <= 3
-//     (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS), e.g.
-//       pump 1 + hatch 1 + fridge 1 = 3 ok
-//       pump 0 + hatch 2 + fridge 1 = 3 ok
-//       pump 1 + hatch 2 + fridge 1 = 4 -> build error
+//     at most MAX_BLE_LINKS (3) of them switched on at the same time
 // ============================================================
+// Every plugin is compiled in (one release file for everyone); the number is the count of
+// slots for that device type. All slots start switched off and are switched on in the web UI
+// (tab System). More devices than slots: build with other numbers (config_local.h) or use a
+// second BLE node with its own topic (e.g. camper/ble2).
 #ifndef PLUGIN_DIMES
-#define PLUGIN_DIMES          0      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
+#define PLUGIN_DIMES          2      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
 #endif
 #ifndef PLUGIN_MOPEKA_PRO
-#define PLUGIN_MOPEKA_PRO     0      // Gas: Mopeka Pro family (Pro Check, Pro Plus, Universal ...)
+#define PLUGIN_MOPEKA_PRO     2      // Gas: Mopeka Pro family (Pro Check, Pro Plus, Universal ...)
 #endif
 #ifndef PLUGIN_MOPEKA_STD
-#define PLUGIN_MOPEKA_STD     0      // Gas: Mopeka Standard / Std Check (older model)
-#endif
-#ifndef PLUGIN_CARAWATER
-#define PLUGIN_CARAWATER      0      // Water pump: CaraWater (e.g. ISP 15), BLE connection (counts towards 3)
+#define PLUGIN_MOPEKA_STD     1      // Gas: Mopeka Standard / Std Check (older model)
 #endif
 #ifndef PLUGIN_RVTECH
-#define PLUGIN_RVTECH         1      // Roof hatch: RV Tech skylight motor control, BLE connection (counts towards 3)
+#define PLUGIN_RVTECH         2      // Roof hatch: RV Tech skylight motor control, BLE connection
+#endif
+#ifndef PLUGIN_CARAWATER
+#define PLUGIN_CARAWATER      1      // Water pump: CaraWater (e.g. ISP 15), BLE connection
 #endif
 #ifndef PLUGIN_WCS_FRIDGE
-#define PLUGIN_WCS_FRIDGE     0      // Fridge: WCS compressor fridge, BLE connection (counts towards 3)
+#define PLUGIN_WCS_FRIDGE     1      // Fridge: WCS compressor fridge, BLE connection
+#endif
+
+// At most this many connecting plugins may be switched on at the same time
+// (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS = 3). Checked in the web UI, when saving
+// and at boot; passive plugins (gas) only listen and have no limit.
+#ifndef MAX_BLE_LINKS
+#define MAX_BLE_LINKS         3
 #endif
 
 // Derived switches (do not edit)
@@ -52,12 +56,10 @@
 #define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
+#define MAX_PLUGINS     16
 
-#if CT_BLE_LINKS > 3
-#error "At most 3 connecting BLE plugins fit on one ESP32: PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE must be 3 or less"
-#endif
-#if CT_PLUGIN_COUNT > 8
-#error "At most 8 plugin instances per device"
+#if CT_PLUGIN_COUNT > MAX_PLUGINS
+#error "Too many plugin slots: the PLUGIN_xxx numbers add up to more than MAX_PLUGINS"
 #endif
 #if CT_PLUGIN_COUNT == 0
 #warning "No plugin selected in config.h - the device only offers WiFi, MQTT and the web UI"
@@ -66,7 +68,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.3.0"
+#define FW_VERSION            "1.4.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 

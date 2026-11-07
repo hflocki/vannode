@@ -98,6 +98,7 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     doc["device"] = DEVICE_NAME;
     doc["reset_reason"] = resetReasonString();
     doc["ha_node"] = mqttNodeId();
+    doc["max_links"] = MAX_BLE_LINKS;
     coreConfigToJson(doc["core"].to<JsonObject>());
 
     JsonArray arr = doc["plugins"].to<JsonArray>();
@@ -132,15 +133,27 @@ static void handleSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size
         err = coreConfigCheck(doc["core"].as<JsonObjectConst>(), restart);
     } else if (doc["enabled"].is<JsonObject>()) {
         // System tab, "Plugins": {"enabled": {"<plugin id>": true / false, ...}}
-        for (JsonPairConst kv : doc["enabled"].as<JsonObjectConst>()) {
+        JsonObjectConst want = doc["enabled"].as<JsonObjectConst>();
+        for (JsonPairConst kv : want) {
             Plugin* p = pluginById(kv.key().c_str());
             if (!p) { err = "Unbekanntes Plugin"; break; }
             if (!kv.value().is<bool>()) { err = "Ungültiger Wert"; break; }
             if (kv.value().as<bool>() != p->enabled) restart = true;
         }
+        // Connections after the change (plugins missing in the request keep their state)
+        uint8_t links = 0;
+        FOR_EACH_PLUGIN(p) {
+            bool on = want[p->id].is<bool>() ? want[p->id].as<bool>() : p->enabled;
+            if (on && p->bleUse() == BLE_LINK) links++;
+        }
+        if (!err && links > MAX_BLE_LINKS) err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
     } else if (doc["plugin"].is<const char*>()) {
         Plugin* p = pluginById(doc["plugin"].as<const char*>());
+        JsonVariantConst en = doc["cfg"]["enabled"];
         if (!p) err = "Unbekanntes Plugin";
+        else if (en.is<bool>() && en.as<bool>() && !p->enabled && p->bleUse() == BLE_LINK &&
+                 registryLinksOn(p) >= MAX_BLE_LINKS)
+            err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
         else err = pluginConfigFromJson(p, doc["cfg"].as<JsonObjectConst>(), false, restart);
     } else {
         err = "Nothing to save";

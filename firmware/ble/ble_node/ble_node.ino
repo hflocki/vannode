@@ -105,6 +105,7 @@ void setup() {
 
     // Phase 1: mount LittleFS, create the plugins, load the config
     settingsInit();
+    registryEnforceLinkLimit();
     FOR_EACH_PLUGIN(p) {
         Serial.printf("[MAIN] Plugin %-10s %-22s %s\n", p->id, p->typeName, p->enabled ? "on" : "off");
     }

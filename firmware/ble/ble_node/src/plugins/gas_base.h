@@ -40,7 +40,8 @@ struct GasReading {
 
 class GasPlugin : public Plugin {
 public:
-    GasPlugin(const char* type, const char* typeName, uint8_t index);
+    // title: default name, different per sensor type so several gas plugins stay apart
+    GasPlugin(const char* type, const char* typeName, const char* title, uint8_t index);
 
     uint8_t bleUse() const override { return BLE_PASSIVE; }
     void begin() override;

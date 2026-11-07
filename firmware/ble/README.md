@@ -13,29 +13,22 @@ Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.
 
 ## Plugins
 
-Zahl = Anzahl der Geräte, `0` = nicht einkompiliert. Ab Werk (und in der Release-`.bin`) ist nur die Dachhaube aktiv.
+Alle Plugins sind in der Release-`.bin` enthalten. Ab Werk ist alles aus – in der Web-Oberfläche unter **System → Plugins** schaltest du ein, was du brauchst (danach startet das Gerät neu). Ausgeschaltete Plugins laufen nicht, erscheinen nicht in der Leiste und nicht in Home Assistant.
 
-| Schalter | Gerät | Bluetooth | Ab Werk | Einstellungen in der Web-UI |
-| --- | --- | --- | --- | --- |
-| `PLUGIN_RVTECH` | Dachhaube RV Tech (Heki-Motorsteuerung) | Verbindung, ggf. mit PIN | **1** | MAC, PIN |
-| `PLUGIN_CARAWATER` | Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbindung | 0 | MAC |
-| `PLUGIN_WCS_FRIDGE` | WCS Kompressor-Kühlschrank | Verbindung, ggf. mit PIN | 0 | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
-| `PLUGIN_DIMES` | Gas: Rotarex DIMES / SRG WAVE | passiv (nur mithören) | 0 | MAC, Flaschengröße, Füllstopp |
-| `PLUGIN_MOPEKA_PRO` | Gas: Mopeka Pro (Pro Check, Universal …) | passiv | 0 | MAC, Leer-/Voll-Höhe |
-| `PLUGIN_MOPEKA_STD` | Gas: Mopeka Standard / Std Check | passiv | 0 | MAC, Leer-/Voll-Höhe, Propan-Anteil |
+| Gerät | Plätze | Rubrik | Einstellungen in der Web-UI |
+| --- | --- | --- | --- |
+| Gas: Rotarex DIMES / SRG WAVE | 2 | Mithören | MAC, Flaschengröße, Füllstopp |
+| Gas: Mopeka Pro (Pro Check, Universal …) | 2 | Mithören | MAC, Leer-/Voll-Höhe |
+| Gas: Mopeka Standard / Std Check | 1 | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
+| Dachhaube RV Tech (Heki-Motorsteuerung) | 2 | Verbinden | MAC, PIN |
+| Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | 1 | Verbinden | MAC |
+| WCS Kompressor-Kühlschrank | 1 | Verbinden | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
 
-- Passive Sensoren: beliebig viele. Geräte mit Verbindung: höchstens **3** pro ESP32 (sonst bricht der Build mit einer Meldung ab).
-- Zweite Instanz, z. B. zwei Dachhauben: `#define PLUGIN_RVTECH 2` → „Dachhaube“ und „Dachhaube 2“ mit eigener MAC und PIN.
-- Jedes einkompilierte Plugin lässt sich zusätzlich in der Web-UI (Tab **System**) aus- und einschalten.
+- **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
+- **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere Haken, das Gerät prüft es beim Speichern und beim Start noch einmal.
+- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/ble2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_ble2`). Alternativ die Zahl der Plätze in `config_local.h` ändern (`PLUGIN_RVTECH 3` usw.) und selbst bauen.
 - **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
-- Die CI baut zusätzlich eine Variante mit allen Plugins (`ble-all`, ohne Release), damit auch die abgeschalteten Plugins immer kompilieren.
-
-Beispiel `config_local.h` mit Pumpe und Kühlschrank zusätzlich:
-
-```cpp
-#define PLUGIN_CARAWATER  1
-#define PLUGIN_WCS_FRIDGE 1
-```
+- Update von einer älteren Version: Plugins mit gespeicherten Einstellungen (z. B. die Dachhaube) bleiben an, alle neuen Plätze sind aus.
 
 ## Hardware
 
@@ -123,7 +116,7 @@ Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine 
 
 1. Neue Datei `src/plugins/plugin_<name>.cpp`, Klasse von `Plugin` ableiten (`src/core/plugin.h`): Einstellungen `fields()`, HA-Entitäten `entities()`, MQTT-Werte `publish()`, Befehle `command()`, Web-Karte `live()`. Für Geräte mit Verbindung gibt es `BleLink` (`src/core/ble_link.h`), für passive Sensoren `onAdvertisement()`.
 2. Fabrik `Plugin* create<Name>(uint8_t index)` am Ende der Datei.
-3. `config.h`: Schalter `PLUGIN_<NAME>` (Standard `0`) und in `CT_BLE_PASSIVE` bzw. `CT_BLE_LINKS` aufnehmen.
+3. `config.h`: Zahl der Plätze `PLUGIN_<NAME>` (z. B. `1`) und in `CT_BLE_PASSIVE` bzw. `CT_BLE_LINKS` aufnehmen.
 4. `src/core/registry.cpp`: Fabrik deklarieren und eine `ADD_PLUGINS`-Zeile.
 5. Topics in `docs/TOPICS.md` eintragen, Plugin-Tabelle oben ergänzen.
 
@@ -152,13 +145,14 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 1.4.0 | Alle Plugins in der Release-`.bin` (Plätze: 2 × DIMES, 2 × Mopeka Pro, 1 × Mopeka Standard, 2 × Dachhaube, 1 × Pumpe, 1 × Kühlschrank), ab Werk aus. System → Plugins in zwei Rubriken *Mithören* und *Verbinden* (höchstens 3 gleichzeitig, wird beim Speichern und beim Start geprüft). Gas-Plugins mit eigenem Namen je Typ |
 | 1.3.0 | Aus der Toolbox wird der **BLE Node**: Hostname `ble-node`, Setup-WLAN `BLE-Node-XXXXXX`, Topic `camper/ble` (ein gespeichertes `camper/toolbox` wird beim Start umgestellt), Release-Datei `ble-node-….bin`, Tag `ble-v…`, Ordner `firmware/ble/ble_node`. Gas-Plugins DIMES und Mopeka wieder als Option (ab Werk aus). Home Assistant legt die Entitäten neu an (`camper_ble`) |
 | 1.2.2 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |
 | 1.2.1 | Pumpe: dritte GATT-Variante FFE0/FFE1, „läuft“ aus dem Statusbit, Druck aus psi × 10 umgerechnet, Statusrahmen anderer Pumpen werden angenommen. Dachhaube: robusteres Zusammensetzen der Telegramme. Kühlschrank: ohne eingetragene UUIDs FFE0/FFE1 statt aller Characteristics |
 | 1.2.0 | Neue Namen: Hostname `toolbox-node`, Setup-WLAN, Gerätename und Release-Datei `toolbox-node-….bin`. Topics `camper/…` und Home-Assistant-IDs bleiben |
 | 1.1.0 | Gas-Plugins entfernt (DIMES, Mopeka Pro, Mopeka Standard, gemeinsamer Gas-Teil): Gasflasche und Tanks liest camper-tanklevel. Übrig: Dachhaube, Wasserpumpe, Kühlschrank |
 | 1.0.1 | Web-Oberfläche im Aussehen der übrigen VanNode-Geräte (Farben, Kopfzeile mit Statuspunkten, Tab-Leiste mit Symbolen, Werte als Kacheln, Schalter statt Häkchen) |
-| 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/ble`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
+| 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/toolbox`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
 | 0.1.x | Eigenes Repo `camper_toolbox`: Plugins Gas (DIMES, Mopeka), Wasserpumpe, Dachhaube, Kühlschrank |
 
 ## Fertige Firmware

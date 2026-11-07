@@ -32,7 +32,7 @@ static bool decodeValue(const uint8_t* d, size_t n, uint8_t offset, uint8_t len,
 
 class DimesPlugin : public GasPlugin {
 public:
-    explicit DimesPlugin(uint8_t index) : GasPlugin("dimes", DIMES_MODEL, index) {}
+    explicit DimesPlugin(uint8_t index) : GasPlugin("dimes", DIMES_MODEL, "Gas (DIMES)", index) {}
 
     size_t fields(const Field*& out) override {
         out = DIMES_FIELDS;

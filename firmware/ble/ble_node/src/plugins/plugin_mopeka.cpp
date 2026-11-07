@@ -125,7 +125,8 @@ static bool decodeMopekaStd(const uint8_t* d, size_t n, int propane, GasReading&
 class MopekaPlugin : public GasPlugin {
 public:
     MopekaPlugin(bool standard, uint8_t index)
-        : GasPlugin(standard ? "mopeka_std" : "mopeka", standard ? "Mopeka Standard" : "Mopeka Pro", index),
+        : GasPlugin(standard ? "mopeka_std" : "mopeka", standard ? "Mopeka Standard" : "Mopeka Pro",
+                    standard ? "Gas (Mopeka Std)" : "Gas (Mopeka)", index),
           isStd(standard) {}
 
     size_t fields(const Field*& out) override {

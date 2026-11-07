@@ -3,7 +3,7 @@
 // ============================================================
 // Plugin factories (one per plugin type, implemented in src/plugins/)
 // To add a plugin type: declare its factory here, add a PLUGIN_xxx switch to
-// config.h and one ADD_PLUGINS line in registryCreate().
+// config.h (number of slots) and one ADD_PLUGINS line in registryCreate().
 // ============================================================
 #if PLUGIN_DIMES
 Plugin* createDimes(uint8_t index);
@@ -24,7 +24,6 @@ Plugin* createRvTech(uint8_t index);
 Plugin* createWcsFridge(uint8_t index);
 #endif
 
-#define MAX_PLUGINS 8
 static Plugin* plugins[MAX_PLUGINS];
 static uint8_t count = 0;
 
@@ -71,6 +70,26 @@ Plugin* pluginById(const char* id) {
         if (strcmp(plugins[i]->id, id) == 0) return plugins[i];
     }
     return nullptr;
+}
+
+uint8_t registryLinksOn(const Plugin* except) {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < count; i++) {
+        if (plugins[i] != except && plugins[i]->enabled && plugins[i]->bleUse() == BLE_LINK) n++;
+    }
+    return n;
+}
+
+void registryEnforceLinkLimit() {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < count; i++) {
+        Plugin* p = plugins[i];
+        if (!p->enabled || p->bleUse() != BLE_LINK) continue;
+        if (++n > MAX_BLE_LINKS) {
+            p->enabled = false;
+            Serial.printf("[MAIN] %s switched off: more than %d Bluetooth connections\n", p->id, MAX_BLE_LINKS);
+        }
+    }
 }
 
 bool registryNeedsBle() {

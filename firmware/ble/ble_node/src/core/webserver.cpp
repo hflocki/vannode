@@ -109,17 +109,24 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
         o["ble"] = t->ble;
     }
     coreConfigToJson(doc["core"].to<JsonObject>());
+    // Device changes are saved right away but only take effect with the next restart
+    doc["restart_needed"] = registryRestartNeeded();
 
     JsonArray arr = doc["plugins"].to<JsonArray>();
-    FOR_EACH_PLUGIN(p) {
+    auto addPlugin = [&](Plugin* p, bool isPending) {
         JsonObject o = arr.add<JsonObject>();
         o["id"] = (const char*)p->id;
         o["type"] = p->type;
         o["type_name"] = p->typeName;
         o["ble"] = p->bleUse();
+        o["running"] = p->enabled && !p->removed;
+        if (isPending) o["pending"] = true;
+        if (p->removed) o["removed"] = true;
         pluginSchemaToJson(p, o["fields"].to<JsonArray>());
         pluginConfigToJson(p, o["cfg"].to<JsonObject>());
-    }
+    };
+    FOR_EACH_PLUGIN(p) addPlugin(p, false);
+    for (uint8_t i = 0; i < pendingCount(); i++) addPlugin(pendingAt(i), true);
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
@@ -144,39 +151,49 @@ static void handleSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size
         // System tab, "Plugins": {"enabled": {"<plugin id>": true / false, ...}}
         JsonObjectConst want = doc["enabled"].as<JsonObjectConst>();
         for (JsonPairConst kv : want) {
-            Plugin* p = pluginById(kv.key().c_str());
+            Plugin* p = pluginOrPendingById(kv.key().c_str());
             if (!p) { err = "Unbekanntes Plugin"; break; }
             if (!kv.value().is<bool>()) { err = "Ungültiger Wert"; break; }
-            if (kv.value().as<bool>() != p->enabled) restart = true;
         }
         // Connections after the change (plugins missing in the request keep their state)
         uint8_t links = 0;
-        FOR_EACH_PLUGIN(p) {
-            bool on = want[p->id].is<bool>() ? want[p->id].as<bool>() : p->enabled;
-            if (on && p->bleUse() == BLE_LINK) links++;
-        }
+        auto countLink = [&](Plugin* p) {
+            bool on = want[p->id].is<bool>() ? want[p->id].as<bool>() : p->enabledNext;
+            if (on && !p->removed && p->bleUse() == BLE_LINK) links++;
+        };
+        FOR_EACH_PLUGIN(p) countLink(p);
+        for (uint8_t i = 0; i < pendingCount(); i++) countLink(pendingAt(i));
         if (!err && links > MAX_BLE_LINKS) err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
     } else if (doc["add"].is<const char*>()) {
         // System tab, "+ Gerät hinzufügen": {"add": "<type>"}; the device starts switched on
         const PluginType* t = pluginType(doc["add"].as<const char*>());
         if (!t) err = "Unbekannter Gerätetyp";
-        else if (pluginCount() >= MAX_PLUGINS) err = "Keine weiteren Geräte möglich (Höchstzahl erreicht)";
+        else if (registryCountNext() >= MAX_PLUGINS || pendingCount() >= MAX_PLUGINS)
+            err = "Keine weiteren Geräte möglich (Höchstzahl erreicht)";
         else if (t->ble == BLE_LINK && registryLinksOn() >= MAX_BLE_LINKS)
             err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig – erst ein anderes ausschalten";
         else if (registryFreeIndex(t) < 0) err = "Keine freie Nummer für diesen Typ";
-        restart = true;
     } else if (doc["remove"].is<const char*>()) {
         // System tab, "Entfernen": {"remove": "<plugin id>"}
-        if (!pluginById(doc["remove"].as<const char*>())) err = "Unbekanntes Plugin";
-        restart = true;
+        if (!pluginOrPendingById(doc["remove"].as<const char*>())) err = "Unbekanntes Plugin";
+    } else if (doc["restore"].is<const char*>()) {
+        // System tab, "Rückgängig" on a removed device (before the restart)
+        Plugin* p = pluginById(doc["restore"].as<const char*>());
+        if (!p || !p->removed) err = "Unbekanntes Plugin";
+        else if (registryCountNext() >= MAX_PLUGINS) err = "Keine weiteren Geräte möglich (Höchstzahl erreicht)";
+        else if (p->enabledNext && p->bleUse() == BLE_LINK && registryLinksOn() >= MAX_BLE_LINKS)
+            err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
     } else if (doc["plugin"].is<const char*>()) {
-        Plugin* p = pluginById(doc["plugin"].as<const char*>());
+        Plugin* p = pluginOrPendingById(doc["plugin"].as<const char*>());
         JsonVariantConst en = doc["cfg"]["enabled"];
-        if (!p) err = "Unbekanntes Plugin";
-        else if (en.is<bool>() && en.as<bool>() && !p->enabled && p->bleUse() == BLE_LINK &&
+        if (!p || p->removed) err = "Unbekanntes Plugin";
+        else if (en.is<bool>() && en.as<bool>() && !p->enabledNext && p->bleUse() == BLE_LINK &&
                  registryLinksOn(p) >= MAX_BLE_LINKS)
             err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
-        else err = pluginConfigFromJson(p, doc["cfg"].as<JsonObjectConst>(), false, restart);
+        else {
+            bool switched;   // a changed switch takes effect at the next restart (restart_needed)
+            err = pluginConfigFromJson(p, doc["cfg"].as<JsonObjectConst>(), false, switched);
+        }
     } else {
         err = "Nothing to save";
     }
@@ -194,6 +211,7 @@ static void handleSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size
         sendError(request, 503, "Busy, try again");
         return;
     }
+    // Only core settings restart right away; device changes report restart_needed in /api/config
     request->send(200, "application/json", restart ? "{\"status\":\"ok\",\"restart\":true}" : "{\"status\":\"ok\"}");
 }
 
@@ -238,6 +256,7 @@ void buildLiveJson(JsonDocument& doc) {
     }
     JsonArray arr = doc["plugins"].to<JsonArray>();
     FOR_EACH_PLUGIN(p) {
+        if (p->removed) continue;
         JsonObject o = arr.add<JsonObject>();
         o["id"] = (const char*)p->id;
         o["name"] = (const char*)p->name;
@@ -427,44 +446,55 @@ static void applyPendingConfig() {
         evlog::add("Einstellungen gespeichert");
         Serial.println("[Web] Core settings changed");
     } else if (doc["enabled"].is<JsonObject>()) {
-        // Takes effect after the restart (plugins are only started at boot)
+        // Saved now, takes effect after the restart (plugins are only started at boot)
         for (JsonPairConst kv : doc["enabled"].as<JsonObjectConst>()) {
-            Plugin* p = pluginById(kv.key().c_str());
-            if (p && kv.value().is<bool>()) p->enabled = kv.value().as<bool>();
+            Plugin* p = pluginOrPendingById(kv.key().c_str());
+            if (p && kv.value().is<bool>()) p->enabledNext = kv.value().as<bool>();
         }
         evlog::add("Plugin-Auswahl geändert");
         Serial.println("[Web] Plugin selection changed");
     } else if (doc["add"].is<const char*>()) {
-        // Written to the config only; the device is created at the restart
+        // Saved now, the device starts with the next restart
         const PluginType* t = pluginType(doc["add"].as<const char*>());
         int8_t index = t ? registryFreeIndex(t) : -1;
         Plugin* p = index >= 0 ? registryNew(t, (uint8_t)index) : nullptr;
         if (!p) return;
-        p->enabled = true;
-        saveConfig(p);
+        p->enabledNext = true;
+        if (!registryAddPending(p)) {
+            delete p;
+            return;
+        }
         evlog::add("Gerät %s hinzugefügt", p->id);
         Serial.printf("[Web] Device %s added\n", p->id);
-        delete p;
-        restart = true;
     } else if (doc["remove"].is<const char*>()) {
-        Plugin* p = pluginById(doc["remove"].as<const char*>());
+        const char* id = doc["remove"].as<const char*>();
+        if (registryDropPending(id)) {
+            Serial.printf("[Web] Pending device %s dropped\n", id);
+        } else {
+            Plugin* p = pluginById(id);
+            if (!p) return;
+            p->removed = true;   // stops publishing now, gone after the restart
+            mqttForget(p);
+            evlog::add("Gerät %s entfernt", p->id);
+            Serial.printf("[Web] Device %s removed\n", p->id);
+        }
+    } else if (doc["restore"].is<const char*>()) {
+        Plugin* p = pluginById(doc["restore"].as<const char*>());
         if (!p) return;
-        mqttForget(p);
-        saveConfig(nullptr, p);
-        evlog::add("Gerät %s entfernt", p->id);
-        Serial.printf("[Web] Device %s removed\n", p->id);
-        restart = true;
+        p->removed = false;
+        mqttRequestDiscovery();
+        Serial.printf("[Web] Device %s kept\n", p->id);
     } else {
-        Plugin* p = pluginById(doc["plugin"] | "");
+        Plugin* p = pluginOrPendingById(doc["plugin"] | "");
         if (!p) return;
         bool r;
         pluginConfigFromJson(p, doc["cfg"].as<JsonObjectConst>(), true, r);
-        if (p->enabled && !restart) p->onConfigChanged();
+        if (p->enabled && !p->removed) p->onConfigChanged();   // pending ones are not running yet
         evlog::add("Einstellungen von %s gespeichert", p->id);
         Serial.printf("[Web] Settings of %s changed\n", p->id);
         mqttRequestDiscovery();   // Name / entities may have changed
     }
-    if (!doc["add"].is<const char*>() && !doc["remove"].is<const char*>()) saveConfig();
+    saveConfig();
     if (restart) {
         Serial.println("[Web] Restart for the new settings");
         restartPending = true;
@@ -480,7 +510,7 @@ void webserverLoop() {
     WebCommand c;
     while (cmdQueue && xQueueReceive(cmdQueue, &c, 0) == pdTRUE) {
         Plugin* p = pluginById(c.id);
-        if (p && p->enabled) {
+        if (p && p->enabled && !p->removed) {
             Serial.printf("[Web] Command %s/%s = %s\n", c.id, c.key, c.value);
             p->command(c.key, c.value);
             wsSendNow = true;
@@ -499,7 +529,10 @@ void webserverLoop() {
         restartAt = millis() + 1000;
     }
     // Deferred restart: the HTTP response can be sent before the chip resets
-    if (restartPending && (long)(millis() - restartAt) >= 0) ESP.restart();
+    if (restartPending && (long)(millis() - restartAt) >= 0) {
+        guard::plannedRestart();   // intended: no crash for the update probation
+        ESP.restart();
+    }
 
     if (wsSendNow || millis() - lastWsUpdate > WS_UPDATE_MS) {
         wsSendNow = false;

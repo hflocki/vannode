@@ -184,6 +184,7 @@ Die laufende Version steht in der Web-UI im Tab **WiFi** und in Home Assistant i
 
 | Version | Änderungen |
 |---|---|
+| 1.5.2 | Gewollte Neustarts (Einstellungen speichern, Neustart-Knopf, WLAN-Rückfall) zählen in der Update-Probezeit nicht mehr als Absturz – vorher konnten drei davon ein frisches Update auf die alte Version zurückrollen |
 | 1.5.1 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |
 | 1.5.0 | Neue Namen: Hostname `battery-node`, Setup-WLAN, Gerätename und Release-Datei `battery-node-….bin`. Topics `camper/…` und Home-Assistant-IDs bleiben |
 | 1.4.0 | Sicheres Update (Kennung, Prüfung im Browser und im Gerät, Fehler im Klartext), Ereignis-Log, Rückfall auf die vorherige Firmware und WLAN-Änderung mit Rückweg |

@@ -13,6 +13,7 @@
 #include "logger.h"
 #include "settings.h"
 #include "wifi_manager.h"
+#include "safeguard.h"
 
 using namespace truma;
 
@@ -508,6 +509,7 @@ void loop() {
   if (g_reboot_at != 0 && (int32_t) (millis() - g_reboot_at) > 0) {
     LOGI(TAG, "Rebooting on request");
     delay(100);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
   }
 

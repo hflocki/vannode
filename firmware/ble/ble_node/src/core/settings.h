@@ -12,9 +12,9 @@
 
 bool settingsInit();       // Mounts LittleFS, loads the config (defaults if missing)
 bool settingsFsReady();
-// extra: a new device that is not registered yet (added in the web UI, created after the restart)
-// skip : a device that is left out (removed in the web UI)
-void saveConfig(Plugin* extra = nullptr, const Plugin* skip = nullptr);
+// Writes the devices as they will be after the next restart: removed ones are left out,
+// pending ones (added in the web UI) are included, switches as set (enabledNext)
+void saveConfig();
 void settingsFactoryReset();   // Deletes /config.json (applied after a restart)
 
 // Core settings

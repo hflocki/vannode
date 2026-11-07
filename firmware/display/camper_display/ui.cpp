@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <time.h>
 #include <ArduinoJson.h>
+#include "safeguard.h"
 
 LV_FONT_DECLARE(font_de_14);
 LV_FONT_DECLARE(font_de_18);
@@ -389,6 +390,7 @@ void onDhcp(lv_event_t*) {
   settings.staticIp = false;
   cfg::save();
   delay(300);
+  guard::plannedRestart();   // intended, not a crash (update probation)
   ESP.restart();
 }
 bool hdrLong = false;   // header was long pressed: screen off when the finger is lifted

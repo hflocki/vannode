@@ -899,6 +899,7 @@ void loop() {
   if (rebootAt && (int32_t)(millis() - rebootAt) > 0) {
     ws.closeAll();
     delay(100);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
   }
 

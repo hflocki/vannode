@@ -408,6 +408,7 @@ void loop() {
   if (g_reboot_at != 0 && (int32_t) (millis() - g_reboot_at) > 0) {
     LOGI(TAG, "Rebooting");
     delay(200);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
   }
 }

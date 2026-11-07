@@ -62,6 +62,7 @@ static void startWiFi() {
     saveConfig();
     Serial.println("[MAIN] New WiFi failed - previous WiFi restored, restarting");
     delay(200);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
 }
 

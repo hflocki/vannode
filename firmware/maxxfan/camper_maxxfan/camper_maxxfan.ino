@@ -69,6 +69,7 @@ void loop() {
   if (rebootAt && (int32_t)(millis() - rebootAt) >= 0) {
     Serial.println("Rebooting...");
     delay(100);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
   }
   delay(2);

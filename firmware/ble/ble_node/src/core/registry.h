@@ -23,6 +23,19 @@ Plugin* registryNew(const PluginType* t, uint8_t index);
 // Register a device (only while loading the config at boot); false = full or id taken
 bool registryAdd(Plugin* p);
 
+// Devices added in the web UI since this boot: saved to /config.json, created at the restart
+bool registryAddPending(Plugin* p);
+// Drop a pending device again (removed before the restart); false = not pending
+bool registryDropPending(const char* id);
+uint8_t pendingCount();
+Plugin* pendingAt(uint8_t i);
+// Running or pending device (for settings changes in the web UI)
+Plugin* pluginOrPendingById(const char* id);
+// Devices after the next restart (not removed + pending): checked against MAX_PLUGINS
+uint8_t registryCountNext();
+// True if the saved device list differs from the running one (added, removed, switched)
+bool registryRestartNeeded();
+
 // All devices of this boot (enabled or not), in the order of /config.json
 uint8_t pluginCount();
 Plugin* pluginAt(uint8_t i);
@@ -30,9 +43,10 @@ Plugin* pluginById(const char* id);
 
 // True if at least one enabled plugin uses Bluetooth
 bool registryNeedsBle();
-// Enabled plugins that keep a Bluetooth connection (except one, e.g. the one being changed)
+// Plugins switched on for the next restart that keep a Bluetooth connection
+// (except one, e.g. the one being changed); pending ones count, removed ones do not
 uint8_t registryLinksOn(const Plugin* except = nullptr);
-// More than MAX_BLE_LINKS connecting plugins switched on (edited config): switch off the rest
+// At boot: more than MAX_BLE_LINKS connecting plugins switched on (edited config): switch off the rest
 void registryEnforceLinkLimit();
 
 #define FOR_EACH_PLUGIN(p) \
@@ -41,6 +55,6 @@ void registryEnforceLinkLimit();
 
 #define FOR_EACH_ENABLED_PLUGIN(p) \
     for (uint8_t _i = 0; _i < pluginCount(); _i++) \
-        for (Plugin* p = pluginAt(_i); p && p->enabled; p = nullptr)
+        for (Plugin* p = pluginAt(_i); p && p->enabled && !p->removed; p = nullptr)
 
 #endif // CT_REGISTRY_H

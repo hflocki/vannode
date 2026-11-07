@@ -54,6 +54,7 @@ static void wifiTrialCheck() {
   cfg::save();
   Serial.println("[boot] new WiFi failed - previous WiFi restored, restarting");
   delay(200);
+  guard::plannedRestart();   // intended, not a crash (update probation)
   ESP.restart();
 }
 

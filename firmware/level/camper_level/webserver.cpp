@@ -410,7 +410,7 @@ void webserverLoop() {
     if (tareSetPending) { tareSetPending = false; sensorSetTare(); mqttRequestSettings(); }
     if (tareResetPending) { tareResetPending = false; sensorResetTare(); mqttRequestSettings(); }
     if (sensorRestartPending) { sensorRestartPending = false; sensorRestart(); }
-    if (restartPending && millis() >= restartAt) ESP.restart();
+    if (restartPending && millis() >= restartAt) { guard::plannedRestart(); ESP.restart(); }
 
     if (millis() - lastWsUpdate > WS_UPDATE_MS) {
         lastWsUpdate = millis();

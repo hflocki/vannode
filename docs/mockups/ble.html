@@ -6,16 +6,16 @@
 const M = {
   id: 'ble',
   config: {
-    version: '1.5.0', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '1.5.1', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
-    plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2,
+    plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2, running: true,
                fields: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                         {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
               // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
-              {id: 'blesensor', type: 'blesensor', type_name: 'Eigener BLE-Sensor', ble: 1,
+              {id: 'blesensor', type: 'blesensor', running: true, type_name: 'Eigener BLE-Sensor', ble: 1,
                fields: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
@@ -43,6 +43,10 @@ const M = {
     max_links: 3
   },
   pos: 0, target: -1, release: false,
+  // device changes are saved at once and take effect with the restart (restart_needed)
+  keep(plugins) {
+    M.save({plugins, restart_needed: plugins.some(p => p.pending || p.removed || p.cfg.enabled !== p.running)});
+  },
   route(path, method, body) {
     if (path === '/api/config' && method === 'POST') {
       const c = M.cfg;
@@ -51,23 +55,31 @@ const M = {
         const p = c.plugins.find(x => x.id === body.plugin);
         if (p) { Object.assign(p.cfg, body.cfg); M.save({plugins: c.plugins}); }
       } else if (body.enabled) {
-        c.plugins.forEach(p => { if (p.id in body.enabled) p.cfg.enabled = body.enabled[p.id]; });
-        M.save({plugins: c.plugins});
-        return {status: 'ok', restart: true};
+        c.plugins.forEach(p => { if (p.id in body.enabled && !p.removed) p.cfg.enabled = body.enabled[p.id]; });
+        M.keep(c.plugins);
       } else if (body.remove) {
-        M.save({plugins: c.plugins.filter(p => p.id !== body.remove)});
-        return {status: 'ok', restart: true};
+        // pending devices disappear right away, running ones after the restart
+        const p = c.plugins.find(x => x.id === body.remove);
+        M.keep(p && p.pending ? c.plugins.filter(x => x !== p) : c.plugins.map(x => x === p ? Object.assign({}, x, {removed: true}) : x));
+      } else if (body.restore) {
+        M.keep(c.plugins.map(x => x.id === body.restore ? Object.assign({}, x, {removed: undefined}) : x));
       } else if (body.add) {
         const t = c.types.find(x => x.type === body.add);
         let n = 1;
         while (c.plugins.some(p => p.id === (n === 1 ? t.type : t.type + n))) n++;
         const id = n === 1 ? t.type : t.type + n;
-        const plugins = c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
-                                            cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]);
-        M.save({plugins});
-        return {status: 'ok', restart: true};
+        M.keep(c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, running: false, pending: true,
+                                  fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
+                                  cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]));
       }
       return {status: 'ok'};
+    }
+    if (path === '/api/restart' && method === 'POST') {
+      // the restart applies all saved device changes
+      const plugins = M.cfg.plugins.filter(p => !p.removed)
+        .map(p => Object.assign({}, p, {pending: undefined, running: p.cfg.enabled}));
+      M.keep(plugins);
+      return {status: 'restarting'};
     }
     if (path === '/api/cmd') {
       const P = {auf: 100, zu: 0, regen: 12, lueften: 102};
@@ -93,10 +105,12 @@ const M = {
     }
     const shown = Math.min(M.pos, 100);
     const label = M.pos === 102 ? 'Lüften' : M.target >= 0 ? (M.target > M.pos ? 'Öffnet...' : 'Schließt...') : M.pos === 0 ? 'Geschlossen' : 'Offen';
-    const on = M.cfg.plugins[0].cfg.enabled;
-    const others = M.cfg.plugins.slice(1).map(p => {
-      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: p.cfg.enabled};
-      if (!p.cfg.enabled) return o;
+    // live data: only what runs in this boot (pending devices start with the restart)
+    const runs = p => p.running && !p.removed;
+    const on = runs(M.cfg.plugins[0]);
+    const others = M.cfg.plugins.slice(1).filter(p => !p.pending && !p.removed).map(p => {
+      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: runs(p)};
+      if (!o.enabled) return o;
       if (p.type !== 'blesensor') return Object.assign(o, {state: 'Warte auf Daten', ok: false, rows: []});
       const t = 21.4 + Math.sin((Date.now() - M.t0) / 60000) * 0.3;
       return Object.assign(o, {state: 'OK', ok: true,
@@ -600,7 +614,7 @@ nav button .ico{display:inline-flex}
         const t = [["live", "Live", "chart"]];
         // Disabled plugins get no tab; they are switched on in System -> Plugins
         for (const p of CFG.plugins)
-          if (p.cfg.enabled) t.push(["p:" + p.id, p.cfg.name, ICONS[p.type] || "plug"]);
+          if (p.cfg.enabled && !p.removed) t.push(["p:" + p.id, p.cfg.name, ICONS[p.type] || "plug"]);
         t.push(
           ["ble", "Bluetooth", "radio"],
           ["wifi", "WLAN", "wifi"],
@@ -634,7 +648,7 @@ nav button .ico{display:inline-flex}
         if (tab == "live") renderLive();
         else if (tab.startsWith("p:")) {
           const p = CFG.plugins.find((x) => "p:" + x.id == tab);
-          if (p && p.cfg.enabled) renderPlugin(p);
+          if (p && p.cfg.enabled && !p.removed) renderPlugin(p);
           else {
             tab = "live";
             return render();
@@ -880,6 +894,14 @@ nav button .ico{display:inline-flex}
             el("span", { className: "mute", textContent: "ID: " + p.id }),
           ),
         );
+        if (!p.running)
+          c.append(
+            el(
+              "small",
+              { className: "mute", style: "display:block;margin-bottom:10px" },
+              "Läuft erst nach dem Neustart (System → Plugins → Jetzt neu starten). Einstellungen kannst du schon jetzt speichern.",
+            ),
+          );
         const nm = el("input", {
           type: "text",
           value: p.cfg.name,
@@ -1203,43 +1225,61 @@ nav button .ico{display:inline-flex}
         const max = CFG.max_links || 3,
           maxDev = CFG.max_devices || 12,
           types = CFG.types || [];
-        const restartAfter = (r, msg) => {
-          if (r.restart) {
-            toast(msg + " – Neustart…");
-            setTimeout(() => location.reload(), 8000);
-          } else toast("Keine Änderung");
+        // Device changes are saved right away and take effect with the next restart
+        const save = async (body, msg) => {
+          try {
+            await api("/api/config", body);
+            toast(msg);
+            await new Promise((r) => setTimeout(r, 300)); // the device applies it in its main loop
+            const keep = window.scrollY;
+            await load();
+            window.scrollTo(0, keep);
+          } catch (e) {
+            toast(e.message, true);
+          }
         };
-        // one line per device: switch, name, type, remove
+        const active = CFG.plugins.filter((p) => !p.removed);
+        // one line per device: switch, name, state after the restart, type, remove / undo
         const mk = (p) => {
-          const i = el("input", { type: "checkbox", checked: p.cfg.enabled });
+          const i = el("input", { type: "checkbox", checked: p.cfg.enabled && !p.removed, disabled: !!p.removed });
           i.dataset.id = p.id;
-          const rm = el("button", {
-            className: "b d",
-            title: "Entfernen",
-            textContent: "✕",
-            style: "width:auto;margin:0;padding:4px 10px",
-            on: {
-              click: async () => {
-                if (!confirm(`„${p.cfg.name}“ entfernen? Die Einstellungen und die Einträge in Home Assistant werden gelöscht.`)) return;
-                try {
-                  restartAfter(await api("/api/config", { remove: p.id }), "Entfernt");
-                } catch (e) {
-                  toast(e.message, true);
-                }
-              },
-            },
-          });
+          let note = "";
+          if (p.removed) note = el("span", { className: "badge err", textContent: "wird entfernt" });
+          else if (p.pending) note = el("span", { className: "badge new", textContent: "neu" });
+          else if (p.cfg.enabled !== p.running)
+            note = el("span", { className: "badge new", textContent: p.cfg.enabled ? "wird eingeschaltet" : "wird ausgeschaltet" });
+          const btn = p.removed
+            ? el("button", {
+                className: "b s",
+                title: "Doch behalten",
+                textContent: "Rückgängig",
+                style: "width:auto;margin:0;padding:4px 10px",
+                on: { click: () => save({ restore: p.id }, "Bleibt erhalten") },
+              })
+            : el("button", {
+                className: "b d",
+                title: "Entfernen",
+                textContent: "✕",
+                style: "width:auto;margin:0;padding:4px 10px",
+                on: {
+                  click: () => {
+                    if (!confirm(`„${p.cfg.name}“ entfernen? Die Einstellungen und die Einträge in Home Assistant werden gelöscht.`)) return;
+                    save({ remove: p.id }, "Entfernt");
+                  },
+                },
+              });
           return el(
             "div",
-            { className: "f", style: "display:flex;gap:8px;align-items:center" },
+            { className: "f", style: "display:flex;gap:8px;align-items:center" + (p.removed ? ";opacity:.6" : "") },
             el(
               "label",
-              { style: "display:flex;gap:8px;align-items:center;flex:1;margin:0" },
+              { style: "display:flex;gap:8px;align-items:center;flex:1;margin:0;flex-wrap:wrap" },
               i,
-              p.cfg.name,
+              el("span", { style: p.removed ? "text-decoration:line-through" : "" }, p.cfg.name),
+              note,
               el("span", { className: "mute", style: "margin-left:auto", textContent: p.type_name }),
             ),
-            rm,
+            btn,
           );
         };
         const listen = CFG.plugins.filter((p) => p.ble !== 2).map(mk);
@@ -1253,11 +1293,12 @@ nav button .ico{display:inline-flex}
           count.textContent = `${on} von ${max}`;
           for (const b of link) {
             const i = b.querySelector("input");
-            i.disabled = !i.checked && on >= max;
+            const gone = CFG.plugins.find((p) => p.id === i.dataset.id).removed;
+            i.disabled = gone || (!i.checked && on >= max);
           }
           for (const o of sel.options) {
             const t = types.find((x) => x.type === o.value);
-            o.disabled = (t && t.ble === 2 && on >= max) || CFG.plugins.length >= maxDev;
+            o.disabled = (t && t.ble === 2 && on >= max) || active.length >= maxDev;
           }
         };
         for (const b of link) b.querySelector("input").addEventListener("change", check);
@@ -1281,19 +1322,40 @@ nav button .ico{display:inline-flex}
             className: "b s",
             textContent: "+ Gerät hinzufügen",
             on: {
-              click: async () => {
+              click: () => {
                 const o = sel.selectedOptions[0];
                 if (!o || o.disabled) return toast("Dieses Gerät passt gerade nicht dazu (Grenze erreicht)", true);
-                try {
-                  restartAfter(await api("/api/config", { add: o.value }), "Hinzugefügt");
-                } catch (e) {
-                  toast(e.message, true);
-                }
+                save({ add: o.value }, "Hinzugefügt");
               },
             },
           }),
         );
         check();
+        // Pending changes: one restart applies all of them
+        const restartBox = CFG.restart_needed
+          ? el(
+              "div",
+              { className: "f", style: "margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(229,162,59,.12)" },
+              el(
+                "small",
+                { style: "display:block;margin-bottom:8px;color:var(--warning)" },
+                "Änderungen sind gespeichert und wirken nach dem Neustart.",
+              ),
+              el("button", {
+                className: "b",
+                textContent: "Jetzt neu starten",
+                on: {
+                  click: () =>
+                    api("/api/restart", {})
+                      .then(() => {
+                        toast("Neustart…");
+                        setTimeout(() => location.reload(), 8000);
+                      })
+                      .catch((e) => toast(e.message, true)),
+                },
+              }),
+            )
+          : null;
         $("#main").append(
           el(
             "div",
@@ -1310,28 +1372,26 @@ nav button .ico{display:inline-flex}
             el(
               "small",
               { className: "mute", style: "display:block;margin-top:8px" },
-              `Insgesamt höchstens ${maxDev} Geräte. Ausgeschaltete Geräte behalten ihre Einstellungen, laufen aber nicht und fehlen in Home Assistant. Jede Änderung startet das Gerät neu.`,
+              `Insgesamt höchstens ${maxDev} Geräte. Ausgeschaltete Geräte behalten ihre Einstellungen, laufen aber nicht und fehlen in Home Assistant. Änderungen werden sofort gespeichert und wirken nach dem Neustart – mehrere Änderungen brauchen nur einen Neustart.`,
             ),
             boxes.length
               ? el("button", {
                   className: "b",
                   textContent: "An/Aus speichern",
                   on: {
-                    click: async () => {
+                    click: () => {
                       const enabled = {};
                       for (const b of boxes) {
                         const i = b.querySelector("input");
-                        enabled[i.dataset.id] = i.checked;
+                        if (!i.disabled || i.checked) enabled[i.dataset.id] = i.checked;
                       }
-                      try {
-                        restartAfter(await api("/api/config", { enabled }), "Gespeichert");
-                      } catch (e) {
-                        toast(e.message, true);
-                      }
+                      for (const p of CFG.plugins) if (p.removed) delete enabled[p.id];
+                      save({ enabled }, "Gespeichert");
                     },
                   },
                 })
               : null,
+            restartBox,
           ),
         );
       }

@@ -2,16 +2,16 @@
 const M = {
   id: 'ble',
   config: {
-    version: '1.5.0', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '1.5.1', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
-    plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2,
+    plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2, running: true,
                fields: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                         {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
               // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
-              {id: 'blesensor', type: 'blesensor', type_name: 'Eigener BLE-Sensor', ble: 1,
+              {id: 'blesensor', type: 'blesensor', running: true, type_name: 'Eigener BLE-Sensor', ble: 1,
                fields: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
@@ -39,6 +39,10 @@ const M = {
     max_links: 3
   },
   pos: 0, target: -1, release: false,
+  // device changes are saved at once and take effect with the restart (restart_needed)
+  keep(plugins) {
+    M.save({plugins, restart_needed: plugins.some(p => p.pending || p.removed || p.cfg.enabled !== p.running)});
+  },
   route(path, method, body) {
     if (path === '/api/config' && method === 'POST') {
       const c = M.cfg;
@@ -47,23 +51,31 @@ const M = {
         const p = c.plugins.find(x => x.id === body.plugin);
         if (p) { Object.assign(p.cfg, body.cfg); M.save({plugins: c.plugins}); }
       } else if (body.enabled) {
-        c.plugins.forEach(p => { if (p.id in body.enabled) p.cfg.enabled = body.enabled[p.id]; });
-        M.save({plugins: c.plugins});
-        return {status: 'ok', restart: true};
+        c.plugins.forEach(p => { if (p.id in body.enabled && !p.removed) p.cfg.enabled = body.enabled[p.id]; });
+        M.keep(c.plugins);
       } else if (body.remove) {
-        M.save({plugins: c.plugins.filter(p => p.id !== body.remove)});
-        return {status: 'ok', restart: true};
+        // pending devices disappear right away, running ones after the restart
+        const p = c.plugins.find(x => x.id === body.remove);
+        M.keep(p && p.pending ? c.plugins.filter(x => x !== p) : c.plugins.map(x => x === p ? Object.assign({}, x, {removed: true}) : x));
+      } else if (body.restore) {
+        M.keep(c.plugins.map(x => x.id === body.restore ? Object.assign({}, x, {removed: undefined}) : x));
       } else if (body.add) {
         const t = c.types.find(x => x.type === body.add);
         let n = 1;
         while (c.plugins.some(p => p.id === (n === 1 ? t.type : t.type + n))) n++;
         const id = n === 1 ? t.type : t.type + n;
-        const plugins = c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
-                                            cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]);
-        M.save({plugins});
-        return {status: 'ok', restart: true};
+        M.keep(c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, running: false, pending: true,
+                                  fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
+                                  cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]));
       }
       return {status: 'ok'};
+    }
+    if (path === '/api/restart' && method === 'POST') {
+      // the restart applies all saved device changes
+      const plugins = M.cfg.plugins.filter(p => !p.removed)
+        .map(p => Object.assign({}, p, {pending: undefined, running: p.cfg.enabled}));
+      M.keep(plugins);
+      return {status: 'restarting'};
     }
     if (path === '/api/cmd') {
       const P = {auf: 100, zu: 0, regen: 12, lueften: 102};
@@ -89,10 +101,12 @@ const M = {
     }
     const shown = Math.min(M.pos, 100);
     const label = M.pos === 102 ? 'Lüften' : M.target >= 0 ? (M.target > M.pos ? 'Öffnet...' : 'Schließt...') : M.pos === 0 ? 'Geschlossen' : 'Offen';
-    const on = M.cfg.plugins[0].cfg.enabled;
-    const others = M.cfg.plugins.slice(1).map(p => {
-      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: p.cfg.enabled};
-      if (!p.cfg.enabled) return o;
+    // live data: only what runs in this boot (pending devices start with the restart)
+    const runs = p => p.running && !p.removed;
+    const on = runs(M.cfg.plugins[0]);
+    const others = M.cfg.plugins.slice(1).filter(p => !p.pending && !p.removed).map(p => {
+      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: runs(p)};
+      if (!o.enabled) return o;
       if (p.type !== 'blesensor') return Object.assign(o, {state: 'Warte auf Daten', ok: false, rows: []});
       const t = 21.4 + Math.sin((Date.now() - M.t0) / 60000) * 0.3;
       return Object.assign(o, {state: 'OK', ok: true,

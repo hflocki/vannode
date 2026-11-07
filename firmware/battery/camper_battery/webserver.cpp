@@ -313,6 +313,7 @@ void webserverLoop() {
 
     // Deferred restart: the HTTP response can be sent before the chip resets
     if (restartPending && millis() >= restartAt) {
+        guard::plannedRestart();   // intended, not a crash (update probation)
         ESP.restart();
     }
 

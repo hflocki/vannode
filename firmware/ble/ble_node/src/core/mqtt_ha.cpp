@@ -237,7 +237,7 @@ static void publishDiscovery() {
         size_t n = p->entities(ents);
         for (size_t i = 0; i < n; i++) {
             // Disabled plugins and inactive entities are removed from Home Assistant
-            if (p->enabled && p->entityActive(ents[i])) publishEntity(p, ents[i]);
+            if (p->enabled && !p->removed && p->entityActive(ents[i])) publishEntity(p, ents[i]);
             else removeEntity(p, ents[i]);
             mqtt.loop();   // Keep the connection serviced during the burst
         }
@@ -268,7 +268,7 @@ static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
     v.trim();
 
     Plugin* p = pluginById(id.c_str());
-    if (!p || !p->enabled) return;
+    if (!p || !p->enabled || p->removed) return;
     Serial.printf("[MQTT] Command %s/%s = %s\n", id.c_str(), key.c_str(), v.c_str());
     p->command(key.c_str(), v.c_str());
 }
@@ -347,7 +347,7 @@ void mqttLoop() {
     // Plugins: immediately on changes, otherwise periodically
     for (uint8_t i = 0; i < pluginCount() && i < MAX_TRACKED; i++) {
         Plugin* p = pluginAt(i);
-        if (!p->enabled) continue;
+        if (!p->enabled || p->removed) continue;
         bool changed = p->updates != lastUpdates[i];
         if (changed || lastPublish[i] == 0 || millis() - lastPublish[i] > p->publishIntervalMs()) {
             lastPublish[i] = millis();

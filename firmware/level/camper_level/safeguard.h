@@ -8,6 +8,8 @@
 //    times before that, the device boots the previous firmware from the other app slot.
 //    An update uploaded over the setup AP (no WiFi at that moment) is only checked for
 //    restart loops, as the new firmware cannot be expected to find the WiFi either.
+//    Restarts the firmware does on purpose (settings saved, restart button) are announced
+//    with plannedRestart() and do not count as a restart loop.
 //    Only updates written by this firmware are guarded (web upload, ArduinoOTA); flashing
 //    over USB is never rolled back.
 // 2. WiFi trial: when SSID/password are changed while the device is connected, the working
@@ -33,6 +35,7 @@ namespace guard {
 
 void begin();              // first thing in setup(): counts the start, rolls back a crash loop
 void otaDone();            // a firmware image was written successfully, restart follows
+void plannedRestart();     // call right before an intended ESP.restart(): not counted as a crash
 void loop(bool healthy);   // healthy = connected to the WiFi (or no WiFi configured)
 bool onProbation();        // new firmware not confirmed yet
 

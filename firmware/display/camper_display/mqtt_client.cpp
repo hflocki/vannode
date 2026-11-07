@@ -16,6 +16,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <map>
+#include "safeguard.h"
 
 namespace {
 
@@ -66,6 +67,7 @@ void handleSelfCommand(const String& sub, const String& msg) {
     alerts::setAwning(out);
   } else if (sub == "reboot") {
     delay(200);
+    guard::plannedRestart();   // intended, not a crash (update probation)
     ESP.restart();
   }
 }

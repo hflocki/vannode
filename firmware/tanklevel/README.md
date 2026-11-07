@@ -332,6 +332,7 @@ Die laufende Version steht in der Web-UI im Tab **WiFi** und in Home Assistant i
 
 | Version | Änderungen |
 | --- | --- |
+| 1.9.2 | Gewollte Neustarts (Einstellungen speichern, Neustart-Knopf, WLAN-Rückfall) zählen in der Update-Probezeit nicht mehr als Absturz – vorher konnten drei davon ein frisches Update auf die alte Version zurückrollen |
 | 1.9.1 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |
 | 1.9.0 | Neue Namen: Hostname `tanklevel-node`, Setup-WLAN, Gerätename und Release-Datei `tanklevel-node-….bin`. Topics `camper/…` und Home-Assistant-IDs bleiben |
 | 1.8.1 | Update-Prüfung vergleicht auch den Chip in der Kennung (gleich wie im Browser); ein Update über den Setup-AP löst keinen WLAN-Rückfall mehr aus |

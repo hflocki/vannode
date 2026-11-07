@@ -57,6 +57,8 @@ static const uint8_t TYPE_COUNT = sizeof(TYPES) / sizeof(TYPES[0]);
 
 static Plugin* plugins[MAX_PLUGINS];
 static uint8_t count = 0;
+static Plugin* pending[MAX_PLUGINS];
+static uint8_t nPending = 0;
 
 uint8_t pluginTypeCount() { return TYPE_COUNT; }
 const PluginType* pluginTypeAt(uint8_t i) { return i < TYPE_COUNT ? &TYPES[i] : nullptr; }
@@ -98,7 +100,7 @@ int8_t registryFreeIndex(const PluginType* t) {
     char id[16];
     for (uint8_t i = 0; i < 99; i++) {
         idFor(t, i, id, sizeof(id));
-        if (!pluginById(id)) return (int8_t)i;
+        if (!pluginOrPendingById(id)) return (int8_t)i;
     }
     return -1;
 }
@@ -114,6 +116,49 @@ bool registryAdd(Plugin* p) {
     if (!p || count >= MAX_PLUGINS || pluginById(p->id)) return false;
     plugins[count++] = p;
     return true;
+}
+
+bool registryAddPending(Plugin* p) {
+    if (!p || nPending >= MAX_PLUGINS || pluginOrPendingById(p->id)) return false;
+    pending[nPending++] = p;
+    return true;
+}
+
+bool registryDropPending(const char* id) {
+    for (uint8_t i = 0; i < nPending; i++) {
+        if (strcmp(pending[i]->id, id) != 0) continue;
+        // Not deleted: the web task may be reading it right now (a few hundred bytes until the restart)
+        for (uint8_t j = i + 1; j < nPending; j++) pending[j - 1] = pending[j];
+        nPending--;
+        return true;
+    }
+    return false;
+}
+
+uint8_t pendingCount() { return nPending; }
+Plugin* pendingAt(uint8_t i) { return i < nPending ? pending[i] : nullptr; }
+
+Plugin* pluginOrPendingById(const char* id) {
+    Plugin* p = pluginById(id);
+    if (p) return p;
+    for (uint8_t i = 0; i < nPending; i++) {
+        if (strcmp(pending[i]->id, id) == 0) return pending[i];
+    }
+    return nullptr;
+}
+
+uint8_t registryCountNext() {
+    uint8_t n = nPending;
+    for (uint8_t i = 0; i < count; i++) if (!plugins[i]->removed) n++;
+    return n;
+}
+
+bool registryRestartNeeded() {
+    if (nPending) return true;
+    for (uint8_t i = 0; i < count; i++) {
+        if (plugins[i]->removed || plugins[i]->enabled != plugins[i]->enabledNext) return true;
+    }
+    return false;
 }
 
 uint8_t pluginCount() {
@@ -134,7 +179,11 @@ Plugin* pluginById(const char* id) {
 uint8_t registryLinksOn(const Plugin* except) {
     uint8_t n = 0;
     for (uint8_t i = 0; i < count; i++) {
-        if (plugins[i] != except && plugins[i]->enabled && plugins[i]->bleUse() == BLE_LINK) n++;
+        Plugin* p = plugins[i];
+        if (p != except && !p->removed && p->enabledNext && p->bleUse() == BLE_LINK) n++;
+    }
+    for (uint8_t i = 0; i < nPending; i++) {
+        if (pending[i] != except && pending[i]->enabledNext && pending[i]->bleUse() == BLE_LINK) n++;
     }
     return n;
 }
@@ -145,7 +194,7 @@ void registryEnforceLinkLimit() {
         Plugin* p = plugins[i];
         if (!p->enabled || p->bleUse() != BLE_LINK) continue;
         if (++n > MAX_BLE_LINKS) {
-            p->enabled = false;
+            p->enabled = p->enabledNext = false;
             Serial.printf("[MAIN] %s switched off: more than %d Bluetooth connections\n", p->id, MAX_BLE_LINKS);
         }
     }

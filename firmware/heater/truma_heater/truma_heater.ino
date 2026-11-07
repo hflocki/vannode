@@ -86,6 +86,7 @@ static void wifiTrialCheck() {
   p.end();
   LOGW(TAG, "New WiFi failed - previous WiFi restored, restarting");
   delay(200);
+  guard::plannedRestart();   // intended, not a crash (update probation)
   ESP.restart();
 }
 

@@ -185,7 +185,7 @@ void pluginSchemaToJson(Plugin* p, JsonArray arr) {
 
 void pluginConfigToJson(Plugin* p, JsonObject o) {
     o["type"] = p->type;
-    o["enabled"] = p->enabled;
+    o["enabled"] = p->enabledNext;
     o["name"] = (const char*)p->name;
     const Field* f = nullptr;
     size_t n = p->fields(f);
@@ -217,8 +217,8 @@ const char* pluginConfigFromJson(Plugin* p, JsonObjectConst in, bool write, bool
 
     JsonVariantConst en = in["enabled"];
     if (en.is<bool>()) {
-        if (en.as<bool>() != p->enabled) restart = true;
-        if (write) p->enabled = en.as<bool>();
+        if (en.as<bool>() != p->enabledNext) restart = true;
+        if (write) p->enabledNext = en.as<bool>();   // runs from the next restart on
     }
     JsonVariantConst nm = in["name"];
     if (nm.is<const char*>()) {
@@ -345,6 +345,7 @@ static void loadConfig() {
             one["name"] = pc["name"];
             pluginConfigFromJson(p, one.as<JsonObjectConst>(), true, restart);
         }
+        p->enabled = p->enabledNext;   // boot: the saved switch is the running state
     }
     // Old format (1.3 / 1.4): store the devices with their type right away
     if (migrated) {
@@ -353,15 +354,18 @@ static void loadConfig() {
     }
 }
 
-void saveConfig(Plugin* extra, const Plugin* skip) {
+void saveConfig() {
     if (!fsReady) return;
     JsonDocument doc;
     coreToFile(doc);
     JsonObject all = doc["plugins"].to<JsonObject>();
     FOR_EACH_PLUGIN(p) {
-        if (p != skip) pluginConfigToJson(p, all[p->id].to<JsonObject>());
+        if (!p->removed) pluginConfigToJson(p, all[p->id].to<JsonObject>());
     }
-    if (extra) pluginConfigToJson(extra, all[extra->id].to<JsonObject>());
+    for (uint8_t i = 0; i < pendingCount(); i++) {
+        Plugin* p = pendingAt(i);
+        pluginConfigToJson(p, all[p->id].to<JsonObject>());
+    }
     File file = LittleFS.open(CONFIG_FILE ".tmp", "w");
     if (!file) {
         Serial.println("[Config] Save failed");

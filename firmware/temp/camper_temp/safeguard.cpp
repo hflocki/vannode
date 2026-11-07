@@ -12,7 +12,7 @@
 // NVS keys (namespace "safeguard"):
 //   ota   1 = new firmware on probation      new  app slot label of the new firmware
 //   old   app slot label to go back to       oldv version of the previous firmware
-//   boots starts on probation so far
+//   boots starts on probation so far          plan  1 = the last restart was intended
 //   net   1 = the update came over the WiFi (0 = over the setup AP: no WiFi check afterwards)
 //   wtr   1 = WiFi trial running             wss/wpw/wex  previous WiFi values
 //   note  last event for the web UI
@@ -82,8 +82,12 @@ void begin() {
         p.end();
         return;
     }
-    // waking up from deep sleep is no new start (Road Buddy): only count real restarts
-    uint8_t boots = p.getUChar("boots", 0) + (esp_reset_reason() == ESP_RST_DEEPSLEEP ? 0 : 1);
+    // waking up from deep sleep is no new start (Road Buddy), an intended restart (settings,
+    // restart button) is no crash: only count the others
+    bool planned = p.getUChar("plan", 0) == 1;
+    if (planned) p.putUChar("plan", 0);
+    bool counts = esp_reset_reason() != ESP_RST_DEEPSLEEP && !(planned && esp_reset_reason() == ESP_RST_SW);
+    uint8_t boots = p.getUChar("boots", 0) + (counts ? 1 : 0);
     p.putUChar("boots", boots);
     netCheck = p.getUChar("net", 1) == 1;
     p.end();
@@ -126,6 +130,13 @@ void loop(bool healthy) {
     }
     healthySince = 0;
     if (now >= GUARD_TIMEOUT_MS) rollback("ohne WLAN-Verbindung");
+}
+
+void plannedRestart() {
+    Preferences p;
+    p.begin(NS, false);
+    p.putUChar("plan", 1);
+    p.end();
 }
 
 bool onProbation() { return probation; }
@@ -185,6 +196,7 @@ String status() {
 namespace guard {
 void begin() {}
 void otaDone() {}
+void plannedRestart() {}
 void loop(bool) {}
 bool onProbation() { return false; }
 void wifiTrialStart(const String&, const String&, const String&) {}

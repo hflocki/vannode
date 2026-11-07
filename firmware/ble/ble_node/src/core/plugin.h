@@ -112,7 +112,9 @@ public:
     uint8_t index;
     char id[16];
     char name[32];             // Display name (web UI, HA device), editable
-    bool enabled = false;      // Switched in the web UI, applied at boot (all slots start off)
+    bool enabled = false;      // Running in this boot (set at boot from enabledNext)
+    bool enabledNext = false;  // Switch in the web UI / config.json, takes effect at the next restart
+    bool removed = false;      // Removed in the web UI: no longer saved or published, gone after the restart
     uint32_t updates = 0;      // Increment on relevant changes: MQTT publishes right away
 
     // ---- Settings ----

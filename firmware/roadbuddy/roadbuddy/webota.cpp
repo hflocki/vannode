@@ -289,7 +289,7 @@ void loop() {
     mdnsStarted = true;
   }
   server.handleClient();
-  if (restartAt && (long)(millis() - restartAt) > 0) ESP.restart();
+  if (restartAt && (long)(millis() - restartAt) > 0) { guard::plannedRestart(); ESP.restart(); }
 }
 
 bool busy() { return uploading; }

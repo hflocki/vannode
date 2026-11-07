@@ -19,6 +19,9 @@ Plugin* createMopekaStd(uint8_t index);
 #if PLUGIN_BLESENSOR
 Plugin* createBleSensor(uint8_t index);
 #endif
+#if PLUGIN_GOVEE
+Plugin* createGovee(uint8_t index);
+#endif
 #if PLUGIN_CARAWATER
 Plugin* createCaraWater(uint8_t index);
 #endif
@@ -48,6 +51,9 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_MOPEKA_STD
     {"mopeka_std", "Gas: Mopeka Standard", BLE_PASSIVE, createMopekaStd},
+#endif
+#if PLUGIN_GOVEE
+    {"govee", "Thermometer Govee", BLE_PASSIVE, createGovee},
 #endif
 #if PLUGIN_BLESENSOR
     {"blesensor", "Eigener BLE-Sensor", BLE_PASSIVE, createBleSensor},

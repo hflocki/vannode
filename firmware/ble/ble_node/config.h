@@ -33,6 +33,9 @@
 #ifndef PLUGIN_BLESENSOR
 #define PLUGIN_BLESENSOR      1      // Own BLE sensor: values at freely set positions of the advertisement
 #endif
+#ifndef PLUGIN_GOVEE
+#define PLUGIN_GOVEE          1      // Thermometer: Govee H5072/H5074/H5075/H5101/H5102/H5104/H5174/H5177/H5179 (passive BLE)
+#endif
 #ifndef PLUGIN_RVTECH
 #define PLUGIN_RVTECH         1      // Roof hatch: RV Tech skylight motor control, BLE connection
 #endif
@@ -55,7 +58,7 @@
 #endif
 
 // Derived switches (do not edit): which code parts are compiled
-#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR)
+#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
@@ -68,7 +71,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.5.2"
+#define FW_VERSION            "1.5.3"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -201,6 +204,16 @@
 #endif
 #ifndef MQTT_BLESENSOR_MS
 #define MQTT_BLESENSOR_MS     30000  // Periodic publish (also published immediately on changes)
+#endif
+
+// ============================================================
+// PLUGIN: GOVEE THERMOMETER
+// ============================================================
+#ifndef GOVEE_TIMEOUT_MS
+#define GOVEE_TIMEOUT_MS      (10UL * 60UL * 1000UL) // No advertisement for this long: "offline"
+#endif
+#ifndef MQTT_GOVEE_MS
+#define MQTT_GOVEE_MS         60000  // Periodic publish (also published immediately on changes)
 #endif
 
 // ============================================================

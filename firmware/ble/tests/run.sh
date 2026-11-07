@@ -5,3 +5,5 @@ cd "$(dirname "$0")"
 mkdir -p build
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/blesensor_test blesensor_test.cpp
 ./build/blesensor_test
+${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/govee_test govee_test.cpp
+./build/govee_test

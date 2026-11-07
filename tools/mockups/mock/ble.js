@@ -2,7 +2,7 @@
 const M = {
   id: 'ble',
   config: {
-    version: '1.5.2', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '1.5.3', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
@@ -18,6 +18,9 @@ const M = {
     schemas: {
       rvtech: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                         {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
+      govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
+              {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
+              {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
       blesensor: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
@@ -37,7 +40,7 @@ const M = {
     types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1},
             {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
-            {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
+            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     max_devices: 12,
     max_links: 3
   },
@@ -91,7 +94,7 @@ const M = {
     if (path === '/api/scan') {
       return {active: true, devices: [
         {mac: 'F0:F8:F2:00:00:01', name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech']},
-        {mac: 'A4:C1:38:00:00:02', name: 'GVH5075', rssi: -83, mfg: '88EC', uuid: '', age: 5, fits: []}]};
+        {mac: 'A4:C1:38:00:00:02', name: 'GVH5075_1A2B', rssi: -83, mfg: '88EC', uuid: '', age: 5, fits: ['govee']}]};
     }
   },
   state() {
@@ -110,6 +113,8 @@ const M = {
     const others = M.cfg.plugins.slice(1).filter(p => !p.pending && !p.removed).map(p => {
       const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: runs(p)};
       if (!o.enabled) return o;
+      if (p.type === 'govee' && p.cfg.mac) return Object.assign(o, {state: 'OK', ok: true,
+        rows: [['Temperatur', 4.3, '°C'], ['Luftfeuchte', 71, '%'], ['Batterie', 100, '%'], ['Modell', 'H5072/H5075', ''], ['Bluetooth', -83, 'dBm'], ['Alter', 12, 's']]});
       if (p.type !== 'blesensor') return Object.assign(o, {state: 'Warte auf Daten', ok: false, rows: []});
       const t = 21.4 + Math.sin((Date.now() - M.t0) / 60000) * 0.3;
       return Object.assign(o, {state: 'OK', ok: true,

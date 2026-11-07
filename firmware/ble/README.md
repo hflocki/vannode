@@ -23,6 +23,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Gas: Rotarex DIMES / SRG WAVE | Mithören | MAC, Flaschengröße, Füllstopp |
 | Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
 | Gas: Mopeka Standard / Std Check | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
+| Thermometer Govee (H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177, H5179; Modell wird erkannt) | Mithören | MAC, Korrektur Temperatur/Feuchte |
 | **Eigener BLE-Sensor** | Mithören | MAC, Datenquelle, bis zu 3 Werte mit Stelle und Umrechnung (siehe unten) |
 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
@@ -167,6 +168,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 1.5.3 | Neues Plugin **Thermometer Govee** (Mithören): Temperatur (auch unter null), Luftfeuchte und Batterie von H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177 und H5179, nur MAC wählen; Korrektur für Temperatur und Feuchte. Host-Test der Dekodierung (`tests/govee_test.cpp`) |
 | 1.5.2 | Neuer Reiter **Geräte** statt eines Reiters je Gerät: Liste mit An/Aus, Hinzufügen, Entfernen und Neustart, je Gerät **Einstellen** (Einstellungen jetzt auch für ausgeschaltete Geräte). Ein neues Gerät öffnet sich gleich mit seinen Einstellungen und dem Knopf „Jetzt neu starten“. Behoben: Mit mehreren Eigenen BLE-Sensoren wurde `/api/config` zu groß für den Speicher, die Seite zeigte „CFG.plugins is not iterable“ und keine Rückmeldung beim Hinzufügen – die Feldbeschreibung kommt jetzt nur einmal je Typ (`schemas`), die Antwort wird gestreamt, bei Speichermangel kommt eine klare Meldung. Knöpfe sind gesperrt, solange eine Änderung unterwegs ist (kein doppeltes Hinzufügen) |
 | 1.5.1 | Änderungen unter System → Plugins (hinzufügen, entfernen, an/aus) werden gespeichert, ohne sofort neu zu starten; neue und entfernte Geräte sind markiert, darunter erscheint **Jetzt neu starten** – mehrere Änderungen brauchen nur einen Neustart. Neue Geräte lassen sich schon vor dem Neustart einstellen, entfernte bis dahin mit „Rückgängig“ behalten. Gewollte Neustarts (Einstellungen speichern, Neustart-Knopf, WLAN-Rückfall) zählen in der Update-Probezeit nicht mehr als Absturz – vorher konnten drei davon ein frisches Update auf die alte Version zurückrollen (so ging 1.5.0 nach dem Hinzufügen auf 1.3.0 zurück) |
 | 1.5.0 | Geräte frei anlegen statt fester Plätze: „+ Gerät hinzufügen“ und „✕“ unter System → Plugins, beliebig viele vom selben Typ (insgesamt 12, höchstens 3 mit Verbindung). Eingeschaltete Plugins aus 1.3 / 1.4 werden übernommen. Neues Plugin **Eigener BLE-Sensor**: Werte an frei einstellbaren Stellen im Funkpaket, ohne neue Firmware. Rohdaten mit Positionen, Reiter-Leiste am Handy scrollbar. Behoben: Mehr als 8 Plugins wurden nicht alle an MQTT gesendet (in 1.4.0 der Kühlschrank). Host-Test der Umrechnung (`tests/run.sh`, auch in der CI) |

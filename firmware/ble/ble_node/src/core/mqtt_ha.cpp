@@ -7,7 +7,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-// Topic layout (prefix = config.mqtt_prefix, default "camper/toolbox"):
+// Topic layout (prefix = config.mqtt_prefix, default "camper/ble"):
 //   <prefix>/status                        online / offline (last will)
 //   <prefix>/info                          diagnostics JSON (devinfo.h), retained
 //   <prefix>/rssi                          WiFi signal
@@ -15,7 +15,7 @@
 //   <prefix>/<plugin>/<key>                values, retained
 //   <prefix>/cmd/<plugin>/<key>/set        commands, not retained
 //
-// Home Assistant: one device "Toolbox Node" (WiFi, status) plus one device per plugin
+// Home Assistant: one device "BLE Node" (WiFi, status) plus one device per plugin
 // instance, linked via via_device. Entities come from the plugins' Entity tables.
 
 static WiFiClient espClient;
@@ -117,7 +117,7 @@ static void addCoreDevice(JsonDocument& doc) {
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"][0] = mqttNodeId();
     device["name"] = DEVICE_NAME;
-    device["model"] = "Toolbox Node";
+    device["model"] = "BLE Node";
     device["sw_version"] = FW_VERSION;
     device["configuration_url"] = String("http://") + WiFi.localIP().toString() + "/";
 }
@@ -301,7 +301,7 @@ void mqttLoop() {
             lastReconnect = millis();
             Serial.println("[MQTT] Connection attempt...");
 
-            String clientId = "toolbox-node-" + WiFi.macAddress();
+            String clientId = "ble-node-" + WiFi.macAddress();
             clientId.replace(":", "");
             String willTopic = topic("status");
             bool connected;

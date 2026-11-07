@@ -8,7 +8,7 @@ const M = {
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
     prefixSelf: 'camper/display', prefixTank: 'camper/tanklevel', prefixLevel: 'camper/level', prefixHeater: 'camper/heater',
-    prefixFan: 'camper/maxxfan', prefixTemp: 'camper/temp', prefixBattery: 'camper/battery', prefixToolbox: 'camper/toolbox', fanPort: 1,
+    prefixFan: 'camper/maxxfan', prefixTemp: 'camper/temp', prefixBattery: 'camper/battery', prefixBle: 'camper/ble', fanPort: 1,
     ntpServer: 'pool.ntp.org', tz: 'CET-1CEST,M3.5.0,M10.5.0/3',
     poOn: true, poClear: true, poPrio: 0, poCat: {temp: 2, heater: 1, bat: 1, water: 3, gas: 1, frost: 1, weather: 1, depart: 1, tile: 3, rule: 3, contact: -3}, poRetry: 300, poExpire: 3600, poToken: '********', poUser: '********', poStatus: 'OK 14:02',
     brightness: 80, dimBrightness: 10, screenTimeout: 120, warnWake: false,

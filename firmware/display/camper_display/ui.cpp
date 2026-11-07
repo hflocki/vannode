@@ -127,7 +127,7 @@ const int LVL_RING = BADGE, LVL_DOT = 10;
 
 lv_obj_t *hRoom, *hWater, *hSet, *hPower, *hPowerLbl, *hFanBm, *hWaterBm, *hStatus, *hDecoke, *hDecokeLbl;
 lv_obj_t *fStatus, *fSpeed, *fSpeedLbl;
-// roof hatch (toolbox-node, plugin rvtech): page and overview tile
+// roof hatch (ble-node, plugin rvtech): page and overview tile
 lv_obj_t *kState, *kSub, *kPos, *kPosLbl, *kPreset[4];
 lv_obj_t *ovHekiVal = nullptr, *ovHekiSub = nullptr, *ovHekiIcon = nullptr;
 uint32_t kPosHold = 0;   // millis() of the last slider command: do not jump back while the hatch moves
@@ -1461,7 +1461,7 @@ void buildHeki(lv_obj_t* tab) {
   DotW d = iconDot(c, LV_SYMBOL_EJECT, C_SLATE, BADGE + 12, &font_de_28);
   lv_obj_align(d.dot, LV_ALIGN_RIGHT_MID, 0, 0);
 
-  // presets of the toolbox (same values as in its web UI: Auf 100, Zu 0, Regen 12, ventilation)
+  // presets of the BLE node (same values as in its web UI: Auf 100, Zu 0, Regen 12, ventilation)
   struct B { const char* txt; const char* key; };
   static const B presets[] = {{LV_SYMBOL_UP "  Auf", "auf"}, {LV_SYMBOL_DOWN "  Zu", "zu"},
                               {"Regen", "regen"}, {"L\xC3\xBC" "ften", "lueften"}};
@@ -1948,9 +1948,9 @@ void refreshValues() {
     lv_label_set_text(ovFanSub, fanOn ? (store::get(DP_FAN_HOLD) == "ON" ? "Auto-Hold aktiv" : "Tippen zum Steuern") : "offline");
   }
 
-  // roof hatch (toolbox-node)
+  // roof hatch (ble-node)
   if (ovHekiVal || kState) {
-    bool tbOn = store::devOnline(DEV_TOOLBOX);
+    bool tbOn = store::devOnline(DEV_BLE);
     bool bt = store::get(DP_HEKI_CONN) != "OFF";
     int preset;
     bool moving, known;
@@ -1970,7 +1970,7 @@ void refreshValues() {
     if (kState) {
       lv_label_set_text(kState, dispText(st).c_str());
       lv_obj_set_style_text_color(kState, !live ? C_MUTED : open ? C_YELLOW : C_TEXT, 0);
-      String ps = !tbOn ? String("Toolbox offline") : !bt ? String("Bluetooth zur Dachhaube getrennt")
+      String ps = !tbOn ? String("BLE-Node offline") : !bt ? String("Bluetooth zur Dachhaube getrennt")
                 : !known ? String("Noch keine Meldung der Dachhaube") : String("Bluetooth verbunden");
       lv_label_set_text(kSub, dispText(ps).c_str());
       for (int i = 0; i < 4; i++)

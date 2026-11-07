@@ -695,7 +695,7 @@ function pgFan(){
   <div class="card" style="margin:12px 0"><h3>Stufe <span id="f_sv">5</span></h3><input type="range" min="1" max="10" value="5" id="f_speed"></div>
   <div class="fanbtns">${b('auto','Auto')}${b('direction','⇅ Richtung')}${b('sync_off','Sync AUS')}</div>`;
 }
-// roof hatch on the toolbox-node (plugin rvtech): presets like in the toolbox, slider for the position
+// roof hatch on the ble-node (plugin rvtech): presets like in the BLE node, slider for the position
 const HEKI_PRESETS=[['auf','▲ Auf'],['zu','▼ Zu'],['regen','Regen'],['lueften','Lüften']];
 function pgHeki(){
   return `<div class="card" style="margin-bottom:12px"><h3>⏏ ${esc(ptitle(13))}</h3><div class="big" id="k_v">--</div><div class="mu" id="k_s"></div></div>
@@ -791,7 +791,7 @@ function update(){
    const col=s=>live&&open?`<span style="color:var(--gas)">${esc(s)}</span>`:esc(s);
    set('ok_v',col(st.startsWith('Offen ')?st.slice(6):st));
    set('ok_s',!on?'offline':!kn?'keine Daten':!bt?'Bluetooth getrennt':mv?'fährt …':st.startsWith('Offen ')?'offen':'Tippen zum Steuern');
-   if($('#k_v')){set('k_v',col(st));set('k_s',!on?'Toolbox offline':!bt?'Bluetooth zur Dachhaube getrennt':!kn?'Noch keine Meldung der Dachhaube':'Bluetooth verbunden');
+   if($('#k_v')){set('k_v',col(st));set('k_s',!on?'BLE-Node offline':!bt?'Bluetooth zur Dachhaube getrennt':!kn?'Noch keine Meldung der Dachhaube':'Bluetooth verbunden');
     document.querySelectorAll('[data-heki]').forEach((b,i)=>b.classList.toggle('on',i===pr&&!mv));
     const kp=$('#k_pos');if(kp&&V.heki_pos!==undefined&&document.activeElement!==kp&&Date.now()>hekiHold){kp.value=V.heki_pos;set('k_pv',esc(V.heki_pos))}}}
   set('of_v',online('fan')?'Bereit':'--');set('of_s',online('fan')?(V.fan_hold==='ON'?'Auto-Hold aktiv':'Tippen zum Steuern'):'offline');
@@ -949,7 +949,7 @@ function pgSettings(){
    <p class="mu">Basis-Topic je Gerät. Leer lassen, wenn das Gerät nicht vorhanden ist.</p>
    ${inp('prefixTank','Tanks (Wasser/Gas)')}${inp('prefixLevel','Ausrichtung (Levelsensor)')}
    <div class="f2"><div><label>Heizung: Steuerung über</label><select id="heaterSrc"><option value="0">eigene Firmware (heater-node)</option><option value="1">CampMatic-Box</option></select></div>${inp('prefixHeater','Heizung: Basis-Topic','text','camper/heater')}</div>
-   <p class="mu" style="margin-top:-4px">CampMatic: Basis-Topic <code>campmatic/&lt;Gerätenummer&gt;</code>, z. B. <code>campmatic/003</code>. Die Box muss per Bridge auf deinem Broker ankommen (siehe README). Freibrennen gibt es dort nicht.</p>${inp('prefixFan','MaxxFan')}${inp('prefixTemp','Temperaturen (temp-node)')}${inp('prefixBattery','Batterien (battery-node)')}${inp('prefixToolbox','Toolbox (Dachhaube Heki)','text','camper/toolbox')}
+   <p class="mu" style="margin-top:-4px">CampMatic: Basis-Topic <code>campmatic/&lt;Gerätenummer&gt;</code>, z. B. <code>campmatic/003</code>. Die Box muss per Bridge auf deinem Broker ankommen (siehe README). Freibrennen gibt es dort nicht.</p>${inp('prefixFan','MaxxFan')}${inp('prefixTemp','Temperaturen (temp-node)')}${inp('prefixBattery','Batterien (battery-node)')}${inp('prefixBle','BLE-Node (Dachhaube Heki)','text','camper/ble')}
    <div class="f2"><div><label>MaxxFan-Port</label><select id="fanPort"><option value="0">0 (RJ11)</option><option value="1">1 (RJ45)</option></select></div>${inp('prefixSelf','Eigenes Topic (Display)')}</div></details>
   <details data-g="dev"><summary>Geräte-Links</summary>
    <p class="mu" style="margin:4px 0 8px">Buttons auf der Seite „Geräte“, die die Web-Oberfläche des jeweiligen Geräts öffnen. Adresse z. B. <code>192.168.8.13</code> oder <code>tanklevel-node.local</code>.</p>
@@ -1058,7 +1058,7 @@ function showGroup(g,fromSec){setGroup=g;try{localStorage.setItem('setGroup',g)}
   const sb=$('.savebar');if(sb)sb.style.display=g==='rules'?'none':'';   // automations have their own save button
   if(g==='rules'){if(!rulesLoaded){rulesLoaded=true;loadRules()}else ruleState()}
   const sd=$('#snd');if(g==='dev'&&sd&&!sd.open){sd.open=true}}
-const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixToolbox','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs'];
+const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs'];
 async function loadSettings(){
   rulesLoaded=false;
   try{

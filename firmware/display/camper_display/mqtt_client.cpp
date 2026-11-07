@@ -129,7 +129,7 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
 void subscribeAll() {
   const String* prefixes[] = {&settings.prefixTank, &settings.prefixLevel,
                               &settings.prefixHeater, &settings.prefixFan, &settings.prefixTemp,
-                              &settings.prefixBattery, &settings.prefixToolbox};
+                              &settings.prefixBattery, &settings.prefixBle};
   for (auto p : prefixes) {
     if (p->isEmpty()) continue;
     mqtt.subscribe((*p + "/#").c_str());
@@ -352,8 +352,8 @@ bool fan(const String& key, const String& value) {
 }
 
 bool heki(const String& key, const String& value) {
-  if (settings.prefixToolbox.isEmpty()) return false;
-  String base = settings.prefixToolbox + "/cmd/rvtech/";   // plugin id of the roof hatch
+  if (settings.prefixBle.isEmpty()) return false;
+  String base = settings.prefixBle + "/cmd/rvtech/";   // plugin id of the roof hatch
   if (key == "position") {
     int p = value.toInt();
     if (value.isEmpty() || p < 0 || p > 100) return false;

@@ -96,11 +96,18 @@ jobs:
             fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=opi,PartitionScheme=app3M_fat9M_16MB
             sketch: firmware/display/camper_display
             libs: https://github.com/moononournation/Arduino_GFX.git#v1.6.0 https://github.com/lvgl/lvgl.git#v9.2.2
-          - device: toolbox
+          - device: ble
             target: esp32c3
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
-            sketch: firmware/toolbox/camper_toolbox
+            sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+          # BLE node with every plugin switched on (no release): keeps the optional plugins compiling
+          - device: ble-all
+            target: esp32c3
+            fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
+            sketch: firmware/ble/ble_node
+            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+            flags: -DPLUGIN_DIMES=1 -DPLUGIN_MOPEKA_PRO=1 -DPLUGIN_MOPEKA_STD=1 -DPLUGIN_CARAWATER=1 -DPLUGIN_RVTECH=1 -DPLUGIN_WCS_FRIDGE=1
           # Template for new devices (firmware/_template/ANLEITUNG.md), built so it always compiles
           - device: template
             target: esp32c3
@@ -159,7 +166,9 @@ jobs:
         if: steps.sel.outputs.skip != '1'
         run: |
           out=build/${{ matrix.device }}-${{ matrix.target }}
-          arduino-cli compile --fqbn "${{ matrix.fqbn }}" --output-dir "$out" "${{ matrix.sketch }}"
+          extra=()
+          if [[ -n "${{ matrix.flags }}" ]]; then extra=(--build-property "compiler.cpp.extra_flags=${{ matrix.flags }}"); fi
+          arduino-cli compile --fqbn "${{ matrix.fqbn }}" "${extra[@]}" --output-dir "$out" "${{ matrix.sketch }}"
           cp "$out"/*.ino.bin "${{ matrix.device }}-node-${{ matrix.target }}.bin"
 
       - uses: actions/upload-artifact@v4

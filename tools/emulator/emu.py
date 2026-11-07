@@ -20,7 +20,7 @@ from pathlib import Path
 # Devices
 # ============================================================
 
-D_TANK, D_LEVEL, D_HEATER, D_FAN, D_TEMP, D_BATTERY, D_ROUTER, D_ZIGBEE, D_TOOLBOX = range(9)
+D_TANK, D_LEVEL, D_HEATER, D_FAN, D_TEMP, D_BATTERY, D_ROUTER, D_ZIGBEE, D_BLE = range(9)
 
 # id, German name for the web page, field holding the base topic, own connection with status + last will
 DEVS = [
@@ -32,7 +32,7 @@ DEVS = [
     ("battery", "Batterien", "bt_pre", True),
     ("router", "Router", "", False),      # sent over the emulator's own connection
     ("zigbee", "Zigbee", "", False),
-    ("toolbox", "Toolbox (Dachhaube)", "tb_pre", True),
+    ("ble", "BLE-Node (Dachhaube)", "tb_pre", True),
 ]
 D_COUNT = len(DEVS)
 
@@ -182,13 +182,13 @@ FIELDS = [
     *bat_slot(1, "ON", "house", "Bordbatterie", "2", "78", "13.25", "-4.2", "100"),
     *bat_slot(2, "OFF", "starter", "Starterbatterie", "3", "90", "12.70", "0", "70"),
 
-    # ---- toolbox (toolbox-node, roof hatch over the plugin rvtech) ----
-    TXT("tb_pre", D_TOOLBOX, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/toolbox"),
-    BOOL("rv_on", D_TOOLBOX, "Dachhaube (Heki)", FL_SET, "Dachhaube gekoppelt", "ON"),
-    BOOL("rv_conn", D_TOOLBOX, "Dachhaube (Heki)", 0, "Bluetooth verbunden", "ON"),
-    NUM("rv_pos", D_TOOLBOX, "Dachhaube (Heki)", 0, "Position (102 = Lüften)", "", 0, 102, 1, 0, 0, "0"),
-    NUM("rv_tgt", D_TOOLBOX, "Dachhaube (Heki)", FL_ADV, "Ziel (fährt dorthin)", "", 0, 102, 1, 0, 0, "0"),
-    NUM("rv_speed", D_TOOLBOX, "Dachhaube (Heki)", FL_SET | FL_ADV, "Geschwindigkeit", "%/s", 1, 50, 1, 0, 0, "5"),
+    # ---- BLE node (ble-node, roof hatch over the plugin rvtech) ----
+    TXT("tb_pre", D_BLE, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/ble"),
+    BOOL("rv_on", D_BLE, "Dachhaube (Heki)", FL_SET, "Dachhaube gekoppelt", "ON"),
+    BOOL("rv_conn", D_BLE, "Dachhaube (Heki)", 0, "Bluetooth verbunden", "ON"),
+    NUM("rv_pos", D_BLE, "Dachhaube (Heki)", 0, "Position (102 = Lüften)", "", 0, 102, 1, 0, 0, "0"),
+    NUM("rv_tgt", D_BLE, "Dachhaube (Heki)", FL_ADV, "Ziel (fährt dorthin)", "", 0, 102, 1, 0, 0, "0"),
+    NUM("rv_speed", D_BLE, "Dachhaube (Heki)", FL_SET | FL_ADV, "Geschwindigkeit", "%/s", 1, 50, 1, 0, 0, "5"),
 
     # ---- router (RUT956 "Data to Server") ----
     TXT("rut_t", D_ROUTER, "Topics", FL_SET | FL_TOPIC | FL_ADV, "GPS (JSON)", "camper/rut"),
@@ -784,7 +784,7 @@ class Emu:
             emit = lambda t, p: out.append((t, p))   # noqa: E731
             p = self.prefix(d)
             [self._b_tank, self._b_level, self._b_heater, self._b_fan, self._b_temp, self._b_battery,
-             lambda p, e: self._b_router(e), lambda p, e: self._b_zigbee(e), self._b_toolbox][d](p, emit)
+             lambda p, e: self._b_router(e), lambda p, e: self._b_zigbee(e), self._b_ble][d](p, emit)
             return out
 
     def _b_tank(self, p, emit):
@@ -865,8 +865,8 @@ class Emu:
             emit(f"{p}/{k}/auto_hold", self.V(k + "_hold"))
             emit(f"{p}/{k}/led", self.V(k + "_led"))
 
-    def _b_toolbox(self, p, emit):
-        """Same topics as plugin_rvtech of toolbox-node: <prefix>/rvtech/..."""
+    def _b_ble(self, p, emit):
+        """Same topics as plugin_rvtech of ble-node: <prefix>/rvtech/..."""
         if not self.B("rv_on"):
             return
         r = p + "/rvtech/"
@@ -1021,7 +1021,7 @@ class Emu:
                     continue
                 sub = topic[len(p):]
                 fn = {D_TANK: self._c_tank, D_LEVEL: self._c_level, D_HEATER: self._c_heater,
-                      D_FAN: self._c_fan, D_TOOLBOX: self._c_toolbox}.get(d)
+                      D_FAN: self._c_fan, D_BLE: self._c_ble}.get(d)
                 if fn:
                     fn(sub, msg)
                 return
@@ -1110,7 +1110,7 @@ class Emu:
         elif btn == "auto":
             self.set_bool(hold, not self.B(hold), True)
 
-    def _c_toolbox(self, sub, msg):
+    def _c_ble(self, sub, msg):
         # cmd/rvtech/<key>/set, keys and preset values as in plugin_rvtech
         if not sub.startswith("cmd/rvtech/") or not sub.endswith("/set") or not self.B("rv_on"):
             return

@@ -45,6 +45,9 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
     if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
     if (config.mqtt_prefix[0] == '\0') strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
+    // Toolbox -> BLE node (1.3.0): move the old default topic and access point name along
+    if (!strcmp(config.mqtt_prefix, "camper/toolbox")) strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
+    if (!strncmp(config.ap_ssid, "Toolbox-Node", 12)) strlcpy(config.ap_ssid, defaultApSsid(), sizeof(config.ap_ssid));
 }
 
 static void coreToFile(JsonDocument& doc) {

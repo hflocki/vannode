@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Camper emulator: sends the MQTT topics of the devices built into the camper (tanks,
-level, heater, MaxxFan, temperatures, batteries, toolbox, router, Zigbee) with values you
+level, heater, MaxxFan, temperatures, batteries, BLE node, router, Zigbee) with values you
 change in a local web page, plus scenarios. For testing the displays and Home Assistant
 at home. See README.md.
 
@@ -435,7 +435,7 @@ def selftest() -> int:
             emu.stop_scenario(True)
         # commands like the display sends them
         emu.command("camper/heater/set/target_temp_room", "22")
-        emu.command("camper/toolbox/cmd/rvtech/auf/set", "1")
+        emu.command("camper/ble/cmd/rvtech/auf/set", "1")
         emu.command("camper/zigbee/cmd/a4c1380000000021/1/0006", "ON")
         emu.command("camper/maxxfan/cmd/p1/speed/set", "4")
         checks = [("setp", "22.0"), ("hvac", "heat"), ("rv_tgt", "100"), ("l1_state", "ON"), ("p1_speed", "4")]

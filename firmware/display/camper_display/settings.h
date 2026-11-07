@@ -66,7 +66,7 @@ struct Settings {
   // mqtt
   String mqttHost, mqttUser, mqttPass;
   uint16_t mqttPort = 1883;
-  String prefixSelf, prefixTank, prefixLevel, prefixHeater, prefixFan, prefixTemp, prefixBattery, prefixToolbox;
+  String prefixSelf, prefixTank, prefixLevel, prefixHeater, prefixFan, prefixTemp, prefixBattery, prefixBle;
   uint8_t fanPort = 1;
   // time
   String ntpServer, tz;

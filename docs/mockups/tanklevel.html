@@ -174,6 +174,13 @@ const M = {
     b.textContent = 'Mockup mit Beispieldaten – keine Verbindung zu einem Gerät';
     b.style.cssText = 'position:sticky;top:0;z-index:9999;background:#d4a017;color:#000;text-align:center;font:600 12px system-ui;padding:4px';
     document.body.prepend(b);
+    // body as a flex row (e.g. BLE node on wide screens): the bar would become a column,
+    // so it is fixed on top and the body moves down by its height
+    const cs = getComputedStyle(document.body);
+    if (cs.display.includes('flex') && !cs.flexDirection.startsWith('column')) {
+      b.style.position = 'fixed'; b.style.left = '0'; b.style.right = '0';
+      document.body.style.paddingTop = ((parseFloat(cs.paddingTop) || 0) + b.offsetHeight) + 'px';
+    }
   });
 })();
 

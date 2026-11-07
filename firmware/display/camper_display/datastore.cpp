@@ -57,11 +57,11 @@ const DpDef DEFS[DP_COUNT] = {
   {"bat_status",  DEV_BATTERY, "status"},
   {"bat_list",    DEV_BATTERY, "batteries"},
 
-  {"tb_status",   DEV_TOOLBOX, "status"},
-  {"heki_cover",  DEV_TOOLBOX, "rvtech/cover"},            // open / closed / opening / closing
-  {"heki_pos",    DEV_TOOLBOX, "rvtech/cover_position"},   // 0 .. 100 %
-  {"heki_rep",    DEV_TOOLBOX, "rvtech/reported"},         // raw value, 102 = ventilation
-  {"heki_conn",   DEV_TOOLBOX, "rvtech/connected"},        // Bluetooth link ON / OFF
+  {"tb_status",   DEV_BLE, "status"},
+  {"heki_cover",  DEV_BLE, "rvtech/cover"},            // open / closed / opening / closing
+  {"heki_pos",    DEV_BLE, "rvtech/cover_position"},   // 0 .. 100 %
+  {"heki_rep",    DEV_BLE, "rvtech/reported"},         // raw value, 102 = ventilation
+  {"heki_conn",   DEV_BLE, "rvtech/connected"},        // Bluetooth link ON / OFF
 };
 
 // CampMatic box (ESPHome style climate topics below <heater prefix>), used instead of the
@@ -121,7 +121,7 @@ const String& prefixOf(Dev d) {
     case DEV_HEATER: return settings.prefixHeater;
     case DEV_TEMP:   return settings.prefixTemp;
     case DEV_BATTERY: return settings.prefixBattery;
-    case DEV_TOOLBOX: return settings.prefixToolbox;
+    case DEV_BLE: return settings.prefixBle;
     default:         return settings.prefixFan;
   }
 }

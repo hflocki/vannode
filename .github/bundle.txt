@@ -7,5 +7,5 @@ tanklevel esp32c3
 temp      esp32c3
 level     esp32s3
 battery   atoms3
-toolbox   esp32c3
+ble       esp32c3
 roadbuddy core2

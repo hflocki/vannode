@@ -296,7 +296,7 @@ void getSettings(AsyncWebServerRequest* r) {
   d["prefixFan"] = settings.prefixFan;
   d["prefixTemp"] = settings.prefixTemp;
   d["prefixBattery"] = settings.prefixBattery;
-  d["prefixToolbox"] = settings.prefixToolbox;
+  d["prefixBle"] = settings.prefixBle;
   d["fanPort"] = settings.fanPort;
   d["ntpServer"] = settings.ntpServer;
   d["tz"] = settings.tz;
@@ -436,7 +436,7 @@ bool applySettings(JsonObject o, bool apply) {
   str("prefixFan", settings.prefixFan, false);
   str("prefixTemp", settings.prefixTemp, false);
   str("prefixBattery", settings.prefixBattery, false);
-  str("prefixToolbox", settings.prefixToolbox, false);
+  str("prefixBle", settings.prefixBle, false);
   str("poToken", settings.poToken, false, true);
   str("poUser", settings.poUser, false, true);
   if (o["poOn"].is<bool>()) settings.poOn = o["poOn"];
@@ -506,7 +506,7 @@ bool applySettings(JsonObject o, bool apply) {
   settings.prefixFan = cleanPrefix(settings.prefixFan);
   settings.prefixTemp = cleanPrefix(settings.prefixTemp);
   settings.prefixBattery = cleanPrefix(settings.prefixBattery);
-  settings.prefixToolbox = cleanPrefix(settings.prefixToolbox);
+  settings.prefixBle = cleanPrefix(settings.prefixBle);
   if (o["fanPort"].is<int>()) settings.fanPort = constrain(o["fanPort"].as<int>(), 0, 1);
 
   if (o["brightness"].is<int>())    settings.brightness = constrain(o["brightness"].as<int>(), 5, 100);

@@ -30,7 +30,7 @@ flowchart LR
   tank["tanklevel<br/>fresh, grey, gas"] --> broker
   temp["temp<br/>DS18B20 + alarms"] --> broker
   bat["battery<br/>BMS over Bluetooth"] --> broker
-  tool["toolbox<br/>Bluetooth plugins: roof hatch …"] <--> broker
+  tool["ble-node<br/>Bluetooth plugins: roof hatch …"] <--> broker
   heater["heater<br/>Truma Combi (LIN)"] <--> broker
   fan["maxxfan<br/>VanTurtle"] <--> broker
   level["level<br/>BNO085 + wedges"] <--> broker
@@ -47,7 +47,7 @@ flowchart LR
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Fresh and grey water (Votronic), gas bottle (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | up to 8 DS18B20 (fridge, freezer …) with alarm limits | `camper/temp` |
 | [`firmware/battery`](firmware/battery) | ESP32-C3 | Battery BMS over Bluetooth (Daly, Ective BM X): state of charge, current, cells | `camper/battery` |
-| [`firmware/toolbox`](firmware/toolbox) | ESP32-C3 | Bluetooth devices as plugins: RV Tech roof hatch (Heki), CaraWater pump, WCS fridge | `camper/toolbox` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 | BLE node: Bluetooth devices as plugins – RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, optionally gas (DIMES, Mopeka) | `camper/ble` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (fork of the level sensor by klehnst) | `camper/level` |
@@ -127,7 +127,7 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
-Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, battery, maxxfan and toolbox the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
+Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, battery, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
 
 **Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file (`temp-node-esp32c3.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
 
@@ -184,5 +184,5 @@ Every folder keeps its license:
 | `firmware/heater` | GPL-3.0 (protocol logic ported from GPL projects, see its README) |
 | `firmware/level` | MIT ([klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT)) |
 | `firmware/tanklevel`, `temp`, `maxxfan`, `display` | MIT |
-| `firmware/toolbox` | MIT (roof hatch protocol ported from the HA integration rvtech-hacs) |
+| `firmware/ble` | MIT (roof hatch protocol ported from the HA integration rvtech-hacs) |
 | `firmware/roadbuddy` | MIT |

@@ -11,7 +11,7 @@ bool mqttIsConnected();
 // Re-send the discovery on the next loop (e.g. after a plugin setting changed entities)
 void mqttRequestDiscovery();
 
-// Home Assistant node ID derived from the MQTT prefix ("camper/toolbox" -> "camper_toolbox")
+// Home Assistant node ID derived from the MQTT prefix ("camper/ble" -> "camper_ble")
 const char* mqttNodeId();
 
 #endif // CT_MQTT_HA_H

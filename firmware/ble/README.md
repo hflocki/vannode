@@ -1,15 +1,15 @@
 > [!WARNING]
 > **IN ENTWICKLUNG.** Die Plugins sind teils mangels Hardware noch nicht am echten Gerät getestet, auch die Dachhaube (RV Tech) noch nicht.
 
-# Toolbox Node
+# BLE Node
 
 Ein ESP32 als **Bluetooth-Gateway mit Plugins**: Er liest Bluetooth-Geräte im Camper aus bzw. steuert sie und stellt alles über eine Web-Oberfläche und MQTT (mit Home-Assistant-Discovery) bereit. Es wird nichts verdrahtet, nur ein ESP32 mit Strom.
 
 Jedes Gerät ist ein **Plugin**. Welche in die Firmware kommen, legst du in `config.h` bzw. `config_local.h` fest. Neue Bluetooth-Geräte kommen als weiteres Plugin dazu und nutzen den fertigen Rahmen (WLAN, MQTT, Web-Oberfläche, Bluetooth-Verbindung, Updates).
 
-Früher ein eigenes Repo (`hflocki/camper_toolbox`), jetzt Teil von VanNode mit derselben Update-Absicherung wie die übrigen Geräte.
+Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jetzt Teil von VanNode mit derselben Update-Absicherung wie die übrigen Geräte. Ein ESP32 für alle Bluetooth-Geräte im Camper, jedes als Plugin.
 
-Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/toolbox.html`](../../docs/mockups/toolbox.html) (herunterladen und im Browser öffnen).
+Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
 ## Plugins
 
@@ -20,11 +20,15 @@ Zahl = Anzahl der Geräte, `0` = nicht einkompiliert. Ab Werk (und in der Releas
 | `PLUGIN_RVTECH` | Dachhaube RV Tech (Heki-Motorsteuerung) | Verbindung, ggf. mit PIN | **1** | MAC, PIN |
 | `PLUGIN_CARAWATER` | Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbindung | 0 | MAC |
 | `PLUGIN_WCS_FRIDGE` | WCS Kompressor-Kühlschrank | Verbindung, ggf. mit PIN | 0 | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
+| `PLUGIN_DIMES` | Gas: Rotarex DIMES / SRG WAVE | passiv (nur mithören) | 0 | MAC, Flaschengröße, Füllstopp |
+| `PLUGIN_MOPEKA_PRO` | Gas: Mopeka Pro (Pro Check, Universal …) | passiv | 0 | MAC, Leer-/Voll-Höhe |
+| `PLUGIN_MOPEKA_STD` | Gas: Mopeka Standard / Std Check | passiv | 0 | MAC, Leer-/Voll-Höhe, Propan-Anteil |
 
 - Passive Sensoren: beliebig viele. Geräte mit Verbindung: höchstens **3** pro ESP32 (sonst bricht der Build mit einer Meldung ab).
 - Zweite Instanz, z. B. zwei Dachhauben: `#define PLUGIN_RVTECH 2` → „Dachhaube“ und „Dachhaube 2“ mit eigener MAC und PIN.
 - Jedes einkompilierte Plugin lässt sich zusätzlich in der Web-UI (Tab **System**) aus- und einschalten.
-- Gas (DIMES, Mopeka) und Tanks liest im VanNode-System [`tanklevel`](../tanklevel). Die Toolbox hat deshalb nur noch Geräte mit Bluetooth-Verbindung.
+- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
+- Die CI baut zusätzlich eine Variante mit allen Plugins (`ble-all`, ohne Release), damit auch die abgeschalteten Plugins immer kompilieren.
 
 Beispiel `config_local.h` mit Pumpe und Kühlschrank zusätzlich:
 
@@ -62,13 +66,13 @@ Board-Paket: esp32 von Espressif Systems, 3.3.x (CI: 3.3.2).
 **Flashen**
 
 1. `config_local.h.example` nach `config_local.h` kopieren und WLAN, MQTT und Passwörter eintragen (die Datei geht nicht nach GitHub).
-2. `camper_toolbox/camper_toolbox.ino` öffnen, Board-Einstellungen prüfen, per USB hochladen.
+2. `ble_node/ble_node.ino` öffnen, Board-Einstellungen prüfen, per USB hochladen.
 3. `http://<ip>/` öffnen. Solange die Web-Oberfläche fehlt, steht dort ein Upload-Formular: `data/index.html.gz` hochladen.
 4. Ab dann Updates nur noch über die Web-UI (Tab **System → Firmware- & Web-Update**).
 
-Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `Toolbox-Node-XXXXXX`, die Seite liegt dann unter `http://192.168.4.1`.
+Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`.
 
-Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/pack_web.py toolbox` ausführen (packt nach `data/index.html.gz`).
+Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/pack_web.py` ausführen (packt nach `data/index.html.gz`).
 
 ## Bluetooth-Geräte einrichten
 
@@ -90,27 +94,29 @@ Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/
 
 ## MQTT / Home Assistant
 
-Basis-Topic `camper/toolbox` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/toolbox/<plugin>/…`, Befehle unter `camper/toolbox/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#toolbox-campertoolbox).
+Basis-Topic `camper/ble` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/ble/<plugin>/…`, Befehle unter `camper/ble/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#toolbox-campertoolbox).
 
 **Dachhaube** (`rvtech`):
 
 | Topic | Inhalt |
 | --- | --- |
-| `camper/toolbox/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
-| `camper/toolbox/rvtech/cover_position` | 0 … 100 % |
-| `camper/toolbox/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` |
-| `camper/toolbox/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `camper/toolbox/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`) |
+| `camper/ble/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
+| `camper/ble/rvtech/cover_position` | 0 … 100 % |
+| `camper/ble/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` |
+| `camper/ble/cmd/rvtech/cover_position/set` | `0` … `100` |
+| `camper/ble/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`) |
 
-In Home Assistant erscheint ein Gerät „Toolbox Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
+In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
+
+> **Umstieg von der Toolbox (bis 1.2.x):** Das Gerät stellt ein gespeichertes `camper/toolbox` beim ersten Start selbst auf `camper/ble` um, das Display (ab 2.16.2) ebenso. Danach die alten retained Topics und die alten HA-Entitäten löschen: `python3 tools/mqtt/clean.py --host <broker> camper/toolbox homeassistant/sensor/camper_toolbox …` bzw. die Geräte „Toolbox Node“ in Home Assistant entfernen.
 
 > Wer die Toolbox schon aus dem alten Repo nutzt: Das Basis-Topic war `camper/tool`, der Hostname `camper-tool`. Ein Gerät mit gespeicherten Einstellungen behält sein altes Topic, bis es in der Web-UI geändert wird. Ändert man es, legt Home Assistant die Entitäten neu an.
 
 ### Dachhaube am Display
 
-Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/toolbox/rvtech/…` und senden die Voreinstellungen und die Position an `camper/toolbox/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
+Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/ble/rvtech/…` und senden die Voreinstellungen und die Position an `camper/ble/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
 
-- Basis-Topic am Display: *Einstellungen → Topics der Geräte → Toolbox* (Standard `camper/toolbox`; ein Gerät aus dem alten Repo sendet auf `camper/tool`).
+- Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node* (Standard `camper/ble`; ein Gerät aus dem alten Repo sendet auf `camper/tool`).
 - Eine zweite Haube (`rvtech2`) kennt das Display noch nicht, ebenso der Abfahrtscheck.
 
 ## Neues Plugin schreiben
@@ -131,7 +137,7 @@ Für eine Fehlermeldung den Monitor vom Einschalten an mitschneiden, bis das Pro
 
 ## Sicheres Update, Ereignisse und Rückfall
 
-Jede Firmware hat eine Kennung (`CAMPER-FW:toolbox:<version>:<chip>;`) und dieselbe Absicherung wie alle VanNode-Geräte (`fwcheck.*`, `evlog.*`, `safeguard.*` aus `firmware/_common`):
+Jede Firmware hat eine Kennung (`CAMPER-FW:toolbox:<version>:<chip>;`, bleibt `toolbox`, damit Geräte mit der Toolbox-Firmware das Update annehmen) und dieselbe Absicherung wie alle VanNode-Geräte (`fwcheck.*`, `evlog.*`, `safeguard.*` aus `firmware/_common`):
 
 - **Prüfung beim Update** (Tab **System → Firmware- & Web-Update**): Die installierte Version steht dabei. Eine gewählte Datei wird schon im Browser und beim Hochladen im Gerät geprüft. Abgelehnt werden eine `.merged.bin`, Firmware für ein anderes Gerät oder einen anderen Chip und zu große Dateien. Firmware aus dem alten Repo (ohne Kennung) geht nur mit „Ohne Kennung hochladen“.
 - **Ereignisse:** Start mit Grund, WLAN und MQTT, Uploads mit Ergebnis, Rückfall, gespeicherte Einstellungen. Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.
@@ -140,23 +146,24 @@ Jede Firmware hat eine Kennung (`CAMPER-FW:toolbox:<version>:<chip>;`) und diese
 
 Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MAC, PIN …) und Bluetooth-Kopplungen bleiben erhalten.
 
-**Umstieg vom alten Repo:** Die alte Firmware (0.1.x) prüft nichts und meldet bei Fehlern nur „Update failed“. Die neue `.bin` (`toolbox-node-esp32c3.bin`) über das alte Update-Feld hochladen, danach `data/index.html.gz`. Die `-full.bin` bzw. `.merged.bin` nur per USB.
+**Umstieg vom alten Repo:** Die alte Firmware (0.1.x) prüft nichts und meldet bei Fehlern nur „Update failed“. Die neue `.bin` (`ble-node-esp32c3.bin`) über das alte Update-Feld hochladen, danach `data/index.html.gz`. Die `-full.bin` bzw. `.merged.bin` nur per USB.
 
 ## Versionen
 
 | Version | Änderungen |
 | --- | --- |
+| 1.3.0 | Aus der Toolbox wird der **BLE Node**: Hostname `ble-node`, Setup-WLAN `BLE-Node-XXXXXX`, Topic `camper/ble` (ein gespeichertes `camper/toolbox` wird beim Start umgestellt), Release-Datei `ble-node-….bin`, Tag `ble-v…`, Ordner `firmware/ble/ble_node`. Gas-Plugins DIMES und Mopeka wieder als Option (ab Werk aus). Home Assistant legt die Entitäten neu an (`camper_ble`) |
 | 1.2.2 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |
 | 1.2.1 | Pumpe: dritte GATT-Variante FFE0/FFE1, „läuft“ aus dem Statusbit, Druck aus psi × 10 umgerechnet, Statusrahmen anderer Pumpen werden angenommen. Dachhaube: robusteres Zusammensetzen der Telegramme. Kühlschrank: ohne eingetragene UUIDs FFE0/FFE1 statt aller Characteristics |
 | 1.2.0 | Neue Namen: Hostname `toolbox-node`, Setup-WLAN, Gerätename und Release-Datei `toolbox-node-….bin`. Topics `camper/…` und Home-Assistant-IDs bleiben |
 | 1.1.0 | Gas-Plugins entfernt (DIMES, Mopeka Pro, Mopeka Standard, gemeinsamer Gas-Teil): Gasflasche und Tanks liest camper-tanklevel. Übrig: Dachhaube, Wasserpumpe, Kühlschrank |
 | 1.0.1 | Web-Oberfläche im Aussehen der übrigen VanNode-Geräte (Farben, Kopfzeile mit Statuspunkten, Tab-Leiste mit Symbolen, Werte als Kacheln, Schalter statt Häkchen) |
-| 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/toolbox`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
+| 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/ble`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
 | 0.1.x | Eigenes Repo `camper_toolbox`: Plugins Gas (DIMES, Mopeka), Wasserpumpe, Dachhaube, Kühlschrank |
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, Tag `toolbox-v<version>`, Datei `toolbox-node-esp32c3.bin`. Siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Datei `ble-node-esp32c3.bin`. Siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

@@ -1,10 +1,10 @@
-// toolbox-node: Bluetooth devices as plugins (here: one RV Tech roof hatch)
+// ble-node: Bluetooth devices as plugins (here: one RV Tech roof hatch)
 const M = {
-  id: 'toolbox',
+  id: 'ble',
   config: {
-    version: '1.0.1', device: 'Toolbox Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_toolbox',
-    core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'Toolbox-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
-           mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/toolbox',
+    version: '1.3.0', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
+           mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
     plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2,
                fields: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},

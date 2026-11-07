@@ -23,7 +23,7 @@
       "firmware/heater/truma_heater",
       "firmware/display/camper_display",
       "firmware/roadbuddy/roadbuddy",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "devinfo.cpp": [
       "firmware/_template/camper_example",
@@ -35,7 +35,7 @@
       "firmware/heater/truma_heater",
       "firmware/display/camper_display",
       "firmware/roadbuddy/roadbuddy",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "safeguard.h": [
       "firmware/_template/camper_example",
@@ -47,7 +47,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "safeguard.cpp": [
       "firmware/_template/camper_example",
@@ -59,7 +59,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "evlog.h": [
       "firmware/_template/camper_example",
@@ -71,7 +71,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "evlog.cpp": [
       "firmware/_template/camper_example",
@@ -83,7 +83,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "fwcheck.h": [
       "firmware/_template/camper_example",
@@ -95,7 +95,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "fwcheck.cpp": [
       "firmware/_template/camper_example",
@@ -107,7 +107,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ],
     "fw_config.h": [
       "firmware/_template/camper_example",
@@ -119,7 +119,7 @@
       "firmware/roadbuddy/roadbuddy",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/toolbox/camper_toolbox"
+      "firmware/ble/ble_node"
     ]
   },
   "blocks": {
@@ -134,7 +134,7 @@
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/battery/camper_battery/web/index.html",
-        "firmware/toolbox/camper_toolbox/web/index.html",
+        "firmware/ble/ble_node/web/index.html",
         "tools/emulator/web/index.html",
         "firmware/heater/truma_heater/web/index.html"
       ]
@@ -150,7 +150,7 @@
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/battery/camper_battery/web/index.html",
-        "firmware/toolbox/camper_toolbox/web/index.html",
+        "firmware/ble/ble_node/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/roadbuddy/roadbuddy/webota.cpp",
@@ -168,7 +168,7 @@
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/battery/camper_battery/web/index.html",
-        "firmware/toolbox/camper_toolbox/web/index.html",
+        "firmware/ble/ble_node/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/roadbuddy/roadbuddy/webota.cpp",

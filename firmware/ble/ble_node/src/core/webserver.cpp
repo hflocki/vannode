@@ -112,6 +112,10 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     // Device changes are saved right away but only take effect with the next restart
     doc["restart_needed"] = registryRestartNeeded();
 
+    // Field descriptions are the same for every device of a type, so they are sent once
+    // per type under "schemas" (one copy per device made /api/config too large for the
+    // heap with several "blesensor" devices).
+    JsonObject schemas = doc["schemas"].to<JsonObject>();
     JsonArray arr = doc["plugins"].to<JsonArray>();
     auto addPlugin = [&](Plugin* p, bool isPending) {
         JsonObject o = arr.add<JsonObject>();
@@ -122,14 +126,20 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
         o["running"] = p->enabled && !p->removed;
         if (isPending) o["pending"] = true;
         if (p->removed) o["removed"] = true;
-        pluginSchemaToJson(p, o["fields"].to<JsonArray>());
+        if (!schemas[p->type].is<JsonArray>()) pluginSchemaToJson(p, schemas[p->type].to<JsonArray>());
         pluginConfigToJson(p, o["cfg"].to<JsonObject>());
     };
     FOR_EACH_PLUGIN(p) addPlugin(p, false);
     for (uint8_t i = 0; i < pendingCount(); i++) addPlugin(pendingAt(i), true);
-    String response;
-    serializeJson(doc, response);
-    request->send(200, "application/json", response);
+    // Out of memory: a clear error instead of a half answer the web UI cannot use
+    if (doc.overflowed()) {
+        sendError(request, 503, "Zu wenig Speicher für die Einstellungen – bitte neu laden");
+        return;
+    }
+    // Stream the answer instead of building a second copy in a String
+    AsyncResponseStream* res = request->beginResponseStream("application/json");
+    serializeJson(doc, *res);
+    request->send(res);
 }
 
 // Body: {"core": {...}} or {"plugin": "<id>", "cfg": {...}}

@@ -6,17 +6,23 @@
 const M = {
   id: 'ble',
   config: {
-    version: '1.5.1', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '1.5.2', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
     plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2, running: true,
-               fields: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
-                        {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
               // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
               {id: 'blesensor', type: 'blesensor', running: true, type_name: 'Eigener BLE-Sensor', ble: 1,
-               fields: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+               cfg: {enabled: true, name: 'Thermometer Bad', mac: 'A4:C1:38:12:34:56', source: 1, company: '', uuid: '181A',
+                     v1_name: 'Temperatur', v1_pos: 6, v1_len: 1, v1_signed: true, v1_big: false, v1_factor: 0.01, v1_add: 0, v1_dec: 1, v1_unit: '°C', v1_kind: 1,
+                     v2_name: 'Luftfeuchte', v2_pos: 8, v2_len: 1, v2_signed: false, v2_big: false, v2_factor: 0.01, v2_add: 0, v2_dec: 0, v2_unit: '%', v2_kind: 2,
+                     v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3}}],
+    // field descriptions once per type (as the firmware sends them since 1.5.2)
+    schemas: {
+      rvtech: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                        {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
+      blesensor: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
                  {k: 'uuid', l: 'Service-UUID', t: 'text', max: 39, h: 'Nur Service-Daten: z. B. 181A, leer = die erste'},
@@ -30,11 +36,8 @@ const M = {
                    {k: `v${n}_add`, l: `Wert ${n}: Offset`, t: 'float', min: -1000000, max: 1000000, step: 0.000001},
                    {k: `v${n}_dec`, l: `Wert ${n}: Nachkommastellen`, t: 'int', min: 0, max: 4, step: 1},
                    {k: `v${n}_unit`, l: `Wert ${n}: Einheit`, t: 'text', max: 9},
-                   {k: `v${n}_kind`, l: `Wert ${n}: Art`, t: 'select', o: 'Allgemein|Temperatur|Luftfeuchte|Batterie|Spannung|Strom|Leistung|Druck'}])],
-               cfg: {enabled: true, name: 'Thermometer Bad', mac: 'A4:C1:38:12:34:56', source: 1, company: '', uuid: '181A',
-                     v1_name: 'Temperatur', v1_pos: 6, v1_len: 1, v1_signed: true, v1_big: false, v1_factor: 0.01, v1_add: 0, v1_dec: 1, v1_unit: '°C', v1_kind: 1,
-                     v2_name: 'Luftfeuchte', v2_pos: 8, v2_len: 1, v2_signed: false, v2_big: false, v2_factor: 0.01, v2_add: 0, v2_dec: 0, v2_unit: '%', v2_kind: 2,
-                     v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3}}],
+                   {k: `v${n}_kind`, l: `Wert ${n}: Art`, t: 'select', o: 'Allgemein|Temperatur|Luftfeuchte|Batterie|Spannung|Strom|Leistung|Druck'}])]
+    },
     types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1},
             {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
@@ -68,8 +71,8 @@ const M = {
         let n = 1;
         while (c.plugins.some(p => p.id === (n === 1 ? t.type : t.type + n))) n++;
         const id = n === 1 ? t.type : t.type + n;
+        if (!c.schemas[t.type]) M.save({schemas: Object.assign({}, c.schemas, {[t.type]: [{k: 'mac', l: 'MAC', t: 'mac'}]})});
         M.keep(c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, running: false, pending: true,
-                                  fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
                                   cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]));
       }
       return {status: 'ok'};
@@ -611,22 +614,22 @@ nav button .ico{display:inline-flex}
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
       const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio" };
       function tabs() {
-        const t = [["live", "Live", "chart"]];
-        // Disabled plugins get no tab; they are switched on in System -> Plugins
-        for (const p of CFG.plugins)
-          if (p.cfg.enabled && !p.removed) t.push(["p:" + p.id, p.cfg.name, ICONS[p.type] || "plug"]);
-        t.push(
+        // Devices share one tab ("Geräte": list, add / remove, then the settings of one device),
+        // so the bar stays short however many devices there are
+        const t = [
+          ["live", "Live", "chart"],
+          ["dev", "Geräte", "plug"],
           ["ble", "Bluetooth", "radio"],
           ["wifi", "WLAN", "wifi"],
           ["mqtt", "MQTT", "sliders"],
           ["sys", "System", "sys"],
-        );
+        ];
         $("#nav").replaceChildren(
           ...t.map(([k, l, ico]) =>
             el(
               "button",
               {
-                className: tab == k ? "on" : "",
+                className: tab == k || (k == "dev" && tab.startsWith("p:")) ? "on" : "",
                 title: l,
                 on: {
                   click: () => {
@@ -646,11 +649,12 @@ nav button .ico{display:inline-flex}
         const m = $("#main");
         m.replaceChildren();
         if (tab == "live") renderLive();
+        else if (tab == "dev") renderPlugins();
         else if (tab.startsWith("p:")) {
           const p = CFG.plugins.find((x) => "p:" + x.id == tab);
-          if (p && p.cfg.enabled && !p.removed) renderPlugin(p);
+          if (p && !p.removed) renderPlugin(p);
           else {
-            tab = "live";
+            tab = "dev";
             return render();
           }
         }
@@ -672,7 +676,7 @@ nav button .ico{display:inline-flex}
             el(
               "div",
               { className: "card" },
-              "Noch kein Gerät angelegt – unter System → Plugins mit „+ Gerät hinzufügen“.",
+              "Noch kein Gerät angelegt – unter Geräte mit „+ Gerät hinzufügen“.",
             ),
           );
         else if (!CFG.plugins.some((p) => p.cfg.enabled))
@@ -680,7 +684,7 @@ nav button .ico{display:inline-flex}
             el(
               "div",
               { className: "card" },
-              "Alle Plugins sind ausgeschaltet – unter System → Plugins einschalten.",
+              "Alle Geräte sind ausgeschaltet – unter Geräte einschalten.",
             ),
           );
         updateLive();
@@ -711,7 +715,7 @@ nav button .ico{display:inline-flex}
             el(
               "div",
               { className: "mute" },
-              "Unter System → Plugins einschalten.",
+              "Unter Geräte einschalten.",
             ),
           );
           return c;
@@ -884,22 +888,66 @@ nav button .ico{display:inline-flex}
         }
         return o;
       }
+      // Field descriptions: once per type in CFG.schemas (1.5.2), per device before
+      const fieldsOf = (p) => (CFG.schemas && CFG.schemas[p.type]) || p.fields || [];
+      function openDevice(id) {
+        tab = "p:" + id;
+        render();
+        window.scrollTo(0, 0);
+      }
+      function restartButton() {
+        return el("button", {
+          className: "b",
+          textContent: "Jetzt neu starten",
+          on: {
+            click: (e) => {
+              e.target.disabled = true;
+              api("/api/restart", {})
+                .then(() => {
+                  toast("Neustart…");
+                  setTimeout(() => location.reload(), 8000);
+                })
+                .catch((x) => {
+                  e.target.disabled = false;
+                  toast(x.message, true);
+                });
+            },
+          },
+        });
+      }
       function renderPlugin(p) {
+        $("#main").append(
+          el("button", {
+            className: "b s",
+            textContent: "← Alle Geräte",
+            style: "width:auto;margin:0 0 10px;padding:4px 12px",
+            on: { click: () => { tab = "dev"; render(); } },
+          }),
+        );
         const c = el("div", { className: "card" });
         c.append(
           el(
             "h2",
             {},
-            p.type_name,
-            el("span", { className: "mute", textContent: "ID: " + p.id }),
+            p.cfg.name || p.type_name,
+            el("span", { className: "mute", textContent: p.type_name + " · ID: " + p.id }),
           ),
         );
         if (!p.running)
           c.append(
             el(
-              "small",
-              { className: "mute", style: "display:block;margin-bottom:10px" },
-              "Läuft erst nach dem Neustart (System → Plugins → Jetzt neu starten). Einstellungen kannst du schon jetzt speichern.",
+              "div",
+              { className: "f", style: "padding:10px 12px;border-radius:8px;background:rgba(229,162,59,.12)" },
+              el(
+                "small",
+                { style: "display:block;margin-bottom:8px;color:var(--warning)" },
+                p.pending
+                  ? "Neu angelegt – läuft erst nach dem Neustart. Einstellungen kannst du schon jetzt speichern, mehrere neue Geräte brauchen nur einen Neustart."
+                  : p.cfg.enabled
+                    ? "Läuft erst nach dem Neustart. Einstellungen kannst du schon jetzt speichern."
+                    : "Ausgeschaltet (unter Geräte einschalten). Einstellungen kannst du trotzdem speichern.",
+              ),
+              p.pending || p.cfg.enabled ? restartButton() : null,
             ),
           );
         const nm = el("input", {
@@ -916,7 +964,7 @@ nav button .ico{display:inline-flex}
           ),
         );
         const box = el("div");
-        for (const f of p.fields) box.append(field(f, p.cfg[f.k]));
+        for (const f of fieldsOf(p)) box.append(field(f, p.cfg[f.k]));
         c.append(box);
         c.append(
           el("button", {
@@ -931,7 +979,7 @@ nav button .ico{display:inline-flex}
                   toast(r.restart ? "Gespeichert – Neustart…" : "Gespeichert");
                   Object.assign(p.cfg, cfg);
                   if (r.restart) setTimeout(() => location.reload(), 8000);
-                  else tabs();
+                  else render();
                 } catch (e) {
                   toast(e.message, true);
                 }
@@ -1226,16 +1274,26 @@ nav button .ico{display:inline-flex}
           maxDev = CFG.max_devices || 12,
           types = CFG.types || [];
         // Device changes are saved right away and take effect with the next restart
+        // While a change is on its way all buttons of the list are locked (no double add)
+        let busy = false;
         const save = async (body, msg) => {
+          if (busy) return;
+          busy = true;
+          for (const b of $("#main").querySelectorAll("button")) b.disabled = true;
+          const before = new Set(CFG.plugins.map((p) => p.id));
           try {
             await api("/api/config", body);
             toast(msg);
             await new Promise((r) => setTimeout(r, 300)); // the device applies it in its main loop
             const keep = window.scrollY;
             await load();
-            window.scrollTo(0, keep);
+            // a new device: straight to its settings
+            const added = body.add && CFG.plugins.find((p) => !before.has(p.id));
+            if (added) openDevice(added.id);
+            else window.scrollTo(0, keep);
           } catch (e) {
             toast(e.message, true);
+            render();
           }
         };
         const active = CFG.plugins.filter((p) => !p.removed);
@@ -1279,6 +1337,15 @@ nav button .ico{display:inline-flex}
               note,
               el("span", { className: "mute", style: "margin-left:auto", textContent: p.type_name }),
             ),
+            p.removed
+              ? null
+              : el("button", {
+                  className: "b s",
+                  title: "Einstellungen",
+                  textContent: "Einstellen",
+                  style: "width:auto;margin:0;padding:4px 10px",
+                  on: { click: () => openDevice(p.id) },
+                }),
             btn,
           );
         };
@@ -1341,26 +1408,15 @@ nav button .ico{display:inline-flex}
                 { style: "display:block;margin-bottom:8px;color:var(--warning)" },
                 "Änderungen sind gespeichert und wirken nach dem Neustart.",
               ),
-              el("button", {
-                className: "b",
-                textContent: "Jetzt neu starten",
-                on: {
-                  click: () =>
-                    api("/api/restart", {})
-                      .then(() => {
-                        toast("Neustart…");
-                        setTimeout(() => location.reload(), 8000);
-                      })
-                      .catch((e) => toast(e.message, true)),
-                },
-              }),
+              restartButton(),
             )
           : null;
         $("#main").append(
           el(
             "div",
             { className: "card" },
-            el("h2", {}, "Plugins"),
+            el("h2", {}, "Geräte"),
+            restartBox,
             ...group("Mithören", "Sensoren, die nur senden (Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
@@ -1391,14 +1447,12 @@ nav button .ico{display:inline-flex}
                   },
                 })
               : null,
-            restartBox,
           ),
         );
       }
       function renderSys() {
         const c = CFG.core,
           L = LIVE || {};
-        renderPlugins();
         const box = el("div");
         box.append(
           inp("Benutzer", "web_user", c.web_user, "text", "Leer = kein Login"),
@@ -1627,7 +1681,9 @@ nav button .ico{display:inline-flex}
         ws.onclose = () => setTimeout(connect, 3000);
       }
       async function load() {
-        CFG = await api("/api/config");
+        const c = await api("/api/config");
+        if (!Array.isArray(c.plugins)) throw new Error("Einstellungen unvollständig empfangen – bitte neu laden");
+        CFG = c;
         $("#title span").textContent = CFG.device;
         document.title = CFG.device;
         render();

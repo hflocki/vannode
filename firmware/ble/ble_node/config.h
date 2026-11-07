@@ -10,32 +10,31 @@
 #endif
 
 // ============================================================
-// >>> PLUGINS - slots per device type <<<
+// >>> PLUGINS - device types in the firmware <<<
 // ------------------------------------------------------------
-// The number is the count of slots of that plugin:
-//   0 = not compiled in
-//   1 = one device, e.g. one fridge
-//   2 = two devices of the same kind, e.g. two gas bottles ("Gas" and "Gas 2")
+// 1 = type is compiled in, 0 = left out (smaller firmware). Devices are not set here:
+// they are added in the web UI (System -> Plugins, "+ Gerät hinzufügen"), any number of
+// the same type, up to MAX_PLUGINS devices in total.
 // Bluetooth limits of one ESP32:
-//   - passive sensors (DIMES, Mopeka) only listen, any number works
+//   - passive sensors (gas, own BLE sensor) only listen, any number works
 //   - connecting devices (pump, roof hatch, fridge) keep a BLE connection each:
 //     at most MAX_BLE_LINKS (3) of them switched on at the same time
+// More devices: a second BLE node with its own topic (e.g. camper/ble2).
 // ============================================================
-// Every plugin is compiled in (one release file for everyone); the number is the count of
-// slots for that device type. All slots start switched off and are switched on in the web UI
-// (tab System). More devices than slots: build with other numbers (config_local.h) or use a
-// second BLE node with its own topic (e.g. camper/ble2).
 #ifndef PLUGIN_DIMES
-#define PLUGIN_DIMES          2      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
+#define PLUGIN_DIMES          1      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
 #endif
 #ifndef PLUGIN_MOPEKA_PRO
-#define PLUGIN_MOPEKA_PRO     2      // Gas: Mopeka Pro family (Pro Check, Pro Plus, Universal ...)
+#define PLUGIN_MOPEKA_PRO     1      // Gas: Mopeka Pro family (Pro Check, Pro Plus, Universal ...)
 #endif
 #ifndef PLUGIN_MOPEKA_STD
 #define PLUGIN_MOPEKA_STD     1      // Gas: Mopeka Standard / Std Check (older model)
 #endif
+#ifndef PLUGIN_BLESENSOR
+#define PLUGIN_BLESENSOR      1      // Own BLE sensor: values at freely set positions of the advertisement
+#endif
 #ifndef PLUGIN_RVTECH
-#define PLUGIN_RVTECH         2      // Roof hatch: RV Tech skylight motor control, BLE connection
+#define PLUGIN_RVTECH         1      // Roof hatch: RV Tech skylight motor control, BLE connection
 #endif
 #ifndef PLUGIN_CARAWATER
 #define PLUGIN_CARAWATER      1      // Water pump: CaraWater (e.g. ISP 15), BLE connection
@@ -44,23 +43,24 @@
 #define PLUGIN_WCS_FRIDGE     1      // Fridge: WCS compressor fridge, BLE connection
 #endif
 
-// At most this many connecting plugins may be switched on at the same time
+// At most this many connecting devices may be switched on at the same time
 // (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS = 3). Checked in the web UI, when saving
-// and at boot; passive plugins (gas) only listen and have no limit.
+// and at boot. Passive devices only listen and have no limit of their own.
 #ifndef MAX_BLE_LINKS
 #define MAX_BLE_LINKS         3
 #endif
+// Devices in total (RAM: every device is an object with its own buffers)
+#ifndef MAX_PLUGINS
+#define MAX_PLUGINS           12
+#endif
 
-// Derived switches (do not edit)
-#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
+// Derived switches (do not edit): which code parts are compiled
+#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR)
+#define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
-#define MAX_PLUGINS     16
 
-#if CT_PLUGIN_COUNT > MAX_PLUGINS
-#error "Too many plugin slots: the PLUGIN_xxx numbers add up to more than MAX_PLUGINS"
-#endif
 #if CT_PLUGIN_COUNT == 0
 #warning "No plugin selected in config.h - the device only offers WiFi, MQTT and the web UI"
 #endif
@@ -68,7 +68,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.4.0"
+#define FW_VERSION            "1.5.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -188,6 +188,19 @@
 #endif
 #ifndef BLE_RELEASE_MS
 #define BLE_RELEASE_MS        (30UL * 60UL * 1000UL) // "Release for the app" ends after 30 min (0 = never)
+#endif
+
+// ============================================================
+// PLUGIN: OWN BLE SENSOR (values at freely set positions, set in the web UI)
+// ============================================================
+#ifndef BLESENSOR_VALUES
+#define BLESENSOR_VALUES      3      // Values per sensor (each with name, position, conversion)
+#endif
+#ifndef BLESENSOR_TIMEOUT_MS
+#define BLESENSOR_TIMEOUT_MS  (10UL * 60UL * 1000UL) // No advertisement for this long: "offline"
+#endif
+#ifndef MQTT_BLESENSOR_MS
+#define MQTT_BLESENSOR_MS     30000  // Periodic publish (also published immediately on changes)
 #endif
 
 // ============================================================

@@ -38,6 +38,7 @@ jobs:
       - run: python3 tools/web/pack_web.py --check
       - run: python3 firmware/heater/tools/embed_web.py --check
       - run: python3 tools/emulator/emulator.py --selftest
+      - run: bash firmware/ble/tests/run.sh
 
   build:
     needs: common

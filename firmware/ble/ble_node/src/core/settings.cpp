@@ -184,6 +184,7 @@ void pluginSchemaToJson(Plugin* p, JsonArray arr) {
 }
 
 void pluginConfigToJson(Plugin* p, JsonObject o) {
+    o["type"] = p->type;
     o["enabled"] = p->enabled;
     o["name"] = (const char*)p->name;
     const Field* f = nullptr;
@@ -303,11 +304,29 @@ static void loadConfig() {
     }
     coreFromFile(doc);
 
-    // Plugins: anything missing or invalid keeps its factory value
+    // Devices: one entry per device, created in this order. Anything missing or invalid in an
+    // entry keeps its factory value. Entries without "type" come from 1.3 / 1.4 (fixed slots):
+    // only the switched-on ones become devices, the empty slots are dropped.
     JsonObjectConst all = doc["plugins"].as<JsonObjectConst>();
-    FOR_EACH_PLUGIN(p) {
-        JsonObjectConst pc = all[p->id].as<JsonObjectConst>();
-        if (pc.isNull()) continue;
+    bool migrated = false;
+    for (JsonPairConst kv : all) {
+        JsonObjectConst pc = kv.value().as<JsonObjectConst>();
+        const char* id = kv.key().c_str();
+        uint8_t index = 0;
+        const PluginType* t = pluginTypeOfId(id, index);
+        bool legacy = !pc["type"].is<const char*>();
+        if (!t || (!legacy && strcmp(t->type, pc["type"].as<const char*>()) != 0)) {
+            Serial.printf("[Config] Unknown device %s skipped\n", id);
+            continue;
+        }
+        if (legacy) migrated = true;
+        if (legacy && !(pc["enabled"] | false)) continue;
+        Plugin* p = registryNew(t, index);
+        if (!p || strcmp(p->id, id) != 0 || !registryAdd(p)) {
+            Serial.printf("[Config] Device %s not created (limit %d)\n", id, MAX_PLUGINS);
+            delete p;
+            continue;
+        }
         bool restart;
         const Field* f = nullptr;
         size_t n = p->fields(f);
@@ -327,16 +346,22 @@ static void loadConfig() {
             pluginConfigFromJson(p, one.as<JsonObjectConst>(), true, restart);
         }
     }
+    // Old format (1.3 / 1.4): store the devices with their type right away
+    if (migrated) {
+        Serial.println("[Config] Plugins of an older version taken over as devices");
+        saveConfig();
+    }
 }
 
-void saveConfig() {
+void saveConfig(Plugin* extra, const Plugin* skip) {
     if (!fsReady) return;
     JsonDocument doc;
     coreToFile(doc);
     JsonObject all = doc["plugins"].to<JsonObject>();
     FOR_EACH_PLUGIN(p) {
-        pluginConfigToJson(p, all[p->id].to<JsonObject>());
+        if (p != skip) pluginConfigToJson(p, all[p->id].to<JsonObject>());
     }
+    if (extra) pluginConfigToJson(extra, all[extra->id].to<JsonObject>());
     File file = LittleFS.open(CONFIG_FILE ".tmp", "w");
     if (!file) {
         Serial.println("[Config] Save failed");
@@ -352,7 +377,6 @@ void saveConfig() {
 bool settingsInit() {
     fsReady = LittleFS.begin(true);
     if (!fsReady) Serial.println("[Config] LittleFS mount failed - running with defaults");
-    registryCreate();
     loadConfig();
     if (fsReady && !LittleFS.exists(CONFIG_FILE)) saveConfig();
     FOR_EACH_PLUGIN(p) p->onConfigChanged();

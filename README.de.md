@@ -47,7 +47,7 @@ flowchart LR
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
 | [`firmware/battery`](firmware/battery) | ESP32-C3 | Batterie-BMS per Bluetooth (Daly, Ective BM X): Ladestand, Strom, Zellen | `camper/battery` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 | BLE-Node: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, optional Gas (DIMES, Mopeka) | `camper/ble` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 | BLE-Node: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, optional Gas (DIMES, Mopeka) und eigene BLE-Sensoren | `camper/ble` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (Fork des Levelsensors von klehnst) | `camper/level` |

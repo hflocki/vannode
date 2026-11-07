@@ -99,6 +99,15 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     doc["reset_reason"] = resetReasonString();
     doc["ha_node"] = mqttNodeId();
     doc["max_links"] = MAX_BLE_LINKS;
+    doc["max_devices"] = MAX_PLUGINS;
+    JsonArray types = doc["types"].to<JsonArray>();
+    for (uint8_t i = 0; i < pluginTypeCount(); i++) {
+        const PluginType* t = pluginTypeAt(i);
+        JsonObject o = types.add<JsonObject>();
+        o["type"] = t->type;
+        o["name"] = t->name;
+        o["ble"] = t->ble;
+    }
     coreConfigToJson(doc["core"].to<JsonObject>());
 
     JsonArray arr = doc["plugins"].to<JsonArray>();
@@ -147,6 +156,19 @@ static void handleSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size
             if (on && p->bleUse() == BLE_LINK) links++;
         }
         if (!err && links > MAX_BLE_LINKS) err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig";
+    } else if (doc["add"].is<const char*>()) {
+        // System tab, "+ Gerät hinzufügen": {"add": "<type>"}; the device starts switched on
+        const PluginType* t = pluginType(doc["add"].as<const char*>());
+        if (!t) err = "Unbekannter Gerätetyp";
+        else if (pluginCount() >= MAX_PLUGINS) err = "Keine weiteren Geräte möglich (Höchstzahl erreicht)";
+        else if (t->ble == BLE_LINK && registryLinksOn() >= MAX_BLE_LINKS)
+            err = "Höchstens 3 Geräte mit Bluetooth-Verbindung gleichzeitig – erst ein anderes ausschalten";
+        else if (registryFreeIndex(t) < 0) err = "Keine freie Nummer für diesen Typ";
+        restart = true;
+    } else if (doc["remove"].is<const char*>()) {
+        // System tab, "Entfernen": {"remove": "<plugin id>"}
+        if (!pluginById(doc["remove"].as<const char*>())) err = "Unbekanntes Plugin";
+        restart = true;
     } else if (doc["plugin"].is<const char*>()) {
         Plugin* p = pluginById(doc["plugin"].as<const char*>());
         JsonVariantConst en = doc["cfg"]["enabled"];
@@ -412,6 +434,26 @@ static void applyPendingConfig() {
         }
         evlog::add("Plugin-Auswahl geändert");
         Serial.println("[Web] Plugin selection changed");
+    } else if (doc["add"].is<const char*>()) {
+        // Written to the config only; the device is created at the restart
+        const PluginType* t = pluginType(doc["add"].as<const char*>());
+        int8_t index = t ? registryFreeIndex(t) : -1;
+        Plugin* p = index >= 0 ? registryNew(t, (uint8_t)index) : nullptr;
+        if (!p) return;
+        p->enabled = true;
+        saveConfig(p);
+        evlog::add("Gerät %s hinzugefügt", p->id);
+        Serial.printf("[Web] Device %s added\n", p->id);
+        delete p;
+        restart = true;
+    } else if (doc["remove"].is<const char*>()) {
+        Plugin* p = pluginById(doc["remove"].as<const char*>());
+        if (!p) return;
+        mqttForget(p);
+        saveConfig(nullptr, p);
+        evlog::add("Gerät %s entfernt", p->id);
+        Serial.printf("[Web] Device %s removed\n", p->id);
+        restart = true;
     } else {
         Plugin* p = pluginById(doc["plugin"] | "");
         if (!p) return;
@@ -422,7 +464,7 @@ static void applyPendingConfig() {
         Serial.printf("[Web] Settings of %s changed\n", p->id);
         mqttRequestDiscovery();   // Name / entities may have changed
     }
-    saveConfig();
+    if (!doc["add"].is<const char*>() && !doc["remove"].is<const char*>()) saveConfig();
     if (restart) {
         Serial.println("[Web] Restart for the new settings");
         restartPending = true;

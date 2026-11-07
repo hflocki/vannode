@@ -1,6 +1,6 @@
 #include "gas_base.h"
 
-#if CT_BLE_PASSIVE
+#if CT_GAS
 
 #include "../core/util.h"
 #include <NimBLEDevice.h>
@@ -191,4 +191,4 @@ void GasPlugin::publish(MqttOut& out) {
     }
 }
 
-#endif // CT_BLE_PASSIVE
+#endif // CT_GAS

@@ -2,11 +2,11 @@
 <html lang="de">
   <head>
 <script>
-// ble-node: Bluetooth devices as plugins (here: one RV Tech roof hatch)
+// ble-node: Bluetooth devices as plugins (here: an RV Tech roof hatch and an own BLE sensor)
 const M = {
   id: 'ble',
   config: {
-    version: '1.4.0', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '1.5.0', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false},
@@ -14,13 +14,32 @@ const M = {
                fields: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                         {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
-              // further slots, all off (every plugin is in the release; switched on in System)
-              ...[['dimes', 'dimes', 'DIMES / SRG WAVE', 'Gas (DIMES)', 1], ['dimes2', 'dimes', 'DIMES / SRG WAVE', 'Gas (DIMES) 2', 1],
-                  ['mopeka', 'mopeka', 'Mopeka Pro', 'Gas (Mopeka)', 1], ['mopeka2', 'mopeka', 'Mopeka Pro', 'Gas (Mopeka) 2', 1],
-                  ['mopeka_std', 'mopeka_std', 'Mopeka Standard', 'Gas (Mopeka Std)', 1],
-                  ['rvtech2', 'rvtech', 'RV Tech Dachhaube', 'Dachhaube 2', 2], ['pump', 'pump', 'CaraWater Pumpe', 'Wasserpumpe', 2],
-                  ['fridge', 'fridge', 'WCS Kühlschrank', 'Kühlschrank', 2]]
-                .map(([id, type, tn, name, ble]) => ({id, type, type_name: tn, ble, fields: [{k: 'mac', l: 'MAC', t: 'mac'}], cfg: {enabled: false, name, mac: ''}}))],
+              // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
+              {id: 'blesensor', type: 'blesensor', type_name: 'Eigener BLE-Sensor', ble: 1,
+               fields: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                 {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
+                 {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
+                 {k: 'uuid', l: 'Service-UUID', t: 'text', max: 39, h: 'Nur Service-Daten: z. B. 181A, leer = die erste'},
+                 ...[1, 2, 3].flatMap(n => [
+                   {k: `v${n}_name`, l: `Wert ${n}: Name`, t: 'text', max: 23, h: 'Leer = Wert nicht benutzt'},
+                   {k: `v${n}_pos`, l: `Wert ${n}: Stelle`, t: 'int', min: 0, max: 63, step: 1, h: 'Position im Paket, 0 = erstes Byte (siehe Rohdaten)'},
+                   {k: `v${n}_len`, l: `Wert ${n}: Länge`, t: 'select', o: '1 Byte|2 Byte|4 Byte'},
+                   {k: `v${n}_signed`, l: `Wert ${n}: mit Vorzeichen`, t: 'bool'},
+                   {k: `v${n}_big`, l: `Wert ${n}: höchstes Byte zuerst`, t: 'bool'},
+                   {k: `v${n}_factor`, l: `Wert ${n}: Faktor`, t: 'float', min: -1000000, max: 1000000, step: 0.000001},
+                   {k: `v${n}_add`, l: `Wert ${n}: Offset`, t: 'float', min: -1000000, max: 1000000, step: 0.000001},
+                   {k: `v${n}_dec`, l: `Wert ${n}: Nachkommastellen`, t: 'int', min: 0, max: 4, step: 1},
+                   {k: `v${n}_unit`, l: `Wert ${n}: Einheit`, t: 'text', max: 9},
+                   {k: `v${n}_kind`, l: `Wert ${n}: Art`, t: 'select', o: 'Allgemein|Temperatur|Luftfeuchte|Batterie|Spannung|Strom|Leistung|Druck'}])],
+               cfg: {enabled: true, name: 'Thermometer Bad', mac: 'A4:C1:38:12:34:56', source: 1, company: '', uuid: '181A',
+                     v1_name: 'Temperatur', v1_pos: 6, v1_len: 1, v1_signed: true, v1_big: false, v1_factor: 0.01, v1_add: 0, v1_dec: 1, v1_unit: '°C', v1_kind: 1,
+                     v2_name: 'Luftfeuchte', v2_pos: 8, v2_len: 1, v2_signed: false, v2_big: false, v2_factor: 0.01, v2_add: 0, v2_dec: 0, v2_unit: '%', v2_kind: 2,
+                     v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3}}],
+    types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
+            {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1},
+            {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
+            {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
+    max_devices: 12,
     max_links: 3
   },
   pos: 0, target: -1, release: false,
@@ -34,6 +53,18 @@ const M = {
       } else if (body.enabled) {
         c.plugins.forEach(p => { if (p.id in body.enabled) p.cfg.enabled = body.enabled[p.id]; });
         M.save({plugins: c.plugins});
+        return {status: 'ok', restart: true};
+      } else if (body.remove) {
+        M.save({plugins: c.plugins.filter(p => p.id !== body.remove)});
+        return {status: 'ok', restart: true};
+      } else if (body.add) {
+        const t = c.types.find(x => x.type === body.add);
+        let n = 1;
+        while (c.plugins.some(p => p.id === (n === 1 ? t.type : t.type + n))) n++;
+        const id = n === 1 ? t.type : t.type + n;
+        const plugins = c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, fields: [{k: 'mac', l: 'MAC', t: 'mac'}],
+                                            cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]);
+        M.save({plugins});
         return {status: 'ok', restart: true};
       }
       return {status: 'ok'};
@@ -63,7 +94,15 @@ const M = {
     const shown = Math.min(M.pos, 100);
     const label = M.pos === 102 ? 'Lüften' : M.target >= 0 ? (M.target > M.pos ? 'Öffnet...' : 'Schließt...') : M.pos === 0 ? 'Geschlossen' : 'Offen';
     const on = M.cfg.plugins[0].cfg.enabled;
-    const off = M.cfg.plugins.slice(1).map(p => ({id: p.id, name: p.cfg.name, type: p.type, enabled: p.cfg.enabled}));
+    const others = M.cfg.plugins.slice(1).map(p => {
+      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: p.cfg.enabled};
+      if (!p.cfg.enabled) return o;
+      if (p.type !== 'blesensor') return Object.assign(o, {state: 'Warte auf Daten', ok: false, rows: []});
+      const t = 21.4 + Math.sin((Date.now() - M.t0) / 60000) * 0.3;
+      return Object.assign(o, {state: 'OK', ok: true,
+        rows: [['Temperatur', Math.round(t * 10) / 10, '°C'], ['Luftfeuchte', 58, '%'], ['Batterie', 87, '%'], ['Bluetooth', -77, 'dBm'], ['Alter', 4, 's']],
+        raw: '0: 56 34 12 38  4: C1 A4 5C 08  8: A8 16 1E 0B  12: 57 C2 0F'});
+    });
     const plug = {id: 'rvtech', name: M.cfg.plugins[0].cfg.name, type: 'rvtech', enabled: on};
     if (on) Object.assign(plug, {
       state: M.release ? 'Für App freigegeben' : 'Verbunden', ok: !M.release,
@@ -74,7 +113,7 @@ const M = {
              {t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: M.release}]
     });
     return {rssi: -58, uptime: M.up(), heap: 98000, wifi_drops: 0, wifi_reason: '', wifi: 'Verbunden', mqtt: true,
-            ble: {adv: 1200 + Math.floor((Date.now() - M.t0) / 100), scanning: true}, plugins: [plug, ...off]};
+            ble: {adv: 1200 + Math.floor((Date.now() - M.t0) / 100), scanning: true}, plugins: [plug, ...others]};
   }
 };
 
@@ -250,7 +289,7 @@ const M = {
       /* Icon above the label: all tabs fit even on small phones */
       nav { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
       nav button {
-        flex: 1; min-width: 0; padding: 8px 2px 7px; font: inherit; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
+        flex: 1 0 64px; min-width: 64px; max-width: 140px; padding: 8px 6px 7px; font: inherit; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
         display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0;
         color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
         overflow: hidden; text-overflow: ellipsis;
@@ -556,7 +595,7 @@ nav button .ico{display:inline-flex}
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
-      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire" };
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio" };
       function tabs() {
         const t = [["live", "Live", "chart"]];
         // Disabled plugins get no tab; they are switched on in System -> Plugins
@@ -619,7 +658,7 @@ nav button .ico{display:inline-flex}
             el(
               "div",
               { className: "card" },
-              "Keine Plugins einkompiliert – siehe config.h.",
+              "Noch kein Gerät angelegt – unter System → Plugins mit „+ Gerät hinzufügen“.",
             ),
           );
         else if (!CFG.plugins.some((p) => p.cfg.enabled))
@@ -1161,84 +1200,138 @@ nav button .ico{display:inline-flex}
         );
       }
       function renderPlugins() {
-        if (!CFG.plugins.length) return;
-        const max = CFG.max_links || 3;
+        const max = CFG.max_links || 3,
+          maxDev = CFG.max_devices || 12,
+          types = CFG.types || [];
+        const restartAfter = (r, msg) => {
+          if (r.restart) {
+            toast(msg + " – Neustart…");
+            setTimeout(() => location.reload(), 8000);
+          } else toast("Keine Änderung");
+        };
+        // one line per device: switch, name, type, remove
         const mk = (p) => {
           const i = el("input", { type: "checkbox", checked: p.cfg.enabled });
           i.dataset.id = p.id;
-          i.dataset.link = p.ble === 2 ? "1" : "";
+          const rm = el("button", {
+            className: "b d",
+            title: "Entfernen",
+            textContent: "✕",
+            style: "width:auto;margin:0;padding:4px 10px",
+            on: {
+              click: async () => {
+                if (!confirm(`„${p.cfg.name}“ entfernen? Die Einstellungen und die Einträge in Home Assistant werden gelöscht.`)) return;
+                try {
+                  restartAfter(await api("/api/config", { remove: p.id }), "Entfernt");
+                } catch (e) {
+                  toast(e.message, true);
+                }
+              },
+            },
+          });
           return el(
             "div",
-            { className: "f" },
+            { className: "f", style: "display:flex;gap:8px;align-items:center" },
             el(
               "label",
-              { style: "display:flex;gap:8px;align-items:center" },
+              { style: "display:flex;gap:8px;align-items:center;flex:1;margin:0" },
               i,
               p.cfg.name,
-              el("span", { className: "mute", textContent: p.type_name }),
+              el("span", { className: "mute", style: "margin-left:auto", textContent: p.type_name }),
             ),
+            rm,
           );
         };
         const listen = CFG.plugins.filter((p) => p.ble !== 2).map(mk);
         const link = CFG.plugins.filter((p) => p.ble === 2).map(mk);
         const boxes = [...listen, ...link];
         const count = el("span", { className: "mute" });
-        // Connections: at most `max` at the same time, further boxes are locked
+        // Connections: at most `max` switched on at the same time, further switches are locked
+        const linkOn = () => link.filter((b) => b.querySelector("input").checked).length;
         const check = () => {
-          const ins = link.map((b) => b.querySelector("input"));
-          const on = ins.filter((i) => i.checked).length;
+          const on = linkOn();
           count.textContent = `${on} von ${max}`;
-          for (const i of ins) i.disabled = !i.checked && on >= max;
+          for (const b of link) {
+            const i = b.querySelector("input");
+            i.disabled = !i.checked && on >= max;
+          }
+          for (const o of sel.options) {
+            const t = types.find((x) => x.type === o.value);
+            o.disabled = (t && t.ble === 2 && on >= max) || CFG.plugins.length >= maxDev;
+          }
         };
         for (const b of link) b.querySelector("input").addEventListener("change", check);
+        const group = (title, hint, items, extra) => [
+          el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
+          el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
+          ...(items.length ? items : [el("small", { className: "mute", style: "display:block" }, "– noch keins –")]),
+        ];
+        // "+ Gerät hinzufügen": type selection, grouped like the lists
+        const sel = el("select", { style: "flex:1" });
+        for (const [label, ble] of [["Mithören", 1], ["Verbinden", 2]]) {
+          const g = el("optgroup", { label });
+          for (const t of types.filter((t) => (t.ble === 2) === (ble === 2))) g.append(el("option", { value: t.type, textContent: t.name }));
+          if (g.children.length) sel.append(g);
+        }
+        const add = el(
+          "div",
+          { className: "f row", style: "margin-top:14px;align-items:center" },
+          sel,
+          el("button", {
+            className: "b s",
+            textContent: "+ Gerät hinzufügen",
+            on: {
+              click: async () => {
+                const o = sel.selectedOptions[0];
+                if (!o || o.disabled) return toast("Dieses Gerät passt gerade nicht dazu (Grenze erreicht)", true);
+                try {
+                  restartAfter(await api("/api/config", { add: o.value }), "Hinzugefügt");
+                } catch (e) {
+                  toast(e.message, true);
+                }
+              },
+            },
+          }),
+        );
         check();
-        const group = (title, hint, items, extra) =>
-          items.length
-            ? [
-                el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
-                el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
-                ...items,
-              ]
-            : [];
         $("#main").append(
           el(
             "div",
             { className: "card" },
             el("h2", {}, "Plugins"),
-            ...group("Mithören", "Sensoren, die nur senden (Gas). Beliebig viele.", listen),
+            ...group("Mithören", "Sensoren, die nur senden (Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
               `Geräte mit fester Bluetooth-Verbindung. Höchstens ${max} gleichzeitig – für mehr einen zweiten BLE-Node mit eigenem Topic (z. B. camper/ble2) nehmen.`,
               link,
               count,
             ),
+            add,
             el(
               "small",
-              { className: "mute" },
-              "Ausgeschaltete Plugins verschwinden aus der Leiste und aus Home Assistant. Änderung startet das Gerät neu.",
+              { className: "mute", style: "display:block;margin-top:8px" },
+              `Insgesamt höchstens ${maxDev} Geräte. Ausgeschaltete Geräte behalten ihre Einstellungen, laufen aber nicht und fehlen in Home Assistant. Jede Änderung startet das Gerät neu.`,
             ),
-            el("button", {
-              className: "b",
-              textContent: "Speichern",
-              on: {
-                click: async () => {
-                  const enabled = {};
-                  for (const b of boxes) {
-                    const i = b.querySelector("input");
-                    enabled[i.dataset.id] = i.checked;
-                  }
-                  try {
-                    const r = await api("/api/config", { enabled });
-                    if (r.restart) {
-                      toast("Gespeichert – Neustart…");
-                      setTimeout(() => location.reload(), 8000);
-                    } else toast("Keine Änderung");
-                  } catch (e) {
-                    toast(e.message, true);
-                  }
-                },
-              },
-            }),
+            boxes.length
+              ? el("button", {
+                  className: "b",
+                  textContent: "An/Aus speichern",
+                  on: {
+                    click: async () => {
+                      const enabled = {};
+                      for (const b of boxes) {
+                        const i = b.querySelector("input");
+                        enabled[i.dataset.id] = i.checked;
+                      }
+                      try {
+                        restartAfter(await api("/api/config", { enabled }), "Gespeichert");
+                      } catch (e) {
+                        toast(e.message, true);
+                      }
+                    },
+                  },
+                })
+              : null,
           ),
         );
       }

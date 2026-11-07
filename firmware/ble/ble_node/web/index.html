@@ -46,7 +46,7 @@
       /* Icon above the label: all tabs fit even on small phones */
       nav { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
       nav button {
-        flex: 1; min-width: 0; padding: 8px 2px 7px; font: inherit; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
+        flex: 1 0 64px; min-width: 64px; max-width: 140px; padding: 8px 6px 7px; font: inherit; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
         display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0;
         color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
         overflow: hidden; text-overflow: ellipsis;
@@ -352,7 +352,7 @@ nav button .ico{display:inline-flex}
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
-      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire" };
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio" };
       function tabs() {
         const t = [["live", "Live", "chart"]];
         // Disabled plugins get no tab; they are switched on in System -> Plugins
@@ -415,7 +415,7 @@ nav button .ico{display:inline-flex}
             el(
               "div",
               { className: "card" },
-              "Keine Plugins einkompiliert – siehe config.h.",
+              "Noch kein Gerät angelegt – unter System → Plugins mit „+ Gerät hinzufügen“.",
             ),
           );
         else if (!CFG.plugins.some((p) => p.cfg.enabled))
@@ -957,84 +957,138 @@ nav button .ico{display:inline-flex}
         );
       }
       function renderPlugins() {
-        if (!CFG.plugins.length) return;
-        const max = CFG.max_links || 3;
+        const max = CFG.max_links || 3,
+          maxDev = CFG.max_devices || 12,
+          types = CFG.types || [];
+        const restartAfter = (r, msg) => {
+          if (r.restart) {
+            toast(msg + " – Neustart…");
+            setTimeout(() => location.reload(), 8000);
+          } else toast("Keine Änderung");
+        };
+        // one line per device: switch, name, type, remove
         const mk = (p) => {
           const i = el("input", { type: "checkbox", checked: p.cfg.enabled });
           i.dataset.id = p.id;
-          i.dataset.link = p.ble === 2 ? "1" : "";
+          const rm = el("button", {
+            className: "b d",
+            title: "Entfernen",
+            textContent: "✕",
+            style: "width:auto;margin:0;padding:4px 10px",
+            on: {
+              click: async () => {
+                if (!confirm(`„${p.cfg.name}“ entfernen? Die Einstellungen und die Einträge in Home Assistant werden gelöscht.`)) return;
+                try {
+                  restartAfter(await api("/api/config", { remove: p.id }), "Entfernt");
+                } catch (e) {
+                  toast(e.message, true);
+                }
+              },
+            },
+          });
           return el(
             "div",
-            { className: "f" },
+            { className: "f", style: "display:flex;gap:8px;align-items:center" },
             el(
               "label",
-              { style: "display:flex;gap:8px;align-items:center" },
+              { style: "display:flex;gap:8px;align-items:center;flex:1;margin:0" },
               i,
               p.cfg.name,
-              el("span", { className: "mute", textContent: p.type_name }),
+              el("span", { className: "mute", style: "margin-left:auto", textContent: p.type_name }),
             ),
+            rm,
           );
         };
         const listen = CFG.plugins.filter((p) => p.ble !== 2).map(mk);
         const link = CFG.plugins.filter((p) => p.ble === 2).map(mk);
         const boxes = [...listen, ...link];
         const count = el("span", { className: "mute" });
-        // Connections: at most `max` at the same time, further boxes are locked
+        // Connections: at most `max` switched on at the same time, further switches are locked
+        const linkOn = () => link.filter((b) => b.querySelector("input").checked).length;
         const check = () => {
-          const ins = link.map((b) => b.querySelector("input"));
-          const on = ins.filter((i) => i.checked).length;
+          const on = linkOn();
           count.textContent = `${on} von ${max}`;
-          for (const i of ins) i.disabled = !i.checked && on >= max;
+          for (const b of link) {
+            const i = b.querySelector("input");
+            i.disabled = !i.checked && on >= max;
+          }
+          for (const o of sel.options) {
+            const t = types.find((x) => x.type === o.value);
+            o.disabled = (t && t.ble === 2 && on >= max) || CFG.plugins.length >= maxDev;
+          }
         };
         for (const b of link) b.querySelector("input").addEventListener("change", check);
+        const group = (title, hint, items, extra) => [
+          el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
+          el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
+          ...(items.length ? items : [el("small", { className: "mute", style: "display:block" }, "– noch keins –")]),
+        ];
+        // "+ Gerät hinzufügen": type selection, grouped like the lists
+        const sel = el("select", { style: "flex:1" });
+        for (const [label, ble] of [["Mithören", 1], ["Verbinden", 2]]) {
+          const g = el("optgroup", { label });
+          for (const t of types.filter((t) => (t.ble === 2) === (ble === 2))) g.append(el("option", { value: t.type, textContent: t.name }));
+          if (g.children.length) sel.append(g);
+        }
+        const add = el(
+          "div",
+          { className: "f row", style: "margin-top:14px;align-items:center" },
+          sel,
+          el("button", {
+            className: "b s",
+            textContent: "+ Gerät hinzufügen",
+            on: {
+              click: async () => {
+                const o = sel.selectedOptions[0];
+                if (!o || o.disabled) return toast("Dieses Gerät passt gerade nicht dazu (Grenze erreicht)", true);
+                try {
+                  restartAfter(await api("/api/config", { add: o.value }), "Hinzugefügt");
+                } catch (e) {
+                  toast(e.message, true);
+                }
+              },
+            },
+          }),
+        );
         check();
-        const group = (title, hint, items, extra) =>
-          items.length
-            ? [
-                el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
-                el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
-                ...items,
-              ]
-            : [];
         $("#main").append(
           el(
             "div",
             { className: "card" },
             el("h2", {}, "Plugins"),
-            ...group("Mithören", "Sensoren, die nur senden (Gas). Beliebig viele.", listen),
+            ...group("Mithören", "Sensoren, die nur senden (Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
               `Geräte mit fester Bluetooth-Verbindung. Höchstens ${max} gleichzeitig – für mehr einen zweiten BLE-Node mit eigenem Topic (z. B. camper/ble2) nehmen.`,
               link,
               count,
             ),
+            add,
             el(
               "small",
-              { className: "mute" },
-              "Ausgeschaltete Plugins verschwinden aus der Leiste und aus Home Assistant. Änderung startet das Gerät neu.",
+              { className: "mute", style: "display:block;margin-top:8px" },
+              `Insgesamt höchstens ${maxDev} Geräte. Ausgeschaltete Geräte behalten ihre Einstellungen, laufen aber nicht und fehlen in Home Assistant. Jede Änderung startet das Gerät neu.`,
             ),
-            el("button", {
-              className: "b",
-              textContent: "Speichern",
-              on: {
-                click: async () => {
-                  const enabled = {};
-                  for (const b of boxes) {
-                    const i = b.querySelector("input");
-                    enabled[i.dataset.id] = i.checked;
-                  }
-                  try {
-                    const r = await api("/api/config", { enabled });
-                    if (r.restart) {
-                      toast("Gespeichert – Neustart…");
-                      setTimeout(() => location.reload(), 8000);
-                    } else toast("Keine Änderung");
-                  } catch (e) {
-                    toast(e.message, true);
-                  }
-                },
-              },
-            }),
+            boxes.length
+              ? el("button", {
+                  className: "b",
+                  textContent: "An/Aus speichern",
+                  on: {
+                    click: async () => {
+                      const enabled = {};
+                      for (const b of boxes) {
+                        const i = b.querySelector("input");
+                        enabled[i.dataset.id] = i.checked;
+                      }
+                      try {
+                        restartAfter(await api("/api/config", { enabled }), "Gespeichert");
+                      } catch (e) {
+                        toast(e.message, true);
+                      }
+                    },
+                  },
+                })
+              : null,
           ),
         );
       }

@@ -107,7 +107,7 @@ Unterstruktur wie bei inetbox2mqtt. Vollständige Liste der Keys in der [README 
 
 ## BLE-Node `camper/ble`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), optional `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -124,6 +124,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters`, `leak` … | Wasserpumpe; Befehle `enable`, `leak`, `pressure_level` |
 | `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `message` | Kühlschrank |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
+| `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |
 
 ## Display `camper/display`
 

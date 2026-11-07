@@ -25,7 +25,7 @@ static unsigned long lastCorePublish = 0;
 static unsigned long lastReconnect = 0;
 static bool discoveryPublished = false;
 
-#define MAX_TRACKED 8
+#define MAX_TRACKED MAX_PLUGINS   // one entry per device (config.h)
 static uint32_t lastUpdates[MAX_TRACKED];
 static unsigned long lastPublish[MAX_TRACKED];
 
@@ -356,6 +356,21 @@ void mqttLoop() {
             publishPlugin(p);
         }
     }
+}
+
+void mqttForget(Plugin* p) {
+    if (!p || !mqtt.connected()) return;
+    const Entity* ents = nullptr;
+    size_t n = p->entities(ents);
+    for (size_t i = 0; i < n; i++) {
+        removeEntity(p, ents[i]);
+        // retained state of the entity (a cover also has <key>_position)
+        mqtt.publish(pluginTopic(p, ents[i].key).c_str(), "", true);
+        if (ents[i].kind == E_COVER) mqtt.publish(pluginTopic(p, (String(ents[i].key) + "_position").c_str()).c_str(), "", true);
+        mqtt.loop();
+    }
+    mqtt.publish(pluginTopic(p, "available").c_str(), "", true);
+    Serial.printf("[MQTT] %s removed from Home Assistant\n", p->id);
 }
 
 bool mqttIsConnected() {

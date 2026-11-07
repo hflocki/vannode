@@ -1,9 +1,11 @@
 #include "registry.h"
 
 // ============================================================
-// Plugin factories (one per plugin type, implemented in src/plugins/)
-// To add a plugin type: declare its factory here, add a PLUGIN_xxx switch to
-// config.h (number of slots) and one ADD_PLUGINS line in registryCreate().
+// Plugin types (one factory per type, implemented in src/plugins/)
+// To add a plugin type: write src/plugins/plugin_<name>.cpp with a factory, add a
+// PLUGIN_xxx switch to config.h and one line to TYPES below.
+// Devices (instances) are not fixed here: they are created from /config.json, which the
+// web UI changes with "+ Gerät hinzufügen" / "Entfernen".
 // ============================================================
 #if PLUGIN_DIMES
 Plugin* createDimes(uint8_t index);
@@ -13,6 +15,9 @@ Plugin* createMopekaPro(uint8_t index);
 #endif
 #if PLUGIN_MOPEKA_STD
 Plugin* createMopekaStd(uint8_t index);
+#endif
+#if PLUGIN_BLESENSOR
+Plugin* createBleSensor(uint8_t index);
 #endif
 #if PLUGIN_CARAWATER
 Plugin* createCaraWater(uint8_t index);
@@ -24,37 +29,91 @@ Plugin* createRvTech(uint8_t index);
 Plugin* createWcsFridge(uint8_t index);
 #endif
 
+// type id (= id of the first device of this type), name for the web UI, Bluetooth use
+static const PluginType TYPES[] = {
+#if PLUGIN_RVTECH
+    {"rvtech", "Dachhaube RV Tech", BLE_LINK, createRvTech},
+#endif
+#if PLUGIN_CARAWATER
+    {"pump", "Wasserpumpe CaraWater", BLE_LINK, createCaraWater},
+#endif
+#if PLUGIN_WCS_FRIDGE
+    {"fridge", "Kühlschrank WCS", BLE_LINK, createWcsFridge},
+#endif
+#if PLUGIN_DIMES
+    {"dimes", "Gas: DIMES / SRG WAVE", BLE_PASSIVE, createDimes},
+#endif
+#if PLUGIN_MOPEKA_PRO
+    {"mopeka", "Gas: Mopeka Pro", BLE_PASSIVE, createMopekaPro},
+#endif
+#if PLUGIN_MOPEKA_STD
+    {"mopeka_std", "Gas: Mopeka Standard", BLE_PASSIVE, createMopekaStd},
+#endif
+#if PLUGIN_BLESENSOR
+    {"blesensor", "Eigener BLE-Sensor", BLE_PASSIVE, createBleSensor},
+#endif
+};
+static const uint8_t TYPE_COUNT = sizeof(TYPES) / sizeof(TYPES[0]);
+
 static Plugin* plugins[MAX_PLUGINS];
 static uint8_t count = 0;
 
-static void add(Plugin* p) {
-    if (p && count < MAX_PLUGINS) plugins[count++] = p;
+uint8_t pluginTypeCount() { return TYPE_COUNT; }
+const PluginType* pluginTypeAt(uint8_t i) { return i < TYPE_COUNT ? &TYPES[i] : nullptr; }
+
+const PluginType* pluginType(const char* type) {
+    for (uint8_t i = 0; i < TYPE_COUNT; i++) {
+        if (!strcmp(TYPES[i].type, type)) return &TYPES[i];
+    }
+    return nullptr;
 }
 
-#define ADD_PLUGINS(n, factory) \
-    for (uint8_t i = 0; i < (n); i++) add(factory(i))
+// "rvtech" -> type rvtech, index 0; "rvtech2" -> index 1; "mopeka_std3" -> mopeka_std, 2.
+// The longest matching type wins ("mopeka_std2" is not "mopeka" + "_std2").
+const PluginType* pluginTypeOfId(const char* id, uint8_t& index) {
+    const PluginType* best = nullptr;
+    size_t bestLen = 0;
+    for (uint8_t i = 0; i < TYPE_COUNT; i++) {
+        size_t n = strlen(TYPES[i].type);
+        if (n <= bestLen || strncmp(id, TYPES[i].type, n) != 0) continue;
+        const char* rest = id + n;
+        bool digits = true;
+        for (const char* c = rest; *c; c++) if (!isdigit((unsigned char)*c)) digits = false;
+        if (!digits) continue;
+        int num = *rest ? atoi(rest) : 1;
+        if (num < 1 || num > 99 || (*rest == '0')) continue;
+        best = &TYPES[i];
+        bestLen = n;
+        index = (uint8_t)(num - 1);
+    }
+    return best;
+}
 
-void registryCreate() {
-    if (count) return;
-#if PLUGIN_DIMES
-    ADD_PLUGINS(PLUGIN_DIMES, createDimes);
-#endif
-#if PLUGIN_MOPEKA_PRO
-    ADD_PLUGINS(PLUGIN_MOPEKA_PRO, createMopekaPro);
-#endif
-#if PLUGIN_MOPEKA_STD
-    ADD_PLUGINS(PLUGIN_MOPEKA_STD, createMopekaStd);
-#endif
-#if PLUGIN_CARAWATER
-    ADD_PLUGINS(PLUGIN_CARAWATER, createCaraWater);
-#endif
-#if PLUGIN_RVTECH
-    ADD_PLUGINS(PLUGIN_RVTECH, createRvTech);
-#endif
-#if PLUGIN_WCS_FRIDGE
-    ADD_PLUGINS(PLUGIN_WCS_FRIDGE, createWcsFridge);
-#endif
-    for (uint8_t i = 0; i < count; i++) plugins[i]->setDefaults();
+static void idFor(const PluginType* t, uint8_t index, char* out, size_t size) {
+    if (index == 0) strlcpy(out, t->type, size);
+    else snprintf(out, size, "%s%u", t->type, (unsigned)(index + 1));
+}
+
+int8_t registryFreeIndex(const PluginType* t) {
+    char id[16];
+    for (uint8_t i = 0; i < 99; i++) {
+        idFor(t, i, id, sizeof(id));
+        if (!pluginById(id)) return (int8_t)i;
+    }
+    return -1;
+}
+
+Plugin* registryNew(const PluginType* t, uint8_t index) {
+    if (!t) return nullptr;
+    Plugin* p = t->create(index);
+    if (p) p->setDefaults();
+    return p;
+}
+
+bool registryAdd(Plugin* p) {
+    if (!p || count >= MAX_PLUGINS || pluginById(p->id)) return false;
+    plugins[count++] = p;
+    return true;
 }
 
 uint8_t pluginCount() {

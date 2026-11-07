@@ -11,24 +11,46 @@ Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jet
 
 Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
-## Plugins
+## Geräte und Plugins
 
-Alle Plugins sind in der Release-`.bin` enthalten. Ab Werk ist alles aus – in der Web-Oberfläche unter **System → Plugins** schaltest du ein, was du brauchst (danach startet das Gerät neu). Ausgeschaltete Plugins laufen nicht, erscheinen nicht in der Leiste und nicht in Home Assistant.
+Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät angelegt – in der Web-Oberfläche unter **System → Plugins** wählst du einen Typ und tippst **+ Gerät hinzufügen** (danach startet der BLE-Node neu). Vom selben Typ gehen beliebig viele, sie heißen dann z. B. „Dachhaube“ und „Dachhaube 2“ (IDs `rvtech`, `rvtech2`). **✕** entfernt ein Gerät samt Einstellungen und Einträgen in Home Assistant. Mit dem Schalter lässt sich ein Gerät auch nur vorübergehend ausschalten, die Einstellungen bleiben.
 
-| Gerät | Plätze | Rubrik | Einstellungen in der Web-UI |
-| --- | --- | --- | --- |
-| Gas: Rotarex DIMES / SRG WAVE | 2 | Mithören | MAC, Flaschengröße, Füllstopp |
-| Gas: Mopeka Pro (Pro Check, Universal …) | 2 | Mithören | MAC, Leer-/Voll-Höhe |
-| Gas: Mopeka Standard / Std Check | 1 | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
-| Dachhaube RV Tech (Heki-Motorsteuerung) | 2 | Verbinden | MAC, PIN |
-| Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | 1 | Verbinden | MAC |
-| WCS Kompressor-Kühlschrank | 1 | Verbinden | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
+| Typ | Rubrik | Einstellungen in der Web-UI |
+| --- | --- | --- |
+| Dachhaube RV Tech (Heki-Motorsteuerung) | Verbinden | MAC, PIN |
+| Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
+| Kühlschrank WCS (Kompressor) | Verbinden | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
+| Gas: Rotarex DIMES / SRG WAVE | Mithören | MAC, Flaschengröße, Füllstopp |
+| Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
+| Gas: Mopeka Standard / Std Check | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
+| **Eigener BLE-Sensor** | Mithören | MAC, Datenquelle, bis zu 3 Werte mit Stelle und Umrechnung (siehe unten) |
 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
-- **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere Haken, das Gerät prüft es beim Speichern und beim Start noch einmal.
-- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/ble2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_ble2`). Alternativ die Zahl der Plätze in `config_local.h` ändern (`PLUGIN_RVTECH 3` usw.) und selbst bauen.
+- **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** eingeschaltet (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere, das Gerät prüft es beim Speichern und beim Start noch einmal.
+- Insgesamt höchstens **12 Geräte** (Arbeitsspeicher, `MAX_PLUGINS`).
+- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/ble2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_ble2`).
 - **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
-- Update von einer älteren Version: Plugins mit gespeicherten Einstellungen (z. B. die Dachhaube) bleiben an, alle neuen Plätze sind aus.
+- **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
+- Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
+
+### Eigener BLE-Sensor
+
+Viele einfache Sensoren (Thermometer, Füllstand, Kontakte …) verbinden sich nicht, sondern funken alle paar Sekunden ein kurzes Datenpaket mit ihren Messwerten an festen Stellen. Mit diesem Plugin trägst du die Stellen selbst ein – ganz ohne neue Firmware:
+
+1. Gerät **Eigener BLE-Sensor** hinzufügen, **Suchen** und den Sensor in der Liste wählen.
+2. **Datenquelle:** *Herstellerdaten* (die Rohdaten beginnen nach den 2 Bytes der Hersteller-ID, wie in nRF Connect) oder *Service-Daten* einer UUID, z. B. `181A`.
+3. Auf der Live-Seite unter **Rohdaten** stehen die empfangenen Bytes mit ihren Positionen (`0: 56 34 12 38  4: C1 A4 5C 08 …`).
+4. Je Wert eintragen: **Name**, **Stelle** (0 = erstes Byte), **Länge** (1, 2 oder 4 Byte), **mit Vorzeichen** (für Werte unter null), **höchstes Byte zuerst** (selten, meist aus), **Faktor** und **Offset** (Wert = Rohzahl × Faktor + Offset), **Nachkommastellen**, **Einheit** und **Art** (Temperatur, Luftfeuchte … – für Symbol und Statistik in Home Assistant).
+
+Beispiel: Xiaomi-Thermometer LYWSD03MMC mit der Firmware von pvvx (Service-Daten `181A`):
+
+| Wert | Stelle | Länge | Vorzeichen | Faktor | Einheit | Art |
+| --- | --- | --- | --- | --- | --- | --- |
+| Temperatur | 6 | 2 Byte | ja | 0,01 | °C | Temperatur |
+| Luftfeuchte | 8 | 2 Byte | nein | 0,01 | % | Luftfeuchte |
+| Batterie | 12 | 1 Byte | nein | 1 | % | Batterie |
+
+Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/ble/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
 
 ## Hardware
 
@@ -116,8 +138,8 @@ Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine 
 
 1. Neue Datei `src/plugins/plugin_<name>.cpp`, Klasse von `Plugin` ableiten (`src/core/plugin.h`): Einstellungen `fields()`, HA-Entitäten `entities()`, MQTT-Werte `publish()`, Befehle `command()`, Web-Karte `live()`. Für Geräte mit Verbindung gibt es `BleLink` (`src/core/ble_link.h`), für passive Sensoren `onAdvertisement()`.
 2. Fabrik `Plugin* create<Name>(uint8_t index)` am Ende der Datei.
-3. `config.h`: Zahl der Plätze `PLUGIN_<NAME>` (z. B. `1`) und in `CT_BLE_PASSIVE` bzw. `CT_BLE_LINKS` aufnehmen.
-4. `src/core/registry.cpp`: Fabrik deklarieren und eine `ADD_PLUGINS`-Zeile.
+3. `config.h`: Schalter `PLUGIN_<NAME> 1` und in `CT_BLE_PASSIVE` bzw. `CT_BLE_LINKS` aufnehmen.
+4. `src/core/registry.cpp`: Fabrik deklarieren und eine Zeile in `TYPES` (Typ-ID, Name in der Web-UI, Bluetooth-Art). Danach steht der Typ unter „+ Gerät hinzufügen“ zur Auswahl.
 5. Topics in `docs/TOPICS.md` eintragen, Plugin-Tabelle oben ergänzen.
 
 Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fields()` selbst und braucht in der Regel keine Änderung.
@@ -145,6 +167,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 1.5.0 | Geräte frei anlegen statt fester Plätze: „+ Gerät hinzufügen“ und „✕“ unter System → Plugins, beliebig viele vom selben Typ (insgesamt 12, höchstens 3 mit Verbindung). Eingeschaltete Plugins aus 1.3 / 1.4 werden übernommen. Neues Plugin **Eigener BLE-Sensor**: Werte an frei einstellbaren Stellen im Funkpaket, ohne neue Firmware. Rohdaten mit Positionen, Reiter-Leiste am Handy scrollbar. Behoben: Mehr als 8 Plugins wurden nicht alle an MQTT gesendet (in 1.4.0 der Kühlschrank). Host-Test der Umrechnung (`tests/run.sh`, auch in der CI) |
 | 1.4.0 | Alle Plugins in der Release-`.bin` (Plätze: 2 × DIMES, 2 × Mopeka Pro, 1 × Mopeka Standard, 2 × Dachhaube, 1 × Pumpe, 1 × Kühlschrank), ab Werk aus. System → Plugins in zwei Rubriken *Mithören* und *Verbinden* (höchstens 3 gleichzeitig, wird beim Speichern und beim Start geprüft). Gas-Plugins mit eigenem Namen je Typ |
 | 1.3.0 | Aus der Toolbox wird der **BLE Node**: Hostname `ble-node`, Setup-WLAN `BLE-Node-XXXXXX`, Topic `camper/ble` (ein gespeichertes `camper/toolbox` wird beim Start umgestellt), Release-Datei `ble-node-….bin`, Tag `ble-v…`, Ordner `firmware/ble/ble_node`. Gas-Plugins DIMES und Mopeka wieder als Option (ab Werk aus). Home Assistant legt die Entitäten neu an (`camper_ble`) |
 | 1.2.2 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |

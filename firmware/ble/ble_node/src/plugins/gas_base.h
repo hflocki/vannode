@@ -3,7 +3,7 @@
 
 #include "../core/plugin.h"
 
-#if CT_BLE_PASSIVE
+#if CT_GAS
 
 // ============================================================
 // Common part of all passive BLE gas level plugins (DIMES, Mopeka Pro, Mopeka Standard)
@@ -101,5 +101,5 @@ private:
     void resetValues();
 };
 
-#endif // CT_BLE_PASSIVE
+#endif // CT_GAS
 #endif // CT_GAS_BASE_H

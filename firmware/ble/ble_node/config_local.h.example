@@ -4,17 +4,17 @@
 // everything here wins over the defaults in config.h.
 #pragma once
 
-// ---- Plugin slots (normally not needed) -------------------------------
-// Every plugin is in the release file and is switched on in the web UI (tab System),
-// at most 3 connecting devices (C) at the same time. Only change the number of slots
-// if you need more or fewer devices of one kind (0 = not compiled in).
-// Each name appears only once - change the number, do not add a second line.
-// #define PLUGIN_DIMES      2      // (P) gas bottle, Rotarex DIMES / SRG WAVE
-// #define PLUGIN_MOPEKA_PRO 2      // (P) gas bottle, Mopeka Pro family
-// #define PLUGIN_MOPEKA_STD 1      // (P) gas bottle, Mopeka Standard
-// #define PLUGIN_RVTECH     2      // (C) roof hatch RV Tech
-// #define PLUGIN_CARAWATER  1      // (C) water pump CaraWater
-// #define PLUGIN_WCS_FRIDGE 1      // (C) WCS fridge
+// ---- Plugin types (normally not needed) -------------------------------
+// Every type is in the release file; devices are added in the web UI (System -> Plugins).
+// 0 leaves a type out (smaller firmware). Each name appears only once.
+// #define PLUGIN_DIMES      0      // gas bottle, Rotarex DIMES / SRG WAVE
+// #define PLUGIN_MOPEKA_PRO 0      // gas bottle, Mopeka Pro family
+// #define PLUGIN_MOPEKA_STD 0      // gas bottle, Mopeka Standard
+// #define PLUGIN_BLESENSOR  0      // own BLE sensor (values at freely set positions)
+// #define PLUGIN_RVTECH     0      // roof hatch RV Tech
+// #define PLUGIN_CARAWATER  0      // water pump CaraWater
+// #define PLUGIN_WCS_FRIDGE 0      // WCS fridge
+// #define MAX_PLUGINS       12     // devices in total
 
 // ---- Passwords -------------------------------------------------------
 #define DEFAULT_AP_PASSWORD     "my-ap-password"   // setup access point, min. 8 characters

@@ -7,11 +7,14 @@
 
 // /config.json layout:
 //   { <core keys: wifi_ssid, mqtt_server, ...>,
-//     "plugins": { "<id>": { "enabled": true, "name": "Gas", <plugin fields> }, ... } }
+//     "plugins": { "<id>": { "type": "dimes", "enabled": true, "name": "Gas", <plugin fields> }, ... } }
+// Every entry of "plugins" is one device; they are created at boot in this order.
 
 bool settingsInit();       // Mounts LittleFS, loads the config (defaults if missing)
 bool settingsFsReady();
-void saveConfig();
+// extra: a new device that is not registered yet (added in the web UI, created after the restart)
+// skip : a device that is left out (removed in the web UI)
+void saveConfig(Plugin* extra = nullptr, const Plugin* skip = nullptr);
 void settingsFactoryReset();   // Deletes /config.json (applied after a restart)
 
 // Core settings

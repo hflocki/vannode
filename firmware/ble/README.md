@@ -24,6 +24,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
 | Gas: Mopeka Standard / Std Check | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
 | Thermometer Govee (H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177, H5179; Modell wird erkannt) | Mithören | MAC, Korrektur Temperatur/Feuchte |
+| **BTHome-Sensor** (ATC/pvvx-Firmware, Shelly BLU H&T / Door / Button / Motion …, BTHome v2 ohne Verschlüsselung) | Mithören | MAC, die Werte werden erkannt (siehe unten) |
 | **Eigener BLE-Sensor** | Mithören | MAC, Datenquelle, bis zu 3 Werte mit Stelle und Umrechnung (siehe unten) |
 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
@@ -33,6 +34,18 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
+
+### BTHome-Sensor
+
+[BTHome](https://bthome.io) ist ein offenes Funkformat: jeder Wert im Paket trägt eine Kennung (Temperatur, Feuchte, Batterie, Tür offen, Taster …). Das Plugin zerlegt das Paket selbst, eingestellt wird nur die MAC.
+
+1. Gerät **BTHome-Sensor** hinzufügen, **Suchen** und den Sensor wählen (passende Geräte senden den Dienst `FCD2` und sind mit „✔ passt“ markiert).
+2. Nach dem Neustart erscheinen die Werte, sobald das erste Paket kommt. Sie stehen dann unter **Erkannte Werte** (z. B. `01,02,03,0C`), damit Home Assistant sie auch nach einem Neustart gleich kennt. Zum Neu-Erkennen das Feld leeren und speichern.
+3. Werte unter `camper/ble/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
+
+- **ATC/pvvx** (Xiaomi LYWSD03MMC u. a.): im Telink-Flasher *Advertising type* **BTHome** wählen (Werkseinstellung neuerer Versionen).
+- **Verschlüsselte** Sensoren (Shelly BLU mit gesetztem Schlüssel) werden nicht gelesen, die Live-Seite zeigt dann „Verschlüsselt“.
+- Höchstens 8 Werte je Sensor (`BTHOME_VALUES`).
 
 ### Eigener BLE-Sensor
 
@@ -168,6 +181,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 1.5.4 | Neues Plugin **BTHome-Sensor** (Mithören): alle Sensoren mit BTHome v2 ohne Verschlüsselung, z. B. ATC/pvvx-Thermometer und Shelly BLU; Werte werden aus dem Paket erkannt und gemerkt, Home Assistant bekommt passende Sensoren und Binärsensoren. Host-Test der Dekodierung (`tests/bthome_test.cpp`) |
 | 1.5.3 | Neues Plugin **Thermometer Govee** (Mithören): Temperatur (auch unter null), Luftfeuchte und Batterie von H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177 und H5179, nur MAC wählen; Korrektur für Temperatur und Feuchte. Host-Test der Dekodierung (`tests/govee_test.cpp`) |
 | 1.5.2 | Neuer Reiter **Geräte** statt eines Reiters je Gerät: Liste mit An/Aus, Hinzufügen, Entfernen und Neustart, je Gerät **Einstellen** (Einstellungen jetzt auch für ausgeschaltete Geräte). Ein neues Gerät öffnet sich gleich mit seinen Einstellungen und dem Knopf „Jetzt neu starten“. Behoben: Mit mehreren Eigenen BLE-Sensoren wurde `/api/config` zu groß für den Speicher, die Seite zeigte „CFG.plugins is not iterable“ und keine Rückmeldung beim Hinzufügen – die Feldbeschreibung kommt jetzt nur einmal je Typ (`schemas`), die Antwort wird gestreamt, bei Speichermangel kommt eine klare Meldung. Knöpfe sind gesperrt, solange eine Änderung unterwegs ist (kein doppeltes Hinzufügen) |
 | 1.5.1 | Änderungen unter System → Plugins (hinzufügen, entfernen, an/aus) werden gespeichert, ohne sofort neu zu starten; neue und entfernte Geräte sind markiert, darunter erscheint **Jetzt neu starten** – mehrere Änderungen brauchen nur einen Neustart. Neue Geräte lassen sich schon vor dem Neustart einstellen, entfernte bis dahin mit „Rückgängig“ behalten. Gewollte Neustarts (Einstellungen speichern, Neustart-Knopf, WLAN-Rückfall) zählen in der Update-Probezeit nicht mehr als Absturz – vorher konnten drei davon ein frisches Update auf die alte Version zurückrollen (so ging 1.5.0 nach dem Hinzufügen auf 1.3.0 zurück) |

@@ -29,8 +29,15 @@ flowchart LR
   broker(("MQTT broker<br/>e.g. RUT956"))
   tank["tanklevel<br/>fresh, grey, gas"] --> broker
   temp["temp<br/>DS18B20 + alarms"] --> broker
-  bat["battery<br/>BMS over Bluetooth"] --> broker
-  tool["tool-node<br/>Bluetooth plugins: roof hatch …"] <--> broker
+  subgraph ble["ble – one firmware, Bluetooth devices as plugins"]
+    direction TB
+    bat["battery-node · camper/battery<br/>Daly BMS · Ective BM X · BM2"]
+    tool["tool-node · camper/tool<br/>RV Tech roof hatch · CaraWater pump · WCS fridge<br/>Govee · BTHome thermometers (ATC, Shelly BLU)<br/>gas DIMES / Mopeka · own BLE sensor"]
+    more["tool2 / tool3 (optional)<br/>more nodes, same firmware"]
+  end
+  bat --> broker
+  tool <--> broker
+  more -.- broker
   heater["heater<br/>Truma Combi (LIN)"] <--> broker
   fan["maxxfan<br/>VanTurtle"] <--> broker
   level["level<br/>BNO085 + wedges"] <--> broker
@@ -107,7 +114,7 @@ Everything in `config_local.h` replaces the default from `config.h`. The file is
 
 Any other value from `config.h` can be overridden as well (pins, prefix, tank size …).
 
-Note: factory WiFi, MQTT and login only apply while nothing is stored on the device yet. A normal update over existing settings does not change them. They are taken over again after a **factory reset** in the web UI, after flashing with **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Tools menu), or for temp, tanklevel, level and battery after uploading the LittleFS image. The access point and OTA passwords always apply immediately.
+Note: factory WiFi, MQTT and login only apply while nothing is stored on the device yet. A normal update over existing settings does not change them. They are taken over again after a **factory reset** in the web UI, after flashing with **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Tools menu), or for temp, tanklevel and level after uploading the LittleFS image. The access point and OTA passwords always apply immediately.
 
 The Road Buddy has no settings page, only an update page; there the whole `config.h` is the personal file (template `config.example.h`). A firmware built with your own `config.h` stores the credentials in flash, so the Actions firmware can be installed through the update page afterwards.
 
@@ -126,7 +133,7 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
-Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, battery, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
+Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
 
 **Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file (`temp-node-esp32c3.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
 
@@ -171,7 +178,7 @@ Sample data and simulated behaviour per device are in `tools/mockups/mock/<devic
 
 ## Origin
 
-The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). They were moved here; the old repos are or will be archived.
+The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). They were moved here (the former `firmware/battery` is now part of `firmware/ble`); the old repos are or will be archived.
 
 ## Licenses
 

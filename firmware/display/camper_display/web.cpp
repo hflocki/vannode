@@ -346,6 +346,7 @@ void getSettings(AsyncWebServerRequest* r) {
   d["dimBrightness"] = settings.dimBrightness;
   d["screenTimeout"] = settings.screenTimeout;
   d["warnWake"] = settings.warnWake;
+  d["dimLogo"] = settings.dimLogo;
   JsonArray b = d["builtin"].to<JsonArray>();
   for (int i = 0; i < BP_COUNT; i++) b.add(settings.builtin[i]);
   JsonArray pn = d["pageNames"].to<JsonArray>();
@@ -518,6 +519,7 @@ bool applySettings(JsonObject o, bool apply) {
   if (o["brightness"].is<int>())    settings.brightness = constrain(o["brightness"].as<int>(), 5, 100);
   if (o["dimBrightness"].is<int>()) settings.dimBrightness = constrain(o["dimBrightness"].as<int>(), 0, 100);
   if (o["warnWake"].is<bool>() && apply) settings.warnWake = o["warnWake"];
+  if (o["dimLogo"].is<bool>() && apply) settings.dimLogo = o["dimLogo"];
   if (o["screenTimeout"].is<int>()) settings.screenTimeout = constrain(o["screenTimeout"].as<int>(), 0, 3600);
   if (o["builtin"].is<JsonArray>() && apply) {
     JsonArray b = o["builtin"];   // shorter list from an older backup: newer pages keep their setting

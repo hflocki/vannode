@@ -15,7 +15,7 @@ const M = {
     prefixFan: 'camper/maxxfan', prefixTemp: 'camper/temp', prefixBattery: 'camper/battery', prefixBle: 'camper/tool', prefixBle2: '', prefixBle3: '', fanPort: 1,
     ntpServer: 'pool.ntp.org', tz: 'CET-1CEST,M3.5.0,M10.5.0/3',
     poOn: true, poClear: true, poPrio: 0, poCat: {temp: 2, heater: 1, bat: 1, water: 3, gas: 1, frost: 1, weather: 1, depart: 1, tile: 3, rule: 3, contact: -3}, poRetry: 300, poExpire: 3600, poToken: '********', poUser: '********', poStatus: 'OK 14:02',
-    brightness: 80, dimBrightness: 10, screenTimeout: 120, warnWake: false,
+    brightness: 80, dimBrightness: 10, screenTimeout: 120, warnWake: false, dimLogo: true,
     wxOn: true, wxLat: '47.6600', wxLon: '9.1750', wxName: 'Stellplatz am See', wxTopic: '', wxGust: 60, wxEvery: 60, wxGustHyst: 10, wnWater: 10, wnGas: 15, wnBat: 20, wnHystPct: 3, wnFrostOn: false, wnFrost: 3, wnHystT: 1, poQuiet: 30, outName: '', awnSrc: '', awnGust: 40, dpOn: true, dpTopic: 'camper/rut', dpDoor: 'camper/door', dpDoorInv: false, dpSpeed: 5, dpSecs: 10, dpCont: true, ovTempSel: '', ovBatSel: '',
     builtin: [true, true, true, true, true, true, true, true, true, true, true, false, false, true],
     pageNames: ['Home', 'Truma', 'MaxxFan', 'Level', 'Temperatur', 'Batterie', 'Wetter', 'Sensoren', 'Warnungen', 'Licht', 'Schalter', 'Energie', 'Extra', 'Dachhaube', 'System'],
@@ -1209,6 +1209,7 @@ function pgSettings(){
 
    <label>Helligkeit</label><input type="range" id="brightness" min="5" max="100">
    <div class="f2">${inp('dimBrightness','Helligkeit gedimmt (%, 0 = aus)','number')}${inp('screenTimeout','Dimmen nach (s, 0 = nie)','number')}</div>
+   <label class="chk"><input type="checkbox" id="dimLogo"> Gedimmt Ruhebild zeigen (Logo, Uhrzeit, Warnungen) statt der Seite</label>
    <label class="chk"><input type="checkbox" id="warnWake"> Neue Warnung schaltet das Display ein</label>
    <p class="mu" style="margin-top:-4px">Aus: Das Display geht immer nach der eingestellten Zeit aus und nur Berühren weckt es. Zum sofortigen Ausschalten: Kopfzeile am Display lange drücken, Knopf auf der Systemseite oder der Aus-Knopf oben auf der Webseite.</p>
    ${inp('displayName','Anzeigename (oben in der Mitte, z. B. Wohnraum)')}
@@ -1367,7 +1368,7 @@ async function loadSettings(){
     {const l=(ST.ovTiles||OV_DEFAULT).split(',');for(let i=0;i<9;i++){const e=$('#ov'+i);if(e)e.value=l[i]||'none'}}
     {const l=(ST.webTiles||WEB_DEFAULT).split(',');for(let i=0;i<16;i++){const e=$('#wt'+i);if(e)e.value=l[i]||'none'}}
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
-    $('#warnWake').checked=!!ST.warnWake;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
+    $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
     $('#postat').textContent=ST.poStatus?'Zuletzt: '+ST.poStatus:'';
@@ -1506,7 +1507,7 @@ function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
-  o.warnWake=$('#warnWake').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
+  o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;
   o.navSel=[...Array(NAV_FREE).keys()].map(i=>$('#nv'+i).value).filter(x=>x).filter((x,i,a)=>a.indexOf(x)===i).join(',');

@@ -54,6 +54,8 @@ Passt zu den anderen Projekten:
 - **Setup-WLAN** wie bei den anderen Projekten: ohne WLAN-Daten oder nach 1 Minute ohne Verbindung öffnet sich `Display-Node-XXXXXX`, Captive Portal unter `http://192.168.4.1`. Das Display zeigt dazu einen QR-Code zum Verbinden.
 - **Stromausfallsicher:** keine SD-Karte, kein Dateisystem. Webseite und Oberfläche stecken in der Firmware, Einstellungen im NVS. Strom an → nach ca. 1–2 s läuft alles wieder.
 - Bildschirm dimmt bzw. schaltet nach einstellbarer Zeit ab (Helligkeit gedimmt 0 = ganz aus), Berühren weckt (die erste Berührung löst nichts aus). Sofort ausschalten: **Kopfzeile lange drücken**, Knopf **Aus** auf der Systemseite oder **💤** oben auf der Webseite
+- **Ruhebild:** Gedimmt (nicht ganz aus) zeigt das Display statt der Seite das VanNode-Logo, groß Uhrzeit und Datum und darunter aktive Warnungen in Gelb auf Schwarz. Alles wandert jede Minute ein paar Pixel, damit nichts einbrennt. Abschalten unter *Einstellungen → Display* mit dem Haken **Gedimmt Ruhebild zeigen** (Standard an); dann bleibt wie bisher die Seite gedimmt stehen
+- **Startbild:** Beim Einschalten zeigt das Display das VanNode-Logo mit Version und dem aktuellen Schritt (WLAN, Oberfläche), bis die Oberfläche fertig ist (mindestens 1,5 s). Ganz unten auf der Systemseite steht das Logo mit Gerätename und Version
 - Uhrzeit per NTP, Firmware-Update über die Webseite (`.bin`-Datei, mit Fortschrittsbalken) oder Arduino-IDE-Netzwerkport
 - **Einstellungen sichern und wiederherstellen** als JSON-Datei (ohne Passwörter)
 - **Verlauf der letzten 24 h** als Kurven auf der Webseite: Temperaturen, Ladestand bzw. Spannung der Batterien

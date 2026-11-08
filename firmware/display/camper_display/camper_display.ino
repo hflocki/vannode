@@ -71,9 +71,12 @@ void setup() {
   cfg::load();
   store::begin();
 
-  if (!disp::begin()) Serial.println("[boot] display init failed, web page still works");
+  bool dispOk = disp::begin();
+  if (dispOk) ui::splash("WLAN ...");   // start screen with logo until the UI is ready
+  else Serial.println("[boot] display init failed, web page still works");
   wifimgr::begin();
   wx::begin();      // before the UI: it shows weather data and warnings
+  if (dispOk) ui::splash("Oberfl\xC3\xA4" "che ...");
   ui::begin();
   mqttc::begin();
   history::begin();

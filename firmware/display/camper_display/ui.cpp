@@ -28,6 +28,8 @@ LV_FONT_DECLARE(font_de_28);
 LV_FONT_DECLARE(font_de_56);
 LV_IMAGE_DECLARE(vn_logo_hdr);   // logo_img.c (tools/logo/make_logo.py)
 LV_IMAGE_DECLARE(vn_logo_qr);
+LV_IMAGE_DECLARE(vn_logo_splash);   // start screen: symbol above wordmark
+LV_IMAGE_DECLARE(vn_logo_wide);     // info card + idle screen: symbol next to wordmark
 
 // Icons that are part of the generated fonts (Font Awesome 5)
 #define ICON_FIRE         "\xEF\x81\xAD"
@@ -1695,6 +1697,16 @@ void buildSystem(lv_obj_t* tab) {
   }
   sIp = sVals[1];
 
+  // about: VanNode logo with device name and version
+  lv_obj_t* ab = card(tab, PAGE_W - 20, 96);
+  lv_obj_t* abLogo = lv_image_create(ab);
+  lv_image_set_src(abLogo, &vn_logo_wide);
+  lv_obj_align(abLogo, LV_ALIGN_LEFT_MID, 0, 0);
+  lv_obj_t* abName = label(ab, &font_de_18, C_TEXT, FW_NAME);
+  lv_obj_align(abName, LV_ALIGN_TOP_RIGHT, 0, 8);
+  lv_obj_t* abVer = label(ab, &font_de_14, C_MUTED, "Version " FW_VERSION);
+  lv_obj_align(abVer, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
+
   // Rescue: switch a static IP back to DHCP (long press, then restart)
   if (settings.staticIp) {
     lv_obj_t* b = button(tab, "Feste IP aus (DHCP) \xE2\x80\x93 lange dr\xC3\xBC" "cken", PAGE_W - 20, 56, nullptr, nullptr,
@@ -2838,9 +2850,117 @@ void build() {
   refreshHeader();
 }
 
+// ---- idle screen ------------------------------------------------------------
+// While the screen is dimmed (not off): logo, clock, date and active warnings on black instead
+// of the page. Everything moves a little every minute, so nothing stays on the same pixels.
+lv_obj_t *idleScr = nullptr, *idleBox = nullptr, *idleClock = nullptr, *idleDate = nullptr, *idleWarn = nullptr;
+uint32_t idleMoved = 0;
+uint8_t idleStep = 0;
+const int8_t IDLE_SHIFT[][2] = {{0, 0}, {-14, -10}, {12, -16}, {16, 8}, {-10, 14}, {-16, 2}, {8, 16}, {14, -6}};
+
+void idleRefresh() {
+  static const char* const days[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
+  if (!idleScr) return;
+  if (wifimgr::timeValid()) {
+    time_t now = time(nullptr);
+    struct tm tm;
+    localtime_r(&now, &tm);
+    lv_label_set_text_fmt(idleClock, "%02d:%02d", tm.tm_hour, tm.tm_min);
+    lv_label_set_text_fmt(idleDate, "%s, %d.%d.", days[tm.tm_wday], tm.tm_mday, tm.tm_mon + 1);
+  } else {
+    lv_label_set_text(idleClock, "");
+    lv_label_set_text(idleDate, "");
+  }
+  String w = lastWarn;
+  if (w.length()) {
+    w.replace("\n", "\n" LV_SYMBOL_WARNING "  ");
+    w = String(LV_SYMBOL_WARNING "  ") + dispText(w);
+  }
+  if (w != String(lv_label_get_text(idleWarn))) lv_label_set_text(idleWarn, w.c_str());
+  if (millis() - idleMoved > 60000UL) {
+    idleMoved = millis();
+    idleStep = (idleStep + 1) % (sizeof(IDLE_SHIFT) / sizeof(IDLE_SHIFT[0]));
+    lv_obj_align(idleBox, LV_ALIGN_CENTER, IDLE_SHIFT[idleStep][0], IDLE_SHIFT[idleStep][1]);
+  }
+}
+
+lv_obj_t* spacer(lv_obj_t* parent, int h) {
+  lv_obj_t* o = lv_obj_create(parent);
+  lv_obj_remove_style_all(o);
+  lv_obj_set_size(o, 1, h);
+  lv_obj_remove_flag(o, LV_OBJ_FLAG_CLICKABLE);
+  return o;
+}
+
+void idleShow() {
+  if (idleScr) return;
+  idleScr = lv_obj_create(lv_layer_top());
+  lv_obj_set_size(idleScr, LCD_WIDTH, LCD_HEIGHT);
+  lv_obj_set_style_bg_color(idleScr, lv_color_black(), 0);
+  lv_obj_set_style_bg_opa(idleScr, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(idleScr, 0, 0);
+  lv_obj_set_style_radius(idleScr, 0, 0);
+  lv_obj_set_style_pad_all(idleScr, 0, 0);
+  lv_obj_remove_flag(idleScr, LV_OBJ_FLAG_SCROLLABLE);
+  idleBox = lv_obj_create(idleScr);
+  lv_obj_remove_style_all(idleBox);
+  lv_obj_set_size(idleBox, LCD_WIDTH - 60, LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(idleBox, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(idleBox, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_row(idleBox, 6, 0);
+  lv_obj_remove_flag(idleBox, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_t* logo = lv_image_create(idleBox);
+  lv_image_set_src(logo, &vn_logo_wide);
+  spacer(idleBox, 18);
+  idleClock = label(idleBox, &font_de_56, C_TEXT, "");
+  idleDate = label(idleBox, &font_de_22, C_MUTED, "");
+  spacer(idleBox, 14);
+  idleWarn = label(idleBox, &font_de_18, C_YELLOW, "");
+  lv_obj_set_width(idleWarn, LCD_WIDTH - 60);
+  lv_obj_set_style_text_align(idleWarn, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_long_mode(idleWarn, LV_LABEL_LONG_WRAP);
+  idleMoved = millis();
+  lv_obj_align(idleBox, LV_ALIGN_CENTER, IDLE_SHIFT[idleStep][0], IDLE_SHIFT[idleStep][1]);
+  idleRefresh();
+}
+
+void idleHide() {
+  if (!idleScr) return;
+  lv_obj_delete(idleScr);
+  idleScr = idleBox = idleClock = idleDate = idleWarn = nullptr;
+}
+
+// ---- start screen -----------------------------------------------------------
+// Shown from disp::begin() until the UI is built and at least SPLASH_MIN_MS have passed.
+const uint32_t SPLASH_MIN_MS = 1500;
+lv_obj_t *splashScr = nullptr, *splashStep = nullptr;
+uint32_t splashAt = 0;
+
 } // namespace
 
 namespace ui {
+
+void splash(const char* step) {
+  if (!splashScr) {
+    splashAt = millis();
+    splashScr = lv_obj_create(lv_layer_top());
+    lv_obj_set_size(splashScr, LCD_WIDTH, LCD_HEIGHT);
+    lv_obj_set_style_bg_color(splashScr, C_BG, 0);
+    lv_obj_set_style_bg_opa(splashScr, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(splashScr, 0, 0);
+    lv_obj_set_style_radius(splashScr, 0, 0);
+    lv_obj_remove_flag(splashScr, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t* logo = lv_image_create(splashScr);
+    lv_image_set_src(logo, &vn_logo_splash);
+    lv_obj_align(logo, LV_ALIGN_CENTER, 0, -36);
+    lv_obj_t* ver = label(splashScr, &font_de_18, C_MUTED, FW_NAME "  " FW_VERSION);
+    lv_obj_align(ver, LV_ALIGN_CENTER, 0, 92);
+    splashStep = label(splashScr, &font_de_14, C_MUTED, "");
+    lv_obj_align(splashStep, LV_ALIGN_BOTTOM_MID, 0, -24);
+  }
+  lv_label_set_text(splashStep, step ? step : "");
+  lv_refr_now(nullptr);   // setup() keeps running without lv_timer_handler(), so draw right away
+}
 
 void begin() {
   scr = lv_screen_active();
@@ -2955,6 +3075,15 @@ void refreshUpdateScreen() {
 
 void loop() {
   refreshUpdateScreen();
+  if (splashScr && millis() - splashAt >= SPLASH_MIN_MS) {
+    lv_obj_fade_out(splashScr, 300, 0);
+    lv_obj_delete_delayed(splashScr, 320);
+    splashScr = splashStep = nullptr;
+  }
+  // idle screen while dimmed (brightness 0 = off: nothing to show)
+  bool idle = !disp::isAwake() && settings.dimLogo && settings.dimBrightness > 0 && otaprog::get() < 0;
+  if (idle && !idleScr) idleShow();
+  else if (!idle && idleScr) idleHide();
   if (sensors::changed()) store::markAllDirty();   // new Zigbee/BLE value: redraw tiles
   if (rebuildPending) {
     rebuildPending = false;
@@ -2979,6 +3108,7 @@ void loop() {
   if (now - lastHeader > 1000) {
     lastHeader = now;
     refreshHeader();
+    idleRefresh();
     // departure check: driving and the check list do not mark the value store dirty
     static String dpSig;
     String sig = String(depart::driving()) + depart::issues() + String(dpLbl && !isnan(depart::speed()) ? (int)lroundf(depart::speed()) : -1);

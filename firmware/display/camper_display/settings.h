@@ -118,6 +118,7 @@ struct Settings {
   uint8_t  brightness, dimBrightness;
   uint16_t screenTimeout;
   bool     warnWake = false;   // a new warning switches the screen on
+  bool     dimLogo = true;     // dimmed: idle screen with logo, clock and warnings instead of the page
   bool     builtin[BP_COUNT];
   // Titles of the fixed pages (index BP_*) and of the system page (index BP_COUNT), "" = default
   String   pageName[BP_COUNT + 1];

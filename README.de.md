@@ -29,6 +29,10 @@ flowchart LR
   broker(("MQTT-Broker<br/>z. B. RUT956"))
   tank["tanklevel<br/>Wasser, Grau, Gas"] --> broker
   temp["temp<br/>DS18B20 + Alarme"] --> broker
+  heater["heater<br/>Truma Combi (LIN)"] <--> broker
+  fan["maxxfan<br/>VanTurtle"] <--> broker
+  level["level<br/>BNO085 + Keile"] <--> broker
+  omg["omg<br/>BLE-Thermometer"] -.-> broker
   subgraph ble["ble – eine Firmware, Bluetooth-Geräte als Plugins"]
     direction TB
     bat["battery-node · camper/battery<br/>Daly BMS · Ective BM X · BM2"]
@@ -38,10 +42,6 @@ flowchart LR
   bat --> broker
   tool <--> broker
   more -.- broker
-  heater["heater<br/>Truma Combi (LIN)"] <--> broker
-  fan["maxxfan<br/>VanTurtle"] <--> broker
-  level["level<br/>BNO085 + Keile"] <--> broker
-  omg["omg<br/>BLE-Thermometer"] -.-> broker
   broker <--> display["display<br/>4-Zoll-Wandpanel + Webseite"]
   broker --> rb["roadbuddy<br/>M5Stack Core2"]
   broker -.- ha["Home Assistant<br/>(optional)"]

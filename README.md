@@ -25,26 +25,32 @@ So the rules here are:
 This is not criticism of ESPHome or Home Assistant – both are great. For this one vehicle a leaner setup simply fit better.
 
 ```mermaid
-flowchart LR
-  broker(("MQTT broker<br/>e.g. RUT956"))
-  tank["tanklevel<br/>fresh, grey, gas"] --> broker
-  temp["temp<br/>DS18B20 + alarms"] --> broker
-  heater["heater<br/>Truma Combi (LIN)"] <--> broker
-  fan["maxxfan<br/>VanTurtle"] <--> broker
-  level["level<br/>BNO085 + wedges"] <--> broker
-  omg["omg<br/>BLE thermometers"] -.-> broker
-  subgraph ble["ble – one firmware, Bluetooth devices as plugins"]
-    direction TB
-    bat["battery-node · camper/battery<br/>Daly BMS · Ective BM X · BM2"]
-    tool["tool-node · camper/tool<br/>RV Tech roof hatch · CaraWater pump · WCS fridge<br/>Govee · BTHome thermometers (ATC, Shelly BLU)<br/>gas DIMES / Mopeka · own BLE sensor"]
-    more["tool2 / tool3 (optional)<br/>more nodes, same firmware"]
+flowchart TB
+  subgraph sens["Sensors"]
+    tank["tanklevel<br/>fresh, grey, gas"]
+    temp["temp<br/>DS18B20, alarms"]
+    level["level<br/>BNO085, wedges"]
+    omg["omg<br/>BLE thermometers"]
   end
-  bat --> broker
-  tool <--> broker
-  more -.- broker
-  broker <--> display["display<br/>4-inch wall panel + web page"]
-  broker --> rb["roadbuddy<br/>M5Stack Core2"]
-  broker -.- ha["Home Assistant<br/>(optional)"]
+  subgraph clim["Climate"]
+    heater["heater<br/>Truma Combi"]
+    fan["maxxfan<br/>roof fan"]
+  end
+  subgraph ble["ble – one firmware"]
+    bat["battery-node<br/>Daly · Ective · BM2"]
+    tool["tool-node<br/>roof hatch · pump<br/>fridge · thermometers"]
+    more["tool2 / tool3<br/>(optional)"]
+  end
+  broker(("MQTT broker<br/>e.g. RUT956"))
+  subgraph ui["Displays"]
+    display["display<br/>wall panel + web page"]
+    rb["roadbuddy<br/>M5Stack Core2"]
+    ha["Home Assistant<br/>(optional)"]
+  end
+  sens --> broker
+  clim <--> broker
+  ble <--> broker
+  broker <--> ui
 ```
 
 ## Devices

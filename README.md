@@ -135,7 +135,7 @@ git push origin temp-v1.1.0
 
 Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
 
-**Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file (`temp-node-esp32c3.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
+**Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file with the firmware version (`temp-node-esp32c3-v1.4.2.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
 
 **All devices in one release:** a tag `bundle-v<version>` builds every device and creates one release with the files listed in [`.github/bundle.txt`](.github/bundle.txt) (one device and target per line, e.g. `heater esp32`), plus the web pages as `<device>-node-web.html.gz` and a table of all versions.
 

@@ -20,7 +20,7 @@ Protokoll-Logik portiert aus [skrebber/esphome-truma_inetbox](https://github.com
 
 ## Unterstützte Boards
 
-In `truma_heater/config.h` ganz oben genau ein Board aktivieren. Ist keins aktiv, nimmt die Firmware das Standard-Board des Chips, für den gebaut wird. Die fertigen Releases gibt es deshalb für beide: `heater-node-esp32c3.bin` (Super Mini) und `heater-node-esp32.bin` (ESP32 DevKit, TX 16 / RX 17).
+In `truma_heater/config.h` ganz oben genau ein Board aktivieren. Ist keins aktiv, nimmt die Firmware das Standard-Board des Chips, für den gebaut wird. Die fertigen Releases gibt es deshalb für beide: `heater-node-esp32c3-v<version>.bin` (Super Mini) und `heater-node-esp32-v<version>.bin` (ESP32 DevKit, TX 16 / RX 17).
 
 | Profil | Board | LIN TX / RX | Arduino-Board |
 |---|---|---|---|

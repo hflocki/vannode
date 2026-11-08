@@ -2,8 +2,9 @@
 """Collect the firmware files listed in .github/bundle.txt into one folder for the bundle release.
 
 Usage: bundle.py <artifact dir> <output dir>
+       bundle.py --version <device>      prints FW_VERSION of the device (used by the build)
 
-For every listed device it copies <device>-node-<target>.bin from the build artifacts,
+For every listed device it copies <device>-node-<target>-v<version>.bin from the build artifacts,
 adds the packed web page (data/index.html.gz) as <device>-node-web.html.gz where the
 device has one, and writes NOTES.md with the firmware versions. Standard library only.
 """
@@ -36,13 +37,16 @@ def version(device):
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--version":
+        print(version(sys.argv[2]))
+        return
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     src, out = Path(sys.argv[1]), Path(sys.argv[2])
     out.mkdir(parents=True, exist_ok=True)
     rows, missing = [], []
     for device, target in entries():
-        name = f"{device}-node-{target}.bin"
+        name = f"{device}-node-{target}-v{version(device)}.bin"
         found = next(src.rglob(name), None)
         if not found:
             missing.append(name)

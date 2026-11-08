@@ -141,7 +141,7 @@ Der RoadBuddy hat eine kleine Webseite für Firmware-Updates. Sie ist nur erreic
 
 1. Display antippen und zur **System-Seite** blättern. Dort stehen IP-Adresse und Version. Solange die Seite offen ist, bleibt der RoadBuddy bis zu 15 Minuten wach.
 2. Im Browser `http://roadbuddy.local` oder die angezeigte IP öffnen.
-3. Die `.bin` aus den GitHub Actions bzw. dem Release (`roadbuddy-node-core2.bin`) auswählen und hochladen.
+3. Die `.bin` aus den GitHub Actions bzw. dem Release (`roadbuddy-node-core2-v<version>.bin`) auswählen und hochladen.
 4. Während des Uploads zeigt das Display den Fortschritt, danach startet er neu.
 
 ### Sicheres Update, Ereignisse und Rückfall

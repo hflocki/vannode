@@ -92,7 +92,7 @@ Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern un
 
 ## Hardware
 
-**ESP32-C3 Super Mini** oder **M5Stack AtomS3 Lite** (beide baut die CI: `ble-node-esp32c3.bin`, `ble-node-atoms3.bin`), ESP32-S3 und klassischer ESP32 gehen ebenso. Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
+**ESP32-C3 Super Mini** oder **M5Stack AtomS3 Lite** (beide baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-atoms3-v<version>.bin`), ESP32-S3 und klassischer ESP32 gehen ebenso. Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
 
 ## Arduino IDE
 

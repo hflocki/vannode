@@ -73,7 +73,7 @@ Vom RJ12-Kabel werden nur **LIN** und **GND** gebraucht. Die Aderfarben und die 
 
 ## Aufbau: ESP32 DevKit V4 (WROOM-32) + FST-T151-Modul
 
-Profil `BOARD_ESP32_DEVKIT` (Standard, wenn für „ESP32 Dev Module“ gebaut wird; Release `heater-node-esp32.bin`). Versorgung mit einem Step-down 12 V → 5 V auf den **5V**-Pin des DevKits.
+Profil `BOARD_ESP32_DEVKIT` (Standard, wenn für „ESP32 Dev Module“ gebaut wird; Release `heater-node-esp32-v<version>.bin`). Versorgung mit einem Step-down 12 V → 5 V auf den **5V**-Pin des DevKits.
 
 | Von | Nach |
 | --- | --- |

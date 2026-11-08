@@ -1,6 +1,7 @@
 # Builds every device on each push / pull request.
 # A tag "<device>-v<version>" (e.g. temp-v1.1.0) builds only that device and
-# creates a GitHub release with its .bin file. A tag "bundle-v<version>" builds every
+# creates a GitHub release with its .bin file. The file name carries the firmware version
+# (FW_VERSION), e.g. temp-node-esp32c3-v1.1.0.bin. A tag "bundle-v<version>" builds every
 # device and creates one release with the files listed in .github/bundle.txt.
 name: Build
 
@@ -159,19 +160,26 @@ jobs:
           extra=()
           if [[ -n "${{ matrix.flags }}" ]]; then extra=(--build-property "compiler.cpp.extra_flags=${{ matrix.flags }}"); fi
           arduino-cli compile --fqbn "${{ matrix.fqbn }}" "${extra[@]}" --output-dir "$out" "${{ matrix.sketch }}"
-          cp "$out"/*.ino.bin "${{ matrix.device }}-node-${{ matrix.target }}.bin"
+          ver=$(python3 tools/release/bundle.py --version "${{ matrix.device }}")
+          # device tag: the tag should name the version in config.h
+          if [[ "$GITHUB_REF_NAME" == ${{ matrix.device }}-v* && "$GITHUB_REF_NAME" != "${{ matrix.device }}-v$ver" ]]; then
+            echo "::warning::Tag $GITHUB_REF_NAME does not match FW_VERSION $ver in the firmware"
+          fi
+          bin="${{ matrix.device }}-node-${{ matrix.target }}-v$ver.bin"
+          cp "$out"/*.ino.bin "$bin"
+          echo "BIN=$bin" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         if: steps.sel.outputs.skip != '1'
         with:
           name: ${{ matrix.device }}-node-${{ matrix.target }}
-          path: ${{ matrix.device }}-node-${{ matrix.target }}.bin
+          path: ${{ env.BIN }}
 
       - name: Release
         if: steps.sel.outputs.skip != '1' && startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/bundle-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.device }}-node-${{ matrix.target }}.bin
+          files: ${{ env.BIN }}
 
   # Tag bundle-v<version>: one release with the firmware files from .github/bundle.txt
   bundle:

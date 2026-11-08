@@ -12,6 +12,7 @@ struct Entry {
   int8_t   online = -1;      // -1 no status seen, 0 offline, 1 online
   bool     hasInfo = false;
   String   version, ip, reset;
+  String   hw;               // hardware of the release file: "esp32c3", "atoms3" ... ("" = older firmware)
   int      rssi = 0;         // dBm, 0 = unknown
   uint32_t uptime = 0;       // s, as reported
   uint32_t infoAt = 0;       // millis() of the last info message
@@ -26,5 +27,6 @@ String json();                  // for /api/devices
 bool changed();                 // something new since the last call (UI refresh)
 bool forget(const String& id);  // delete <root>/<id>/status and /info on the broker (left-over entries)
 String label(const String& id, const std::vector<Entry>& all);   // name, plus the id if two share a name
+String hwName(const String& hw);   // readable hardware: "ESP32-C3", "AtomS3" ... ("" stays "")
 
 }  // namespace netdev

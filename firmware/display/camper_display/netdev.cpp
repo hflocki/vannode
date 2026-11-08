@@ -82,6 +82,7 @@ bool onMessage(const char* topic, const char* payload, unsigned int len) {
   Entry& e = entry(devId);
   e.hasInfo = true;
   e.version = doc["version"] | "";
+  e.hw = doc["hw"] | "";
   e.ip = doc["ip"] | "";
   e.reset = doc["reset"] | "";
   e.rssi = doc["rssi"] | 0;
@@ -115,6 +116,15 @@ String name(const String& id) {
   return id;
 }
 
+String hwName(const String& hw) {
+  static const char* const MAP[][2] = {
+    {"esp32", "ESP32"}, {"esp32c3", "ESP32-C3"}, {"esp32s3", "ESP32-S3"}, {"esp32c6", "ESP32-C6"},
+    {"esp8266", "ESP8266"}, {"atoms3", "AtomS3"}, {"core2", "Core2"},
+  };
+  for (auto& m : MAP) if (hw == m[0]) return m[1];
+  return hw;
+}
+
 bool infoStale(const Entry& e) {
   return !e.hasInfo || millis() - e.infoAt > INFO_STALE_MS;
 }
@@ -131,6 +141,7 @@ String json() {
     o["on"] = e.online;
     if (e.hasInfo) {
       o["v"] = e.version;
+      if (e.hw.length()) o["hw"] = e.hw;
       o["ip"] = e.ip;
       o["rssi"] = e.rssi;
       o["up"] = e.uptime + (now - e.infoAt) / 1000;   // estimated current uptime

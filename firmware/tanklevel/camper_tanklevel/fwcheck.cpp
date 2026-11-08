@@ -25,6 +25,9 @@
 
 #if defined(FW_TARGET)
 
+// Added to "wrong chip" errors: which release file fits this device
+#define HW_HINT " \xE2\x80\x93 passende Datei: \xE2\x80\xA6-node-" FW_HW "-v\xE2\x80\xA6.bin"
+
 // The marker. Referenced by id(), so the linker keeps it in the image.
 static const char FW_ID[] = "CAMPER-FW:" FW_DEVICE ":" FW_VERSION ":" FW_TARGET ";";
 
@@ -127,6 +130,7 @@ void info(JsonObject o) {
     o["ver"] = FW_VERSION;
     o["chip"] = FW_TARGET;
     o["chip_id"] = FW_CHIP_ID;
+    o["hw"] = FW_HW;
     o["max"] = (uint32_t)maxSize();
     o["id"] = id();
 }
@@ -167,7 +171,7 @@ void chunk(const uint8_t* data, size_t len, bool final) {
 #if defined(ESP32)
         int chip = hdr[12] | (hdr[13] << 8);
         if (chip != FW_CHIP_ID) {
-            fail(String("Firmware für ") + chipName(chip) + ", dieses Gerät ist ein " + chipName(FW_CHIP_ID));
+            fail(String("Firmware für ") + chipName(chip) + ", dieses Gerät ist ein " + chipName(FW_CHIP_ID) + HW_HINT);
             return;
         }
 #endif
@@ -184,7 +188,7 @@ void chunk(const uint8_t* data, size_t len, bool final) {
         return;
     }
     if (found && fileChip != FW_TARGET) {
-        fail(String("Firmware für ") + fileChip + ", dieses Gerät ist ein " FW_TARGET);
+        fail(String("Firmware für ") + fileChip + ", dieses Gerät ist ein " FW_TARGET HW_HINT);
         return;
     }
     if (len && Update.write((uint8_t*)data, len) != len) { fail(String("Schreiben: ") + FW_UPDATE_ERROR()); return; }

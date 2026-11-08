@@ -184,6 +184,7 @@ Mit Discovery erscheint ein Gerät **„MaxxFan Node“** mit Tasten-Entitäten 
 
 | Version | Änderungen |
 | --- | --- |
+| 1.8.3 | Meldet in `<prefix>/info` die Hardware (`hw`, z. B. `esp32c3`, `atoms3`), das Display zeigt sie in der Geräteliste. Die Update-Seite nennt die passende Release-Datei (`…-node-<hw>-v….bin`), auch in der Fehlermeldung bei falschem Chip |
 | 1.8.2 | Gewollte Neustarts (Einstellungen speichern, Neustart-Knopf, WLAN-Rückfall) zählen in der Update-Probezeit nicht mehr als Absturz – vorher konnten drei davon ein frisches Update auf die alte Version zurückrollen |
 | 1.8.1 | VanNode-Symbol links neben der Überschrift der Webseite und als Favicon |
 | 1.8.0 | Neue Namen: Standard-Hostname `maxxfan-node` (ein gespeicherter Hostname bleibt), Setup-WLAN, Gerätename und Release-Datei `maxxfan-node-….bin`. Topics `camper/…` und Home-Assistant-IDs bleiben |

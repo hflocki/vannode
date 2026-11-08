@@ -135,10 +135,10 @@ const M = {
     if (path === '/api/sensors') { M.sensors = body; return {ok: true, msg: 'Sensoren gespeichert'}; }
     if (path === '/api/devices') {
       const up = Math.floor((Date.now() - M.t0) / 1000);
-      const D = (id, n, v, rssi, base) => ({id, n, on: 1, v, ip: '192.168.8.' + (20 + id.length), rssi, up: base + up, rst: 'power on', age: 20});
-      return [D('display', 'Display', '2.9.13', -52, 86400), D('heater', 'Heizung', '1.3.1', -63, 7200), D('level', 'Level', '2.1.1', -58, 3600),
-              D('maxxfan', 'Dachlüfter', '1.5.1', -66, 7100), D('tanklevel', 'Tanks', '1.6.1', -61, 90000), D('temp', 'Temperatur', '1.2.1', -70, 4000),
-              {id: 'battery', n: 'Batterie', on: 1}, {id: 'roadbuddy', n: 'Road Buddy', on: 0, v: '1.2.3', ip: '192.168.8.40', rssi: -71, up: 600, rst: 'deep sleep', age: 900},
+      const D = (id, n, v, rssi, base, hw) => ({id, n, on: 1, v, hw, ip: '192.168.8.' + (20 + id.length), rssi, up: base + up, rst: 'power on', age: 20});
+      return [D('display', 'Display', '2.9.13', -52, 86400, 'esp32s3'), D('heater', 'Heizung', '1.3.1', -63, 7200, 'esp32'), D('level', 'Level', '2.1.1', -58, 3600, 'esp32s3'),
+              D('maxxfan', 'Dachlüfter', '1.5.1', -66, 7100, 'esp32c3'), D('tanklevel', 'Tanks', '1.6.1', -61, 90000, 'esp32c3'), D('temp', 'Temperatur', '1.2.1', -70, 4000, 'esp32c3'),
+              D('battery', 'BLE-Node Battery', '2.0.2', -55, 5400, 'atoms3'), D('tool', 'BLE-Node Tool', '2.0.2', -60, 5300, 'esp32c3'), {id: 'roadbuddy', n: 'Road Buddy', on: 0, v: '1.2.3', ip: '192.168.8.40', rssi: -71, up: 600, rst: 'deep sleep', age: 900},
               // left-overs of old firmware on the broker (removable with ✕)
               {id: 'gaslevel', n: 'gaslevel', on: 1}, {id: 'truma', n: 'Heizung (truma)', on: 0}].filter(d => !M.gone.includes(d.id))
               .map(d => d.id === 'heater' ? Object.assign(d, {n: M.gone.includes('truma') ? 'Heizung' : 'Heizung (heater)'}) : d);

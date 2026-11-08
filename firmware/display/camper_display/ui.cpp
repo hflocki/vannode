@@ -2557,6 +2557,7 @@ void refreshNetDevices() {
     else if (netdev::infoStale(e)) v = e.hasInfo ? "v" + e.version + "  \xE2\x80\xA2  keine Info" : "keine Info";
     else {
       v = "v" + e.version;
+      if (e.hw.length()) v += "  \xE2\x80\xA2  " + netdev::hwName(e.hw);
       if (e.rssi) v += "  \xE2\x80\xA2  " + String(e.rssi) + " dBm";
       v += "  \xE2\x80\xA2  " + uptimeText(e.uptime);
     }

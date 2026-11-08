@@ -139,10 +139,10 @@ const M = {
     if (path === '/api/sensors') { M.sensors = body; return {ok: true, msg: 'Sensoren gespeichert'}; }
     if (path === '/api/devices') {
       const up = Math.floor((Date.now() - M.t0) / 1000);
-      const D = (id, n, v, rssi, base) => ({id, n, on: 1, v, ip: '192.168.8.' + (20 + id.length), rssi, up: base + up, rst: 'power on', age: 20});
-      return [D('display', 'Display', '2.9.13', -52, 86400), D('heater', 'Heizung', '1.3.1', -63, 7200), D('level', 'Level', '2.1.1', -58, 3600),
-              D('maxxfan', 'Dachlüfter', '1.5.1', -66, 7100), D('tanklevel', 'Tanks', '1.6.1', -61, 90000), D('temp', 'Temperatur', '1.2.1', -70, 4000),
-              {id: 'battery', n: 'Batterie', on: 1}, {id: 'roadbuddy', n: 'Road Buddy', on: 0, v: '1.2.3', ip: '192.168.8.40', rssi: -71, up: 600, rst: 'deep sleep', age: 900},
+      const D = (id, n, v, rssi, base, hw) => ({id, n, on: 1, v, hw, ip: '192.168.8.' + (20 + id.length), rssi, up: base + up, rst: 'power on', age: 20});
+      return [D('display', 'Display', '2.9.13', -52, 86400, 'esp32s3'), D('heater', 'Heizung', '1.3.1', -63, 7200, 'esp32'), D('level', 'Level', '2.1.1', -58, 3600, 'esp32s3'),
+              D('maxxfan', 'Dachlüfter', '1.5.1', -66, 7100, 'esp32c3'), D('tanklevel', 'Tanks', '1.6.1', -61, 90000, 'esp32c3'), D('temp', 'Temperatur', '1.2.1', -70, 4000, 'esp32c3'),
+              D('battery', 'BLE-Node Battery', '2.0.2', -55, 5400, 'atoms3'), D('tool', 'BLE-Node Tool', '2.0.2', -60, 5300, 'esp32c3'), {id: 'roadbuddy', n: 'Road Buddy', on: 0, v: '1.2.3', ip: '192.168.8.40', rssi: -71, up: 600, rst: 'deep sleep', age: 900},
               // left-overs of old firmware on the broker (removable with ✕)
               {id: 'gaslevel', n: 'gaslevel', on: 1}, {id: 'truma', n: 'Heizung (truma)', on: 0}].filter(d => !M.gone.includes(d.id))
               .map(d => d.id === 'heater' ? Object.assign(d, {n: M.gone.includes('truma') ? 'Heizung' : 'Heizung (heater)'}) : d);
@@ -210,7 +210,7 @@ const M = {
     // firmware info and event log (fwcheck / evlog), the same example for every device
     if (u.pathname === '/api/system' && method === 'GET') {
       const S3 = M.id === 'level' || M.id === 'display';
-      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip: S3 ? 'esp32s3' : 'esp32c3', chip_id: S3 ? 9 : 5, max: 1966080},
+      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip: S3 ? 'esp32s3' : 'esp32c3', chip_id: S3 ? 9 : 5, hw: S3 ? 'esp32s3' : 'esp32c3', max: 1966080},
                    up: 5400, log: [
         {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
         {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},
@@ -776,6 +776,7 @@ function bindSystem(){
 }
 // devices in the network: <root>/+/status and <root>/+/info, collected by the display
 let devTimer=0;
+const HW_NAMES={esp32:'ESP32',esp32c3:'ESP32-C3',esp32s3:'ESP32-S3',esp32c6:'ESP32-C6',esp8266:'ESP8266',atoms3:'AtomS3',core2:'Core2'};
 const upTxt=s=>s<3600?Math.floor(s/60)+' min':s<86400?Math.floor(s/3600)+' h '+Math.floor(s%3600/60)+' min':Math.floor(s/86400)+' d '+Math.floor(s%86400/3600)+' h';
 async function loadDevices(){
   const b=$('#sy_dev');if(!b)return;
@@ -785,8 +786,8 @@ async function loadDevices(){
   b.classList.remove('mu');
   // left-overs (offline, or "online" without info from an old firmware) can be removed from the broker
   b.innerHTML=l.map(d=>{const old=d.age==null||d.age>180,dot=`<span class="dot" style="background:${d.on===1?(d.v==null?'var(--gas)':'var(--ok)'):d.on===0?'var(--warn)':'var(--line2)'}"></span>`;
-    const v=d.on===0?'offline':d.v==null?'keine Info':`v${esc(d.v)}${d.rssi?' · '+d.rssi+' dBm':''}${!old?' · '+upTxt(d.up):' · keine Info'}`;
-    const t=(d.v!=null?`IP ${d.ip||'?'} · letzter Neustart: ${d.rst||'?'} · `:'')+'Topic: …/'+d.id+'/status';
+    const v=d.on===0?'offline':d.v==null?'keine Info':`v${esc(d.v)}${d.hw?' · '+esc(HW_NAMES[d.hw]||d.hw):''}${d.rssi?' · '+d.rssi+' dBm':''}${!old?' · '+upTxt(d.up):' · keine Info'}`;
+    const t=(d.v!=null?`IP ${d.ip||'?'} · letzter Neustart: ${d.rst||'?'} · `:'')+(d.hw?`Firmware-Datei: …-node-${d.hw}-v….bin · `:'')+'Topic: …/'+d.id+'/status';
     const del=d.on!==1||old?`<button class="devdel" data-id="${esc(d.id)}" data-n="${esc(d.n)}" title="Eintrag vom Broker löschen">✕</button>`:'';
     return `<div class="sysrow" title="${esc(t)}"><span>${dot} ${esc(d.n)}</span><span class="devr"><b class="${d.on===0?'':'mu'}" style="font-weight:400${d.on===0?';color:var(--warn,#e5484d)':''}">${v}</b>${del}</span></div>`}).join('')+
     (l.some(d=>d.on!==1||d.age==null||d.age>180)?'<div class="mu" style="font-size:12px;margin-top:8px">✕ löscht einen alten Eintrag (Status und Info) vom Broker, z. B. nach einem Wechsel des Topics. Ein Gerät, das noch läuft, meldet sich danach von selbst wieder.</div>':'');
@@ -1312,7 +1313,7 @@ function pgSettings(){
    <div class="f2">${inp('ntpServer','Zeitserver')}${inp('tz','Zeitzone (POSIX)')}</div>
    <label>Firmware-Update (.bin)</label>
    <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
-   <p class="mu" style="margin-top:0">Die <code>.bin</code> aus dem Release (<code>display-node-esp32s3.bin</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>camper_display.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>). Die Datei wird vor dem Hochladen geprüft.</p>
+   <p class="mu" style="margin-top:0">Die <code>.bin</code> aus dem Release (<code>display-node-esp32s3-v….bin</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>camper_display.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>). Die Datei wird vor dem Hochladen geprüft.</p>
    <div class="row"><input type="file" id="fwu-file" accept=".bin" class="grow" onchange="fwChosen(false)"><button class="btn" id="fwu-btn" disabled>Hochladen</button></div>
    <div class="fwu-chk" id="fwu-chk"></div>
    <label class="chk fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()"> Ohne Kennung hochladen</label>
@@ -1687,7 +1688,8 @@ async function fwLoad() {
         if (!r.ok) return;
         const d = await r.json();
         FWI = d.fw || null;
-        if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB`;
+        if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB` +
+            (FWI.hw ? `<br>Passende Datei aus dem Release: <b>…-node-${fwEsc(FWI.hw)}-v….bin</b>` : '');
         const box = fwEl('fwu-log');
         if (box) box.innerHTML = (d.log || []).length ? d.log.map(e => {
             const when = e.b === 0 ? 'vor ' + fwAgo(Math.max(0, (d.up || 0) - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + fwAgo(e.t);
@@ -1696,6 +1698,8 @@ async function fwLoad() {
         }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
     } catch (e) {}
 }
+// Which release file fits this device (FW_HW of the running firmware), added to "wrong chip" errors
+function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : ''; }
 // Checks the chosen file in the browser: {ok, kind, msg, warn, force}
 async function fwInspect(file, fsImages) {
     const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
@@ -1709,12 +1713,12 @@ async function fwInspect(file, fsImages) {
     const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
     if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
     const chip = u[12] | (u[13] << 8);
-    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}`};
+    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${fwHwHint()}`};
     if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
     const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
     if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
     if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
-    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}`};
+    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${fwHwHint()}`};
     const c = FWI ? fwVerCmp(m[2], FWI.ver) : 1;
     return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
         (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};

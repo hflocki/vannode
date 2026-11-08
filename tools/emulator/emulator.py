@@ -93,7 +93,7 @@ class Broker:
 
     def info_json(self, c):
         # same keys as devinfo.* of the real devices; the MAC is made up per emulated device
-        return json.dumps({"version": f"emu-py-{VERSION}", "ip": self.ip, "mac": f"02:00:00:00:EE:{c:02X}",
+        return json.dumps({"version": f"emu-py-{VERSION}", "hw": "emulator", "ip": self.ip, "mac": f"02:00:00:00:EE:{c:02X}",
                            "rssi": -50, "uptime": int(time.time() - self.started), "reset": "poweron", "heap": 0},
                           separators=(",", ":"))
 

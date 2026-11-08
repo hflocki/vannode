@@ -1,5 +1,6 @@
 // Shared source – edit only in firmware/_common, then run tools/common/sync_common.py
 #include "devinfo.h"
+#include "fw_config.h"   // FW_HW
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
@@ -41,6 +42,7 @@ static const char* resetReason() {
 String devinfoJson(const char* version) {
     JsonDocument doc;
     doc["version"] = version;
+    doc["hw"] = FW_HW;
     doc["ip"] = WiFi.localIP().toString();
     doc["mac"] = WiFi.macAddress();
     doc["rssi"] = WiFi.RSSI();

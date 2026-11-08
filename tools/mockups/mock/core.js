@@ -35,7 +35,7 @@
     // firmware info and event log (fwcheck / evlog), the same example for every device
     if (u.pathname === '/api/system' && method === 'GET') {
       const S3 = M.id === 'level' || M.id === 'display';
-      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip: S3 ? 'esp32s3' : 'esp32c3', chip_id: S3 ? 9 : 5, max: 1966080},
+      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip: S3 ? 'esp32s3' : 'esp32c3', chip_id: S3 ? 9 : 5, hw: S3 ? 'esp32s3' : 'esp32c3', max: 1966080},
                    up: 5400, log: [
         {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
         {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},

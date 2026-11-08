@@ -266,8 +266,11 @@ const char* bmsTypeName(uint8_t t) {
 // Problem text
 // ============================================================
 
-// Daly fault bytes (same layout as the 0x98 "failure status" answer of the Daly UART protocol).
+// Daly fault bytes, indexed like the 0x98 "failure status" answer of the Daly UART protocol.
 // Level 1 = warning, level 2 = protection (the BMS switches the MOSFETs off).
+// In the MODBUS registers 0x3A ... 0x3D the two bytes of each register are swapped against
+// the UART order: register 0x3A = temperatures (high byte), voltages (low byte), and so on
+// (same as syssi/esphome-daly-bms). See bmsProblemText().
 static const char* const DALY_FAULTS[7][8] = {
     {"Zellspannung zu hoch (Stufe 1)", "Zellspannung zu hoch (Stufe 2)", "Zellspannung zu niedrig (Stufe 1)", "Zellspannung zu niedrig (Stufe 2)",
      "Gesamtspannung zu hoch (Stufe 1)", "Gesamtspannung zu hoch (Stufe 2)", "Gesamtspannung zu niedrig (Stufe 1)", "Gesamtspannung zu niedrig (Stufe 2)"},
@@ -306,11 +309,12 @@ size_t bmsProblemText(const BmsSample& s, char* out, size_t n) {
         out[len] = 0;
     };
     if (s.problem_fmt == 1) {
-        for (int byte = 0; byte < 8; byte++) {
+        for (int byte = 0; byte < 8; byte++) {         // byte 0 = first byte of register 0x3A
             uint8_t v = (s.problem_code >> (8 * (7 - byte))) & 0xFF;
+            int uart = byte ^ 1;                         // swapped bytes per register, see DALY_FAULTS
             for (int bit = 0; bit < 8; bit++) {
                 if (!(v & (1 << bit))) continue;
-                const char* t = byte < 7 ? DALY_FAULTS[byte][bit] : nullptr;
+                const char* t = uart < 7 ? DALY_FAULTS[uart][bit] : nullptr;
                 if (t) add(t);
                 else unknown |= (uint64_t)1 << (8 * (7 - byte) + bit);
             }

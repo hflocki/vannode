@@ -54,12 +54,22 @@ int main() {
     n = frame(0xD2, d, sizeof(d), f);
     check(dalyDecode(DALY_D2, f, n, nullptr, 0, s) && near(s.runtime_s, 36000.0f, 1), "Daly: runtime 10 h at -10 A");
 
-    // Fault byte 0 bit 0 -> readable text
-    d[116] = 0x01;
+    // Fault register 0x3A: low byte = voltages, high byte = temperatures (swapped against UART)
+    d[117] = 0x02;
     n = frame(0xD2, d, sizeof(d), f);
     char pt[160];
     check(dalyDecode(DALY_D2, f, n, nullptr, 0, s) && s.problem && bmsProblemText(s, pt, sizeof(pt)) > 0 &&
-              !strcmp(pt, "Zellspannung zu hoch (Stufe 1)"), "Daly: problem text");
+              !strcmp(pt, "Zellspannung zu hoch (Stufe 2)"), "Daly: problem text, voltage byte");
+    d[117] = 0x00;
+    d[116] = 0x04;
+    n = frame(0xD2, d, sizeof(d), f);
+    check(dalyDecode(DALY_D2, f, n, nullptr, 0, s) && bmsProblemText(s, pt, sizeof(pt)) > 0 &&
+              !strcmp(pt, "Ladetemperatur zu niedrig (Stufe 1)"), "Daly: problem text, temperature byte");
+    d[116] = 0x00;
+    d[119] = 0x40;   // register 0x3B low byte: SoC low (level 1)
+    n = frame(0xD2, d, sizeof(d), f);
+    check(dalyDecode(DALY_D2, f, n, nullptr, 0, s) && bmsProblemText(s, pt, sizeof(pt)) > 0 &&
+              !strcmp(pt, "Ladezustand zu niedrig (Stufe 1)"), "Daly: problem text, current/SoC byte");
 
     // Broken CRC is rejected
     f[10] ^= 0xFF;

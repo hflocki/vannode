@@ -91,7 +91,7 @@ const int LOGO_X = 14;                  // VanNode symbol left of the page title
 const int TITLE_X = LOGO_X + 28 + 8;    // 28 px symbol (logo_img.c) + gap
 
 // ---- page bookkeeping ----------------------------------------------------
-enum : int { PG_SYSTEM = 100 };
+enum : int { PG_SYSTEM = 100, PG_SYSINFO = 101 };   // system page and its info page
 struct PageInfo { String title; int builtin; int custom; };
 std::vector<PageInfo> pages;
 
@@ -378,7 +378,8 @@ void updateHeaderTitle() {
   }
   // icon bar: highlight the active page (none if it is not in the bar)
   for (size_t p = 0; p < navBtns.size() && p < navTabs.size(); p++) {
-    bool on = navTabs[p] == (int)i;
+    int sel = (i < pages.size() && pages[i].builtin == PG_SYSINFO) ? tabIndexOfBuiltin(PG_SYSTEM) : (int)i;
+    bool on = navTabs[p] == sel;
     lv_obj_set_style_bg_color(navBtns[p], on ? C_CARD_HI : C_NAV, 0);
     lv_obj_set_style_text_color(lv_obj_get_child(navBtns[p], 0), on ? C_ACCENT : C_MUTED, 0);
   }
@@ -1615,32 +1616,30 @@ void buildCustom(lv_obj_t* tab, int pageIdx) {
 const char* const SYS_ROWS[] = {"Netzwerk", "IP-Adresse", "Signal", "MQTT", "Hostname", "Firmware", "Laufzeit", "Speicher"};
 const int SYS_N = sizeof(SYS_ROWS) / sizeof(SYS_ROWS[0]);
 
+// Link button across the page width: text left, arrow right (system page <-> info page)
+lv_obj_t* linkButton(lv_obj_t* parent, const char* txt, const char* arrow, bool arrowLeft, int target) {
+  lv_obj_t* b = card(parent, PAGE_W - 20, 52);
+  lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_t* l = label(b, &font_de_18, C_TEXT, txt);
+  lv_obj_t* a = label(b, &font_de_18, C_ACCENT, arrow);
+  lv_obj_align(a, arrowLeft ? LV_ALIGN_LEFT_MID : LV_ALIGN_RIGHT_MID, 0, 0);
+  lv_obj_align(l, LV_ALIGN_LEFT_MID, arrowLeft ? 28 : 0, 0);
+  lv_obj_add_event_cb(b, onNav, LV_EVENT_CLICKED, (void*)(intptr_t)target);
+  return b;
+}
+
+// System page: logo, QR code + brightness, link to the info page
 void buildSystem(lv_obj_t* tab) {
   pageContainer(tab);
-  // order: devices in the network, QR code + brightness, the display itself
-  // devices in the network: <root>/+/status and <root>/+/info
-  sNetCard = card(tab, PAGE_W - 20, 2 * NET_ROW_H + 20);
-  lv_obj_t* nh = label(sNetCard, &font_de_18, C_MUTED, LV_SYMBOL_WIFI "  Ger\xC3\xA4te");
-  lv_obj_align(nh, LV_ALIGN_TOP_LEFT, 0, 0);
-  sNetEmpty = label(sNetCard, &font_de_14, C_MUTED, "Noch keine Meldung");
-  lv_obj_align(sNetEmpty, LV_ALIGN_TOP_LEFT, 0, NET_ROW_H);
-  for (int i = 0; i < NET_ROWS; i++) {
-    NetRowW& w = sNetRows[i];
-    int y = (i + 1) * NET_ROW_H;
-    w.dot = shape(sNetCard, 10, 10, LV_RADIUS_CIRCLE);
-    lv_obj_align(w.dot, LV_ALIGN_TOP_LEFT, 0, y + 6);
-    w.name = label(sNetCard, &font_de_18, C_TEXT, "");
-    lv_obj_align(w.name, LV_ALIGN_TOP_LEFT, 18, y);
-    w.val = label(sNetCard, &font_de_14, C_MUTED, "");
-    lv_obj_set_width(w.val, PAGE_W - 20 - 24 - 170);
-    lv_obj_set_style_text_align(w.val, LV_TEXT_ALIGN_RIGHT, 0);
-    lv_label_set_long_mode(w.val, LV_LABEL_LONG_DOT);
-    lv_obj_align(w.val, LV_ALIGN_TOP_RIGHT, 0, y + 3);
-    lv_obj_add_flag(w.dot, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(w.name, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(w.val, LV_OBJ_FLAG_HIDDEN);
-  }
-  sNetAt = 0;
+  // about: VanNode logo with device name and version
+  lv_obj_t* ab = card(tab, PAGE_W - 20, 96);
+  lv_obj_t* abLogo = lv_image_create(ab);
+  lv_image_set_src(abLogo, &vn_logo_wide);
+  lv_obj_align(abLogo, LV_ALIGN_LEFT_MID, 0, 0);
+  lv_obj_t* abName = label(ab, &font_de_18, C_TEXT, FW_NAME);
+  lv_obj_align(abName, LV_ALIGN_TOP_RIGHT, 0, 8);
+  lv_obj_t* abVer = label(ab, &font_de_14, C_MUTED, "Version " FW_VERSION);
+  lv_obj_align(abVer, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
 
   // QR code to open the web page (or join the setup access point)
   lv_obj_t* qc = card(tab, 150, 150);
@@ -1681,6 +1680,40 @@ void buildSystem(lv_obj_t* tab) {
   lv_label_set_long_mode(sNet, LV_LABEL_LONG_WRAP);
   lv_obj_align(sNet, LV_ALIGN_BOTTOM_LEFT, 0, 0);
 
+  // everything else (devices in the network, values, rescue) is on the info page
+  linkButton(tab, "Ger\xC3\xA4te & Infos", LV_SYMBOL_RIGHT, false, tabIndexOfBuiltin(PG_SYSINFO));
+  sInfo = nullptr;
+}
+
+// Info page (behind the system page, not in the icon bar): devices in the network,
+// the display itself, rescue button
+void buildSysInfo(lv_obj_t* tab) {
+  pageContainer(tab);
+  linkButton(tab, "Zur\xC3\xBC" "ck", LV_SYMBOL_LEFT, true, tabIndexOfBuiltin(PG_SYSTEM));
+  // devices in the network: <root>/+/status and <root>/+/info
+  sNetCard = card(tab, PAGE_W - 20, 2 * NET_ROW_H + 20);
+  lv_obj_t* nh = label(sNetCard, &font_de_18, C_MUTED, LV_SYMBOL_WIFI "  Ger\xC3\xA4te");
+  lv_obj_align(nh, LV_ALIGN_TOP_LEFT, 0, 0);
+  sNetEmpty = label(sNetCard, &font_de_14, C_MUTED, "Noch keine Meldung");
+  lv_obj_align(sNetEmpty, LV_ALIGN_TOP_LEFT, 0, NET_ROW_H);
+  for (int i = 0; i < NET_ROWS; i++) {
+    NetRowW& w = sNetRows[i];
+    int y = (i + 1) * NET_ROW_H;
+    w.dot = shape(sNetCard, 10, 10, LV_RADIUS_CIRCLE);
+    lv_obj_align(w.dot, LV_ALIGN_TOP_LEFT, 0, y + 6);
+    w.name = label(sNetCard, &font_de_18, C_TEXT, "");
+    lv_obj_align(w.name, LV_ALIGN_TOP_LEFT, 18, y);
+    w.val = label(sNetCard, &font_de_14, C_MUTED, "");
+    lv_obj_set_width(w.val, PAGE_W - 20 - 24 - 170);
+    lv_obj_set_style_text_align(w.val, LV_TEXT_ALIGN_RIGHT, 0);
+    lv_label_set_long_mode(w.val, LV_LABEL_LONG_DOT);
+    lv_obj_align(w.val, LV_ALIGN_TOP_RIGHT, 0, y + 3);
+    lv_obj_add_flag(w.dot, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(w.name, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(w.val, LV_OBJ_FLAG_HIDDEN);
+  }
+  sNetAt = 0;
+
   // label / value list like a settings screen
   const int rowH = 24;
   lv_obj_t* ic = card(tab, PAGE_W - 20, SYS_N * rowH + 20);
@@ -1697,23 +1730,12 @@ void buildSystem(lv_obj_t* tab) {
   }
   sIp = sVals[1];
 
-  // about: VanNode logo with device name and version
-  lv_obj_t* ab = card(tab, PAGE_W - 20, 96);
-  lv_obj_t* abLogo = lv_image_create(ab);
-  lv_image_set_src(abLogo, &vn_logo_wide);
-  lv_obj_align(abLogo, LV_ALIGN_LEFT_MID, 0, 0);
-  lv_obj_t* abName = label(ab, &font_de_18, C_TEXT, FW_NAME);
-  lv_obj_align(abName, LV_ALIGN_TOP_RIGHT, 0, 8);
-  lv_obj_t* abVer = label(ab, &font_de_14, C_MUTED, "Version " FW_VERSION);
-  lv_obj_align(abVer, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
-
   // Rescue: switch a static IP back to DHCP (long press, then restart)
   if (settings.staticIp) {
     lv_obj_t* b = button(tab, "Feste IP aus (DHCP) \xE2\x80\x93 lange dr\xC3\xBC" "cken", PAGE_W - 20, 56, nullptr, nullptr,
                          C_CARD_HI, &font_de_18);
     lv_obj_add_event_cb(b, onDhcp, LV_EVENT_LONG_PRESSED, nullptr);
   }
-  sInfo = nullptr;
 }
 
 // ---- weather page --------------------------------------------------------------
@@ -2750,15 +2772,15 @@ std::vector<int> navPages() {
       String id = settings.navSel.substring(start, c < 0 ? settings.navSel.length() : c);
       id.trim();
       for (size_t i = 0; i < pages.size(); i++)
-        if ((int)i != home && pages[i].builtin != PG_SYSTEM && idOf(pages[i]) == id) { out.push_back(i); added++; break; }
+        if ((int)i != home && pages[i].builtin < PG_SYSTEM && idOf(pages[i]) == id) { out.push_back(i); added++; break; }
       if (c < 0) break;
       start = c + 1;
     }
   } else {
     for (size_t i = 0; i < pages.size() && added < NAV_FREE; i++)
-      if ((int)i != home && pages[i].builtin != PG_SYSTEM) { out.push_back(i); added++; }
+      if ((int)i != home && pages[i].builtin < PG_SYSTEM) { out.push_back(i); added++; }
   }
-  out.push_back(pages.size() - 1);   // system page, always last
+  out.push_back(tabIndexOfBuiltin(PG_SYSTEM));   // system page, always last
   return out;
 }
 
@@ -2808,6 +2830,7 @@ void build() {
   for (int b = 0; b < BP_COUNT; b++) if (settings.builtin[b]) pages.push_back({pageTitle(b), b, -1});
   for (size_t p = 0; p < settings.pages.size(); p++) pages.push_back({settings.pages[p].name, -1, (int)p});
   pages.push_back({pageTitle(BP_COUNT), PG_SYSTEM, -1});
+  pages.push_back({"Ger\xC3\xA4te & Infos", PG_SYSINFO, -1});   // last: reached from the system page
 
   tv = lv_tabview_create(scr);
   lv_tabview_set_tab_bar_size(tv, 0);
@@ -2833,6 +2856,7 @@ void build() {
         buildDevPage(tab, *devPageFor(p.builtin));
         break;
       case PG_SYSTEM:   buildSystem(tab); break;
+      case PG_SYSINFO:  buildSysInfo(tab); break;
       default:          buildCustom(tab, p.custom); break;
     }
   }
@@ -2840,7 +2864,7 @@ void build() {
   buildNav();
 
   // without network setup, start on the system page so the QR code is visible
-  if (settings.wifiSsid.isEmpty()) keep = pages.size() - 1;
+  if (settings.wifiSsid.isEmpty()) keep = tabIndexOfBuiltin(PG_SYSTEM);
   gotoTab(constrain(keep, 0, (int)pages.size() - 1), false);
   updateHeaderTitle();
 

@@ -207,6 +207,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.0.2 | Daly: Fehlertexte stimmen jetzt. Die beiden Bytes jedes Fehlerregisters waren vertauscht, z. B. kam „Ladetemperatur zu hoch (Stufe 2)“ statt „Zellspannung zu hoch (Stufe 2)“ |
 | 2.0.1 | Der allgemeine BLE-Node heißt jetzt **tool-node** mit Topic `camper/tool` (Batterien: battery-node, `camper/battery`). Ein gespeichertes `camper/ble` und der Name `ble-node` werden beim Start umgestellt, das Display (ab 2.17.0) ebenso. Home Assistant legt die Geräte neu an (`camper_tool`) |
 | 2.0.0 | **Batterien** als Plugins (Daly BMS, Ective BM X, BM2) – die frühere battery-node-Firmware ist hier aufgegangen, `firmware/battery` entfällt. Liste `<prefix>/batteries` für die Displays wie bisher. **Gerätename** einstellbar (Reiter MQTT): Hostname, Titel, Gerät in Home Assistant, z. B. `battery-node`. Einstellungen eines alten battery-node werden beim ersten Start übernommen (einmal per USB flashen). Build auch für den **AtomS3 Lite** mit Status-LED. Lange Bluetooth-Antworten (über 128 Byte) werden nicht mehr abgeschnitten. Host-Test der Batterie-Protokolle (`tests/bms_test.cpp`) |
 | 1.5.4 | Neues Plugin **BTHome-Sensor** (Mithören): alle Sensoren mit BTHome v2 ohne Verschlüsselung, z. B. ATC/pvvx-Thermometer und Shelly BLU; Werte werden aus dem Paket erkannt und gemerkt, Home Assistant bekommt passende Sensoren und Binärsensoren. Host-Test der Dekodierung (`tests/bthome_test.cpp`) |

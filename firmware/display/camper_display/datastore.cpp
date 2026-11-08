@@ -114,6 +114,15 @@ std::vector<bool>   tileDirtyF[2];
 
 const String EMPTY;
 
+// BLE node with the roof hatch: tool, tool2 or tool3 - the one an rvtech topic came from
+// (tool until then)
+String bleActive;
+const String& blePrefixNow() {
+  const String* all[] = {&settings.prefixBle, &settings.prefixBle2, &settings.prefixBle3};
+  for (auto p : all) if (p->length() && *p == bleActive) return *p;
+  return settings.prefixBle.length() ? settings.prefixBle : settings.prefixBle2.length() ? settings.prefixBle2 : settings.prefixBle3;
+}
+
 const String& prefixOf(Dev d) {
   switch (d) {
     case DEV_TANK:   return settings.prefixTank;
@@ -121,7 +130,7 @@ const String& prefixOf(Dev d) {
     case DEV_HEATER: return settings.prefixHeater;
     case DEV_TEMP:   return settings.prefixTemp;
     case DEV_BATTERY: return settings.prefixBattery;
-    case DEV_BLE: return settings.prefixBle;
+    case DEV_BLE: return blePrefixNow();
     default:         return settings.prefixFan;
   }
 }
@@ -203,6 +212,24 @@ void rebuildTopics() {
 
 bool onMessage(const char* topic, const char* payload, unsigned int len) {
   bool used = false;
+  // Roof hatch on another BLE node (tool2 / tool3): follow it
+  {
+    const String* all[] = {&settings.prefixBle, &settings.prefixBle2, &settings.prefixBle3};
+    for (auto p : all) {
+      if (p->isEmpty() || *p == blePrefixNow()) continue;
+      String hatch = *p + "/rvtech/";
+      if (strncmp(topic, hatch.c_str(), hatch.length()) == 0) {
+        bleActive = *p;
+        for (int i = 0; i < DP_COUNT; i++) {   // only the BLE datapoints (tiles keep their values)
+          if (DEFS[i].dev != DEV_BLE) continue;
+          String t = blePrefixNow() + "/" + DEFS[i].sub;
+          if (t != topics[i]) setDp(i, "");
+          topics[i] = t;
+        }
+        break;
+      }
+    }
+  }
   for (int i = 0; i < DP_COUNT; i++) {
     if (topics[i].length() && topics[i] == topic) {
       String v = formatRaw(payload, len, -1);
@@ -245,6 +272,7 @@ bool onMessage(const char* topic, const char* payload, unsigned int len) {
   return used;
 }
 
+const String& blePrefix()       { return blePrefixNow(); }
 const String& get(DpId id)      { return values[id]; }
 bool has(DpId id)               { return values[id].length() > 0; }
 float lastHeaterSetpoint()      { return lastHeatSet; }

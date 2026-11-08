@@ -183,7 +183,7 @@ FIELDS = [
     *bat_slot(2, "OFF", "starter", "Starterbatterie", "3", "90", "12.70", "0", "70"),
 
     # ---- BLE node (ble-node, roof hatch over the plugin rvtech) ----
-    TXT("tb_pre", D_BLE, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/ble"),
+    TXT("tb_pre", D_BLE, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/tool"),
     BOOL("rv_on", D_BLE, "Dachhaube (Heki)", FL_SET, "Dachhaube gekoppelt", "ON"),
     BOOL("rv_conn", D_BLE, "Dachhaube (Heki)", 0, "Bluetooth verbunden", "ON"),
     NUM("rv_pos", D_BLE, "Dachhaube (Heki)", 0, "Position (102 = Lüften)", "", 0, 102, 1, 0, 0, "0"),

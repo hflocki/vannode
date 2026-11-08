@@ -67,6 +67,7 @@ struct Settings {
   String mqttHost, mqttUser, mqttPass;
   uint16_t mqttPort = 1883;
   String prefixSelf, prefixTank, prefixLevel, prefixHeater, prefixFan, prefixTemp, prefixBattery, prefixBle;
+  String prefixBle2, prefixBle3;   // further BLE nodes (tool2, tool3), "" = none; the roof hatch may be on any of them
   uint8_t fanPort = 1;
   // time
   String ntpServer, tz;

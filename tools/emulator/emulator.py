@@ -435,7 +435,7 @@ def selftest() -> int:
             emu.stop_scenario(True)
         # commands like the display sends them
         emu.command("camper/heater/set/target_temp_room", "22")
-        emu.command("camper/ble/cmd/rvtech/auf/set", "1")
+        emu.command("camper/tool/cmd/rvtech/auf/set", "1")
         emu.command("camper/zigbee/cmd/a4c1380000000021/1/0006", "ON")
         emu.command("camper/maxxfan/cmd/p1/speed/set", "4")
         checks = [("setp", "22.0"), ("hvac", "heat"), ("rv_tgt", "100"), ("l1_state", "ON"), ("p1_speed", "4")]

@@ -19,7 +19,7 @@
 //   - passive sensors (gas, own BLE sensor) only listen, any number works
 //   - connecting devices (pump, roof hatch, fridge) keep a BLE connection each:
 //     at most MAX_BLE_LINKS (3) of them switched on at the same time
-// More devices: a second BLE node with its own topic (e.g. camper/ble2).
+// More devices: a second BLE node with its own topic (e.g. camper/tool2).
 // ============================================================
 #ifndef PLUGIN_DIMES
 #define PLUGIN_DIMES          1      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
@@ -84,7 +84,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.0.0"
+#define FW_VERSION            "2.0.1"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -95,7 +95,7 @@
 #endif
 
 #ifndef DEFAULT_NODE_NAME
-#define DEFAULT_NODE_NAME     "ble-node"          // Node name (web UI, MQTT tab): host name, Home Assistant
+#define DEFAULT_NODE_NAME     "tool-node"         // Node name (web UI, MQTT tab): host name, Home Assistant
 #endif                                            // device and web UI title, e.g. "battery-node"
 #ifndef DEFAULT_AP_SSID
 #define DEFAULT_AP_SSID       "BLE-Node"          // Base name; "-XXXXXX" (last 3 MAC bytes) is appended
@@ -137,9 +137,9 @@
 #endif
 // Topics: <prefix>/<plugin>/<value>, commands <prefix>/cmd/<plugin>/<value>/set,
 // <prefix>/status, <prefix>/info (docs/TOPICS.md). The Home Assistant node ID is derived
-// from it ("camper/ble" -> "camper_ble"), so two BLE nodes need two prefixes.
+// from it ("camper/tool" -> "camper_tool"), so two BLE nodes need two prefixes.
 #ifndef DEFAULT_MQTT_PREFIX
-#define DEFAULT_MQTT_PREFIX   "camper/ble"
+#define DEFAULT_MQTT_PREFIX   "camper/tool"
 #endif
 
 // WiFi TX power in 0.25 dBm steps: 70 = 17.5 dBm (factory default, selectable in the web UI).

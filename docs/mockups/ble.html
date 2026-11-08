@@ -6,10 +6,10 @@
 const M = {
   id: 'ble',
   config: {
-    version: '2.0.0', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '2.0.0', device: 'tool-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_tool',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
-           mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
-           web_user: '', web_pass_set: false, node_name: 'ble-node'},
+           mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/tool',
+           web_user: '', web_pass_set: false, node_name: 'tool-node'},
     plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2, running: true,
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
               // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
@@ -1261,7 +1261,7 @@ nav button .ico{display:inline-flex}
             "node_name",
             c.node_name,
             "text",
-            "Hostname, Titel und Gerät in Home Assistant, z. B. ble-node oder battery-node (a–z, 0–9, -)",
+            "Hostname, Titel und Gerät in Home Assistant, z. B. tool-node oder battery-node (a–z, 0–9, -)",
           ),
           inp("Broker", "mqtt_server", c.mqtt_server),
           inp("Port", "mqtt_port", c.mqtt_port, "number"),

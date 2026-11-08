@@ -30,7 +30,7 @@ flowchart LR
   tank["tanklevel<br/>fresh, grey, gas"] --> broker
   temp["temp<br/>DS18B20 + alarms"] --> broker
   bat["battery<br/>BMS over Bluetooth"] --> broker
-  tool["ble-node<br/>Bluetooth plugins: roof hatch …"] <--> broker
+  tool["tool-node<br/>Bluetooth plugins: roof hatch …"] <--> broker
   heater["heater<br/>Truma Combi (LIN)"] <--> broker
   fan["maxxfan<br/>VanTurtle"] <--> broker
   level["level<br/>BNO085 + wedges"] <--> broker
@@ -46,7 +46,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Fresh and grey water (Votronic), gas bottle (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | up to 8 DS18B20 (fridge, freezer …) with alarm limits | `camper/temp` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **ble-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/ble` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **tool-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/tool` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (fork of the level sensor by klehnst) | `camper/level` |

@@ -30,7 +30,7 @@ flowchart LR
   tank["tanklevel<br/>Wasser, Grau, Gas"] --> broker
   temp["temp<br/>DS18B20 + Alarme"] --> broker
   bat["battery<br/>BMS per Bluetooth"] --> broker
-  tool["ble-node<br/>Bluetooth-Plugins: Dachhaube …"] <--> broker
+  tool["tool-node<br/>Bluetooth-Plugins: Dachhaube …"] <--> broker
   heater["heater<br/>Truma Combi (LIN)"] <--> broker
   fan["maxxfan<br/>VanTurtle"] <--> broker
   level["level<br/>BNO085 + Keile"] <--> broker
@@ -46,7 +46,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | Eine Firmware für alle Bluetooth-Geräte als Plugins. Läuft zweimal: **battery-node** (Daly BMS, Ective BM X, BM2) und **ble-node** (Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren) | `camper/battery`, `camper/ble` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | Eine Firmware für alle Bluetooth-Geräte als Plugins. Läuft zweimal: **battery-node** (Daly BMS, Ective BM X, BM2) und **tool-node** (Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren) | `camper/battery`, `camper/tool` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (Fork des Levelsensors von klehnst) | `camper/level` |

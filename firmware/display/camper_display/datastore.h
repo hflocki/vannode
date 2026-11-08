@@ -40,6 +40,7 @@ namespace store {
   float         getf(DpId id, float def = NAN);
   bool          has(DpId id);
   bool          devOnline(Dev d);          // device status topic says "online"
+  const String& blePrefix();               // BLE node with the roof hatch (tool, tool2 or tool3)
   float         lastHeaterSetpoint();      // last setpoint >= 5 °C seen (NAN = none), kept while the heater is off
 
   size_t        tileCount();

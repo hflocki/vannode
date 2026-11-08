@@ -14,7 +14,7 @@ Nachgebildet werden:
 | Batterien | `camper/battery/<id>/…`, `batteries` (2 Batterien, Daly / Ective / BM2) | – |
 | Router | `camper/rut` (GPS-JSON wie der RUT956), `camper/door`, `camper/router/mobile` | – |
 | Zigbee | `camper/zigbee/data/<ieee>/1/…`: 3 Tür-/Fensterkontakte, 2 Klimasensoren, LED-Leiste | LED an/aus, Helligkeit, Farbe |
-| BLE-Node | `camper/ble/rvtech/…`: Dachhaube (Heki) mit `cover`, `cover_position`, `reported`, `connected` | Auf, Zu, Regen, Lüften, Position, `OPEN`/`CLOSE`; die Haube fährt mit einstellbarer Geschwindigkeit (Standard 5 %/s) |
+| BLE-Node | `camper/tool/rvtech/…`: Dachhaube (Heki) mit `cover`, `cover_position`, `reported`, `connected` | Auf, Zu, Regen, Lüften, Position, `OPEN`/`CLOSE`; die Haube fährt mit einstellbarer Geschwindigkeit (Standard 5 %/s) |
 
 Die Formate sind dieselben wie bei der echten Firmware bzw. beim Router und SMLIGHT-Gateway (siehe [`docs/TOPICS.md`](../../docs/TOPICS.md)). Jedes Gerät hat eine eigene Broker-Verbindung mit eigenem Last Will, `…/status` und `…/info` (Version `emu-py-…`), daher erscheint es in der Geräteliste des Displays wie das echte. Home-Assistant-Discovery sendet der Emulator nicht, damit keine doppelten Entitäten entstehen.
 

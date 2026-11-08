@@ -56,7 +56,10 @@ void load() {
   settings.prefixTemp   = prefs.getString("ptemp",  DEFAULT_PREFIX_TEMP);
   settings.prefixBattery = prefs.getString("pbat",  DEFAULT_PREFIX_BATTERY);
   settings.prefixBle = prefs.getString("ptbx",  DEFAULT_PREFIX_BLE);
-  if (settings.prefixBle == "camper/toolbox") settings.prefixBle = DEFAULT_PREFIX_BLE;   // Toolbox -> BLE node
+  // Toolbox -> BLE node -> "tool" (2.17.0): the old default topics move along with the BLE firmware 2.0.1
+  if (settings.prefixBle == "camper/toolbox" || settings.prefixBle == "camper/ble") settings.prefixBle = DEFAULT_PREFIX_BLE;
+  settings.prefixBle2 = prefs.getString("pbl2", "");
+  settings.prefixBle3 = prefs.getString("pbl3", "");
   settings.fanPort      = prefs.getUChar ("fport",  DEFAULT_FAN_PORT);
   settings.ntpServer    = prefs.getString("ntp",    DEFAULT_NTP_SERVER);
   settings.tz           = prefs.getString("tz",     DEFAULT_TZ);
@@ -192,6 +195,8 @@ void save() {
   prefs.putString("ptemp",  settings.prefixTemp);
   prefs.putString("pbat",   settings.prefixBattery);
   prefs.putString("ptbx",   settings.prefixBle);
+  prefs.putString("pbl2",   settings.prefixBle2);
+  prefs.putString("pbl3",   settings.prefixBle3);
   prefs.putUChar ("fport",  settings.fanPort);
   prefs.putString("ntp",    settings.ntpServer);
   prefs.putString("tz",     settings.tz);

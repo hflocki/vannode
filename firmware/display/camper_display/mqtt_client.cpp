@@ -131,7 +131,7 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
 void subscribeAll() {
   const String* prefixes[] = {&settings.prefixTank, &settings.prefixLevel,
                               &settings.prefixHeater, &settings.prefixFan, &settings.prefixTemp,
-                              &settings.prefixBattery, &settings.prefixBle};
+                              &settings.prefixBattery, &settings.prefixBle, &settings.prefixBle2, &settings.prefixBle3};
   for (auto p : prefixes) {
     if (p->isEmpty()) continue;
     mqtt.subscribe((*p + "/#").c_str());
@@ -354,8 +354,9 @@ bool fan(const String& key, const String& value) {
 }
 
 bool heki(const String& key, const String& value) {
-  if (settings.prefixBle.isEmpty()) return false;
-  String base = settings.prefixBle + "/cmd/rvtech/";   // plugin id of the roof hatch
+  const String& node = store::blePrefix();   // the BLE node the roof hatch reports from
+  if (node.isEmpty()) return false;
+  String base = node + "/cmd/rvtech/";   // plugin id of the roof hatch
   if (key == "position") {
     int p = value.toInt();
     if (value.isEmpty() || p < 0 || p > 100) return false;

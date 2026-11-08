@@ -59,8 +59,11 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.node_name,   doc["node_name"]   | DEFAULT_NODE_NAME,     sizeof(config.node_name));
     if (!isValidNodeName(config.node_name)) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
     if (config.mqtt_prefix[0] == '\0') strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
-    // Toolbox -> BLE node (1.3.0): move the old default topic and access point name along
-    if (!strcmp(config.mqtt_prefix, "camper/toolbox")) strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
+    // Toolbox -> BLE node (1.3.0) -> "tool" (2.0.1): move the old default topics and names along
+    // (the display 2.17.0 does the same); battery-node keeps camper/battery
+    if (!strcmp(config.mqtt_prefix, "camper/toolbox") || !strcmp(config.mqtt_prefix, "camper/ble"))
+        strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
+    if (!strcmp(config.node_name, "ble-node")) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
     if (!strncmp(config.ap_ssid, "Toolbox-Node", 12)) strlcpy(config.ap_ssid, defaultApSsid(), sizeof(config.ap_ssid));
 }
 

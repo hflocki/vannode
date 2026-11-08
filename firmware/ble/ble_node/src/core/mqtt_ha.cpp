@@ -8,7 +8,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-// Topic layout (prefix = config.mqtt_prefix, default "camper/ble"):
+// Topic layout (prefix = config.mqtt_prefix, default "camper/tool"):
 //   <prefix>/status                        online / offline (last will)
 //   <prefix>/info                          diagnostics JSON (devinfo.h), retained
 //   <prefix>/rssi                          WiFi signal

@@ -11,7 +11,7 @@
 // =====================================================================
 
 #define FW_NAME                 "display-node"
-#define FW_VERSION              "2.16.3"
+#define FW_VERSION              "2.17.0"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -73,7 +73,7 @@
 #define DEFAULT_PREFIX_FAN      "camper/maxxfan"
 #endif
 #ifndef DEFAULT_PREFIX_BLE
-#define DEFAULT_PREFIX_BLE  "camper/ble"   // ble-node (BLE gateway), roof hatch: <prefix>/rvtech/...
+#define DEFAULT_PREFIX_BLE  "camper/tool"  // BLE node "tool" (roof hatch: <prefix>/rvtech/...); tool2 / tool3: web UI
 #endif
 #ifndef DEFAULT_PREFIX_TEMP
 #define DEFAULT_PREFIX_TEMP     "camper/temp"

@@ -38,5 +38,5 @@
 
 // ---- Device ----------------------------------------------------------
 // #define DEVICE_NAME          "BLE Node"
-// #define DEFAULT_MQTT_PREFIX  "camper/ble"
+// #define DEFAULT_MQTT_PREFIX  "camper/tool"
 // #define OTA_HOSTNAME         "ble-node"

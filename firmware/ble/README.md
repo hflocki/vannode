@@ -14,9 +14,9 @@ Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jet
 | Rolle | Gerätename | Topic | Geräte darauf |
 | --- | --- | --- | --- |
 | battery-node | `battery-node` | `camper/battery` | Daly BMS, Ective BM X, BM2 |
-| ble-node | `ble-node` | `camper/ble` | Dachhaube, Pumpe, Kühlschrank, Thermometer, Gas, eigene Sensoren |
+| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Thermometer, Gas, eigene Sensoren |
 
-Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `ble2-node`, `camper/ble2`).
+Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
 
 Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
@@ -42,8 +42,8 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
 - **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** eingeschaltet (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere, das Gerät prüft es beim Speichern und beim Start noch einmal.
 - Insgesamt höchstens **12 Geräte** (Arbeitsspeicher, `MAX_PLUGINS`).
-- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/ble2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_ble2`).
-- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
+- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/tool2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_tool2`).
+- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/tool/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
 
@@ -65,7 +65,7 @@ Die Batterie-Plugins sind die frühere battery-node-Firmware. Die Protokolle sta
 
 1. Gerät **BTHome-Sensor** hinzufügen, **Suchen** und den Sensor wählen (passende Geräte senden den Dienst `FCD2` und sind mit „✔ passt“ markiert).
 2. Nach dem Neustart erscheinen die Werte, sobald das erste Paket kommt. Sie stehen dann unter **Erkannte Werte** (z. B. `01,02,03,0C`), damit Home Assistant sie auch nach einem Neustart gleich kennt. Zum Neu-Erkennen das Feld leeren und speichern.
-3. Werte unter `camper/ble/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
+3. Werte unter `camper/tool/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
 
 - **ATC/pvvx** (Xiaomi LYWSD03MMC u. a.): im Telink-Flasher *Advertising type* **BTHome** wählen (Werkseinstellung neuerer Versionen).
 - **Verschlüsselte** Sensoren (Shelly BLU mit gesetztem Schlüssel) werden nicht gelesen, die Live-Seite zeigt dann „Verschlüsselt“.
@@ -88,7 +88,7 @@ Beispiel: Xiaomi-Thermometer LYWSD03MMC mit der Firmware von pvvx (Service-Daten
 | Luftfeuchte | 8 | 2 Byte | nein | 0,01 | % | Luftfeuchte |
 | Batterie | 12 | 1 Byte | nein | 1 | % | Batterie |
 
-Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/ble/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
+Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/tool/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
 
 ## Hardware
 
@@ -149,17 +149,17 @@ Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/
 
 ## MQTT / Home Assistant
 
-Basis-Topic `camper/ble` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/ble/<plugin>/…`, Befehle unter `camper/ble/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#toolbox-campertoolbox).
+Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#toolbox-campertoolbox).
 
 **Dachhaube** (`rvtech`):
 
 | Topic | Inhalt |
 | --- | --- |
-| `camper/ble/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
-| `camper/ble/rvtech/cover_position` | 0 … 100 % |
-| `camper/ble/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` |
-| `camper/ble/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `camper/ble/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`) |
+| `camper/tool/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
+| `camper/tool/rvtech/cover_position` | 0 … 100 % |
+| `camper/tool/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` |
+| `camper/tool/cmd/rvtech/cover_position/set` | `0` … `100` |
+| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`) |
 
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 
@@ -169,9 +169,9 @@ In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plug
 
 ### Dachhaube am Display
 
-Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/ble/rvtech/…` und senden die Voreinstellungen und die Position an `camper/ble/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
+Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/tool/rvtech/…` und senden die Voreinstellungen und die Position an `camper/tool/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
 
-- Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node* (Standard `camper/ble`; ein Gerät aus dem alten Repo sendet auf `camper/tool`).
+- Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node Tool* (Standard `camper/tool`). Weitere BLE-Nodes trägst du bei *Tool 2* und *Tool 3* ein; die Dachhaube wird auf jedem davon gefunden.
 - Eine zweite Haube (`rvtech2`) kennt das Display noch nicht, ebenso der Abfahrtscheck.
 
 ## Neues Plugin schreiben
@@ -207,6 +207,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.0.1 | Der allgemeine BLE-Node heißt jetzt **tool-node** mit Topic `camper/tool` (Batterien: battery-node, `camper/battery`). Ein gespeichertes `camper/ble` und der Name `ble-node` werden beim Start umgestellt, das Display (ab 2.17.0) ebenso. Home Assistant legt die Geräte neu an (`camper_tool`) |
 | 2.0.0 | **Batterien** als Plugins (Daly BMS, Ective BM X, BM2) – die frühere battery-node-Firmware ist hier aufgegangen, `firmware/battery` entfällt. Liste `<prefix>/batteries` für die Displays wie bisher. **Gerätename** einstellbar (Reiter MQTT): Hostname, Titel, Gerät in Home Assistant, z. B. `battery-node`. Einstellungen eines alten battery-node werden beim ersten Start übernommen (einmal per USB flashen). Build auch für den **AtomS3 Lite** mit Status-LED. Lange Bluetooth-Antworten (über 128 Byte) werden nicht mehr abgeschnitten. Host-Test der Batterie-Protokolle (`tests/bms_test.cpp`) |
 | 1.5.4 | Neues Plugin **BTHome-Sensor** (Mithören): alle Sensoren mit BTHome v2 ohne Verschlüsselung, z. B. ATC/pvvx-Thermometer und Shelly BLU; Werte werden aus dem Paket erkannt und gemerkt, Home Assistant bekommt passende Sensoren und Binärsensoren. Host-Test der Dekodierung (`tests/bthome_test.cpp`) |
 | 1.5.3 | Neues Plugin **Thermometer Govee** (Mithören): Temperatur (auch unter null), Luftfeuchte und Batterie von H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177 und H5179, nur MAC wählen; Korrektur für Temperatur und Feuchte. Host-Test der Dekodierung (`tests/govee_test.cpp`) |

@@ -2,6 +2,7 @@
 #include "wifi_manager.h"
 #include "registry.h"
 #include "../../devinfo.h"
+#include "../plugins/bms_plugin.h"
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -14,6 +15,7 @@
 //   <prefix>/<plugin>/available            online / offline (device of the plugin reachable)
 //   <prefix>/<plugin>/<key>                values, retained
 //   <prefix>/cmd/<plugin>/<key>/set        commands, not retained
+//   <prefix>/batteries                     all battery devices as one JSON list (displays)
 //
 // Home Assistant: one device "BLE Node" (WiFi, status) plus one device per plugin
 // instance, linked via via_device. Entities come from the plugins' Entity tables.
@@ -116,7 +118,7 @@ static String discoveryTopic(const char* comp, const char* objectId) {
 static void addCoreDevice(JsonDocument& doc) {
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"][0] = mqttNodeId();
-    device["name"] = DEVICE_NAME;
+    device["name"] = (const char*)config.node_name;
     device["model"] = "BLE Node";
     device["sw_version"] = FW_VERSION;
     device["configuration_url"] = String("http://") + WiFi.localIP().toString() + "/";
@@ -301,7 +303,7 @@ void mqttLoop() {
             lastReconnect = millis();
             Serial.println("[MQTT] Connection attempt...");
 
-            String clientId = "ble-node-" + WiFi.macAddress();
+            String clientId = String(config.node_name) + "-" + WiFi.macAddress();
             clientId.replace(":", "");
             String willTopic = topic("status");
             bool connected;
@@ -356,6 +358,20 @@ void mqttLoop() {
             publishPlugin(p);
         }
     }
+
+#if CT_BMS
+    // Batteries: one list for the displays, on every new reading (at most every 2 s) and once a minute
+    static uint32_t listSeen = 0;
+    static unsigned long listAt = 0;
+    if (bmsAny() && ((bmsListChanges != listSeen && millis() - listAt > 2000) || listAt == 0 ||
+                     millis() - listAt > 60000)) {
+        listSeen = bmsListChanges;
+        listAt = millis() ? millis() : 1;
+        static char buf[1000];
+        size_t n = bmsBatteryList(buf, sizeof(buf));
+        if (n) mqtt.publish(topic("batteries").c_str(), buf, true);
+    }
+#endif
 }
 
 void mqttForget(Plugin* p) {

@@ -2,7 +2,7 @@
 //
 // The protocol knowledge (commands, field positions, scaling) is ported from
 // aiobmsble by Patrick Loschmidt (patman15), https://github.com/patman15/aiobmsble,
-// licensed under the Apache License 2.0. See LICENSE in this folder.
+// licensed under the Apache License 2.0 (firmware/ble/LICENSE-Apache-2.0).
 #ifndef BMS_PROTO_H
 #define BMS_PROTO_H
 

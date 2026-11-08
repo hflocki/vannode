@@ -46,8 +46,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
-| [`firmware/battery`](firmware/battery) | ESP32-C3 | Batterie-BMS per Bluetooth (Daly, Ective BM X): Ladestand, Strom, Zellen | `camper/battery` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 | BLE-Node: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, optional Gas (DIMES, Mopeka) und eigene BLE-Sensoren | `camper/ble` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | Eine Firmware für alle Bluetooth-Geräte als Plugins. Läuft zweimal: **battery-node** (Daly BMS, Ective BM X, BM2) und **ble-node** (Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren) | `camper/battery`, `camper/ble` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (Fork des Levelsensors von klehnst) | `camper/level` |
@@ -180,9 +179,8 @@ Jeder Ordner behält seine Lizenz:
 
 | Ordner | Lizenz |
 | --- | --- |
-| `firmware/battery` | Apache-2.0 (Protokolle portiert aus [aiobmsble](https://github.com/patman15/aiobmsble)) |
 | `firmware/heater` | GPL-3.0 (Protokoll-Logik portiert aus GPL-Projekten, siehe dortige README) |
 | `firmware/level` | MIT ([klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT)) |
 | `firmware/tanklevel`, `temp`, `maxxfan`, `display` | MIT |
-| `firmware/ble` | MIT (Dachhauben-Protokoll portiert aus der HA-Integration rvtech-hacs) |
+| `firmware/ble` | MIT (Dachhauben-Protokoll portiert aus der HA-Integration rvtech-hacs); Batterie-Protokolle `bms_proto.*` Apache-2.0 (portiert aus [aiobmsble](https://github.com/patman15/aiobmsble)) |
 | `firmware/roadbuddy` | MIT |

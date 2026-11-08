@@ -26,6 +26,18 @@ static void setCoreDefaults() {
     strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
     strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
     strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
+    strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
+}
+
+// Node name = host name: 1-23 characters a-z, 0-9 and "-", not starting / ending with "-"
+static bool isValidNodeName(const char* s) {
+    size_t n = strlen(s);
+    if (n == 0 || n >= sizeof(config.node_name) || s[0] == '-' || s[n - 1] == '-') return false;
+    for (size_t i = 0; i < n; i++) {
+        char c = s[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) return false;
+    }
+    return true;
 }
 
 static void coreFromFile(JsonDocument& doc) {
@@ -44,6 +56,8 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
     if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
+    strlcpy(config.node_name,   doc["node_name"]   | DEFAULT_NODE_NAME,     sizeof(config.node_name));
+    if (!isValidNodeName(config.node_name)) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
     if (config.mqtt_prefix[0] == '\0') strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
     // Toolbox -> BLE node (1.3.0): move the old default topic and access point name along
     if (!strcmp(config.mqtt_prefix, "camper/toolbox")) strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
@@ -64,6 +78,7 @@ static void coreToFile(JsonDocument& doc) {
     doc["mqtt_prefix"] = (const char*)config.mqtt_prefix;
     doc["web_user"] = (const char*)config.web_user;
     doc["web_pass"] = (const char*)config.web_pass;
+    doc["node_name"] = (const char*)config.node_name;
 }
 
 void coreConfigToJson(JsonObject o) {
@@ -80,6 +95,7 @@ void coreConfigToJson(JsonObject o) {
     o["mqtt_prefix"] = (const char*)config.mqtt_prefix;
     o["web_user"] = (const char*)config.web_user;
     o["web_pass_set"] = config.web_pass[0] != '\0';
+    o["node_name"] = (const char*)config.node_name;
 }
 
 // Strings: max length check. Passwords: empty input keeps the stored one.
@@ -113,6 +129,11 @@ const char* coreConfigCheck(JsonObjectConst in, bool& restart) {
         if (n > 0) ch = true;
     }
     if (in["mqtt_prefix"].is<const char*>() && in["mqtt_prefix"].as<const char*>()[0] == '\0') return "MQTT-Präfix fehlt";
+    if (in["node_name"].is<const char*>()) {
+        const char* nn = in["node_name"].as<const char*>();
+        if (!isValidNodeName(nn)) return "Gerätename: 1-23 Zeichen a-z, 0-9 und -";
+        if (strcmp(nn, config.node_name) != 0) ch = true;   // host name: restart
+    }
     if (!in["mqtt_port"].isNull()) {
         int port = in["mqtt_port"] | -1;
         if (port < 1 || port > 65535) return "MQTT-Port 1-65535";
@@ -145,6 +166,7 @@ void coreConfigApply(JsonObjectConst in) {
     applyStr(in, "mqtt_user", config.mqtt_user, sizeof(config.mqtt_user), false);
     applyStr(in, "mqtt_pass", config.mqtt_pass, sizeof(config.mqtt_pass), true);
     applyStr(in, "mqtt_prefix", config.mqtt_prefix, sizeof(config.mqtt_prefix), true);
+    applyStr(in, "node_name", config.node_name, sizeof(config.node_name), true);
     if (!in["mqtt_port"].isNull()) config.mqtt_port = in["mqtt_port"] | DEFAULT_MQTT_PORT;
     if (!in["wifi_tx_power"].isNull()) config.wifi_tx_power = (int8_t)(in["wifi_tx_power"] | DEFAULT_TX_POWER);
     if (in["ap_always"].is<bool>()) config.ap_always = in["ap_always"].as<bool>();
@@ -289,6 +311,44 @@ const char* pluginConfigFromJson(Plugin* p, JsonObjectConst in, bool write, bool
 // Persistence
 // ============================================================
 
+#if CT_BMS
+// battery-node 1.x stored {"interval": 10, "batteries": [{"mac", "type" 1/2/3, "name", "key"}]}.
+// Every battery becomes a device of the matching type (daly, ective, bm2) with name, MAC and
+// interval. The old id ("key") is not kept: topics are now <prefix>/<device id>/...
+static bool migrateBatteries(JsonDocument& doc) {
+    static const char* const TYPES_BY_NUMBER[] = {nullptr, "daly", "ective", "bm2"};
+    int interval = doc["interval"] | BMS_DEFAULT_INTERVAL_S;
+    bool any = false;
+    for (JsonObjectConst b : doc["batteries"].as<JsonArrayConst>()) {
+        int num = b["type"] | 0;
+        const PluginType* t = (num >= 1 && num <= 3) ? pluginType(TYPES_BY_NUMBER[num]) : nullptr;
+        if (!t) continue;
+        int8_t index = registryFreeIndex(t);
+        Plugin* p = index >= 0 ? registryNew(t, (uint8_t)index) : nullptr;
+        if (!p || !registryAdd(p)) {
+            delete p;
+            continue;
+        }
+        JsonDocument one;
+        one["enabled"] = true;
+        one["name"] = b["name"] | t->name;
+        one["mac"] = b["mac"] | "";
+        one["interval"] = interval;
+        bool restart;
+        // field by field: an invalid value keeps its factory value
+        for (JsonPairConst kv : one.as<JsonObjectConst>()) {
+            JsonDocument f;
+            f[kv.key()] = kv.value();
+            pluginConfigFromJson(p, f.as<JsonObjectConst>(), true, restart);
+        }
+        p->enabled = p->enabledNext;
+        Serial.printf("[Config] Battery %s (%s) taken over as %s\n", p->name, t->name, p->id);
+        any = true;
+    }
+    return any;
+}
+#endif
+
 static void loadConfig() {
     setCoreDefaults();
     if (!fsReady || !LittleFS.exists(CONFIG_FILE)) return;
@@ -347,7 +407,14 @@ static void loadConfig() {
         }
         p->enabled = p->enabledNext;   // boot: the saved switch is the running state
     }
-    // Old format (1.3 / 1.4): store the devices with their type right away
+#if CT_BMS
+    // Former battery-node firmware (firmware/battery): its list "batteries" becomes devices
+    if (!doc["plugins"].is<JsonObjectConst>() && doc["batteries"].is<JsonArrayConst>()) {
+        migrated = migrateBatteries(doc);
+        if (!doc["node_name"].is<const char*>()) strlcpy(config.node_name, "battery-node", sizeof(config.node_name));
+    }
+#endif
+    // Old format (1.3 / 1.4, battery-node): store the devices with their type right away
     if (migrated) {
         Serial.println("[Config] Plugins of an older version taken over as devices");
         saveConfig();

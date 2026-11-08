@@ -71,6 +71,8 @@ public:
     const char* lastErrorText() const { return lastReason ? bleReasonText(lastReason) : ""; }
 
     bool write(const uint8_t* d, size_t n, bool response);
+    // Without response if the characteristic supports it, else with response
+    bool writeAuto(const uint8_t* d, size_t n);
     bool write(const char* s, bool response) { return write((const uint8_t*)s, strlen(s), response); }
     bool canWrite() const { return linkUp && writeChr != nullptr; }
 

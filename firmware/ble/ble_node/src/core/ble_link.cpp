@@ -5,7 +5,7 @@
 #include "ble.h"
 
 #define RECONNECT_DELAY_MS 2000   // After a regular disconnect
-#define QUEUE_DEPTH        8
+#define QUEUE_DEPTH        12
 
 void BleLink::begin(const char* tag_, const char* svc, const char* notify, const char* wr) {
     tag = tag_;
@@ -149,10 +149,16 @@ void BleLink::onConfirmPasskey(NimBLEConnInfo& info, uint32_t p) {
 
 void BleLink::push(const uint8_t* d, size_t n) {
     if (!queue) return;
+    // Longer notifications (large MTU, e.g. a Daly BMS answer of 129 bytes) are split into
+    // several packets in order; plugins that reassemble frames get every byte.
     BlePacket p;
-    p.len = n > BLE_PACKET_MAX ? BLE_PACKET_MAX : n;
-    memcpy(p.data, d, p.len);
-    xQueueSend(queue, &p, 0);   // Queue full: drop (never block the host task)
+    do {
+        p.len = n > BLE_PACKET_MAX ? BLE_PACKET_MAX : n;
+        memcpy(p.data, d, p.len);
+        if (xQueueSend(queue, &p, 0) != pdTRUE) return;   // Queue full: drop (never block the host task)
+        d += p.len;
+        n -= p.len;
+    } while (n > 0);
 }
 
 // ---- Connection handling (loop task) -------------------------------------------
@@ -379,6 +385,11 @@ void BleLink::loop() {
             lastRssiValue = client->getRssi();
         }
     }
+}
+
+bool BleLink::writeAuto(const uint8_t* d, size_t n) {
+    if (!writeChr) return false;
+    return write(d, n, !writeChr->canWriteNoResponse());
 }
 
 bool BleLink::write(const uint8_t* d, size_t n, bool response) {

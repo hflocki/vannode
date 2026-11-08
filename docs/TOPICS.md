@@ -24,8 +24,8 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Heizung (Truma) | `camper/heater` | heater | [firmware/heater](../firmware/heater/README.md) |
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
-| Batterien (BMS) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
-| BLE-Node (Bluetooth-Geräte als Plugins: Dachhaube, Pumpe, Kühlschrank, optional Gas) | `camper/ble` | ble | [firmware/ble](../firmware/ble/README.md) |
+| Batterien (BMS), battery-node | `camper/battery` | ble (Gerätename battery-node) | [firmware/ble](../firmware/ble/README.md#batterien-battery-node) |
+| BLE-Node (Bluetooth-Geräte als Plugins: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas) | `camper/ble` | ble | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Road Buddy (M5Stack Core2) | `camper/roadbuddy` | roadbuddy | [firmware/roadbuddy](../firmware/roadbuddy/README.md) |
 | Emulator (Werkzeug am PC) | `camper/emulator` (+ die Topics der nachgebildeten Geräte) | – | [tools/emulator](../tools/emulator/README.md) |
@@ -97,17 +97,21 @@ Unterstruktur wie bei inetbox2mqtt. Vollständige Liste der Keys in der [README 
 
 ## Batterien `camper/battery`
 
+Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2` … (bis battery-node 1.x eine frei gewählte ID).
+
 | Topic | Inhalt |
 | --- | --- |
 | `…/<id>/available` | `online`, solange das BMS antwortet |
 | `…/<id>/soc`, `voltage`, `current`, `power`, `charge`, `energy`, `runtime`, `charging` | Messwerte (Strom positiv = Laden) |
 | `…/<id>/problem`, `…/<id>/problem_text` | Fehler des BMS |
 | `…/<id>/temperature`, `cycles`, `delta`, `cell_1` … | nur Daly |
-| `…/batteries` | alle Batterien als JSON-Liste für Displays |
+| `…/<id>/state` | nur BM2: `Normal`, `Schwach`, `Kritisch`, `Lädt`, `Erhaltungsladung` |
+| `…/<id>/connected`, `…/<id>/release`, `…/<id>/ble_rssi` | Bluetooth-Verbindung, für die Hersteller-App freigegeben, Signal |
+| `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` |
 
 ## BLE-Node `camper/ble`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |

@@ -1,13 +1,22 @@
 > [!WARNING]
 > **IN ENTWICKLUNG.** Die Plugins sind teils mangels Hardware noch nicht am echten Gerät getestet, auch die Dachhaube (RV Tech) noch nicht.
 
-# BLE Node
+# BLE Node / Battery Node
 
 Ein ESP32 als **Bluetooth-Gateway mit Plugins**: Er liest Bluetooth-Geräte im Camper aus bzw. steuert sie und stellt alles über eine Web-Oberfläche und MQTT (mit Home-Assistant-Discovery) bereit. Es wird nichts verdrahtet, nur ein ESP32 mit Strom.
 
 Jedes Gerät ist ein **Plugin**. Welche in die Firmware kommen, legst du in `config.h` bzw. `config_local.h` fest. Neue Bluetooth-Geräte kommen als weiteres Plugin dazu und nutzen den fertigen Rahmen (WLAN, MQTT, Web-Oberfläche, Bluetooth-Verbindung, Updates).
 
 Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jetzt Teil von VanNode mit derselben Update-Absicherung wie die übrigen Geräte. Ein ESP32 für alle Bluetooth-Geräte im Camper, jedes als Plugin.
+
+**Eine Firmware, zwei Rollen.** Seit 2.0 läuft dieselbe Firmware auch auf dem **battery-node** (vorher eigene Firmware `firmware/battery`). Welche Rolle ein Gerät hat, steht nur in seinen Einstellungen (Reiter **MQTT**):
+
+| Rolle | Gerätename | Topic | Geräte darauf |
+| --- | --- | --- | --- |
+| battery-node | `battery-node` | `camper/battery` | Daly BMS, Ective BM X, BM2 |
+| ble-node | `ble-node` | `camper/ble` | Dachhaube, Pumpe, Kühlschrank, Thermometer, Gas, eigene Sensoren |
+
+Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `ble2-node`, `camper/ble2`).
 
 Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
@@ -20,6 +29,9 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Dachhaube RV Tech (Heki-Motorsteuerung) | Verbinden | MAC, PIN |
 | Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
 | Kühlschrank WCS (Kompressor) | Verbinden | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
+| Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
+| Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
+| Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
 | Gas: Rotarex DIMES / SRG WAVE | Mithören | MAC, Flaschengröße, Füllstopp |
 | Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
 | Gas: Mopeka Standard / Std Check | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
@@ -34,6 +46,18 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
+
+### Batterien (battery-node)
+
+Die Batterie-Plugins sind die frühere battery-node-Firmware. Die Protokolle stammen aus [aiobmsble](https://github.com/patman15/aiobmsble) von Patrick Loschmidt (patman15), der Bibliothek hinter der Home-Assistant-Integration *BLE Battery Management* (Apache-2.0, `src/plugins/bms_proto.*`, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)).
+
+- **Daly / Ective:** feste Verbindung, Abfrage alle *Abfrageintervall* Sekunden (5–300, Standard 10). Ladestand, Spannung, Strom, Leistung, Restkapazität, Energie, Restlaufzeit; bei Daly zusätzlich Zellspannungen, Zelldifferenz, Temperatur, Zyklen und Fehler als Text.
+- **BM2:** neuere Geräte senden ihre Werte per Funk, dann bleibt der Verbindungsplatz frei („OK (Funk)“). Ältere ohne Funkwerte werden verbunden. Zustand aus der Spannung (Normal, Schwach, Kritisch, Lädt, Erhaltungsladung).
+- Solange der ESP verbunden ist, kommt die Hersteller-App meist nicht dran: **Bluetooth für App freigeben** am Gerät (endet nach 30 min von selbst).
+- Für die Displays steht die Liste aller Batterien unter `<prefix>/batteries` (wie bisher), Einzelwerte unter `<prefix>/<geräte-id>/…` (`daly`, `ective`, `bm2` …), siehe [TOPICS](../../docs/TOPICS.md#batterien-camperbattery).
+- **Status-LED** (AtomS3 Lite, sonst `STATUS_LED_PIN`): grün = alle Geräte liefern, gelb = eins fehlt, rot blinkend = kein WLAN/MQTT, blau = noch kein Gerät.
+
+**Umstieg vom alten battery-node (1.x):** Die Update-Seite der alten Firmware nimmt die neue `.bin` nicht an (anderes Gerät), deshalb **einmal per USB flashen** – mit *Erase All Flash Before Sketch Upload: Disabled*, dann bleiben die Einstellungen erhalten. Beim ersten Start werden WLAN, MQTT (Topic `camper/battery`) und Login übernommen, jede eingetragene Batterie wird ein Gerät (`daly`, `ective`, `bm2` …) mit Name, MAC und Abfrageintervall, und der Gerätename wird `battery-node`. Danach `data/index.html.gz` hochladen. Geändert: Die Einzel-Topics heißen jetzt nach der Geräte-ID statt der frei gewählten ID (`camper/battery/daly/soc` statt z. B. `camper/battery/house/soc`); Display und Road Buddy lesen nur die Liste `batteries` und merken davon nichts. In Home Assistant erscheinen die Batterien neu (alte Einträge von Hand löschen).
 
 ### BTHome-Sensor
 
@@ -68,7 +92,7 @@ Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern un
 
 ## Hardware
 
-**ESP32-C3 Super Mini** (so baut die CI), ESP32-S3 und klassischer ESP32 gehen ebenso. Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
+**ESP32-C3 Super Mini** oder **M5Stack AtomS3 Lite** (beide baut die CI: `ble-node-esp32c3.bin`, `ble-node-atoms3.bin`), ESP32-S3 und klassischer ESP32 gehen ebenso. Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
 
 ## Arduino IDE
 
@@ -79,6 +103,8 @@ Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern un
 | Board | ESP32C3 Dev Module |
 | USB CDC On Boot | **Enabled** |
 | Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** – WLAN und Bluetooth brauchen gut 1,4 MB |
+
+AtomS3 Lite: Board **M5AtomS3**, USB CDC On Boot **Enabled**, Partition Scheme **8M with spiffs (3MB APP/1.5MB SPIFFS)**. Wird der AtomS3 beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken des USB-Kabels ca. 2 s halten (Download-Modus).
 
 Board-Paket: esp32 von Espressif Systems, 3.3.x (CI: 3.3.2).
 
@@ -99,7 +125,7 @@ Board-Paket: esp32 von Espressif Systems, 3.3.x (CI: 3.3.2).
 3. `http://<ip>/` öffnen. Solange die Web-Oberfläche fehlt, steht dort ein Upload-Formular: `data/index.html.gz` hochladen.
 4. Ab dann Updates nur noch über die Web-UI (Tab **System → Firmware- & Web-Update**).
 
-Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`.
+Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Danach unter **MQTT** Gerätename und Topic für die Rolle setzen (z. B. `battery-node` / `camper/battery`).
 
 Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/pack_web.py` ausführen (packt nach `data/index.html.gz`).
 
@@ -181,6 +207,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.0.0 | **Batterien** als Plugins (Daly BMS, Ective BM X, BM2) – die frühere battery-node-Firmware ist hier aufgegangen, `firmware/battery` entfällt. Liste `<prefix>/batteries` für die Displays wie bisher. **Gerätename** einstellbar (Reiter MQTT): Hostname, Titel, Gerät in Home Assistant, z. B. `battery-node`. Einstellungen eines alten battery-node werden beim ersten Start übernommen (einmal per USB flashen). Build auch für den **AtomS3 Lite** mit Status-LED. Lange Bluetooth-Antworten (über 128 Byte) werden nicht mehr abgeschnitten. Host-Test der Batterie-Protokolle (`tests/bms_test.cpp`) |
 | 1.5.4 | Neues Plugin **BTHome-Sensor** (Mithören): alle Sensoren mit BTHome v2 ohne Verschlüsselung, z. B. ATC/pvvx-Thermometer und Shelly BLU; Werte werden aus dem Paket erkannt und gemerkt, Home Assistant bekommt passende Sensoren und Binärsensoren. Host-Test der Dekodierung (`tests/bthome_test.cpp`) |
 | 1.5.3 | Neues Plugin **Thermometer Govee** (Mithören): Temperatur (auch unter null), Luftfeuchte und Batterie von H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177 und H5179, nur MAC wählen; Korrektur für Temperatur und Feuchte. Host-Test der Dekodierung (`tests/govee_test.cpp`) |
 | 1.5.2 | Neuer Reiter **Geräte** statt eines Reiters je Gerät: Liste mit An/Aus, Hinzufügen, Entfernen und Neustart, je Gerät **Einstellen** (Einstellungen jetzt auch für ausgeschaltete Geräte). Ein neues Gerät öffnet sich gleich mit seinen Einstellungen und dem Knopf „Jetzt neu starten“. Behoben: Mit mehreren Eigenen BLE-Sensoren wurde `/api/config` zu groß für den Speicher, die Seite zeigte „CFG.plugins is not iterable“ und keine Rückmeldung beim Hinzufügen – die Feldbeschreibung kommt jetzt nur einmal je Typ (`schemas`), die Antwort wird gestreamt, bei Speichermangel kommt eine klare Meldung. Knöpfe sind gesperrt, solange eine Änderung unterwegs ist (kein doppeltes Hinzufügen) |
@@ -198,8 +225,8 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Datei `ble-node-esp32c3.bin`. Siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 
-MIT, siehe [LICENSE](LICENSE). Das Dachhauben-Protokoll ist aus der Home-Assistant-Integration rvtech-hacs portiert.
+MIT, siehe [LICENSE](LICENSE). Das Dachhauben-Protokoll ist aus der Home-Assistant-Integration rvtech-hacs portiert. Ausnahme: die Batterie-Protokolle `ble_node/src/plugins/bms_proto.*` sind aus [aiobmsble](https://github.com/patman15/aiobmsble) portiert und stehen unter Apache-2.0, siehe [LICENSE-Apache-2.0](LICENSE-Apache-2.0).

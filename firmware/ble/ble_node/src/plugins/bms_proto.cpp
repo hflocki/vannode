@@ -1,5 +1,5 @@
 // BMS protocol decoding. Protocol knowledge ported from aiobmsble (Apache-2.0),
-// https://github.com/patman15/aiobmsble - see bms_proto.h and LICENSE.
+// https://github.com/patman15/aiobmsble - see bms_proto.h and firmware/ble/LICENSE-Apache-2.0.
 #include "bms_proto.h"
 #include <math.h>
 #include <string.h>

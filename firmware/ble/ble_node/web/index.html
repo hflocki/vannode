@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>BLE Node</title>
+    <title>VanNode BLE</title>
     <style>
       /* Same look as the other VanNode devices (battery, tanklevel, temp ...) */
       :root {
@@ -352,7 +352,7 @@ nav button .ico{display:inline-flex}
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
-      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio" };
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio", govee: "radio", bthome: "radio", daly: "plug", ective: "plug", bm2: "plug" };
       function tabs() {
         // Devices share one tab ("Geräte": list, add / remove, then the settings of one device),
         // so the bar stays short however many devices there are
@@ -975,6 +975,13 @@ nav button .ico{display:inline-flex}
         const c = CFG.core,
           box = el("div");
         box.append(
+          inp(
+            "Gerätename",
+            "node_name",
+            c.node_name,
+            "text",
+            "Hostname, Titel und Gerät in Home Assistant, z. B. ble-node oder battery-node (a–z, 0–9, -)",
+          ),
           inp("Broker", "mqtt_server", c.mqtt_server),
           inp("Port", "mqtt_port", c.mqtt_port, "number"),
           inp("Benutzer", "mqtt_user", c.mqtt_user),
@@ -992,7 +999,7 @@ nav button .ico{display:inline-flex}
             "text",
             "Home-Assistant-Knoten: " +
               CFG.ha_node +
-              " – zwei Geräte brauchen zwei Präfixe",
+              " – zwei Geräte brauchen zwei Präfixe (Batterien: camper/battery)",
           ),
         );
         $("#main").append(
@@ -1157,10 +1164,10 @@ nav button .ico{display:inline-flex}
             { className: "card" },
             el("h2", {}, "Geräte"),
             restartBox,
-            ...group("Mithören", "Sensoren, die nur senden (Gas, eigener BLE-Sensor). Beliebig viele.", listen),
+            ...group("Mithören", "Sensoren, die nur senden (Thermometer, Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
-              `Geräte mit fester Bluetooth-Verbindung. Höchstens ${max} gleichzeitig – für mehr einen zweiten BLE-Node mit eigenem Topic (z. B. camper/ble2) nehmen.`,
+              `Geräte mit fester Bluetooth-Verbindung (Batterien, Dachhaube, Pumpe, Kühlschrank). Höchstens ${max} gleichzeitig – für mehr einen zweiten Node mit eigenem Topic nehmen (z. B. battery-node mit camper/battery).`,
               link,
               count,
             ),

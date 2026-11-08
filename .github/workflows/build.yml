@@ -52,16 +52,6 @@ jobs:
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
             sketch: firmware/tanklevel/camper_tanklevel
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
-          - device: battery
-            target: esp32c3
-            fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
-            sketch: firmware/battery/camper_battery
-            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
-          - device: battery
-            target: atoms3
-            fqbn: esp32:esp32:m5stack_atoms3:CDCOnBoot=cdc,PartitionScheme=default_8MB
-            sketch: firmware/battery/camper_battery
-            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
           - device: temp
             target: esp8266
             fqbn: esp8266:esp8266:nodemcuv2:eesz=4M1M
@@ -100,6 +90,12 @@ jobs:
           - device: ble
             target: esp32c3
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
+            sketch: firmware/ble/ble_node
+            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+          # Same firmware on the M5Stack AtomS3 Lite (formerly the battery-node, status LED)
+          - device: ble
+            target: atoms3
+            fqbn: esp32:esp32:m5stack_atoms3:CDCOnBoot=cdc,PartitionScheme=default_8MB
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
           # Template for new devices (firmware/_template/ANLEITUNG.md), built so it always compiles

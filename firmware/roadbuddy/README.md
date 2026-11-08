@@ -129,7 +129,7 @@ Die Sensoren dazu:
 - Level: [level-node](../level) (ESP32 + Adafruit BNO085, Fork des Levelsensors von klehnst)
 - Wasser und Gas: [tanklevel-node](../tanklevel) (ein ESP32-C3 für Frischwasser, Grauwasser und Gas)
 - Temperaturen: [temp-node](../temp) (bis zu 8 DS18B20 mit Alarm-Grenzwerten)
-- Batterien: [battery-node](../battery) (Daly, Ective BM X, BM2 über Bluetooth)
+- Batterien: [battery-node](../ble) (Daly, Ective BM X, BM2 über Bluetooth)
 
 Mehr zeigt der RoadBuddy bewusst nicht: Heizung, Lüfter und Warnungen laufen auf dem großen Wandpanel [display-node](../display).
 

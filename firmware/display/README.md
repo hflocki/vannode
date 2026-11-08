@@ -15,7 +15,7 @@ Passt zu den anderen Projekten:
 | Truma Combi Heizung | [heater-node](../heater) oder CampMatic-Box, siehe [Heizung über CampMatic](#heizung-über-campmatic) | `camper/heater` ² |
 | MaxxFan (VanTurtle) | [maxxfan-node](../maxxfan) | `camper/maxxfan` |
 | Temperaturen (DS18B20) | [temp-node](../temp) | `camper/temp` |
-| Batterien (Daly, Ective, BM2) | [battery-node](../battery) | `camper/battery` |
+| Batterien (Daly, Ective, BM2) | [battery-node](../ble) | `camper/battery` |
 | Router (GPS, Mobilfunk) | Teltonika RUT956, siehe [Router-Daten](#router-daten-rut956) | frei |
 | Zigbee2MQTT & alles andere | eigene Seiten und Kacheln | frei |
 

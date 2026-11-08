@@ -95,7 +95,7 @@ void wifiManagerInit() {
     } else {
         WiFi.mode(WIFI_AP);
         delay(100);
-        WiFi.setHostname(OTA_HOSTNAME);
+        WiFi.setHostname(config.node_name);
         startAP(1);
         wifiState = WIFI_STATE_AP;
         Serial.println("[WiFi] No SSID — AP only");
@@ -106,7 +106,7 @@ static bool blockingConnect() {
     WiFi.mode(WIFI_STA);
     delay(500);  // ESP32-C3 needs time for WiFi stack to fully init
     WiFi.setTxPower(txPower());  // Reduced TX power is more stable on some boards (web UI)
-    WiFi.setHostname(OTA_HOSTNAME);
+    WiFi.setHostname(config.node_name);
     WiFi.setSleep(WIFI_PS_MIN_MODEM);  // Keep modem sleep for WiFi/Bluetooth coexistence
     
     for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {

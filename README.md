@@ -46,8 +46,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Fresh and grey water (Votronic), gas bottle (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | up to 8 DS18B20 (fridge, freezer …) with alarm limits | `camper/temp` |
-| [`firmware/battery`](firmware/battery) | ESP32-C3 | Battery BMS over Bluetooth (Daly, Ective BM X): state of charge, current, cells | `camper/battery` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 | BLE node: Bluetooth devices as plugins – RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, optionally gas (DIMES, Mopeka) and own BLE sensors | `camper/ble` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **ble-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/ble` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (fork of the level sensor by klehnst) | `camper/level` |
@@ -180,9 +179,8 @@ Every folder keeps its license:
 
 | Folder | License |
 | --- | --- |
-| `firmware/battery` | Apache-2.0 (protocols ported from [aiobmsble](https://github.com/patman15/aiobmsble)) |
 | `firmware/heater` | GPL-3.0 (protocol logic ported from GPL projects, see its README) |
 | `firmware/level` | MIT ([klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT)) |
 | `firmware/tanklevel`, `temp`, `maxxfan`, `display` | MIT |
-| `firmware/ble` | MIT (roof hatch protocol ported from the HA integration rvtech-hacs) |
+| `firmware/ble` | MIT (roof hatch protocol ported from the HA integration rvtech-hacs); battery protocols `bms_proto.*` Apache-2.0 (ported from [aiobmsble](https://github.com/patman15/aiobmsble)) |
 | `firmware/roadbuddy` | MIT |

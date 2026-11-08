@@ -25,6 +25,15 @@ Plugin* createGovee(uint8_t index);
 #if PLUGIN_BTHOME
 Plugin* createBtHome(uint8_t index);
 #endif
+#if PLUGIN_DALY
+Plugin* createDaly(uint8_t index);
+#endif
+#if PLUGIN_ECTIVE
+Plugin* createEctive(uint8_t index);
+#endif
+#if PLUGIN_BM2
+Plugin* createBm2(uint8_t index);
+#endif
 #if PLUGIN_CARAWATER
 Plugin* createCaraWater(uint8_t index);
 #endif
@@ -45,6 +54,15 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_WCS_FRIDGE
     {"fridge", "Kühlschrank WCS", BLE_LINK, createWcsFridge},
+#endif
+#if PLUGIN_DALY
+    {"daly", "Batterie: Daly BMS", BLE_LINK, createDaly},
+#endif
+#if PLUGIN_ECTIVE
+    {"ective", "Batterie: Ective BM X", BLE_LINK, createEctive},
+#endif
+#if PLUGIN_BM2
+    {"bm2", "Batterie: BM2 Batteriewächter", BLE_LINK, createBm2},
 #endif
 #if PLUGIN_DIMES
     {"dimes", "Gas: DIMES / SRG WAVE", BLE_PASSIVE, createDimes},

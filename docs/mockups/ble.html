@@ -6,10 +6,10 @@
 const M = {
   id: 'ble',
   config: {
-    version: '1.5.4', device: 'BLE Node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '2.0.0', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
-           web_user: '', web_pass_set: false},
+           web_user: '', web_pass_set: false, node_name: 'ble-node'},
     plugins: [{id: 'rvtech', type: 'rvtech', type_name: 'RV Tech Dachhaube', ble: 2, running: true,
                cfg: {enabled: true, name: 'Dachhaube', mac: 'F0:F8:F2:00:00:01', pin: ''}},
               // own BLE sensor: a Xiaomi thermometer with custom firmware (service data 181A)
@@ -22,6 +22,11 @@ const M = {
     schemas: {
       rvtech: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                         {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist.'}],
+      daly: [{k: 'mac', l: 'Batterie-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+             {k: 'interval', l: 'Abfrageintervall', t: 'int', min: 5, max: 300, u: 's', h: 'Wie oft die Werte gelesen werden'}],
+      ective: [{k: 'mac', l: 'Batterie-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+               {k: 'interval', l: 'Abfrageintervall', t: 'int', min: 5, max: 300, u: 's', h: 'Wie oft die Werte gelesen werden'}],
+      bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
       govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
               {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
               {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
@@ -43,7 +48,7 @@ const M = {
                    {k: `v${n}_unit`, l: `Wert ${n}: Einheit`, t: 'text', max: 9},
                    {k: `v${n}_kind`, l: `Wert ${n}: Art`, t: 'select', o: 'Allgemein|Temperatur|Luftfeuchte|Batterie|Spannung|Strom|Leistung|Druck'}])]
     },
-    types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
+    types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2}, {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1},
             {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
@@ -100,6 +105,7 @@ const M = {
     if (path === '/api/scan') {
       return {active: true, devices: [
         {mac: 'F0:F8:F2:00:00:01', name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech']},
+        {mac: 'C8:47:8C:00:00:03', name: 'DL-C8478C000003', rssi: -68, mfg: '0102', uuid: '0xfff0', age: 1, fits: ['daly']},
         {mac: 'A4:C1:38:AB:CD:EF', name: 'ATC_ABCDEF', rssi: -76, mfg: '', uuid: '0xfcd2', age: 3, fits: ['bthome']},
         {mac: 'A4:C1:38:00:00:02', name: 'GVH5075_1A2B', rssi: -83, mfg: '88EC', uuid: '', age: 5, fits: ['govee']}]};
     }
@@ -120,6 +126,10 @@ const M = {
     const others = M.cfg.plugins.slice(1).filter(p => !p.pending && !p.removed).map(p => {
       const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: runs(p)};
       if (!o.enabled) return o;
+      if (p.type === 'daly' && p.cfg.mac) return Object.assign(o, {state: 'OK', ok: true, gauge: {v: 78, unit: '%', label: 'Ladestand', max: 100},
+        rows: [['Spannung', 13.31, 'V'], ['Strom', -4.2, 'A'], ['Leistung', -56, 'W'], ['Restkapazität', 78, 'Ah'], ['Energie', 1038, 'Wh'],
+               ['Restlaufzeit', 18.6, 'h'], ['Temperatur', 14.5, '°C'], ['Zellen', '4 × 3.326 … 3.331 V', ''], ['Zelldifferenz', 5, 'mV'], ['Zyklen', 41, ''], ['Alter', 3, 's'], ['Bluetooth', -68, 'dBm']],
+        ctrl: [{t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: false}]});
       if (p.type === 'bthome' && p.cfg.mac) return Object.assign(o, {state: 'OK', ok: true,
         rows: [['Batterie', 87, '%'], ['Temperatur', 19.8, '°C'], ['Luftfeuchte', 54.2, '%'], ['Spannung', 2.91, 'V'], ['Bluetooth', -76, 'dBm'], ['Alter', 6, 's']],
         raw: '40 00 A5 01 57 02 BC 07 03 2C 15 0C 5E 0B'});
@@ -274,7 +284,7 @@ const M = {
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>BLE Node</title>
+    <title>VanNode BLE</title>
     <style>
       /* Same look as the other VanNode devices (battery, tanklevel, temp ...) */
       :root {
@@ -623,7 +633,7 @@ nav button .ico{display:inline-flex}
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
-      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio" };
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio", govee: "radio", bthome: "radio", daly: "plug", ective: "plug", bm2: "plug" };
       function tabs() {
         // Devices share one tab ("Geräte": list, add / remove, then the settings of one device),
         // so the bar stays short however many devices there are
@@ -1246,6 +1256,13 @@ nav button .ico{display:inline-flex}
         const c = CFG.core,
           box = el("div");
         box.append(
+          inp(
+            "Gerätename",
+            "node_name",
+            c.node_name,
+            "text",
+            "Hostname, Titel und Gerät in Home Assistant, z. B. ble-node oder battery-node (a–z, 0–9, -)",
+          ),
           inp("Broker", "mqtt_server", c.mqtt_server),
           inp("Port", "mqtt_port", c.mqtt_port, "number"),
           inp("Benutzer", "mqtt_user", c.mqtt_user),
@@ -1263,7 +1280,7 @@ nav button .ico{display:inline-flex}
             "text",
             "Home-Assistant-Knoten: " +
               CFG.ha_node +
-              " – zwei Geräte brauchen zwei Präfixe",
+              " – zwei Geräte brauchen zwei Präfixe (Batterien: camper/battery)",
           ),
         );
         $("#main").append(
@@ -1428,10 +1445,10 @@ nav button .ico{display:inline-flex}
             { className: "card" },
             el("h2", {}, "Geräte"),
             restartBox,
-            ...group("Mithören", "Sensoren, die nur senden (Gas, eigener BLE-Sensor). Beliebig viele.", listen),
+            ...group("Mithören", "Sensoren, die nur senden (Thermometer, Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
-              `Geräte mit fester Bluetooth-Verbindung. Höchstens ${max} gleichzeitig – für mehr einen zweiten BLE-Node mit eigenem Topic (z. B. camper/ble2) nehmen.`,
+              `Geräte mit fester Bluetooth-Verbindung (Batterien, Dachhaube, Pumpe, Kühlschrank). Höchstens ${max} gleichzeitig – für mehr einen zweiten Node mit eigenem Topic nehmen (z. B. battery-node mit camper/battery).`,
               link,
               count,
             ),

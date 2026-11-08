@@ -95,7 +95,7 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     if (!auth(request)) return;
     JsonDocument doc;
     doc["version"] = FW_VERSION;
-    doc["device"] = DEVICE_NAME;
+    doc["device"] = (const char*)config.node_name;
     doc["reset_reason"] = resetReasonString();
     doc["ha_node"] = mqttNodeId();
     doc["max_links"] = MAX_BLE_LINKS;

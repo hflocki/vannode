@@ -358,28 +358,30 @@ std::vector<TempOut> climate() {
   return out;
 }
 
-bool outdoor(TempOut& out) {
-  // chosen sensor (Einstellungen > Warnungen): own climate sensor or a temp-node sensor by name
-  if (settings.outName.length()) {
-    {
-      Lock lock;
-      uint32_t now = millis();
-      for (size_t i = 0; i < devs.size(); i++) {
-        if (devs[i].kind != K_CLIMATE || devs[i].name != settings.outName || isnan(vals[i].temp)) continue;
-        out = {devs[i].name, vals[i].temp, vals[i].hum, !vals[i].at || now - vals[i].at > STALE_MS};
-        return true;
-      }
-    }
-    JsonDocument doc;
-    const String& list = store::get(DP_TEMP_LIST);
-    if (list.isEmpty() || deserializeJson(doc, list)) return false;
-    for (JsonObjectConst o : doc.as<JsonArrayConst>()) {
-      if (settings.outName != (o["name"] | "") || !o["t"].is<float>()) continue;
-      out = {settings.outName, o["t"].as<float>(), NAN, !store::devOnline(DEV_TEMP)};
+bool byName(const String& name, TempOut& out) {
+  {
+    Lock lock;
+    uint32_t now = millis();
+    for (size_t i = 0; i < devs.size(); i++) {
+      if (devs[i].kind != K_CLIMATE || devs[i].name != name || isnan(vals[i].temp)) continue;
+      out = {devs[i].name, vals[i].temp, vals[i].hum, !vals[i].at || now - vals[i].at > STALE_MS};
       return true;
     }
-    return false;
   }
+  JsonDocument doc;
+  const String& list = store::get(DP_TEMP_LIST);
+  if (list.isEmpty() || deserializeJson(doc, list)) return false;
+  for (JsonObjectConst o : doc.as<JsonArrayConst>()) {
+    if (name != (o["name"] | "") || !o["t"].is<float>()) continue;
+    out = {name, o["t"].as<float>(), NAN, !store::devOnline(DEV_TEMP)};
+    return true;
+  }
+  return false;
+}
+
+bool outdoor(TempOut& out) {
+  // chosen sensor (Einstellungen > Warnungen): own climate sensor or a temp-node sensor by name
+  if (settings.outName.length()) return byName(settings.outName, out);
   Lock lock;
   uint32_t now = millis();
   for (size_t i = 0; i < devs.size(); i++) {

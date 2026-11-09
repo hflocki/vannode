@@ -149,7 +149,8 @@ void buildSys(JsonObject s) {
   s["bri"] = settings.brightness;
   s["finder"] = mqttc::finderActive();
   s["awake"] = disp::isAwake();   // the web page shows a wake button while the screen is dark
-  s["warn"] = ui::warningText();  // the same warnings as on the display (incl. tile rules and weather)
+  s["warn"] = ui::warningText();
+  s["hfault"] = alerts::heaterFault();   // "Fehler 212: text" for the heater page  // the same warnings as on the display (incl. tile rules and weather)
   JsonArray ind = s["ind"].to<JsonArray>();   // icons of true automation rules (door open ...)
   for (auto& k : rules::activeIcons()) ind.add(k);
   for (auto& k : sensors::activeIcons()) ind.add(k);
@@ -332,6 +333,8 @@ void getSettings(AsyncWebServerRequest* r) {
   d["wnHystT"] = settings.wnHystT / 10.0f;
   d["poQuiet"] = settings.poQuiet;
   d["outName"] = settings.outName;
+  d["fgName"] = settings.fgName;
+  d["fgLimit"] = settings.fgLimit;
   d["awnSrc"] = settings.awnSrc;
   d["awnGust"] = settings.awnGust;
   d["dpOn"] = settings.dpOn;
@@ -488,6 +491,9 @@ bool applySettings(JsonObject o, bool apply) {
   if (o["poQuiet"].is<int>()) settings.poQuiet = constrain(o["poQuiet"].as<int>(), 0, 1440);
   str("outName", settings.outName, false);
   settings.outName.trim();
+  str("fgName", settings.fgName, false);
+  settings.fgName.trim();
+  if (o["fgLimit"].is<int>()) settings.fgLimit = constrain(o["fgLimit"].as<int>(), 1, 20);
   str("awnSrc", settings.awnSrc, false);
   settings.awnSrc.trim();
   if (o["awnGust"].is<int>()) settings.awnGust = constrain(o["awnGust"].as<int>(), 0, 150);

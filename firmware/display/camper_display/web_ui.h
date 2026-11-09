@@ -679,7 +679,7 @@ function warnings(){
   if(typeof S.warn==='string')return S.warn.split('\n').map(x=>x.trim()).filter(x=>x);
   const w=[];
   if(online('temp')&&V.temp_alarm)V.temp_alarm.split('; ').forEach(x=>w.push(x));
-  if(online('heat')&&V.heat_errflag==='ON')w.push('Heizung: Fehler '+(V.heat_err||'?'));
+  if(online('heat')&&V.heat_errflag==='ON')w.push('Heizung: '+(S.hfault||'Fehler '+(V.heat_err||'?')));
   if(WX.warn)WX.warn.split('\n').forEach(x=>w.push(x));
   if(online('bat'))bats().forEach(b=>{if(!b.ok)return;
     if(b.p)w.push(b.name+' BMS: '+(b.pt||'Fehler, bitte prüfen'));
@@ -873,7 +873,7 @@ function update(){
     if(pendingSet===null)set('h_set',fmt(V.heat_set,0,'°C'));
     document.querySelectorAll('#h_fan .btn').forEach(b=>b.classList.toggle('on',b.dataset.hv===V.heat_fan||(b.dataset.hv==='high'&&V.heat_fan==='boost')));
     document.querySelectorAll('#h_wm .btn').forEach(b=>b.classList.toggle('on',b.dataset.hv===V.heat_wmode||(b.dataset.hv==='high'&&V.heat_wmode==='boost')));
-    const err=V.heat_errflag==='ON';set('h_st',(err?`<span class="err">Fehler ${esc(V.heat_err)}</span><br>`:'')+`<span class="mu">${esc(HEAT_OP[V.heat_op]||V.heat_op||'')}</span>`);
+    const err=V.heat_errflag==='ON';set('h_st',(err?`<span class="err">${esc(S.hfault||('Fehler '+V.heat_err))}</span><br>`:'')+`<span class="mu">${esc(HEAT_OP[V.heat_op]||V.heat_op||'')}</span>`);
     const dc=V.heat_decoke==='ON';const de=$('#h_dec');de.textContent=dc?`Stop (${V.heat_drem||'?'} min)`:'Freibrennen';de.classList.toggle('on',dc);
   }
   if($('#f_st'))set('f_st',svg('fan')+' '+(online('fan')?'Online':'Offline')+(V.fan_hold==='ON'?' · Auto-Hold':''));
@@ -1028,6 +1028,9 @@ function pgSettings(){
    <div><label for="outName">Sensor für die Außentemperatur (Wetter-Seite, Frost)</label><select id="outName"></select></div>
    <label class="chk"><input type="checkbox" id="wnFrostOn"> Frostwarnung (Außensensor, sonst Wetter)</label>
    <div class="f2">${inp('wnFrost','Frost unter (°C)','number')}${inp('wnHystT','Hysterese Temperaturen (°C)','text','1,0')}</div>
+   <label style="margin-top:12px"><b>Frostwächter (Truma-Boiler)</b></label>
+   <div class="f2"><div><label for="fgName">Sensor am Frostwächter-Ventil</label><select id="fgName"></select></div>${inp('fgLimit','Warnung unter (°C)','number')}</div>
+   <p class="mu" style="margin-top:-4px">Das FrostControl-Ventil öffnet bei etwa 3 °C und lässt den Boiler leer laufen. Mit gewähltem Sensor kommt eine Warnung (Display und Pushover, Kategorie Frost), wenn es dort kälter als die Grenze wird, und ebenso, wenn der Sensor 2 Stunden keine Werte liefert. Ohne Sensor ist die Warnung aus.</p>
    <div class="f2">${inp('wxGustHyst','Hysterese Böen (km/h)','number')}${inp('poQuiet','Ruhezeit Pushover (min)','number')}</div>
    <p class="mu" style="margin-top:-4px">Ruhezeit: Kommt eine Warnung innerhalb dieser Zeit wieder, wird sie nicht noch einmal gesendet. Die Böen-Grenze selbst steht unter Wetter.</p>
    <label style="margin-top:12px"><b>Markise</b></label>
@@ -1093,7 +1096,7 @@ function showGroup(g,fromSec){setGroup=g;try{localStorage.setItem('setGroup',g)}
   const sb=$('.savebar');if(sb)sb.style.display=g==='rules'?'none':'';   // automations have their own save button
   if(g==='rules'){if(!rulesLoaded){rulesLoaded=true;loadRules()}else ruleState()}
   const sd=$('#snd');if(g==='dev'&&sd&&!sd.open){sd.open=true}}
-const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs'];
+const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs'];
 async function loadSettings(){
   rulesLoaded=false;
   try{
@@ -1237,14 +1240,17 @@ function fillOutAwn(){
   const names=[...new Set([...own,...ct])],cur=ST.outName||'';
   if(cur&&!names.includes(cur))names.push(cur);
   $('#outName').innerHTML=opt('','automatisch (erster Sensor mit Haken „Wetter“)',cur)+names.map(n=>opt(n,n+(ct.includes(n)&&!own.includes(n)?' (temp-node)':''),cur)).join('');
+  const fg=ST.fgName||'',fgn=[...new Set([...own,...ct])];
+  if(fg&&!fgn.includes(fg))fgn.push(fg);
+  $('#fgName').innerHTML=opt('','aus (kein Sensor gewählt)',fg)+fgn.map(n=>opt(n,n+(ct.includes(n)&&!own.includes(n)?' (temp-node)':''),fg)).join('');
   const con=sens().filter(x=>x.k===0).map(x=>x.n),ac=ST.awnSrc||'';
   if(ac&&!con.includes(ac))con.push(ac);
   $('#awnSrc').innerHTML=opt('','Schalter von Hand',ac)+con.map(n=>opt(n,'Kontakt: '+n,ac)).join('');
 }
 function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
-  ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
-  o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
+  ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
+  o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;

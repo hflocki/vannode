@@ -10,6 +10,7 @@ Ported from the former ESP32 firmware (firmware/emulator), same topics and forma
 """
 import json
 import math
+import re
 import random
 import threading
 import time
@@ -225,6 +226,7 @@ FIELDS = [
     *zb_contact(3, "OFF", "00158d0000000003", "Dachhaube", "OFF"),
     *zb_climate(1, "ON", "00158d0000000011", "Kühlschrank", "5.5", "60"),
     *zb_climate(2, "OFF", "00158d0000000012", "Außen", "8.0", "75"),
+    *zb_climate(3, "OFF", "00158d0000000013", "Frostwächter", "9.0", "70"),
     BOOL("l1_on", D_ZIGBEE, "LED-Leiste", 0, "Lampe vorhanden", "ON"),
     TXT("l1_ieee", D_ZIGBEE, "LED-Leiste", FL_SET | FL_TOPIC, "IEEE-Adresse", "a4c1380000000021"),
     BOOL("l1_state", D_ZIGBEE, "LED-Leiste", 0, "An", "OFF"),
@@ -261,6 +263,26 @@ HT_MODELS = {
     "combi_d_e": dict(fboost=False, vario=False, water=True,  wboost=False, elec=True,  diesel=True),
     "vario":     dict(fboost=True,  vario=True,  water=False, wboost=False, elec=False, diesel=False),
 }
+def _load_truma_errors():
+    """{family: {code: (kind, text)}} from firmware/_common/truma_errors.h (same table as the firmware).
+    Families like truma_err::family(): gas, diesel, vario; the catalogue is a fallback for gas only."""
+    src = Path(__file__).resolve().parents[2] / "firmware" / "_common" / "truma_errors.h"
+    try:
+        h = src.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    texts = re.findall(r'^  "(.*)",$', h.split("TEXTS[] = {", 1)[1].split("};", 1)[0], re.M)
+
+    def table(name):
+        body = h.split(f"{name}[] = {{", 1)[1].split("};", 1)[0]
+        return {int(c): ("" if k == "0" else k.strip("'"), texts[int(t)])
+                for c, k, t in re.findall(r"\{(\d+), ('[EW]'|0), (\d+)\}", body)}
+    gas = dict(table("CATALOGUE"))
+    gas.update(table("CP_GAS"))
+    return {"gas": gas, "diesel": table("CP_DIESEL"), "vario": table("CP_VARIO")}
+
+
+HT_ERRORS = _load_truma_errors()
 HT_PHASE_S = 45          # start-up / after-run ("start/cool down") after switching on or off
 HT_DECOKE_TEMP = 30      # DECOKE_TARGET_TEMP in the firmware
 
@@ -337,6 +359,10 @@ BUILTIN_SCEN = [
      "desc": "Heizung an; nach 20 s keine Verbindung zur CP Plus (LIN), nach 90 s wieder da",
      "start": {"alive": "ON", "hvac": "heat", "setp": 21, "ht_dyn": "ON"},
      "tracks": {"alive": [[0, "ON"], [20, "OFF"], [90, "ON"]]}},
+    {"id": "frostguard", "name": "Frostwächter",
+     "desc": "Zigbee-Klimasensor 3 (am Frostwächter-Ventil) kühlt in 2 Minuten von 9 auf 4 °C ab und wieder auf 9 °C",
+     "start": {"k3_on": "ON"},
+     "tracks": {"k3_t": [[0, 9], [120, 4], [180, 4], [240, 9]]}},
     {"id": "offline", "name": "Gerät offline",
      "desc": "das gewählte Gerät fällt nach 30 s aus (Last Will) und kommt nach 2 Minuten wieder",
      "modes": {"$dev": [[0, "on"], [30, "offline"], [150, "on"]]}},
@@ -985,6 +1011,10 @@ class Emu:
         emit(cs + "operating_status_text", txt)
         emit(cs + "error_code", str(err))
         emit(cs + "heater_error", "ON" if err else "OFF")
+        fam = "diesel" if model.startswith("combi_d") else "vario" if model == "vario" else "gas"
+        kind, text = HT_ERRORS.get(fam, {}).get(err, ("", ""))
+        emit(cs + "error_text", text)
+        emit(cs + "error_kind", kind)
         if heat:
             action = "heating" if heating else "idle"
         else:
@@ -1124,7 +1154,7 @@ class Emu:
                 b = f"{base}/{self.V(k + 'ieee')}/1/"
                 emit(b + "0006/0000", zb_val("1" if self.B(k + "open") else "0", False))
                 emit(b + "0001/0021", zb_val(self.P(k + "bat"), False))
-        for n in (1, 2):
+        for n in (1, 2, 3):
             k = f"k{n}_"
             if self.B(k + "on"):
                 b = f"{base}/{self.V(k + 'ieee')}/1/"

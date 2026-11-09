@@ -11,7 +11,7 @@
 // =====================================================================
 
 #define FW_NAME                 "display-node"
-#define FW_VERSION              "2.20.1"
+#define FW_VERSION              "2.21.0"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns

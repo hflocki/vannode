@@ -471,6 +471,12 @@ def selftest() -> int:
         if st.get("camper/heater/control_status/operating_status_text") not in ("off", "on", "start/cool down", "warning"):
             errors.append("heater: operating_status_text not like the firmware")
         emu.command(H + "heater_model", "combi_d")
+        emu.set_value("ht_err", "122")
+        st = dict(emu.build(2))
+        if not (st.get("camper/heater/control_status/error_text", "").startswith("Kraftstoffmangel") and
+                st.get("camper/heater/control_status/error_kind") == "E"):
+            errors.append("heater: Combi D error 122 text/kind wrong (firmware/_common/truma_errors.h)")
+        emu.set_value("ht_err", "0")
         if not any(t == "camper/display/cmd/awning" for t, _ in sent):
             errors.append("scenario depart: awning command not sent")
         # upload, rejected input, delete

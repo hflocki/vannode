@@ -618,8 +618,7 @@ String warnings(std::vector<uint8_t>* cats = nullptr) {
     a.replace("; ", "\n");
     add(a, WC_TEMP);
   }
-  if (store::devOnline(DEV_HEATER) && store::get(DP_HEAT_ERROR) == "ON")
-    add("Heizung: Fehler " + store::get(DP_HEAT_ERRCODE), WC_HEATER);
+  if (alerts::heaterFault().length()) add("Heizung: " + alerts::heaterFault(), WC_HEATER);
   // Batteries: the text before ':' identifies a warning for the push messages
   if (store::devOnline(DEV_BATTERY)) {
     for (auto& b : batItems()) {
@@ -2360,10 +2359,15 @@ void refreshValues() {
     String wm = store::get(DP_HEAT_WATERMODE);
     setMatrix(hWaterBm, wm == "off" ? 0 : wm == "eco" ? 1 : (wm == "high" || wm == "boost") ? 2 : -1);
 
+    // operating status of the heater-node is English (truma_protocol.h)
     String st = store::get(DP_HEAT_OPSTATUS);
-    lv_label_set_text(hStatus, st.c_str());
-    bool err = store::get(DP_HEAT_ERROR) == "ON";
-    if (err) lv_label_set_text_fmt(hStatus, "Fehler %s\n%s", store::get(DP_HEAT_ERRCODE).c_str(), st.c_str());
+    if (st == "off") st = "Aus";
+    else if (st == "on") st = "In Betrieb";
+    else if (st == "start/cool down") st = "Start / Nachlauf";
+    else if (st == "warning") st = "Warnung";
+    String fault = alerts::heaterFault();
+    bool err = fault.length() > 0;
+    lv_label_set_text(hStatus, err ? (fault + "\n" + st).c_str() : st.c_str());
     lv_obj_set_style_text_color(hStatus, err ? C_WARN : C_MUTED, 0);
 
     bool dec = store::get(DP_HEAT_DECOKE) == "ON";

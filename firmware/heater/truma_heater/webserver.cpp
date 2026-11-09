@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "heater_control.h"
+#include "truma_errors.h"
 #include "heater_model.h"
 #include "logger.h"
 #include "mqtt_ha.h"
@@ -98,6 +99,9 @@ static void render_state() {
     h["status"] = (uint8_t) s.heater.operating_status;
     h["status_text"] = operating_status_to_str(s.heater.operating_status);
     h["error"] = heater::error_code();
+    const truma_err::Info ei = truma_err::lookup(heater::error_code(), truma_err::family(heater::model().key));
+    if (ei.text) h["error_text"] = ei.text;
+    if (ei.kind) h["error_kind"] = String(ei.kind);
     h["on"] = heater::room_on();
     h["action"] = heater::hvac_action();
   }

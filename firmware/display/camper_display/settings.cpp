@@ -118,6 +118,8 @@ void load() {
   settings.wnHystT      = prefs.getUChar ("wnhyst", 10);
   settings.poQuiet      = prefs.getUShort("pquiet", 30);
   settings.outName      = prefs.getString("outnam", "");
+  settings.fgName       = prefs.getString("fgnam",  "");
+  settings.fgLimit      = prefs.getChar  ("fglim",  7);
   settings.awnSrc       = prefs.getString("awnsrc", "");
   settings.awnGust      = prefs.getUChar ("awngst", DEFAULT_AWNING_GUST);
   settings.awnOut       = prefs.getBool  ("awnout", false);
@@ -242,6 +244,8 @@ void save() {
   prefs.putUChar ("wnhyst", settings.wnHystT);
   prefs.putUShort("pquiet", settings.poQuiet);
   prefs.putString("outnam", settings.outName);
+  prefs.putString("fgnam",  settings.fgName);
+  prefs.putChar  ("fglim",  settings.fgLimit);
   prefs.putString("awnsrc", settings.awnSrc);
   prefs.putUChar ("awngst", settings.awnGust);
   prefs.putBool  ("awnout", settings.awnOut);

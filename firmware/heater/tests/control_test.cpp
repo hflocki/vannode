@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "mqtt_ha.h"
 #include "settings.h"
+#include "truma_errors.h"
 #include <cstdarg>
 #include <string>
 #include <vector>
@@ -211,6 +212,15 @@ int main() {
   box.state_.heater.error_code_high = 1; box.state_.heater.error_code_low = 12;
   heater::loop();
   check(heater::error_code() == 112, "error code high*100+low");
+
+  // --- fault texts (shared table firmware/_common/truma_errors.h)
+  using namespace truma_err;
+  check(lookup(517, GAS).text && lookup(517, GAS).kind == 'E' && lookup(255, DIESEL).kind == 'W', "fault 517 E, 255 W");
+  check(lookup(122, DIESEL).text && !strncmp(lookup(122, DIESEL).text, "Kraftstoffmangel", 16), "Combi D 122: fuel");
+  check(strcmp(lookup(121, GAS).text, lookup(121, DIESEL).text) != 0, "121 differs between gas and diesel");
+  check(lookup(855, GAS).text && !lookup(855, DIESEL).text, "catalogue fallback only for the gas Combi");
+  check(!lookup(0, GAS).text && !lookup(999, GAS).text, "no text for 0 and unknown codes");
+  check(family("combi_d_e") == DIESEL && family("vario") == VARIO && family("combi_e") == GAS, "heater families");
 
   printf("control_test: %d/%d passed\n", total - fails, total);
   return fails ? 1 : 0;

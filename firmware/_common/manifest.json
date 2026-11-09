@@ -1,6 +1,10 @@
 {
   "_comment": "Shared source files and the sketches that carry a copy. Edit the file here, then run tools/common/sync_common.py.",
   "files": {
+    "truma_errors.h": [
+      "firmware/display/camper_display",
+      "firmware/heater/truma_heater"
+    ],
     "wifi_manager.h": [
       "firmware/_template/camper_example",
       "firmware/temp/camper_temp",

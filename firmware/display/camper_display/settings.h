@@ -98,6 +98,10 @@ struct Settings {
   // outside temperature (weather page, frost): name of an own climate sensor or a temp-node sensor,
   // "" = the first own sensor marked for the weather page
   String   outName;
+  // Truma FrostControl: warning when the sensor at the drain valve gets cold (the valve opens at
+  // about 3 °C and empties the boiler). Empty sensor name = off.
+  String   fgName;              // own climate sensor or temp-node sensor by name
+  int8_t   fgLimit = 7;         // warn below this temperature in °C
   // awning: "" = switch on the display / web page / MQTT, otherwise the name of an own contact sensor (open = out)
   String   awnSrc;
   uint8_t  awnGust = 40;        // warn while the awning is out from these gusts in km/h, 0 = off

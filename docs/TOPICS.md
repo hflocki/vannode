@@ -66,7 +66,7 @@ Unterstruktur wie bei inetbox2mqtt. Vollständige Liste der Keys in der [README 
 
 | Topic | Inhalt |
 | --- | --- |
-| `…/control_status/<key>` | Zustand, z. B. `current_temp_room`, `target_temp_room`, `heating_mode`, `current_temp_water`, `water_mode`, `operating_status_text`, `error_code`, `heater_error`, `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode`, `timer`, `decoke` |
+| `…/control_status/<key>` | Zustand, z. B. `current_temp_room`, `target_temp_room`, `heating_mode`, `current_temp_water`, `water_mode`, `operating_status_text`, `error_code`, `error_text`, `error_kind`, `heater_error`, `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode`, `timer`, `decoke` |
 | `…/set/<key>` | Befehle, z. B. `target_temp_room`, `heating_mode`, `water_mode`, `hvac_mode`, `room_setpoint`, `fan_mode`, `timer`, `decoke`, `heater_model`, `sniffer`, `reboot` |
 | `…/log` | Logzeilen (nicht retained), Stufe in der Web-Oberfläche einstellbar |
 

@@ -4,6 +4,7 @@
 #include "sensors.h"
 #include "weather.h"
 #include "mqtt_client.h"
+#include "truma_errors.h"
 #include <map>
 #include <time.h>
 #include <freertos/FreeRTOS.h>
@@ -88,6 +89,22 @@ String warnings(std::vector<uint8_t>* cats) {
                  isnan(out) || out >= settings.wnFrost + settings.wnHystT / 10.0f))
     add("Frostgefahr: " + (isnan(out) ? String("--") : comma1(out)) + " \xC2\xB0" "C " + src, WC_FROST);
 
+  // Truma FrostControl: sensor at the drain valve below the limit (the valve opens at about 3 °C
+  // and drains the boiler). Off while no sensor is chosen. A silent sensor is reported as well,
+  // because the warning would be blind then.
+  // After a restart the sensor gets 2 h (its stale time) before it counts as silent.
+  float fg = NAN;
+  bool fgStale = false;
+  if (settings.fgName.length()) {
+    sensors::TempOut o;
+    if (sensors::byName(settings.fgName, o) && !o.stale) fg = o.temp;
+    else fgStale = millis() > 2UL * 60 * 60 * 1000;
+  }
+  if (below("fguard", fg, settings.fgLimit, settings.wnHystT / 10.0f))
+    add("Frostw\xC3\xA4" "chter: " + comma1(fg) + " \xC2\xB0" "C am Boiler \xE2\x80\x93 Ventil \xC3\xB6" "ffnet bald, Wasser l\xC3\xA4" "uft ab", WC_FROST);
+  if (latch("fguard_stale", fgStale, !fgStale))
+    add("Frostw\xC3\xA4" "chter: Sensor " + settings.fgName + " liefert keine Werte", WC_FROST);
+
   // awning out and gusts above its own (lower) limit
   float gust = NAN;
   if (settings.wxOn && settings.awnGust > 0 && awning() == 1) {
@@ -98,6 +115,19 @@ String warnings(std::vector<uint8_t>* cats) {
             isnan(gust) || gust < settings.awnGust - settings.wxGustHyst))
     add("Markise einfahren: B\xC3\xB6" "en bis " + (isnan(gust) ? String("--") : String((int)lroundf(gust))) + " km/h", WC_WEATHER);
   return w;
+}
+
+String heaterFault() {
+  if (!store::devOnline(DEV_HEATER) || store::get(DP_HEAT_ERROR) != "ON") return "";
+  int code = store::get(DP_HEAT_ERRCODE).toInt();
+  // the model of the heater-node decides the meaning (Combi D: 121 = dosing pump ...);
+  // older heater firmware sends no model: gas Combi
+  truma_err::Info e = truma_err::lookup(code, truma_err::family(store::get(DP_HEAT_MODEL).c_str()));
+  String s;
+  if (e.kind) s = String(e.kind) + " " + String(code) + " H";        // like the CP Plus: "E 122 H"
+  else s = String(store::get(DP_HEAT_OPSTATUS) == "warning" ? "Warnung " : "Fehler ") + String(code);
+  if (e.text) s += String(": ") + e.text;
+  return s;
 }
 
 bool awningIsSwitch() { return settings.awnSrc.isEmpty(); }

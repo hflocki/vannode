@@ -98,7 +98,9 @@ Basis-Topic standardmäßig `camper/heater` (in den Einstellungen änderbar; bis
 | `el_power_level` | 0 / 900 / 1800 | Elektroleistung |
 | `operating_status` | 0–9 | 0/1 aus, 4 Start/Nachlauf, ≥5 läuft |
 | `operating_status_text` | Text | |
-| `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe Anleitung der Heizung |
+| `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe `error_text` |
+| `error_text` | Text | Kurzer deutscher Text zum Fehlercode passend zum eingestellten Heizungsmodell (Gas-Combi, Combi D, VarioHeat; z. B. 122 = `Kraftstoffmangel (…)` bei der Combi D), leer = kein Fehler oder unbekannter Code. Tabelle: `truma_errors.h` (gemeinsam mit dem Display, Quelle `firmware/_common`) |
+| `error_kind` | `E` / `W` / leer | `E` = Fehler (muss am CP Plus quittiert werden), `W` = Warnung (verschwindet von selbst), leer = unbekannt |
 | `heater_error` | ON / OFF | Fehler oder Warnung aktiv (jeder Code ≠ 0) |
 | `clock` | hh:mm | Uhrzeit des CP Plus |
 | `vent_level` | 0–10 | Lüftungsstufe (0 = kein Lüften). Nur bei Heizungen, die den LIN-Frame 0x20 nutzen, sonst nicht gesendet |

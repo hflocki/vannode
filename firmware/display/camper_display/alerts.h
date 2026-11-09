@@ -21,6 +21,11 @@ bool above(const String& key, float value, float limit, float hyst);
 // warning kind (WarnCat) of each line
 String warnings(std::vector<uint8_t>* cats = nullptr);
 
+// Heater fault as text like the CP Plus: "E 122 H: Kraftstoffmangel (...)", "" = none or heater
+// offline. Codes without a known kind: "Fehler 212: ..." ("Warnung" while the heater reports
+// operating status "warning").
+String heaterFault();
+
 // Awning: a switch on the display / web page / MQTT, or an own contact sensor (settings.awnSrc)
 bool   awningIsSwitch();      // true = switch, false = contact sensor
 int8_t awning();              // -1 unknown, 0 in, 1 out

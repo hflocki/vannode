@@ -14,6 +14,7 @@
 #include "settings.h"
 #include "wifi_manager.h"
 #include "safeguard.h"
+#include "truma_errors.h"
 
 using namespace truma;
 
@@ -100,6 +101,11 @@ static void publish_state() {
     pub("error_code", String(heater::error_code()));
     // Either byte marks an error or warning: E212 arrives as low 0xD4 / high 0x00, W255 as low 0xFF.
     pub("heater_error", heater::error_code() != 0 ? "ON" : "OFF");
+    // German short text and E (error) / W (warning) for the code on this heater family
+    // ("" = no fault or unknown code), see truma_errors.h
+    const truma_err::Info ei = truma_err::lookup(heater::error_code(), truma_err::family(heater::model().key));
+    pub("error_text", ei.text ? ei.text : "");
+    pub("error_kind", ei.kind ? String(ei.kind) : String(""));
     pub("hvac_mode", heater::room_on() ? "heat" : "off");
     pub("hvac_action", heater::hvac_action());
   }
@@ -342,6 +348,7 @@ static void publish_discovery() {
   disc_sensor("operating_status", "Operating status", "operating_status", nullptr, nullptr, true, AVAIL_HEATER,
               "mdi:state-machine");
   disc_sensor("error_code", "Error code", "error_code", nullptr, nullptr, true, AVAIL_HEATER, "mdi:alert-decagram");
+  disc_sensor("error_text", "Error text", "error_text", nullptr, nullptr, true, AVAIL_HEATER, "mdi:alert-decagram");
   // Only filled on heaters that use LIN frame 0x20 (stays unknown otherwise).
   disc_sensor("vent_level", "Ventilation level", "vent_level", nullptr, nullptr, false, AVAIL_HEATER, "mdi:fan");
   // The timer used to be a read-only sensor: remove that old entity.

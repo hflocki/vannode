@@ -45,6 +45,7 @@ const DpDef DEFS[DP_COUNT] = {
   {"heat_errflag",DEV_HEATER, "control_status/heater_error"},
   {"heat_decoke", DEV_HEATER, "control_status/decoke"},
   {"heat_drem",   DEV_HEATER, "control_status/decoke_remaining"},
+  {"heat_model",  DEV_HEATER, "control_status/heater_model"},   // fault code meaning per family
 
   {"fan_status",  DEV_FAN, "status"},
   {"fan_hold",    DEV_FAN, "p#/auto_hold"},

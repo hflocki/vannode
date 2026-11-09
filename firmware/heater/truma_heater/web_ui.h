@@ -455,7 +455,7 @@ function render(){
   setTxt('decoke-text',d.active?('Läuft noch '+Math.ceil(d.remaining/60)+' min.'):'Maximale Temperatur mit Lüfter High, danach werden die vorherigen Einstellungen wiederhergestellt.');
   if(document.activeElement!==$('decoke-min'))$('decoke-min').value=d.minutes;
   setTxt('opstat',h.valid?h.status+' ('+h.status_text+')':'--');
-  setTxt('err',h.valid?(h.error?h.error:'keiner'):'--');
+  setTxt('err',h.valid?(h.error?(h.error_kind?h.error_kind+' '+h.error+' H':h.error)+(h.error_text?' – '+h.error_text:''):'keiner'):'--');
   setTxt('timer',s.timer??'--');setTxt('clock',s.cpplus_clock??'--');
   const tc=s.timer_cfg;
   setTxt('timer-text',tc?(tc.active?'Aktiv '+tc.start+'–'+tc.stop+', '+tc.temp+' °C, Lüfter '+tc.fan:'Aus (gespeichert '+tc.start+'–'+tc.stop+')'):'Noch kein Timer-Status vom CP Plus.');

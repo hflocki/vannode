@@ -3,6 +3,8 @@
 #   1. protocol_test: synthetic CP Plus session (identify, assign NAD, init, status, command)
 #   2. replay:        real CP Plus / Combi D6 E captures (WomoLIN project) fed through our parser,
 #                     our answers compared with the original iNet Box answers
+#   3. control_test:  heater_control (MQTT / web commands -> InetBox commands, models, timer, decoking)
+# Exits with an error on the first failed check (also used by the CI).
 set -euo pipefail
 cd "$(dirname "$0")"
 SRC=../truma_heater
@@ -11,6 +13,9 @@ mkdir -p "$OUT"
 CXX=${CXX:-g++}
 $CXX -std=gnu++17 -Wall -I stub -I "$SRC" -o "$OUT/protocol_test" protocol_test.cpp "$SRC/inetbox.cpp"
 $CXX -std=gnu++17 -Wall -I stub -I "$SRC" -o "$OUT/replay" replay.cpp "$SRC/inetbox.cpp"
+$CXX -std=gnu++17 -Wall -I stub_ctl -I stub -I "$SRC" -o "$OUT/control_test" control_test.cpp \
+  "$SRC/heater_control.cpp" "$SRC/inetbox.cpp"
+fail() { echo "FAILED: $*"; exit 1; }
 
 for f in captures/*.log; do
   python3 log2replay.py "$f" "$OUT/$(basename "$f" .log).txt" > /dev/null
@@ -21,7 +26,9 @@ for f in captures/community/*.log; do
 done
 
 echo "== protocol_test"
-"$OUT/protocol_test" | tail -2
+r=$("$OUT/protocol_test")
+echo "$r" | tail -2
+echo "$r" | grep -q "ALL TESTS PASSED" || fail "protocol_test"
 
 echo "== replay: init with Combi 6"
 "$OUT/replay" "$OUT/cp_plus-init-combi_6.txt" | tail -3
@@ -33,12 +40,14 @@ echo "== replay: all captures (parser, checksums)"
 for f in "$OUT"/*.txt; do
   r=$("$OUT/replay" "$f" | grep -oE "frames=[0-9]+ crc_err=[0-9]+")
   printf "  %-36s %s\n" "$(basename "$f" .txt)" "$r"
+  [[ "$r" == *"crc_err=0" ]] || fail "checksum errors in $(basename "$f")"
 done
 
 echo "== replay: community captures (ESPHome observer logs, iNet Box at NAD 0x03)"
 for f in "$OUT"/community/*.txt; do
   r=$("$OUT/replay" nad:03 "$f" | grep -oE "frames=[0-9]+ crc_err=[0-9]+")
   printf "  %-36s %s\n" "$(basename "$f" .txt)" "$r"
+  [[ "$r" == *"crc_err=0" ]] || fail "checksum errors in $(basename "$f")"
 done
 
 echo "== commands from the Truma app: our heater update vs. original iNet Box (payload only)"
@@ -52,6 +61,7 @@ for f in "$OUT"/truma_app-set_heating_to_*.txt "$OUT"/truma_app-set_fan_*.txt "$
   esac
   n=$("$OUT/replay" "$OUT/cp_plus-combi_6d_e-inet_box.txt" "$c" "$f" | grep -cE "^DIFF pid 3D real: 03 2[3-9]" || true)
   printf "  %-36s %-10s %s\n" "$b" "$c" "$([ "$n" = 0 ] && echo identical || echo "$n payload diffs")"
+  [ "$n" = 0 ] || fail "$b differs from the original iNet Box"
 done
 
 echo "== timer from the Truma app: our timer update vs. original iNet Box (payload)"
@@ -83,3 +93,6 @@ r=$("$OUT/replay" "$OUT/vent.txt" | grep "^vent:")
 echo "  $r"
 [ "$r" = "vent: raw 0x3 (3)" ] || exit 1
 
+echo "== control_test (heater_control: commands, models, timer, decoking)"
+"$OUT/control_test" || fail "control_test"
+echo "ALL HEATER TESTS PASSED"

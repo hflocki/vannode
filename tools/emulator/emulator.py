@@ -442,6 +442,35 @@ def selftest() -> int:
         for k, want in checks:
             if emu.V(k) != want:
                 errors.append(f"command: {k} = {emu.V(k)!r}, expected {want!r}")
+        # heater: model rules, timer, decoking (same rules as the firmware)
+        H = "camper/heater/set/"
+        emu.command(H + "heater_model", "combi_d")
+        emu.command(H + "fan_mode", "high")
+        emu.command(H + "fan_mode", "boost")              # Combi D: no boost
+        emu.command(H + "water_mode", "boost")            # Combi D: boost becomes high
+        emu.command(H + "timer", "21:30-06:00,19,high,eco")
+        emu.command(H + "energy_mix", "mix")              # Combi D: no 230 V
+        hchecks = [("fan", "high"), ("wmode", "high"), ("tm_on", "ON"), ("tm_times", "21:30-06:00"),
+                   ("tm_temp", "19.0"), ("tm_fan", "high"), ("tm_water", "eco"), ("energy", "gas")]
+        emu.command(H + "target_temp_room", "20")
+        emu.command(H + "decoke", "ON")
+        hchecks += [("decoke", "ON"), ("fan", "high"), ("hvac", "heat")]
+        for k, want in hchecks:
+            if emu.V(k) != want:
+                errors.append(f"heater: {k} = {emu.V(k)!r}, expected {want!r}")
+        st = dict(emu.build(2))
+        if st.get("camper/heater/control_status/target_temp_room") != "30.0":
+            errors.append("heater: decoking does not heat to 30 C")
+        emu.command(H + "decoke", "OFF")
+        if emu.V("decoke") != "OFF" or emu.V("setp") != "20.0":
+            errors.append(f"heater: decoking not restored (setp {emu.V('setp')})")
+        emu.command(H + "heater_model", "vario")
+        if emu.V("fan") != "auto":
+            errors.append(f"heater: VarioHeat fan {emu.V('fan')!r}, expected 'auto'")
+        st = dict(emu.build(2))
+        if st.get("camper/heater/control_status/operating_status_text") not in ("off", "on", "start/cool down", "warning"):
+            errors.append("heater: operating_status_text not like the firmware")
+        emu.command(H + "heater_model", "combi_d")
         if not any(t == "camper/display/cmd/awning" for t, _ in sent):
             errors.append("scenario depart: awning command not sent")
         # upload, rejected input, delete

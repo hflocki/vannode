@@ -40,6 +40,7 @@ jobs:
       - run: python3 firmware/heater/tools/embed_web.py --check
       - run: python3 tools/emulator/emulator.py --selftest
       - run: bash firmware/ble/tests/run.sh
+      - run: bash firmware/heater/tests/run.sh
 
   build:
     needs: common
@@ -127,22 +128,33 @@ jobs:
       - uses: arduino/setup-arduino-cli@v2
         if: steps.sel.outputs.skip != '1'
 
+      # Board package (toolchains ~1 GB) from the cache: the download from Espressif sometimes times out
+      - uses: actions/cache@v4
+        if: steps.sel.outputs.skip != '1'
+        with:
+          path: |
+            ~/.arduino15/packages
+            ~/.arduino15/staging
+          key: arduino-${{ matrix.target == 'esp8266' && env.ESP8266_CORE || env.ESP32_CORE }}-v1
+
       - name: Install board package and libraries
         if: steps.sel.outputs.skip != '1'
         run: |
+          # Downloads fail now and then (timeouts): up to 3 attempts, 30 s apart
+          retry() { for i in 1 2 3; do "$@" && return 0; echo "::warning::attempt $i failed: $*"; sleep 30; done; return 1; }
           arduino-cli config init
           if [[ "${{ matrix.target }}" == esp8266 ]]; then
             arduino-cli config add board_manager.additional_urls "$ESP8266_URL"
-            arduino-cli core update-index
-            arduino-cli core install "$ESP8266_CORE"
+            retry arduino-cli core update-index
+            retry arduino-cli core install "$ESP8266_CORE"
           else
             arduino-cli config add board_manager.additional_urls "$ESP32_URL"
-            arduino-cli core update-index
-            arduino-cli core install "$ESP32_CORE"
+            retry arduino-cli core update-index
+            retry arduino-cli core install "$ESP32_CORE"
           fi
           arduino-cli config set library.enable_unsafe_install true
           for url in $COMMON_LIBS ${{ matrix.libs }}; do
-            arduino-cli lib install --git-url "$url"
+            retry arduino-cli lib install --git-url "$url"
           done
           # LVGL reads its configuration from next to the lvgl library folder
           if [[ "${{ matrix.device }}" == display ]]; then

@@ -6,10 +6,13 @@ Host-side tests for the LIN / iNet Box protocol code. They run on the Mac or Lin
 ./tests/run.sh
 ```
 
+The script stops with an error at the first failed check; the CI runs it on every push.
+
 | Test | What it does |
 |---|---|
 | `protocol_test.cpp` | Synthetic CP Plus session: read-by-identifier, NAD assignment, init request, device + heater status frames, room/fan command, checksums |
 | `replay.cpp` | Feeds real LIN analyzer captures into `InetBox` byte by byte. Master frames are replayed, for every slave slot (0x18, 0x3D) our answer is compared with the answer of the original Truma iNet Box |
+| `control_test.cpp` | `heater_control.cpp` without LIN: commands from MQTT / web (room on/off, setpoint, fan modes, hot water, energy source, timer, decoking) for every heater model, read back from the InetBox command queue. Uses `stub_ctl/Arduino.h` with a working `String` |
 
 `replay` accepts several capture files and commands in between, e.g. `cmd:22,A` = room 22 °C, fan HIGH (`HeatingMode` value in hex).
 

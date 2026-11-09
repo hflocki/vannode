@@ -873,7 +873,7 @@ function update(){
     if(pendingSet===null)set('h_set',fmt(V.heat_set,0,'°C'));
     document.querySelectorAll('#h_fan .btn').forEach(b=>b.classList.toggle('on',b.dataset.hv===V.heat_fan||(b.dataset.hv==='high'&&V.heat_fan==='boost')));
     document.querySelectorAll('#h_wm .btn').forEach(b=>b.classList.toggle('on',b.dataset.hv===V.heat_wmode||(b.dataset.hv==='high'&&V.heat_wmode==='boost')));
-    const err=V.heat_errflag==='ON';set('h_st',(err?`<span class="err">Fehler ${esc(V.heat_err)}</span><br>`:'')+`<span class="mu">${esc(V.heat_op||'')}</span>`);
+    const err=V.heat_errflag==='ON';set('h_st',(err?`<span class="err">Fehler ${esc(V.heat_err)}</span><br>`:'')+`<span class="mu">${esc(HEAT_OP[V.heat_op]||V.heat_op||'')}</span>`);
     const dc=V.heat_decoke==='ON';const de=$('#h_dec');de.textContent=dc?`Stop (${V.heat_drem||'?'} min)`:'Freibrennen';de.classList.toggle('on',dc);
   }
   if($('#f_st'))set('f_st',svg('fan')+' '+(online('fan')?'Online':'Offline')+(V.fan_hold==='ON'?' · Auto-Hold':''));
@@ -1083,6 +1083,8 @@ function showSec(id){
 }
 function setDirty(on){const d=$('#dirty');if(!d)return;d.classList.toggle('on',on);$('#dirty_t').textContent=on?'Änderungen nicht gespeichert':'Alles gespeichert'}
 // settings groups: [id, label]; the chosen one is remembered in the browser
+// operating_status_text of the heater-node (English, as in truma_protocol.h)
+const HEAT_OP={'off':'Aus','on':'In Betrieb','start/cool down':'Start / Nachlauf','warning':'Warnung'};
 const SET_GROUPS=[['view','Anzeige'],['dev','Sensoren & Geräte'],['rules','Automationen'],['net','Verbindung'],['svc','Dienste'],['sys','System'],['about','Info']];
 let rulesLoaded=false;   // the automations tab loads its rules on first show (own save button)
 let setGroup=(()=>{try{return localStorage.getItem('setGroup')||'view'}catch(e){return'view'}})();

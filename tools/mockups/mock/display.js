@@ -74,7 +74,7 @@ const M = {
       lvl_rl: Math.max(0, pitch * 3 - roll * 1.4).toFixed(1), lvl_rr: Math.max(0, pitch * 3 + roll * 1.4).toFixed(1),
       heat_status: 'online', heat_alive: 'ON', heat_room: H.room.toFixed(1), heat_set: String(H.set), heat_hvac: H.hvac,
       heat_action: H.hvac === 'heat' && H.room < H.set ? 'heating' : 'idle', heat_fan: H.fan, heat_wmode: H.wmode,
-      heat_water: H.wmode === 'off' ? '18' : '42', heat_op: H.hvac === 'heat' ? 'Heizen' : 'Aus', heat_err: '0', heat_errflag: 'OFF',
+      heat_water: H.wmode === 'off' ? '18' : '42', heat_op: H.hvac === 'heat' ? 'on' : 'off', heat_err: '0', heat_errflag: 'OFF',
       heat_decoke: H.decoke ? 'ON' : 'OFF', heat_drem: String(Math.ceil(H.drem)),
       fan_status: 'online', fan_hold: 'OFF', fan_led: 'ON',
       tb_status: 'online', heki_cover: 'open', heki_pos: '40', heki_rep: '40', heki_conn: 'ON',

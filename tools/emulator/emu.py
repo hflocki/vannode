@@ -150,13 +150,24 @@ FIELDS = [
     ENUM("hvac", D_HEATER, "Raum", 0, "Raumheizung", "heat", "heat=An,off=Aus"),
     NUM("room", D_HEATER, "Raum", 0, "Raumtemperatur", "°C", -10, 40, 0.1, 1, 0.1, "19.5"),
     NUM("setp", D_HEATER, "Raum", 0, "Solltemperatur", "°C", 5, 30, 0.5, 1, 0, "21"),
-    ENUM("fan", D_HEATER, "Raum", 0, "Lüfterstufe", "eco", "eco,high,boost"),
+    ENUM("fan", D_HEATER, "Raum", 0, "Lüfterstufe", "eco", "eco,high,boost,night,auto"),
     BOOL("ht_dyn", D_HEATER, "Raum", FL_SET, "Raumtemperatur folgt der Heizung", "ON"),
     ENUM("wmode", D_HEATER, "Warmwasser", 0, "Warmwasser", "off", "off=Aus,eco=Eco 40 °C,high=Hot 60 °C,boost=Boost"),
     NUM("water", D_HEATER, "Warmwasser", 0, "Wassertemperatur", "°C", 0, 80, 1, 1, 0, "38"),
     NUM("ht_err", D_HEATER, "Diagnose", 0, "Fehlercode (0 = keiner)", "", 0, 999, 1, 0, 0, "0"),
     BOOL("decoke", D_HEATER, "Diagnose", FL_ADV, "Freibrennen", "OFF"),
-    NUM("decoke_rem", D_HEATER, "Diagnose", FL_ADV, "Freibrennen Rest", "min", 0, 120, 1, 0, 0, "0"),
+    NUM("decoke_rem", D_HEATER, "Diagnose", FL_ADV, "Freibrennen Rest", "min", 0, 240, 1, 0, 0, "0"),
+    NUM("decoke_min", D_HEATER, "Diagnose", FL_SET | FL_ADV, "Freibrennen Dauer", "min", 1, 240, 1, 0, 0, "30"),
+    ENUM("ht_model", D_HEATER, "Gerät", FL_SET, "Heizungsmodell", "combi_d",
+         "combi=Combi 4/6 (Gas),combi_e=Combi 4/6 E (Gas + 230 V),combi_d=Combi D (Diesel),"
+         "combi_d_e=Combi D 6 E (Diesel + 230 V),vario=VarioHeat"),
+    ENUM("energy", D_HEATER, "Energie", FL_ADV, "Energiequelle (nur E-Modelle)", "gas", "gas=Gas/Diesel,mix=Mix,electricity=Strom"),
+    ENUM("el_level", D_HEATER, "Energie", FL_ADV, "Elektro-Leistung", "0", "0=0 W,900=900 W,1800=1800 W"),
+    BOOL("tm_on", D_HEATER, "Timer", FL_ADV, "Timer aktiv", "OFF"),
+    TXT("tm_times", D_HEATER, "Timer", FL_ADV, "Timer-Zeiten (HH:MM-HH:MM)", "22:00-06:30"),
+    NUM("tm_temp", D_HEATER, "Timer", FL_ADV, "Timer Raumtemperatur", "°C", 5, 30, 0.5, 1, 0, "20"),
+    ENUM("tm_fan", D_HEATER, "Timer", FL_ADV, "Timer Lüfterstufe", "eco", "eco,high,boost,night,auto"),
+    ENUM("tm_water", D_HEATER, "Timer", FL_ADV, "Timer Warmwasser", "off", "off=Aus,eco=Eco,high=Hot,boost=Boost"),
 
     # ---- roof fan (maxxfan-node) ----
     TXT("mf_pre", D_FAN, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/maxxfan"),
@@ -241,6 +252,51 @@ FIDX = {f["key"]: i for i, f in enumerate(FIELDS)}
 # on repeats. "$dev" is the device picked in the web page; "@<field>" takes the topic from
 # that field. Topic fields (base topics, IEEE addresses) cannot be changed by a scenario.
 
+# Truma heater models like firmware/heater/truma_heater/heater_model.h:
+# fan boost, VarioHeat fan modes, boiler, water boost, 230 V element, diesel (decoking)
+HT_MODELS = {
+    "combi":     dict(fboost=True,  vario=False, water=True,  wboost=True,  elec=False, diesel=False),
+    "combi_e":   dict(fboost=True,  vario=False, water=True,  wboost=True,  elec=True,  diesel=False),
+    "combi_d":   dict(fboost=False, vario=False, water=True,  wboost=False, elec=False, diesel=True),
+    "combi_d_e": dict(fboost=False, vario=False, water=True,  wboost=False, elec=True,  diesel=True),
+    "vario":     dict(fboost=True,  vario=True,  water=False, wboost=False, elec=False, diesel=False),
+}
+HT_PHASE_S = 45          # start-up / after-run ("start/cool down") after switching on or off
+HT_DECOKE_TEMP = 30      # DECOKE_TARGET_TEMP in the firmware
+
+
+def ht_fan_ok(model, fan):
+    m = HT_MODELS[model]
+    if fan in ("night", "auto"):
+        return m["vario"]
+    if fan in ("eco", "high"):
+        return not m["vario"]
+    return fan == "boost" and m["fboost"]
+
+
+def ht_hhmm(v):
+    """'HH:MM' -> minutes of day, None if invalid."""
+    try:
+        h, m = v.strip().split(":")
+        h, m = int(h), int(m)
+    except ValueError:
+        return None
+    return h * 60 + m if 0 <= h <= 23 and 0 <= m <= 59 else None
+
+
+def ht_water(model, v):
+    """Water mode or °C -> off/eco/high/boost for the model, None if invalid."""
+    v = v.strip().lower()
+    if v not in ("off", "eco", "high", "boost"):
+        x = to_float(v)
+        if math.isnan(x):
+            return None
+        v = "boost" if x >= 80 else "high" if x >= 60 else "eco" if x >= 40 else "off"
+    if v == "boost" and not HT_MODELS[model]["wboost"]:
+        v = "high"
+    return v
+
+
 BUILTIN_SCEN = [
     {"id": "empty", "name": "Tanks leer", "desc": "Frischwasser 30 → 5 %, Gas 25 → 8 % in 3 Minuten",
      "tracks": {"w_pct": [[0, 30], [180, 5]], "gas_pct": [[0, 25], [180, 8]]}},
@@ -273,6 +329,14 @@ BUILTIN_SCEN = [
      "tracks": {"pitch": [[0, 3], [90, 0.2]], "roll": [[0, -2.2], [90, -0.3]]}},
     {"id": "heat", "name": "Aufheizen", "desc": "Heizung an auf 22 °C bei 12 °C Raumtemperatur, Warmwasser Eco",
      "start": {"alive": "ON", "hvac": "heat", "setp": 22, "room": 12, "wmode": "eco", "water": 15, "ht_dyn": "ON"}},
+    {"id": "heat_error", "name": "Heizung Fehler",
+     "desc": "Heizung läuft; nach 30 s Fehler 212, nach 2 Minuten wieder in Ordnung",
+     "start": {"alive": "ON", "hvac": "heat", "setp": 21, "room": 17, "ht_dyn": "ON", "ht_err": 0},
+     "tracks": {"ht_err": [[0, 0], [30, 212], [120, 0]]}},
+    {"id": "cpplus_lost", "name": "CP Plus weg",
+     "desc": "Heizung an; nach 20 s keine Verbindung zur CP Plus (LIN), nach 90 s wieder da",
+     "start": {"alive": "ON", "hvac": "heat", "setp": 21, "ht_dyn": "ON"},
+     "tracks": {"alive": [[0, "ON"], [20, "OFF"], [90, "ON"]]}},
     {"id": "offline", "name": "Gerät offline",
      "desc": "das gewählte Gerät fällt nach 30 s aus (Last Will) und kommt nach 2 Minuten wieder",
      "modes": {"$dev": [[0, "on"], [30, "offline"], [150, "on"]]}},
@@ -554,6 +618,10 @@ class Emu:
         self.save_at = 0.0
         self.last_noise = 0.0
         self.heki_last = math.nan
+        self.ht_last = None                # (hvac, water mode) seen last, for start-up / after-run
+        self.ht_phase_until = 0.0
+        self.ht_decoke_end = 0.0
+        self.ht_decoke_prev = None         # (hvac, setpoint, fan) restored after decoking
         self.sender = None                 # fn(topic, payload): not retained one-shot messages
         self.log = deque(maxlen=16)        # received commands
         self.scen_list = []
@@ -742,10 +810,26 @@ class Emu:
             self.stop_scenario(not r["keep"])
 
     def _heater_dynamics(self):
+        now = time.monotonic()
+        state = (self.V("hvac"), self.V("wmode"))
+        if self.ht_last is not None and state != self.ht_last:
+            self.ht_phase_until = now + HT_PHASE_S      # burner starts or runs after
+        self.ht_last = state
+        if self.B("decoke"):
+            if not self.ht_decoke_end:                   # switched on in the web page of the emulator
+                self.ht_decoke_end = now + self.N("decoke_min") * 60
+            rem = max(0.0, self.ht_decoke_end - now)
+            self.set_num("decoke_rem", math.ceil(rem / 60), False)
+            if rem <= 0:
+                self._decoke(False, True)
+        elif self.ht_decoke_end:
+            self._decoke(False, False)
         if not self.B("ht_dyn") or not self.B("alive"):
             return
         room, setp, water = self.N("room"), self.N("setp"), self.N("water")
         heat = self.V("hvac") == "heat"
+        if self.B("decoke"):
+            setp = HT_DECOKE_TEMP
         target = setp if heat else 12.0            # without heating it cools to 12 °C
         rate = (0.03 if self.V("fan") == "eco" else 0.06) if heat else 0.01
         if not math.isnan(room) and abs(room - target) > 0.05:
@@ -754,6 +838,28 @@ class Emu:
         wt = {"eco": 40, "high": 60, "boost": 62}.get(wm, 15)
         if not math.isnan(water) and abs(water - wt) > 0.5:
             self.set_num("water", water + (0.25 if wt > water else -0.05), False)
+
+    def _decoke(self, on, restore):
+        """Decoking like the firmware: 30 °C + HIGH for decoke_min minutes, then restore."""
+        if on:
+            if self.B("decoke"):
+                return
+            self.ht_decoke_prev = (self.V("hvac"), self.N("setp"), self.V("fan"))
+            self.set_bool("decoke", True, False)
+            self.set_str("hvac", "heat", False)
+            self.set_str("fan", "high", False)
+            self.ht_decoke_end = time.monotonic() + self.N("decoke_min") * 60
+            self.set_num("decoke_rem", self.N("decoke_min"), False)
+            return
+        self.set_bool("decoke", False, False)
+        self.set_num("decoke_rem", 0, False)
+        self.ht_decoke_end = 0.0
+        if restore and self.ht_decoke_prev:
+            hv, sp, fan = self.ht_decoke_prev
+            self.set_str("hvac", hv, False)
+            self.set_num("setp", sp, False)
+            self.set_str("fan", fan, False)
+        self.ht_decoke_prev = None
 
     def _heki_dynamics(self):
         """Roof hatch moves towards the target like the real one; a typed position becomes the target."""
@@ -827,35 +933,74 @@ class Emu:
             emit(f"{p}/wedge_{name}", fmt((top - x) * 100, 1))
 
     def _b_heater(self, p, emit):
+        # Same keys and value formats as firmware/heater/truma_heater/mqtt_ha.cpp
         cs = p + "/control_status/"
+        model = self.V("ht_model") if self.V("ht_model") in HT_MODELS else "combi_d"
+        mi = HT_MODELS[model]
         alive = self.B("alive")
         emit(cs + "alive", "ON" if alive else "OFF")
+        emit(cs + "lin_traffic", "ON" if alive else "OFF")
+        decoke = self.B("decoke")
         heat = self.V("hvac") == "heat"
         room, setp, water = self.NN("room"), self.N("setp"), self.N("water")
-        wm, fan = self.V("wmode"), self.V("fan")
-        heating = heat and room < setp - 0.2
-        water_heating = wm != "off" and water < (40 if wm == "eco" else 60) - 1
-        emit(cs + "current_temp_room", fmt(room, 1))
+        wm = self.V("wmode") if mi["water"] else "off"
+        fan = self.V("fan")
+        if not ht_fan_ok(model, fan):
+            fan = "auto" if mi["vario"] else "eco"
+        target = HT_DECOKE_TEMP if decoke else setp
+        heating = heat and room < target - 0.2
+        emit(cs + "decoke", "ON" if decoke else "OFF")
+        emit(cs + "decoke_minutes", fmt(self.N("decoke_min"), 0))
+        emit(cs + "decoke_remaining", self.P("decoke_rem"))
         emit(cs + "room_setpoint", fmt(setp, 1))
-        emit(cs + "target_temp_room", fmt(setp, 0) if heat else "0")
-        emit(cs + "hvac_mode", "heat" if heat else "off")
-        emit(cs + "hvac_action", "off" if not heat and wm == "off" else "heating" if heating or water_heating else "idle")
         emit(cs + "fan_mode", fan)
-        emit(cs + "heating_mode", ("eco" if fan == "eco" else "high") if heat else "off")
-        emit(cs + "water_mode", "high" if wm == "boost" else wm)
-        emit(cs + "target_temp_water", {"eco": "40", "high": "60", "boost": "200"}.get(wm, "0"))
+        emit(cs + "heater_model", model)
+        if not alive:
+            return                                 # no status frames from the CP Plus
+        emit(cs + "current_temp_room", fmt(room, 1))
+        emit(cs + "target_temp_room", fmt(target, 1) if heat else "0.0")
+        emit(cs + "hvac_mode", "heat" if heat else "off")
+        emit(cs + "heating_mode", fan if heat else "off")
+        emit(cs + "water_mode", wm)
+        emit(cs + "target_temp_water", {"eco": "40.0", "high": "60.0", "boost": "200.0"}.get(wm, "0.0"))
         emit(cs + "current_temp_water", fmt(water, 1))
-        on = alive and (heat or wm != "off")
-        emit(cs + "operating_status", "5" if on else "0")
-        emit(cs + "operating_status_text", "Keine Verbindung" if not alive else "Aus" if not on
-             else "Heizen" if heating or water_heating else "Bereit")
+        energy = self.V("energy") if mi["elec"] else "gas"
+        level = self.V("el_level") if energy != "gas" else "0"
+        emit(cs + "energy_mix", energy)
+        emit(cs + "el_power_level", level)
+        if mi["elec"]:
+            emit(cs + "energy_select", "gas" if energy == "gas" else f"{energy}_{level}")
+        on = heat or wm != "off"
         err = int(self.N("ht_err"))
+        phase = time.monotonic() < self.ht_phase_until
+        if err:
+            st, txt = 1, "warning"
+        elif phase:
+            st, txt = 4, "start/cool down"           # also the after-run when switched off
+        elif on:
+            st, txt = 5, "on"
+        else:
+            st, txt = 0, "off"
+        emit(cs + "operating_status", str(st))
+        emit(cs + "operating_status_text", txt)
         emit(cs + "error_code", str(err))
         emit(cs + "heater_error", "ON" if err else "OFF")
-        emit(cs + "decoke", self.V("decoke"))
-        emit(cs + "decoke_remaining", self.P("decoke_rem"))
-        emit(cs + "energy_mix", "gas")
-        emit(cs + "heater_model", "combi_d")
+        if heat:
+            action = "heating" if heating else "idle"
+        else:
+            action = "fan" if st >= 4 and wm == "off" else "off"   # after-run with room and water off
+        emit(cs + "hvac_action", action)
+        times = self.V("tm_times")
+        se = times.split("-")
+        if len(se) != 2 or ht_hhmm(se[0]) is None or ht_hhmm(se[1]) is None:
+            times = "22:00-06:30"
+        tm_on = self.B("tm_on")
+        emit(cs + "timer_active", "ON" if tm_on else "OFF")
+        emit(cs + "timer", times if tm_on else "off")
+        emit(cs + "timer_times", times)
+        emit(cs + "timer_temp_room", fmt(self.N("tm_temp"), 1))
+        emit(cs + "timer_heating_mode", self.V("tm_fan"))
+        emit(cs + "timer_water_mode", self.V("tm_water"))
 
     def _b_fan(self, p, emit):
         emit(p + "/expander", self.V("mf_exp"))
@@ -1046,42 +1191,83 @@ class Emu:
             self.set_str("lv_sensor", "OK", True)
 
     def _c_heater(self, sub, msg):
+        # Same commands and checks as firmware/heater/truma_heater (mqtt_ha.cpp, heater_control.cpp)
         if not sub.startswith("set/"):
             return
         key, v = sub[4:], msg.strip().lower()
+        model = self.V("ht_model") if self.V("ht_model") in HT_MODELS else "combi_d"
+        mi = HT_MODELS[model]
         x = to_float(v)
         x0 = 0.0 if math.isnan(x) else x
+        if key in ("target_temp_room", "hvac_mode", "heating_mode", "fan_mode") and self.B("decoke"):
+            self._decoke(False, False)                 # a user change ends decoking
         if key == "target_temp_room":
-            if x0 <= 0:
+            if x0 < 5:
                 self.set_str("hvac", "off", True)
             else:
-                self.set_num("setp", x0, True)
+                self.set_num("setp", min(x0, 30), True)
                 self.set_str("hvac", "heat", True)
         elif key == "room_setpoint":
-            if 5 <= x0 <= 30:
-                self.set_num("setp", x0, True)
+            if not math.isnan(x):
+                self.set_num("setp", clamp(x, 5, 30), True)
         elif key == "hvac_mode":
             if v in ("heat", "off"):
                 self.set_str("hvac", v, True)
-        elif key == "heating_mode":
+        elif key in ("heating_mode", "fan_mode"):
             if v == "off":
                 self.set_str("hvac", "off", True)
-            elif v in ("eco", "high"):
+            elif ht_fan_ok(model, v):
                 self.set_str("fan", v, True)
-                self.set_str("hvac", "heat", True)
-        elif key == "fan_mode":
-            if v in ("eco", "high", "boost"):
-                self.set_str("fan", v, True)
-        elif key == "water_mode":
-            if v in ("off", "eco", "high", "boost"):
-                self.set_str("wmode", v, True)
-        elif key == "target_temp_water":
-            self.set_str("wmode", "boost" if x0 >= 200 else "high" if x0 >= 60 else "eco" if x0 >= 40 else "off", True)
+                if key == "heating_mode":
+                    self.set_str("hvac", "heat", True)
+        elif key in ("water_mode", "target_temp_water"):
+            w = ht_water(model, v)
+            if w is not None and mi["water"]:
+                self.set_str("wmode", w, True)
+        elif key in ("energy_mix", "energy_select"):
+            mix, _, lvl = v.partition("_")
+            mix = {"diesel": "gas", "electric": "electricity"}.get(mix, mix)
+            if mix in ("gas", "mix", "electricity") and (mix == "gas" or mi["elec"]):
+                self.set_str("energy", mix, True)
+                if lvl in ("0", "900", "1800"):
+                    self.set_str("el_level", lvl, True)
+        elif key == "el_power_level":
+            if v in ("0", "900", "1800") and mi["elec"]:
+                self.set_str("el_level", v, True)
+        elif key == "heater_model":
+            if v in HT_MODELS:
+                self.set_str("ht_model", v, True)
+                if not ht_fan_ok(v, self.V("fan")):
+                    self.set_str("fan", "auto" if HT_MODELS[v]["vario"] else "eco", True)
+                if not HT_MODELS[v]["diesel"]:
+                    self._decoke(False, False)
+        elif key in ("timer", "timer_active"):
+            if v in ("off", "0"):
+                self.set_bool("tm_on", False, True)
+            elif v in ("on", "1"):
+                self.set_bool("tm_on", True, True)
+            elif key == "timer":
+                parts = [x.strip() for x in v.split(",")]
+                se = parts[0].split("-")
+                if len(se) != 2 or ht_hhmm(se[0]) is None or ht_hhmm(se[1]) is None or ht_hhmm(se[0]) == ht_hhmm(se[1]):
+                    return
+                if len(parts) > 2 and parts[2] and not ht_fan_ok(model, parts[2]):
+                    return
+                self.set_str("tm_times", parts[0], True)
+                if len(parts) > 1 and parts[1] and not math.isnan(to_float(parts[1])):
+                    self.set_num("tm_temp", clamp(to_float(parts[1]), 5, 30), True)
+                if len(parts) > 2 and parts[2]:
+                    self.set_str("tm_fan", parts[2], True)
+                if len(parts) > 3 and ht_water(model, parts[3]) is not None:
+                    self.set_str("tm_water", ht_water(model, parts[3]), True)
+                self.set_bool("tm_on", True, True)
         elif key == "decoke":
             on = self._on_off(msg, self.B("decoke"))
-            if on is not None:
-                self.set_bool("decoke", on, True)
-                self.set_num("decoke_rem", 60 if on else 0, True)
+            if on is not None and mi["diesel"] and self.B("alive"):
+                self._decoke(on, not on)
+        elif key == "decoke_minutes":
+            if not math.isnan(x):
+                self.set_num("decoke_min", clamp(round(x), 1, 240), True)
 
     def _c_fan(self, sub, msg):
         # cmd/p<n>/...

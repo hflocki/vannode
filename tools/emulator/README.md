@@ -8,7 +8,7 @@ Nachgebildet werden:
 | --- | --- | --- |
 | Tanks | `camper/tanklevel/…` Frischwasser, Grauwasser, Gas | Glättung an/aus |
 | Levelsensor | `camper/level/…` Neigung, Keilhöhen, `is_level` | Nullpunkt setzen/zurücksetzen, Toleranz |
-| Heizung | `camper/heater/control_status/…` | `set/target_temp_room`, `hvac_mode`, `room_setpoint`, `fan_mode`, `heating_mode`, `water_mode`, `target_temp_water`, `decoke` |
+| Heizung | `camper/heater/control_status/…` | `set/target_temp_room`, `hvac_mode`, `room_setpoint`, `fan_mode`, `heating_mode`, `water_mode`, `target_temp_water`, `energy_mix`, `energy_select`, `el_power_level`, `timer`, `timer_active`, `decoke`, `decoke_minutes`, `heater_model` |
 | MaxxFan | `camper/maxxfan/p1/…`, `p2/…` | Stufe, Schließen, LED, Tasten |
 | Temperaturen | `camper/temp/<id>`, `alarm`, `alarm_text`, `sensors` (4 Sensoren mit Alarmgrenzen) | – |
 | Batterien | `camper/battery/<id>/…`, `batteries` (2 Batterien, Daly / Ective / BM2) | – |
@@ -55,6 +55,8 @@ Aufgeklappt zeigt die Karte alle Werte mit Schiebereglern, Schaltern und Auswahl
 
 Wenn sich etwas Abgeleitetes ändert, rechnet der Emulator wie das Gerät: Literangabe aus Prozent und Tankgröße, Keilhöhen aus Neigung, Rad- und Spurweite, Alarmtext der Temperaturen, Leistung, Restlaufzeit und Laden der Batterie, `hvac_action` und Betriebstext der Heizung. Die Raumtemperatur läuft bei eingeschalteter Heizung langsam auf die Solltemperatur zu (abschaltbar).
 
+**Heizung wie die echte Firmware:** Das gewählte **Heizungsmodell** (Combi Gas, Combi E, Combi D, Combi D E, VarioHeat) bestimmt, welche Befehle angenommen werden: Lüfterstufen (Boost nur Gas-Combi, VarioHeat night/auto/boost), Warmwasser (Boost wird bei Diesel zu Hot, VarioHeat ohne Boiler), 230 V nur bei E-Modellen, Freibrennen nur bei Diesel. Nach dem Ein- oder Ausschalten meldet sie 45 s lang `start/cool down` (Start bzw. Nachlauf, ausgeschaltet mit `hvac_action` = `fan`), danach `on`/`off`; bei Fehlercode `warning`. **Freibrennen** heizt auf 30 °C mit Stufe High, zählt die Restminuten herunter und stellt danach Solltemperatur, Stufe und An/Aus von vorher wieder her; eine Änderung von Hand bricht es ab. Der **Timer** nimmt `HH:MM-HH:MM[,temp[,fan[,water]]]`, `on` und `off` wie die Firmware. Ohne Verbindung zur CP Plus (*CP Plus verbunden* aus) sendet sie wie das echte Gerät keine Statuswerte der Heizung mehr.
+
 **Eigene Zigbee-Adressen:** Trägst du unter *Zigbee → Mehr* die IEEE-Adressen deiner echten Kontakte und Klimasensoren ein, passt die Sensor-Liste des Displays ohne Änderung.
 
 **Szenarien:**
@@ -69,6 +71,8 @@ Wenn sich etwas Abgeleitetes ändert, rechnet der Emulator wie das Gerät: Liter
 | Fahrt | 0 → 80 km/h, Neigung schwankt, Kontakt 1 bleibt offen |
 | Schräg geparkt | 3° / 2,2°, nach 90 s eben |
 | Aufheizen | Heizung an auf 22 °C bei 12 °C, Warmwasser Eco |
+| Heizung Fehler | Heizung läuft, nach 30 s Fehler 212, nach 2 Minuten wieder in Ordnung |
+| CP Plus weg | Heizung an, nach 20 s keine Verbindung zur CP Plus, nach 90 s wieder da |
 | Gerät offline | gewähltes Gerät fällt nach 30 s aus und kommt nach 2 Minuten wieder |
 
 **Stopp** stellt die Werte von vorher wieder her, **Stopp & behalten** lässt den Endstand stehen. Bei Szenarien mit Gerätewahl (z. B. *Gerät offline*) steht die Auswahl direkt am Szenario.

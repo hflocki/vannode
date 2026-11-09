@@ -1639,7 +1639,10 @@ void buildSystem(lv_obj_t* tab) {
   lv_obj_t* abName = label(ab, &font_de_18, C_TEXT, FW_NAME);
   lv_obj_align(abName, LV_ALIGN_TOP_RIGHT, 0, 8);
   lv_obj_t* abVer = label(ab, &font_de_14, C_MUTED, "Version " FW_VERSION);
-  lv_obj_align(abVer, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
+  lv_obj_align(abVer, LV_ALIGN_RIGHT_MID, 0, 0);
+  // author and license, must stay (MIT, see AGENTS.md)
+  lv_obj_t* abCopy = label(ab, &font_de_14, C_MUTED, "\xC2\xA9 2026 hflocki \xC2\xB7 MIT");
+  lv_obj_align(abCopy, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
 
   // QR code to open the web page (or join the setup access point)
   lv_obj_t* qc = card(tab, 150, 150);

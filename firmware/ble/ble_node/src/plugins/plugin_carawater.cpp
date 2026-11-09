@@ -1,7 +1,9 @@
 // Plugin "pump": CaraWater water pump (tested protocol: ISP 15) via BLE connection.
 // Protocol ported from the Home Assistant integration "carawater_isp15":
-//   notify FF01: status frame  AA 93 <status> .. <U16LE values at 6..19>
+//   notify FF01 (FF02 also notifies, both are subscribed): status frame AA 93 <status> .. <U16LE values at 6..19>
 //   write  FF02: 60 byte frame AA 39 <status> .. 22 12 07 .. <checksum>
+// ISP 51 (TD5322A): status frame AA 45 with the same layout (2D idle / 3D running);
+// its write frame is unknown, so control is disabled for it.
 // Some pumps use FFF0/FFF1/FFF2 or FFE0/FFE1 instead; all layouts are tried automatically.
 
 #include "../core/plugin.h"
@@ -9,9 +11,10 @@
 #if PLUGIN_CARAWATER
 
 #include "../core/ble_link.h"
+#include "../core/util.h"
 
 // Known GATT layouts: FF00/FF01/FF02 (ISP 15, as in the HA integration),
-// FFF0/FFF1/FFF2 (other Seaflo based pumps), and FFE0/FFE1/FFE1.
+// FFF0/FFF1/FFF2 (other Seaflo based pumps) and FFE0/FFE1 (BLE UART bridge).
 // The plugin starts with the first one and switches to the next one if the service is not found ("Falsches Gerät?").
 struct PumpUuids {
     const char* service;
@@ -22,8 +25,13 @@ struct PumpUuids {
 static const PumpUuids PUMP_LAYOUTS[] = {
     {PUMP_SERVICE_UUID, PUMP_NOTIFY_UUID, PUMP_WRITE_UUID},             // FF00 / FF01 / FF02
     {PUMP_ALT_SERVICE_UUID, PUMP_ALT_NOTIFY_UUID, PUMP_ALT_WRITE_UUID}, // FFF0 / FFF1 / FFF2
-    {PUMP_UART_SERVICE_UUID, PUMP_UART_CHAR_UUID, PUMP_UART_CHAR_UUID},    // FFE0 / FFE1
+    {PUMP_UART_SERVICE_UUID, PUMP_UART_CHAR_UUID, PUMP_UART_CHAR_UUID},   // FFE0 / FFE1 (notify + write)
 };
+
+// Notifications: every characteristic of the pump service that can notify is subscribed,
+// not only the documented one. The ISP 15 offers NOTIFY on FF01 and FF02 (nRF Connect),
+// and status frames may come on either. parseFrame() only takes "AA 93" frames anyway.
+static const char* notifyFilter(const PumpUuids&) { return ""; }
 
 struct PumpCfg {
     char mac[18];
@@ -76,14 +84,18 @@ public:
     uint8_t bleUse() const override { return BLE_LINK; }
     const char* bleAddress() const override { return c.mac; }
     bool bleCandidate(int32_t company, const char* uuid, const char* name) const override {
-        return strstr(uuid, "ff00") != nullptr || strstr(uuid, "fff0") != nullptr || strstr(uuid, "ffe0") != nullptr;
+        if (strstr(uuid, "ff00") || strstr(uuid, "fff0")) return true;
+        // FFE0 is a generic BLE UART service (roof hatch and fridge use it too):
+        // only list such devices when the name points to a pump
+        return strstr(uuid, "ffe0") && (containsIgnoreCase(name, "ISP") || containsIgnoreCase(name, "cara") ||
+                                         containsIgnoreCase(name, "pump") || containsIgnoreCase(name, "seaflo"));
     }
     const char* manufacturer() const override { return "CaraWater"; }
     const char* model() const override { return c.model[0] ? c.model : "Pumpe"; }
 
     void begin() override {
         const PumpUuids& u = PUMP_LAYOUTS[layout];
-        link.begin(id, u.service, u.notify, u.write);
+        link.begin(id, u.service, notifyFilter(u), u.write);
         link.setSilenceTimeout(PUMP_OFFLINE_MS * 4);   // Connected but silent: reconnect
         begun = true;
         link.setTarget(c.mac);
@@ -107,7 +119,7 @@ public:
                 layout = (layout + 1) % (sizeof(PUMP_LAYOUTS) / sizeof(PUMP_LAYOUTS[0]));
                 const PumpUuids& u = PUMP_LAYOUTS[layout];
                 Serial.printf("[%s] Trying GATT layout %s\n", id, u.service);
-                link.setUuids(u.service, u.notify, u.write);
+                link.setUuids(u.service, notifyFilter(u), u.write);
             }
             updates++;
         }
@@ -198,6 +210,13 @@ public:
             updates++;   // Re-publish the real state so HA switches snap back
             return;
         }
+        if (frameType == 0x45) {
+            // The write frame of the ISP 51 is not known yet; the ISP 15 frame (AA 39) could
+            // set wrong values, so nothing is written. Needed: the app traffic (HCI snoop log).
+            Serial.printf("[%s] Command %s=%s ignored - control of the ISP 51 is not supported yet\n", id, key, value);
+            updates++;   // Re-publish the real state so HA switches snap back
+            return;
+        }
         if (status != statusRaw && writeStatus(status)) applyStatus(status);   // Optimistic
         updates++;
     }
@@ -217,6 +236,9 @@ private:
     bool running = false;
     float voltage = 0, current = 0, temperature = 0, pressure = 0, flow = 0;
     uint16_t dailyLiters = 0, totalLiters = 0;
+    bool lastBit10 = false;        // Status bit 0x10, logged to check its meaning
+    uint8_t lastIgnoredType = 0;   // Last non-status frame type that was logged
+    uint8_t frameType = 0;         // Status frame type seen: 0x93 (ISP 15) or 0x45 (ISP 51)
     unsigned long lastFrame = 0;
     bool lastAvailable = false;
     bool lastRunning = false;
@@ -239,30 +261,50 @@ private:
         leakDetection = (status & 0x04) != 0;
     }
 
-    // Status frame: AA 93 <status> ... U16LE at 6 voltage, 8 current, 10 pressure raw (psi*10),
+    // Status frame: AA 93 (ISP 15) or AA 45 (ISP 51) <status> ... U16LE at 6 voltage, 8 current, 10 pressure raw (psi*10),
     // 12 temperature, 14 flow, 16 daily liters, 18 total liters
-    // The frame type in byte 1 is not checked (it differs between pumps); only the echo
-    // of an own command frame (AA 39) is skipped.
     void parseFrame(const uint8_t* d, size_t n) {
-        if (n < 20 || d[0] != 0xAA || d[1] == 0x39) return;
+        // Only status frames: with the FFE1 layout notify and write share one characteristic,
+        // other frames (e.g. acknowledgements) must not be taken as status
+        // Status frame types: 93 = ISP 15, 45 = ISP 51 (TD5322A), same value layout
+        bool known = n >= 20 && d[0] == 0xAA && (d[1] == 0x93 || d[1] == 0x45);
+        if (!known) {
+            if (n >= 2 && d[0] == 0xAA && d[1] != lastIgnoredType) {   // Log each type once
+                lastIgnoredType = d[1];
+                Serial.printf("[%s] Frame type %02X ignored\n", id, d[1]);
+            }
+            return;
+        }
         uint8_t oldStatus = statusRaw;
         bool hadData = hasData;
+        if (d[1] != frameType) {
+            frameType = d[1];
+            Serial.printf("[%s] Status frames of type %02X (%s)\n", id, frameType, frameType == 0x45 ? "ISP 51" : "ISP 15");
+        }
 
         applyStatus(d[2]);
-        running = (d[2] & 0x10) != 0;          // status bit 4: motor runs
 
+        // Measured values (little endian)
         voltage = u16le(d, 6) / 10.0f;
         current = u16le(d, 8) / 10.0f;
-        pressure = u16le(d, 10) / 10.0f * 0.0689476f;   // psi x 10 -> bar
+        pressure = u16le(d, 10) / 10.0f * 0.0689476f;   // psi x10 -> bar
         temperature = u16le(d, 12) / 10.0f;
         flow = u16le(d, 14) / 10.0f;
         dailyLiters = u16le(d, 16);
         totalLiters = u16le(d, 18);
 
+        // Running: status bit 0x10 (confirmed on the ISP 51: 2D idle, 3D running).
+        // Current / flow as a fallback for pumps that do not set the bit.
+        bool bit10 = (d[2] & 0x10) != 0;
+        running = bit10 || current > 0.2f || flow > 0.0f;
+        if (bit10 != lastBit10 || !hadData) {
+            lastBit10 = bit10;
+            Serial.printf("[%s] Status %02X: bit 0x10 %s, current %.1f A, flow %.1f l/min\n", id, d[2], bit10 ? "set" : "clear", current, flow);
+        }
+
         lastFrame = millis();
         hasData = true;
 
-        // Publish immediately on switch/level changes or pump start/stop; values follow periodically
         if (!hadData || oldStatus != statusRaw || lastRunning != running) {
             lastRunning = running;
             updates++;

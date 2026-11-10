@@ -10,6 +10,7 @@
 #if PLUGIN_RVTECH
 
 #include "../core/ble_link.h"
+#include "../core/devlog.h"
 #include <NimBLEDevice.h>
 
 #define RV_MAX_POSITION 102
@@ -75,12 +76,12 @@ public:
 
     uint8_t bleUse() const override { return BLE_LINK; }
     const char* bleAddress() const override { return c.mac; }
-
+    
     // Check BLE UUID advertising candidate (looking for UART service FFE0)
     bool bleCandidate(int32_t company, const char* uuid, const char* name) const override {
         return strstr(uuid, "ffe0") != nullptr;
     }
-
+    
     // Update RSSI from advertising packets even when disconnected
     void onAdvertisement(const NimBLEAdvertisedDevice* dev, const char* addr) override {
         if (c.mac[0] && strcmp(addr, c.mac) == 0) advRssi = dev->getRSSI();
@@ -97,11 +98,16 @@ public:
     void loop() override {
         link.loop();
 
-        // New connection or disconnect: empty telegram buffer, publish the state right away
+        // Connection state changed: publish at once (status, availability) and start
+        // with an empty telegram buffer
         if (link.changes != lastLinkChanges) {
             lastLinkChanges = link.changes;
             rxLen = 0;
             updates++;
+        }
+        // Clear RX buffer when disconnected to prevent stale fragments
+        if (!link.connected()) {
+            rxLen = 0;
         }
 
         // Process incoming BLE UART packets from ESP32 BLE task
@@ -121,13 +127,13 @@ public:
                     setTarget(sendValue);
                     sendValue = -1;
                 } else if (++sendAttempts >= 2) {
-                    Serial.printf("[%s] Sending %d failed\n", id, sendValue);
+                    devlogf(id, "Sending %d failed", sendValue);
                     sendValue = -1;
                 } else {
                     sendNotBefore = millis() + RV_SEND_RETRY_MS;
                 }
             } else if (millis() - sendQueued > RVTECH_SEND_WAIT_MS) {
-                Serial.printf("[%s] Not connected - command %d dropped\n", id, sendValue);
+                devlogf(id, "Not connected - command %d dropped", sendValue);
                 sendValue = -1;
                 updates++;
             }
@@ -269,7 +275,7 @@ private:
         char buf[12];
         snprintf(buf, sizeof(buf), "P_d=%03d\r\n", v);
         bool ok = link.write(buf, false);
-        Serial.printf("[%s] Send %d: %s\n", id, v, ok ? "OK" : "FAILED");
+        devlogf(id, "Send %d: %s", v, ok ? "OK" : "FAILED");
         return ok;
     }
 
@@ -287,23 +293,26 @@ private:
                 memmove(rx, rx + 1, sizeof(rx) - 2);
                 rxLen = sizeof(rx) - 2;
             }
+            if (d[i] == 0) continue;   // A zero byte would end the string search early
             rx[rxLen++] = (char)d[i];
             rx[rxLen] = '\0';
 
             // Scan buffer for line end indicator "\r\n"
             char* lineEnd = strstr(rx, "\r\n");
             if (lineEnd) {
-                char* match = strstr(rx, "P_a=");
-                if (match && match < lineEnd && (lineEnd - match) >= 7) {
-                    if (isdigit((unsigned char)match[4]) &&
-                        isdigit((unsigned char)match[5]) &&
-                        isdigit((unsigned char)match[6])) {
-                        int v = (match[4] - '0') * 100 + (match[5] - '0') * 10 + (match[6] - '0');
-                        if (v <= RV_MAX_POSITION) {
-                            onPosition(v);
-                        } else {
-                            Serial.printf("[%s] Invalid position %d ignored\n", id, v);
-                        }
+                // Use the LAST "P_a=" before the line end: a cut-off fragment in front of
+                // a complete telegram (e.g. "P_a=0P_a=050\r\n") must not hide it
+                char* match = nullptr;
+                for (char* m = strstr(rx, "P_a="); m && m < lineEnd; m = strstr(m + 1, "P_a=")) match = m;
+                if (match && (lineEnd - match) == 7 &&
+                    isdigit((unsigned char)match[4]) &&
+                    isdigit((unsigned char)match[5]) &&
+                    isdigit((unsigned char)match[6])) {
+                    int v = (match[4] - '0') * 100 + (match[5] - '0') * 10 + (match[6] - '0');
+                    if (v <= RV_MAX_POSITION) {
+                        onPosition(v);
+                    } else {
+                        devlogf(id, "Invalid position %d ignored", v);
                     }
                 }
                 // Shift processed line out of buffer

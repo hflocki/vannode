@@ -27,8 +27,8 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Typ | Rubrik | Einstellungen in der Web-UI |
 | --- | --- | --- |
 | Dachhaube RV Tech (Heki-Motorsteuerung) | Verbinden | MAC, PIN |
-| Wasserpumpe CaraWater (ISP 15; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
-| Kühlschrank WCS (Kompressor) | Verbinden | MAC, PIN, optional UUIDs (Standard FFE0/FFE1) / Abfrage |
+| Wasserpumpe CaraWater (ISP 15, ISP 51 nur Anzeige; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
+| Kühlschrank WCS (Kompressor) | Verbinden | MAC, optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-PIN: die PIN der App ist keine Kopplungs-PIN |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
@@ -141,7 +141,7 @@ Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/
 | Status | Bedeutung / was tun |
 | --- | --- |
 | `Nicht erreichbar` | Gerät nicht in Reichweite oder noch mit dem Handy verbunden |
-| `Kopplung fehlgeschlagen` | PIN falsch oder Gerät noch an ein Handy gekoppelt |
+| `Kopplung fehlgeschlagen` | PIN falsch oder Gerät noch an ein Handy gekoppelt. Mit PIN probiert die Firmware nacheinander vier Kopplungsarten (Secure Connections, Legacy, Legacy nach der Dienstsuche, ohne Anfrage); klappt keine, wartet sie 5 Minuten, damit die anderen Geräte weiterlaufen |
 | `PIN nötig?` | Gerät verlangt eine Kopplung, aber keine (oder eine falsche) PIN eingetragen |
 | `Falsches Gerät?` | Erwartete Bluetooth-Dienste nicht gefunden – andere MAC gewählt? |
 | `Warte auf Daten` | Verbunden, aber noch keine Werte |
@@ -188,6 +188,8 @@ Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fie
 
 115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login löschen), `help`.
 
+**Ohne USB-Kabel:** Jedes verbindende Gerät (Dachhaube, Pumpe, Kühlschrank, Batterien per Verbindung) hat auf seiner Seite unter *Geräte* eine Karte **Log** mit „Log herunterladen“ und „Log leeren“. Darin stehen dieselben Zeilen wie im seriellen Monitor (Verbindung, Kopplung, GATT-Tabelle, empfangene Daten), bis 8 kB je Gerät, seit dem letzten Neustart. Bei Problemen: Log leeren, Fehler abwarten, herunterladen und schicken.
+
 Für eine Fehlermeldung den Monitor vom Einschalten an mitschneiden, bis das Problem auftritt (beim Kühlschrank mindestens 3 Minuten). Dort stehen u. a. Verbindungsaufbau und Trennungsgrund (`Reason 0x…`), das Ergebnis der Kopplung (`Security: …`), alle Dienste des Geräts (`GATT table:`) und die ersten empfangenen Pakete (`RX … bytes`). Den Log als Text schicken, MAC-Adressen dürfen geschwärzt werden.
 
 ## Sicheres Update, Ereignisse und Rückfall
@@ -207,6 +209,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.0 | Stand der camper_toolbox 0.1.13 übernommen. **Dachhaube:** vier Kopplungsvarianten nacheinander (für ältere BLE-4.0-Module), nach allen Fehlversuchen 5 min Pause statt die anderen Geräte zu blockieren; Telegramme robuster (letztes `P_a=` vor dem Zeilenende, Nullbytes, Puffer bei Trennung leeren). **Kühlschrank:** GATT E530/E531 statt FFE0/FFE1, Notify auf allen Kanälen des Service, ohne Bluetooth-PIN; `*` in den UUID-Feldern = alle. **Log je Gerät** zum Herunterladen in der Weboberfläche (`/api/log`) |
 | 2.0.4 | Pumpe (CaraWater) aus der getesteten camper_toolbox 0.1.13 übernommen: auch ISP 51 (TD5322A, Status `AA 45`, nur Anzeige – Steuern noch nicht möglich), alle Notify-Kanäle der Pumpe werden abonniert, FFE0-Geräte nur noch mit Pumpen-Namen in der Suche, „läuft“ auch über Strom/Durchfluss, Befehle ohne Verbindung setzen den Schalter in HA zurück |
 | 2.0.3 | Meldet in `<prefix>/info` die Hardware (`hw`, z. B. `esp32c3`, `atoms3`), das Display zeigt sie in der Geräteliste. Die Update-Seite nennt die passende Release-Datei (`…-node-<hw>-v….bin`), auch in der Fehlermeldung bei falschem Chip |
 | 2.0.2 | Daly: Fehlertexte stimmen jetzt. Die beiden Bytes jedes Fehlerregisters waren vertauscht, z. B. kam „Ladetemperatur zu hoch (Stufe 2)“ statt „Zellspannung zu hoch (Stufe 2)“ |

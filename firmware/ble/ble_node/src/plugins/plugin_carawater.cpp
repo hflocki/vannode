@@ -11,6 +11,7 @@
 #if PLUGIN_CARAWATER
 
 #include "../core/ble_link.h"
+#include "../core/devlog.h"
 #include "../core/util.h"
 
 // Known GATT layouts: FF00/FF01/FF02 (ISP 15, as in the HA integration),
@@ -25,7 +26,7 @@ struct PumpUuids {
 static const PumpUuids PUMP_LAYOUTS[] = {
     {PUMP_SERVICE_UUID, PUMP_NOTIFY_UUID, PUMP_WRITE_UUID},             // FF00 / FF01 / FF02
     {PUMP_ALT_SERVICE_UUID, PUMP_ALT_NOTIFY_UUID, PUMP_ALT_WRITE_UUID}, // FFF0 / FFF1 / FFF2
-    {PUMP_UART_SERVICE_UUID, PUMP_UART_CHAR_UUID, PUMP_UART_CHAR_UUID},   // FFE0 / FFE1 (notify + write)
+    {PUMP_ALT2_SERVICE_UUID, PUMP_ALT2_CHAR_UUID, PUMP_ALT2_CHAR_UUID},   // FFE0 / FFE1 (notify + write)
 };
 
 // Notifications: every characteristic of the pump service that can notify is subscribed,
@@ -118,7 +119,7 @@ public:
             if (!strcmp(link.state(), "Falsches Gerät?")) {
                 layout = (layout + 1) % (sizeof(PUMP_LAYOUTS) / sizeof(PUMP_LAYOUTS[0]));
                 const PumpUuids& u = PUMP_LAYOUTS[layout];
-                Serial.printf("[%s] Trying GATT layout %s\n", id, u.service);
+                devlogf(id, "Trying GATT layout %s", u.service);
                 link.setUuids(u.service, notifyFilter(u), u.write);
             }
             updates++;
@@ -206,14 +207,14 @@ public:
             return;
         }
         if (!link.connected()) {
-            Serial.printf("[%s] Command ignored - pump not connected\n", id);
+            devlogf(id, "Command ignored - pump not connected");
             updates++;   // Re-publish the real state so HA switches snap back
             return;
         }
         if (frameType == 0x45) {
             // The write frame of the ISP 51 is not known yet; the ISP 15 frame (AA 39) could
             // set wrong values, so nothing is written. Needed: the app traffic (HCI snoop log).
-            Serial.printf("[%s] Command %s=%s ignored - control of the ISP 51 is not supported yet\n", id, key, value);
+            devlogf(id, "Command %s=%s ignored - control of the ISP 51 is not supported yet", key, value);
             updates++;   // Re-publish the real state so HA switches snap back
             return;
         }
@@ -271,7 +272,7 @@ private:
         if (!known) {
             if (n >= 2 && d[0] == 0xAA && d[1] != lastIgnoredType) {   // Log each type once
                 lastIgnoredType = d[1];
-                Serial.printf("[%s] Frame type %02X ignored\n", id, d[1]);
+                devlogf(id, "Frame type %02X ignored", d[1]);
             }
             return;
         }
@@ -279,7 +280,7 @@ private:
         bool hadData = hasData;
         if (d[1] != frameType) {
             frameType = d[1];
-            Serial.printf("[%s] Status frames of type %02X (%s)\n", id, frameType, frameType == 0x45 ? "ISP 51" : "ISP 15");
+            devlogf(id, "Status frames of type %02X (%s)", frameType, frameType == 0x45 ? "ISP 51" : "ISP 15");
         }
 
         applyStatus(d[2]);
@@ -299,7 +300,7 @@ private:
         running = bit10 || current > 0.2f || flow > 0.0f;
         if (bit10 != lastBit10 || !hadData) {
             lastBit10 = bit10;
-            Serial.printf("[%s] Status %02X: bit 0x10 %s, current %.1f A, flow %.1f l/min\n", id, d[2], bit10 ? "set" : "clear", current, flow);
+            devlogf(id, "Status %02X: bit 0x10 %s, current %.1f A, flow %.1f l/min", d[2], bit10 ? "set" : "clear", current, flow);
         }
 
         lastFrame = millis();
@@ -324,7 +325,7 @@ private:
         for (int i = 0; i < 59; i++) sum += cmd[i];
         cmd[59] = sum;
         bool ok = link.write(cmd, sizeof(cmd), true);
-        Serial.printf("[%s] Write status 0x%02X: %s\n", id, status, ok ? "OK" : "FAILED");
+        devlogf(id, "Write status 0x%02X: %s", status, ok ? "OK" : "FAILED");
         return ok;
     }
 };

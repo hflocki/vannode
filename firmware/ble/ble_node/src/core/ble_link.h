@@ -30,6 +30,7 @@
 #define BLE_REASON_PAIRING    2   // Pairing failed, no detailed code from the stack
 #define BLE_REASON_NEED_PIN   3   // Subscriptions refused: device needs pairing
 #define BLE_REASON_NO_SERVICE 4   // Expected service / characteristic missing
+#define BLE_REASON_PAIR_TIMEOUT 5 // Pairing started, but the device never finished it (30 s)
 
 // Short German text for a NimBLE connect / disconnect reason (HCI or host error code)
 const char* bleReasonText(int reason);
@@ -113,6 +114,8 @@ private:
     volatile bool authDone = false;   // Pairing / encryption result waiting to be logged
     volatile bool authEncrypted = false, authAuthenticated = false, authBonded = false;
     uint8_t rxLogged = 0;             // Packets logged as hex since the last connect
+    uint8_t pairAttempt = 0;          // Failed pairings so far, selects the pairing variant
+    bool pairPause = false;           // All pairing variants failed: wait BLE_PAIR_PAUSE_MS
     bool isConnecting = false;
     bool linkUp = false;
     bool isReleased = false;
@@ -136,6 +139,8 @@ private:
     void markDisconnected();
     bool subscribeChr(NimBLERemoteCharacteristic* c);
     void forgetBond();
+    bool pairNow(bool sc);
+    void pairFailedOnce();
     void dumpGatt();
     void push(const uint8_t* d, size_t n);
 };

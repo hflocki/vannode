@@ -98,6 +98,10 @@ const M = {
       else if (k === 'cover_position') M.target = +body.v;
       return {status: 'ok'};
     }
+    if (path === '/api/log') {
+      return '# Beispiel-Log (Mockup)\n0:00:05.120 State: Verbinde\n0:00:05.880 Connected, MTU 247, 1 subscription(s)\n';
+    }
+    if (path === '/api/log/clear') return { ok: true };
     if (path === '/api/scan') {
       return {active: true, devices: [
         {mac: 'F0:F8:F2:00:00:01', name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech']},

@@ -84,7 +84,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.0.4"
+#define FW_VERSION            "2.1.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -195,6 +195,9 @@
 #endif
 #ifndef BLE_RETRY_MS
 #define BLE_RETRY_MS          10000  // Wait between connection attempts
+#endif
+#ifndef BLE_PAIR_PAUSE_MS
+#define BLE_PAIR_PAUSE_MS     300000 // Pause after all pairing variants failed (other devices keep running)
 #endif
 #ifndef BLE_RETRY_MAX_MS
 #define BLE_RETRY_MAX_MS      60000  // Back-off limit while the device is out of range
@@ -436,12 +439,10 @@
 // ------------------------------------------------------------
 // The fridge sends ASCII status messages "/SC0/t0,t1,t2,<temp zone 1>,<temp zone 2>,
 // <set zone 1>,<set zone 2>,t7,<voltage x10>,t9,<battery %>,...".
-// The fridge talks over a BLE UART bridge (service FFE0, characteristic FFE1). Other
-// UUIDs, the Bluetooth PIN and an optional poll command are set in the web UI
-// (not in config_local.h); empty UUID fields mean FFE0/FFE1.
+// GATT: own service E530 with the write characteristic E531; every characteristic of the
+// service that can notify is subscribed (see plugin_wcs_fridge.cpp). Other UUIDs and an
+// optional poll command are set in the web UI; the fridge uses no Bluetooth pairing.
 // ============================================================
-#define WCS_SERVICE_UUID      "0000ffe0-0000-1000-8000-00805f9b34fb"
-#define WCS_CHAR_UUID         "0000ffe1-0000-1000-8000-00805f9b34fb"
 #ifndef WCS_OFFLINE_MS
 #define WCS_OFFLINE_MS        120000 // No status message for 2 min = fridge offline
 #endif

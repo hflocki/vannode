@@ -11,6 +11,7 @@
 // JSON list <prefix>/batteries for the displays (bmsBatteryList(), published by mqtt_ha).
 
 #include "../core/plugin.h"
+#include "../core/devlog.h"
 
 #if CT_BMS
 
@@ -200,7 +201,7 @@ public:
             if (!strcmp(link.state(), "Falsches Gerät?") && layoutCount() > 1) {
                 layout = (layout + 1) % layoutCount();
                 const BmsUuids& u = layouts()[layout];
-                Serial.printf("[%s] Trying GATT layout %s\n", id, u.service);
+                devlogf(id, "Trying GATT layout %s", u.service);
                 link.setUuids(u.service, u.notify, u.write);
             }
             updates++;
@@ -531,7 +532,7 @@ private:
 
     void pollFailed() {
         step = S_IDLE;
-        Serial.printf("[%s] No valid answer\n", id);
+        devlogf(id, "No valid answer");
         updates++;
     }
 
@@ -563,7 +564,7 @@ private:
                 else ok = dalyDecode(p, buf, len, nullptr, 0, s);
             }
             if (ok) {
-                if (!dalyProto) Serial.printf("[%s] Daly protocol 0x%02X\n", id, p);
+                if (!dalyProto) devlogf(id, "Daly protocol 0x%02X", p);
                 dalyProto = p;
                 step = S_IDLE;
                 accept(s, link.rssi());
@@ -574,7 +575,7 @@ private:
             startDaly();
         } else {
             if (crcOk && ectiveDecode(buf, len, s)) {
-                if (ectiveId < 0) Serial.printf("[%s] Ective device id 0x%02X\n", id, tryProto);
+                if (ectiveId < 0) devlogf(id, "Ective device id 0x%02X", tryProto);
                 ectiveId = tryProto;
                 step = S_IDLE;
                 accept(s, link.rssi());

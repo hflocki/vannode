@@ -2,39 +2,48 @@
 // The fridge sends ASCII status messages (comma separated, possibly split over several
 // notifications):
 //   /SC0/t0,t1,t2,<temp zone 1>,<temp zone 2>,<set zone 1>,<set zone 2>,t7,<voltage x10>,t9,<battery %>,...
-// Field positions as in the ESPHome example of the fridge. GATT: BLE UART bridge,
-// service FFE0 with characteristic FFE1 (notify and write), unless set in the web UI.
+// Field positions as in the ESPHome example of the fridge. GATT layout: service E530,
+// write characteristic E531 (can be changed in the web UI). The fridge does not use BLE
+// pairing (nRF Connect connects without a PIN); a PIN of the app is not a Bluetooth PIN.
 
 #include "../core/plugin.h"
 
 #if PLUGIN_WCS_FRIDGE
 
 #include "../core/ble_link.h"
+#include "../core/devlog.h"
 #include "../core/util.h"
 
 #define WCS_LINE_MAX    160
 #define WCS_IDLE_FLUSH  300    // ms without new data: the collected message is complete
 #define WCS_MIN_TOKENS  11
 
+// GATT layout of the fridge (nRF Connect, WCS_xxxx): own 128-bit service with a write
+// characteristic E531; notifications: every characteristic of the service that can notify.
+// Used when the web UI fields are empty.
+#define WCS_SERVICE_UUID "0000e530-1212-efde-1523-785feabcd123"
+#define WCS_NOTIFY_UUID  ""
+#define WCS_WRITE_UUID   "0000e531-1212-efde-1523-785feabcd123"
+
 struct WcsCfg {
     char mac[18];
     char pin[8];           // Bluetooth PIN (digits), empty = no pairing
     bool zone2;            // Fridge has a second zone (freezer)
-    char service[40];      // GATT service UUID, empty = all services
-    char notify[40];       // Notify characteristic, empty = every one that can notify
-    char write[40];        // Write characteristic for the poll command, empty = none
+    char service[40];      // GATT service UUID, empty = E530, "*" = all services
+    char notify[40];       // Notify characteristic, empty or "*" = every one that can notify
+    char write[40];        // Write characteristic for the poll command, empty = E531
     char poll[24];         // Poll command (ASCII), empty = fridge sends on its own
     int32_t poll_s;        // Poll interval in s
 };
 
 static const Field WCS_FIELDS[] = {
     FLD_MAC(WcsCfg, mac, "mac", "Kühlschrank-MAC", "Über \"Suchen\" aus der Liste wählen"),
-    FLD_TEXT(WcsCfg, pin, "pin", "Bluetooth-PIN", "Nur Ziffern (1-6, auch 000000), wie in der Kühlschrank-App. "
-                                             "Leer lassen, wenn keine nötig ist. Handy-App dabei trennen."),
+    FLD_TEXT(WcsCfg, pin, "pin", "Bluetooth-PIN", "Normalerweise LEER lassen: Der Kühlschrank nutzt keine "
+                                             "Bluetooth-Kopplung. Die PIN der App ist keine Bluetooth-PIN."),
     FLD_BOOL(WcsCfg, zone2, "zone2", "Zweite Zone", "Kühlschrank mit zweitem Fach / Gefrierfach"),
-    FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = FFE0 (Standard)"),
-    FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = FFE1 (Standard)"),
-    FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = FFE1 (Standard), nur für einen Abfragebefehl nötig"),
+    FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = E530 (Standard), * = alle Services"),
+    FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = jede im Service, die senden kann (Standard)"),
+    FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard). Nur für einen Abfragebefehl nötig"),
     FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = der Kühlschrank sendet von selbst. \\r und \\n erlaubt"),
     FLD_INT(WcsCfg, poll_s, "poll_s", "Abfrage alle", "s", 1, 3600, nullptr),
 };
@@ -76,7 +85,8 @@ public:
         unescape(c.poll, pollCmd, sizeof(pollCmd));
         pinValue = blePinParse(c.pin);
         if (begun) {
-            link.setUuids(svcUuid(), notifyUuid(), writeUuid());
+            link.setUuids(effUuid(c.service, WCS_SERVICE_UUID), effUuid(c.notify, WCS_NOTIFY_UUID),
+                          effUuid(c.write, WCS_WRITE_UUID));
             link.setTarget(c.mac, pinValue);
         }
     }
@@ -89,7 +99,8 @@ public:
     const char* manufacturer() const override { return "WCS"; }
 
     void begin() override {
-        link.begin(id, svcUuid(), notifyUuid(), writeUuid());
+        link.begin(id, effUuid(c.service, WCS_SERVICE_UUID), effUuid(c.notify, WCS_NOTIFY_UUID),
+                   effUuid(c.write, WCS_WRITE_UUID));
         link.setSilenceTimeout(WCS_OFFLINE_MS);   // Connected but silent: reconnect
         begun = true;
         link.setTarget(c.mac, pinValue);
@@ -111,7 +122,7 @@ public:
         if (pollCmd[0] && link.canWrite() && (lastPoll == 0 || millis() - lastPoll > (uint32_t)c.poll_s * 1000UL)) {
             lastPoll = millis();
             bool ok = link.write(pollCmd, true);
-            if (!ok) Serial.printf("[%s] Poll command failed\n", id);
+            if (!ok) devlogf(id, "Poll command failed");
         }
 
         bool avail = available();
@@ -185,6 +196,14 @@ public:
     }
 
 private:
+    // Effective UUID: empty field = default (FFE0 / FFE1), "*" = no filter (all services /
+    // every notifying characteristic, for diagnosis), otherwise the value as entered
+    static const char* effUuid(const char* field, const char* def) {
+        if (!field[0]) return def;
+        if (!strcmp(field, "*")) return "";
+        return field;
+    }
+
     WcsCfg c;
     BleLink link;
     bool begun = false;
@@ -204,11 +223,6 @@ private:
     float temp1 = NAN, temp2 = NAN, set1 = NAN, set2 = NAN, voltage = NAN, battery = NAN;
     unsigned long lastMsg = 0;
     uint32_t messages = 0;
-
-    // Empty UUID fields: the BLE UART bridge of the fridge (FFE0 / FFE1)
-    const char* svcUuid() const { return c.service[0] ? c.service : WCS_SERVICE_UUID; }
-    const char* notifyUuid() const { return c.notify[0] ? c.notify : WCS_CHAR_UUID; }
-    const char* writeUuid() const { return c.write[0] ? c.write : WCS_CHAR_UUID; }
 
     const char* stateText() {
         if (link.connected() && !hasData) return "Warte auf Daten";
@@ -258,7 +272,7 @@ private:
     void parseMessage(const char* msg) {
         const char* p = strstr(msg, "/SC0/");
         if (!p) {
-            Serial.printf("[%s] Message: %s\n", id, msg);
+            devlogf(id, "Message: %s", msg);
             return;
         }
         char buf[WCS_LINE_MAX + 1];
@@ -276,7 +290,7 @@ private:
             s = comma + 1;
         }
         if (n < WCS_MIN_TOKENS) {
-            Serial.printf("[%s] Status with %d fields ignored: %s\n", id, n, msg);
+            devlogf(id, "Status with %d fields ignored: %s", n, msg);
             return;
         }
 
@@ -292,8 +306,7 @@ private:
         hasData = true;
         lastMsg = millis();
         messages++;
-        Serial.printf("[%s] Zone 1: %.1f (set %.1f) | Zone 2: %.1f (set %.1f) | %.1f V | %.0f%%\n",
-            id, temp1, set1, temp2, set2, voltage, battery);
+        devlogf(id, "Zone 1: %.1f (set %.1f) | Zone 2: %.1f (set %.1f) | %.1f V | %.0f%%", temp1, set1, temp2, set2, voltage, battery);
     }
 };
 

@@ -116,6 +116,34 @@
     ]
   },
   "blocks": {
+    "web/vannode-logo.css": {
+      "begin": "/* vannode-logo-wide:begin */",
+      "end": "/* vannode-logo-wide:end */",
+      "before": "</style>",
+      "files": [
+        "firmware/_template/camper_example/web/index.html",
+        "firmware/tanklevel/camper_tanklevel/web/index.html",
+        "firmware/temp/camper_temp/web/index.html",
+        "firmware/level/camper_level/web/index.html",
+        "firmware/maxxfan/camper_maxxfan/web/index.html",
+        "firmware/ble/ble_node/web/index.html",
+        "firmware/heater/truma_heater/web/index.html"
+      ]
+    },
+    "web/vannode-about.js": {
+      "begin": "// vannode-about:begin",
+      "end": "// vannode-about:end",
+      "before": "</script>",
+      "files": [
+        "firmware/_template/camper_example/web/index.html",
+        "firmware/tanklevel/camper_tanklevel/web/index.html",
+        "firmware/temp/camper_temp/web/index.html",
+        "firmware/level/camper_level/web/index.html",
+        "firmware/maxxfan/camper_maxxfan/web/index.html",
+        "firmware/ble/ble_node/web/index.html",
+        "firmware/heater/truma_heater/web/index.html"
+      ]
+    },
     "web/camper-theme.css": {
       "begin": "/* camper-theme:begin */",
       "end": "/* camper-theme:end */",

@@ -184,7 +184,10 @@ async function fwChosen(fsImages) {
 function fwForce() { fwEl('fwu-btn').disabled = !(fwPick && (fwPick.ok || (fwPick.force && fwEl('fwu-force').checked))); }
 fwLoad();
 setInterval(fwLoad, 15000);
-</script></body></html>)HTML";
+</script>
+<!-- Author and license: required by the MIT license, must stay (AGENTS.md) -->
+<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Road Buddy · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz MIT<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
+</body></html>)HTML";
 
 bool authOk() {
   if (webUser.isEmpty()) return true;

@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Tiny logger: prints to Serial and keeps the last lines in RAM for the web UI and MQTT.
 // Every line gets a running sequence number, so readers can fetch only new lines.
 #pragma once

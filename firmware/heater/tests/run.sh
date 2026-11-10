@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+# GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+# See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 # Host-side tests for the LIN / iNet Box protocol code (no ESP32 needed).
 #   1. protocol_test: synthetic CP Plus session (identify, assign NAD, init, status, command)
 #   2. replay:        real CP Plus / Combi D6 E captures (WomoLIN project) fed through our parser,

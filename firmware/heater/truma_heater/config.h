@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Compile-time configuration. Runtime settings (WiFi, MQTT, ...) are edited in the web UI and stored in NVS.
 //
 // Arduino IDE: choose your board below (exactly one line active). Pins of a profile can be changed in
@@ -34,7 +39,7 @@
 #endif
 
 #define FW_NAME "heater-node"
-#define FW_VERSION "1.7.2"
+#define FW_VERSION "1.7.3"
 #define FW_DEVICE "heater"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS 50000   // a changed WiFi must connect this fast, else the old one returns

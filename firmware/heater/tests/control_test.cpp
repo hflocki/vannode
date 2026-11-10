@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Host test for heater_control.cpp: MQTT / web commands -> InetBox commands.
 // No LIN traffic here: the CP Plus status is written straight into the InetBox state, the
 // commands are read back from its command queue. The LIN side is covered by protocol_test/replay.

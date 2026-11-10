@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only AND MIT
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// Portions Copyright (c) 2026 C64Axel (MIT) - see firmware/ble/LICENSE-rvtech-MIT.
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Plugin "rvtech": RV Tech roof hatch / skylight motor control via BLE connection.
 // Ported from the Home Assistant integration rvtech-hacs (https://github.com/C64Axel/rvtech-hacs):
 //   ASCII over a BLE UART bridge, characteristic FFE1 (notify + write without response)

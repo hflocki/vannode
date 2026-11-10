@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // LVGL memory in PSRAM (lv_conf.h: LV_USE_STDLIB_MALLOC = LV_STDLIB_CUSTOM).
 // With the C library malloc, small LVGL objects land in internal RAM, and a full UI leaves too
 // little of it for TLS (weather, Pushover) and WiFi. Falls back to internal RAM if PSRAM is full.

@@ -3,6 +3,8 @@
 
 # heater-node
 
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). VanNode ersetzt keine Schutzfunktion der Heizung und keinen CO-Melder; Eingriffe an Heizung und Gasanlage nur durch Fachkundige.
+
 Truma-Heizung (Combi / Combi D, Vario Heat) per **MQTT** steuern – mit einem ESP32 am LIN-Bus, reines **Arduino**, ohne ESPHome.
 
 - Der ESP ist **LIN-Slave** und meldet sich am CP Plus als **iNet Box** (T23.70.0) an.
@@ -292,4 +294,6 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 ## Lizenz
 
 GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Die Protokoll-Logik ist aus [skrebber/esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) (GPL-3.0, Fork von Fabian-Schmidt/esphome-truma_inetbox) portiert, das Setzen des Timers aus [havanti/esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0); die Mitschnitte in `tests/captures` stammen aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0).
+
+Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

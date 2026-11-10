@@ -1,5 +1,7 @@
 # camper-omg – Bluetooth-Sensoren über OpenMQTTGateway
 
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+
 > [!WARNING]
 > **Noch nicht auf Hardware getestet.** Die Konfiguration ist geprüft (PlatformIO löst sie korrekt auf), gebaut und geflasht wurde sie hier noch nicht.
 
@@ -52,4 +54,6 @@ Die Umgebungen in `camper_env.ini` bauen auf `com-esp32`, `libraries.ble` und `l
 ## Lizenz
 
 OpenMQTTGateway: GPL-3.0 (wird nur heruntergeladen, nicht mitgeliefert). Die Dateien in diesem Ordner: GNU GPL Version 3 mit den zusätzlichen Bedingungen aus [NOTICE.md](NOTICE.md).
+
+Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

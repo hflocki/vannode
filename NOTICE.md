@@ -36,6 +36,35 @@ and to every work based on it:
 These terms do not forbid selling the program or devices that run it. Whoever distributes it must
 follow the GNU GPL v3 (including passing on the complete source code) and the terms above.
 
+## No warranty, no liability – use at your own risk
+
+VanNode is a private hobby project. It is given away free of charge and without any business
+activity. It monitors and switches real equipment in a vehicle (heater, gas and water tanks, water
+pump, roof hatch and roof fan, batteries). Faults in the software, the settings, the hardware or the
+installation can damage devices, the vehicle or other property and can put people at risk.
+
+- Building, installing and using VanNode is entirely at your own risk and responsibility.
+- VanNode is not a safety device. It does not replace the controls and protective functions of the
+  device manufacturers, gas, CO or smoke detectors, the frost protection valve or regular checks.
+  Values and warnings shown by VanNode can be wrong, late or missing – do not rely on them.
+- Work on gas installations, 230 V and the vehicle's electrical system must only be done by
+  qualified persons, following the applicable regulations and the manufacturers' instructions.
+  Connecting VanNode to third-party devices may void their warranty, guarantee or approval.
+- To the extent permitted by applicable law, the author accepts no liability for damage of any kind
+  resulting from the use of VanNode, its documentation or devices built with it, or from the fact
+  that they cannot be used (see also sections 15 and 16 of the GNU GPL v3). Only liability that
+  cannot be excluded by law remains, in particular for intent and gross negligence, for injury to
+  life, body or health and under mandatory product liability law, where it applies.
+
+## Trademarks
+
+Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
+Daly, Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
+They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
+or certified by any of these owners. Protocols are taken from public open-source projects or were
+determined only to make the devices work together (interoperability).
+
 ## Third-party components
 
 | Part | Used for | Source | License |
@@ -48,7 +77,7 @@ follow the GNU GPL v3 (including passing on the complete source code) and the te
 | `firmware/_common/truma_errors.h` – Truma fault codes | facts, texts rephrased in German | Truma "Diagnostics catalogue Truma Combi" (04.02.2019); CP Plus code lists as published on [womo-teile.de/truma-fehlercodes](https://www.womo-teile.de/truma-fehlercodes) | – |
 | `firmware/ble` – battery protocols `bms_proto.*` (Daly, Ective, BM2) | ported | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/ble/LICENSE-Apache-2.0`](firmware/ble/LICENSE-Apache-2.0)) |
 | `firmware/ble` – roof hatch protocol (RV Tech / Heki) | ported | [C64Axel/rvtech-hacs](https://github.com/C64Axel/rvtech-hacs), Copyright (c) 2026 C64Axel | MIT ([`firmware/ble/LICENSE-rvtech-MIT`](firmware/ble/LICENSE-rvtech-MIT)) |
-| `firmware/ble` – CaraWater pump protocol | protocol knowledge | Home Assistant integration "carawater_isp15" | – |
+| `firmware/ble` – CaraWater pump protocol | protocol knowledge, own C++ implementation | Home Assistant integration "carawater_isp15" by a community member, shared in a user group; asked whether and how he wants to be named, no answer yet – he will be credited on request | – (no license stated) |
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
 | `firmware/tanklevel` – Mopeka Pro gas sensor decoding | decoding as in this library, own implementation | [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |

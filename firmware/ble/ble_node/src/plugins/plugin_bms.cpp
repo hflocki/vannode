@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Plugins "daly", "ective", "bm2": batteries (BMS / battery monitors) over Bluetooth.
 // Formerly the separate battery-node firmware (firmware/battery); protocol decoding in
 // bms_proto.cpp (ported from aiobmsble, Apache-2.0).

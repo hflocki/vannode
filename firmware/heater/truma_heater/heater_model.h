@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Heater model selection: which controls a Truma heater actually offers.
 // Selected in the web UI (or MQTT / HA), stored in NVS, default DEFAULT_HEATER_MODEL from config.h.
 // Changes take effect immediately: web UI, MQTT checks and HA discovery follow the active model.

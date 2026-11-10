@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 #include "webota.h"
 #include <WiFi.h>
 #include <WebServer.h>
@@ -186,7 +191,7 @@ fwLoad();
 setInterval(fwLoad, 15000);
 </script>
 <!-- Author and license: must stay (GPL-3.0 additional terms, NOTICE.md) -->
-<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Road Buddy · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz GNU GPL v3, ohne Gew&auml;hrleistung<br>Hinweis und Link m&uuml;ssen in Kopien erhalten bleiben<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
+<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Road Buddy · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz GNU GPL v3, ohne Gew&auml;hr &ndash; Nutzung auf eigene Gefahr<br>Hinweis und Link m&uuml;ssen in Kopien erhalten bleiben<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
 </body></html>)HTML";
 
 bool authOk() {

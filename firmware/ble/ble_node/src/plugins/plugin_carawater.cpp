@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // Plugin "pump": CaraWater water pump (tested protocol: ISP 15) via BLE connection.
 // Protocol ported from the Home Assistant integration "carawater_isp15":
 //   notify FF01 (FF02 also notifies, both are subscribed): status frame AA 93 <status> .. <U16LE values at 6..19>

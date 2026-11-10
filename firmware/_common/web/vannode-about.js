@@ -10,6 +10,7 @@
   const A = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
   const GPL = 'Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
   const TERMS = 'Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
+  const RISK = 'Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
   // firmware id (FW_DEVICE) -> name, repo folder, third-party parts in this firmware
   const DEV = {
     tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel', x: [
@@ -20,7 +21,7 @@
     toolbox:   {n: 'BLE-Node', d: 'ble', x: [
       'Batterie-Protokolle (Daly, Ective, BM2) portiert aus ' + A('https://github.com/patman15/aiobmsble', 'aiobmsble') + ' (Apache-2.0)',
       'Dachhauben-Protokoll portiert aus ' + A('https://github.com/C64Axel/rvtech-hacs', 'rvtech-hacs') + ', © 2026 C64Axel (MIT)',
-      'Pumpen-Protokoll nach der HA-Integration carawater_isp15',
+      'Pumpen-Protokoll nach der HA-Integration carawater_isp15 eines Community-Mitglieds (eigene Umsetzung)',
       'BM2-Format nach bm2-esphome und ha_bm2monitor, Govee und Mopeka nach govee-ble und mopeka-iot-ble (alle MIT, eigene Umsetzung)']},
     heater:    {n: 'Heater-Node', d: 'heater', x: [
       'Protokoll-Logik portiert aus ' + A('https://github.com/skrebber/esphome-truma_inetbox', 'skrebber/esphome-truma_inetbox') + ' (Fork von Fabian-Schmidt, GPL-3.0)',
@@ -53,6 +54,7 @@
       '<p style="margin:6px 0">' + COPY + '<br>Teil von VanNode – Camper-Elektronik über MQTT<br>' + A(REPO, 'github.com/hflocki/vannode') + '</p>' +
       '<p style="margin:6px 0">Lizenz: <b>GNU GPL Version 3</b>. ' + GPL + '</p>' +
       '<p style="' + small + '">' + TERMS + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em"><b>Ohne Gewähr.</b> ' + RISK + '</p>' +
       (info.x ? '<p style="' + small + '">Enthält fremde Teile:<br>' + info.x.join('<br>') + '</p>' : '') +
       '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(base + 'NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
     upd.insertAdjacentElement('afterend', c);

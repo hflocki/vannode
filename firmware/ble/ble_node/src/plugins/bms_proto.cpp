@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only AND Apache-2.0
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// Portions from aiobmsble by Patrick Loschmidt (Apache-2.0) - see firmware/ble/LICENSE-Apache-2.0.
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 // BMS protocol decoding. Protocol knowledge ported from aiobmsble (Apache-2.0),
 // https://github.com/patman15/aiobmsble - see bms_proto.h and firmware/ble/LICENSE-Apache-2.0.
 #include "bms_proto.h"

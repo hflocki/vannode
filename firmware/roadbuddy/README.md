@@ -1,5 +1,7 @@
 # RoadBuddy – M5Stack Core2 Camper-Display
 
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+
 Kleines Touch-Display für das Wohnmobil auf Basis des **M5Stack Core2**. Es ist für den schnellen Blick beim Ankommen gedacht: Stehe ich gerade, reichen Wasser und Gas? Dazu zeigt es per MQTT Neigung (Wasserwaage), Frischwassertank, Gasflasche, Temperaturen und Batterien. Zum Akku-Sparen schaltet sich das Display automatisch aus, danach geht das Gerät in den Deep Sleep, WLAN und MQTT sind dann komplett aus.
 
 Optik und Farben entsprechen dem großen Wandpanel [display-node](../display): dunkle Karten mit dünnem Rand, farbiger Kreis mit Symbol, Dezimalkomma, gleiche Zustandsfarben und dieselbe Segmentanzeige für Batterien.
@@ -208,4 +210,6 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 ## Lizenz
 
 GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md).
+
+Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

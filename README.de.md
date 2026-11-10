@@ -11,6 +11,8 @@
 
 Elektronik für den Camper, die über **MQTT** zusammenspielt: Tanks, Temperaturen, Batterien, Heizung, Dachlüfter, Dachhaube, Ausrichtung und zwei Displays. Jedes Gerät ist ein ESP8266/ESP32 mit eigener **Arduino**-Firmware, eigener Web-Oberfläche und Home-Assistant-Discovery. Die Geräte und Displays reden direkt über den Broker miteinander, z. B. den MQTT-Broker des LTE-Routers. Home Assistant kann mitlesen, muss aber nicht laufen.
 
+> **Nutzung auf eigene Gefahr.** VanNode ist ein unentgeltliches Hobbyprojekt ohne Gewähr und ohne Haftung und keine Sicherheitseinrichtung. Lies den [Haftungsausschluss](#haftungsausschluss--nutzung-auf-eigene-gefahr), bevor du etwas nachbaust oder einbaust.
+
 ## Warum?
 
 Angefangen hat alles mit Home Assistant und ESPHome. Für den Camper wurde mir das mit der Zeit zu viel: ein Server, der immer laufen muss, damit irgendetwas angezeigt wird, eine YAML-Konfiguration pro Gerät, Updates, die nebenbei etwas verändern, und viele Teile, die alle zusammenpassen müssen. Ein Fahrzeug ist oft tagelang ohne Netz und nur mit Batterie unterwegs, da wollte ich etwas Einfacheres und Robusteres.
@@ -186,6 +188,38 @@ Die Beispieldaten und das simulierte Verhalten stehen je Gerät in `tools/mockup
 
 Die Geräte waren vorher einzelne Repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). Sie wurden hierher übernommen (das frühere `firmware/battery` ist jetzt Teil von `firmware/ble`); die alten Repos sind archiviert bzw. werden es.
 
+## Haftungsausschluss – Nutzung auf eigene Gefahr
+
+VanNode ist ein privates Hobbyprojekt, unentgeltlich und ohne Geschäftstätigkeit. Es überwacht und
+schaltet echte Technik im Fahrzeug (Heizung, Gas- und Wassertank, Wasserpumpe, Dachhaube und
+Dachlüfter, Batterien). Fehler in Software, Einstellungen, Hardware oder Einbau können Geräte, das
+Fahrzeug oder andere Sachen beschädigen und Menschen gefährden.
+
+- Nachbau, Einbau und Nutzung erfolgen vollständig auf eigene Gefahr und eigene Verantwortung.
+- VanNode ist keine Sicherheitseinrichtung. Es ersetzt weder die Steuerungen und Schutzfunktionen
+  der Hersteller noch Gas-, CO- oder Rauchmelder, das Frostwächter-Ventil oder regelmäßige
+  Kontrollen. Angezeigte Werte und Warnungen können falsch sein, zu spät kommen oder ausbleiben –
+  verlass dich nicht darauf.
+- Arbeiten an Gasanlage, 230 V und Fahrzeugelektrik nur durch Fachkundige, unter Beachtung der
+  geltenden Vorschriften und der Anleitungen der Hersteller. Der Anschluss an fremde Geräte kann
+  deren Garantie, Gewährleistung oder Zulassung gefährden.
+- Soweit gesetzlich zulässig, haftet der Autor nicht für Schäden jeder Art, die aus der Nutzung von
+  VanNode, seiner Dokumentation oder damit gebauter Geräte entstehen oder daraus, dass sie nicht
+  genutzt werden können (siehe auch Abschnitte 15 und 16 der GNU GPL v3). Unberührt bleibt nur die
+  Haftung, die gesetzlich nicht ausgeschlossen werden kann, insbesondere bei Vorsatz und grober
+  Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit und nach zwingendem
+  Produkthaftungsrecht, soweit es anwendbar ist.
+
+## Marken
+
+Produkt- und Firmennamen in diesem Projekt – zum Beispiel Truma, Combi, CP Plus, CaraWater, Daly,
+Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Teltonika und Home Assistant – sind Marken oder eingetragene Marken ihrer Inhaber. Sie stehen hier
+nur, um passende Geräte zu benennen. VanNode hat keine Verbindung zu diesen Inhabern und wird von
+ihnen weder unterstützt noch geprüft oder empfohlen. Die Protokolle stammen aus öffentlichen
+Open-Source-Projekten oder wurden nur ermittelt, damit die Geräte zusammenarbeiten
+(Interoperabilität).
+
 ## Lizenz
 
 VanNode steht unter der **GNU General Public License Version 3** ([`LICENSE`](LICENSE)) mit
@@ -206,7 +240,7 @@ Fremde Teile behalten ihre Lizenz und sind in der [`NOTICE.md`](NOTICE.md) aufge
 | Ordner | Fremde Teile |
 | --- | --- |
 | `firmware/heater` | Protokoll-Logik aus [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) und Timer aus [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), Test-Mitschnitte aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
-| `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT) |
+| `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach der Community-Integration carawater_isp15 (eigene Umsetzung) |
 | `firmware/level` | basiert auf dem Levelsensor von [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
 | `firmware/display` | Schriften Montserrat und Font Awesome Free (OFL), Truma-Fehlertexte (eigene Formulierung) |
 | `firmware/omg` | OpenMQTTGateway (GPL-3.0), wird beim Bauen heruntergeladen |

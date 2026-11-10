@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode - GNU GPL v3 with additional terms, see NOTICE.md. NO WARRANTY, use at your own risk. -->
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -916,6 +917,7 @@ const VN_COPYRIGHT='Copyright © 2026 hflocki';
 const VN_REPO='https://github.com/hflocki/vannode';
 const VN_GPL='Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
 const VN_TERMS='Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
+const VN_RISK='Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
 function pgAbout(){
   const a=(h,t)=>`<a href="${h}" target="_blank" rel="noopener">${t}</a>`;
   return `<details data-g="about" class="about" open><summary>Über VanNode</summary>
@@ -924,6 +926,7 @@ function pgAbout(){
    <p>${VN_COPYRIGHT}<br>Teil von VanNode – Camper-Elektronik über MQTT<br>${a(VN_REPO,'github.com/hflocki/vannode')}</p>
    <p>Lizenz: <b>GNU GPL Version 3</b>. ${VN_GPL}</p>
    <p class="mu">${VN_TERMS}</p>
+   <p><b>Ohne Gewähr.</b> ${VN_RISK}</p>
    <p>${a(VN_REPO+'/blob/main/firmware/display/LICENSE','Lizenztext (GPL-3.0)')} · ${a(VN_REPO+'/blob/main/firmware/display/NOTICE.md','Hinweise und fremde Teile')}</p>
    <details><summary>Fremde Teile und verwendete Software</summary><table>
     <tr><td>Truma-Fehlercodes</td><td>nach Truma-Diagnosekatalog und CP-Plus-Codelisten, Texte eigenständig</td></tr>

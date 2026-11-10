@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only AND MIT
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// Portions Copyright (c) 2026 klehnst (MIT) - see firmware/level/LICENSE-klehnst-MIT.
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
 /**
  * 🚐 Camper Level Card v6.0 – Home Assistant Custom Card
  *

@@ -209,6 +209,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.2 | Build-Fehler aus 2.1.0 behoben: Pumpen-Plugin nutzt wieder `PUMP_UART_*` aus `config.h` (2.1.0 und 2.1.1 ließen sich nicht bauen) |
 | 2.1.1 | Webseite: Karte **Über VanNode** unter dem Update (Logo, Version, Copyright, Lizenz, Link zum Projekt) |
 | 2.1.0 | Stand der camper_toolbox 0.1.13 übernommen. **Dachhaube:** vier Kopplungsvarianten nacheinander (für ältere BLE-4.0-Module), nach allen Fehlversuchen 5 min Pause statt die anderen Geräte zu blockieren; Telegramme robuster (letztes `P_a=` vor dem Zeilenende, Nullbytes, Puffer bei Trennung leeren). **Kühlschrank:** GATT E530/E531 statt FFE0/FFE1, Notify auf allen Kanälen des Service, ohne Bluetooth-PIN; `*` in den UUID-Feldern = alle. **Log je Gerät** zum Herunterladen in der Weboberfläche (`/api/log`) |
 | 2.0.4 | Pumpe (CaraWater) aus der getesteten camper_toolbox 0.1.13 übernommen: auch ISP 51 (TD5322A, Status `AA 45`, nur Anzeige – Steuern noch nicht möglich), alle Notify-Kanäle der Pumpe werden abonniert, FFE0-Geräte nur noch mit Pumpen-Namen in der Suche, „läuft“ auch über Strom/Durchfluss, Befehle ohne Verbindung setzen den Schalter in HA zurück |

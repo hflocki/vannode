@@ -26,7 +26,7 @@ struct PumpUuids {
 static const PumpUuids PUMP_LAYOUTS[] = {
     {PUMP_SERVICE_UUID, PUMP_NOTIFY_UUID, PUMP_WRITE_UUID},             // FF00 / FF01 / FF02
     {PUMP_ALT_SERVICE_UUID, PUMP_ALT_NOTIFY_UUID, PUMP_ALT_WRITE_UUID}, // FFF0 / FFF1 / FFF2
-    {PUMP_ALT2_SERVICE_UUID, PUMP_ALT2_CHAR_UUID, PUMP_ALT2_CHAR_UUID},   // FFE0 / FFE1 (notify + write)
+    {PUMP_UART_SERVICE_UUID, PUMP_UART_CHAR_UUID, PUMP_UART_CHAR_UUID},   // FFE0 / FFE1 (notify + write)
 };
 
 // Notifications: every characteristic of the pump service that can notify is subscribed,

@@ -51,4 +51,5 @@ Die Umgebungen in `camper_env.ini` bauen auf `com-esp32`, `libraries.ble` und `l
 
 ## Lizenz
 
-OpenMQTTGateway: GPL-3.0 (wird nur heruntergeladen, nicht mitgeliefert). Die Dateien in diesem Ordner: MIT.
+OpenMQTTGateway: GPL-3.0 (wird nur heruntergeladen, nicht mitgeliefert). Die Dateien in diesem Ordner: GNU GPL Version 3 mit den zusätzlichen Bedingungen aus [NOTICE.md](NOTICE.md).
+

@@ -1639,8 +1639,8 @@ void buildSystem(lv_obj_t* tab) {
   lv_obj_align(abName, LV_ALIGN_TOP_RIGHT, 0, 8);
   lv_obj_t* abVer = label(ab, &font_de_14, C_MUTED, "Version " FW_VERSION);
   lv_obj_align(abVer, LV_ALIGN_RIGHT_MID, 0, 0);
-  // author and license, must stay (MIT, see AGENTS.md)
-  lv_obj_t* abCopy = label(ab, &font_de_14, C_MUTED, "\xC2\xA9 2026 hflocki \xC2\xB7 MIT");
+  // author and license: must stay (GPL-3.0 additional terms, NOTICE.md)
+  lv_obj_t* abCopy = label(ab, &font_de_14, C_MUTED, "\xC2\xA9 2026 hflocki \xC2\xB7 GPL-3.0");
   lv_obj_align(abCopy, LV_ALIGN_BOTTOM_RIGHT, 0, -8);
 
   // QR code to open the web page (or join the setup access point)

@@ -13,7 +13,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.4.4"
+#define FW_VERSION            "2.4.5"
 #define FW_DEVICE             "level"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID

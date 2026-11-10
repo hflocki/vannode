@@ -209,6 +209,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.3 | Lizenz jetzt GNU GPL v3 mit Zusatzbedingungen (Urhebervermerk bleibt, Forks kennzeichnen, Name/Logo nicht lizenziert); Über-Karte nennt Lizenz und fremde Teile |
 | 2.1.2 | Build-Fehler aus 2.1.0 behoben: Pumpen-Plugin nutzt wieder `PUMP_UART_*` aus `config.h` (2.1.0 und 2.1.1 ließen sich nicht bauen) |
 | 2.1.1 | Webseite: Karte **Über VanNode** unter dem Update (Logo, Version, Copyright, Lizenz, Link zum Projekt) |
 | 2.1.0 | Stand der camper_toolbox 0.1.13 übernommen. **Dachhaube:** vier Kopplungsvarianten nacheinander (für ältere BLE-4.0-Module), nach allen Fehlversuchen 5 min Pause statt die anderen Geräte zu blockieren; Telegramme robuster (letztes `P_a=` vor dem Zeilenende, Nullbytes, Puffer bei Trennung leeren). **Kühlschrank:** GATT E530/E531 statt FFE0/FFE1, Notify auf allen Kanälen des Service, ohne Bluetooth-PIN; `*` in den UUID-Feldern = alle. **Log je Gerät** zum Herunterladen in der Weboberfläche (`/api/log`) |
@@ -238,4 +239,5 @@ Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble
 
 ## Lizenz
 
-MIT, siehe [LICENSE](LICENSE). Das Dachhauben-Protokoll ist aus der Home-Assistant-Integration rvtech-hacs portiert. Ausnahme: die Batterie-Protokolle `ble_node/src/plugins/bms_proto.*` sind aus [aiobmsble](https://github.com/patman15/aiobmsble) portiert und stehen unter Apache-2.0, siehe [LICENSE-Apache-2.0](LICENSE-Apache-2.0).
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll nach der HA-Integration carawater_isp15.
+

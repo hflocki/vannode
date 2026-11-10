@@ -55,7 +55,7 @@ Passt zu den anderen Projekten:
 - **Stromausfallsicher:** keine SD-Karte, kein Dateisystem. Webseite und Oberfläche stecken in der Firmware, Einstellungen im NVS. Strom an → nach ca. 1–2 s läuft alles wieder.
 - Bildschirm dimmt bzw. schaltet nach einstellbarer Zeit ab (Helligkeit gedimmt 0 = ganz aus), Berühren weckt (die erste Berührung löst nichts aus). Sofort ausschalten: **Kopfzeile lange drücken**, Knopf **Aus** auf der Systemseite oder **💤** oben auf der Webseite
 - **Ruhebild:** Gedimmt (nicht ganz aus) zeigt das Display statt der Seite das VanNode-Logo, groß Uhrzeit und Datum und darunter aktive Warnungen in Gelb auf Schwarz. Alles wandert jede Minute ein paar Pixel, damit nichts einbrennt. Abschalten unter *Einstellungen → Display* mit dem Haken **Gedimmt Ruhebild zeigen** (Standard an); dann bleibt wie bisher die Seite gedimmt stehen
-- **Info:** *Einstellungen → Info* zeigt Logo, Version, Urheber, MIT-Lizenztext und die verwendete Software mit Lizenzen. Auf dem Wandpanel steht der Vermerk auf der Logo-Karte der Systemseite
+- **Info:** *Einstellungen → Info* zeigt Logo, Version, Urheber, Lizenz (GPL-3.0 mit Zusatzbedingungen) und die fremden Teile und verwendete Software. Auf dem Wandpanel steht der Vermerk auf der Logo-Karte der Systemseite
 - **Startbild:** Beim Einschalten zeigt das Display das VanNode-Logo mit Version und dem aktuellen Schritt (WLAN, Oberfläche), bis die Oberfläche fertig ist (mindestens 1,5 s). Oben auf der Systemseite steht das Logo mit Gerätename und Version
 - Uhrzeit per NTP, Firmware-Update über die Webseite (`.bin`-Datei, mit Fortschrittsbalken) oder Arduino-IDE-Netzwerkport
 - **Einstellungen sichern und wiederherstellen** als JSON-Datei (ohne Passwörter)
@@ -510,4 +510,4 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 - Der MaxxFan meldet keine Drehzahl zurück. Die Lüfterseite zeigt deshalb nur Online-Status und Auto-Hold; die Stufe wird gesetzt, nicht gelesen.
 - PubSubClient verwirft Nachrichten über 4 KB (`MQTT_BUFFER_SIZE`). Große Zigbee-Geräte-JSONs bitte in Zigbee2MQTT nicht unnötig aufblähen.
 - Bubble-Richtung: Neigt sich der Punkt falsch herum, im Levelsensor die Montagerichtung prüfen.
-- Lizenz: MIT. Schriften: Montserrat (OFL) und Font Awesome 5 Free (OFL), wie in LVGL enthalten.
+- Lizenz: GNU GPL Version 3 mit zusätzlichen Bedingungen, siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md); Name und Logo: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Schriften: Montserrat (OFL) und Font Awesome 5 Free (OFL), wie in LVGL enthalten.

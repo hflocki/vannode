@@ -913,26 +913,28 @@ const TYPES=['Wert','Schalter','Taster','Regler'];
 const PO_CATS=[['temp','Kühlschrank / Temperatur'],['heater','Heizung'],['bat','Batterie'],['water','Frischwasser'],['gas','Gas'],['frost','Frost'],['weather','Wetter / Markise'],['depart','Abfahrtscheck'],['tile','Eigene Kacheln'],['rule','Regeln'],['contact','Kontakte']];
 function prioOpts(def){return (def?'<option value="3">wie Standard</option>':'')+'<option value="-1">Leise</option><option value="0">Normal</option><option value="1">Hoch</option><option value="2">Notfall</option>'+(def?'<option value="-3">Aus</option>':'')}
 function inp(id,lbl,type='text',ph=''){return `<div><label for="${id}">${lbl}</label><input type="${type}" id="${id}" placeholder="${esc(ph)}"></div>`}
-// Settings -> Info: logo, author, license. The copyright line and the license text are required by
-// the MIT license and must stay in every copy and fork (see AGENTS.md).
-const VN_COPYRIGHT='Copyright (c) 2026 hflocki';
-const VN_MIT=`Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`;
+// Settings -> Info: logo, author, license. Part of the Appropriate Legal Notices of VanNode: under
+// the additional terms of its GNU GPL v3 license (section 7 b/c, see NOTICE.md) the author
+// attribution, the project link and the license information must stay in every copy and fork.
+const VN_COPYRIGHT='Copyright © 2026 hflocki';
+const VN_REPO='https://github.com/hflocki/vannode';
+const VN_GPL='Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
+const VN_TERMS='Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
 function pgAbout(){
+  const a=(h,t)=>`<a href="${h}" target="_blank" rel="noopener">${t}</a>`;
   return `<details data-g="about" class="about" open><summary>Über VanNode</summary>
    <i class="vnlogo" role="img" aria-label="VanNode"></i>
    <p><b>Display-Node</b> · Firmware ${esc((cfg&&cfg.fw)||'--')}</p>
-   <p>${VN_COPYRIGHT.replace('(c)','©')}<br>Teil von VanNode – Camper-Elektronik über MQTT<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener">github.com/hflocki/vannode</a></p>
-   <p>Lizenz: <b>MIT</b>. Nutzen, ändern und weitergeben ist erlaubt, solange dieser Copyright-Vermerk und der Lizenztext erhalten bleiben.</p>
-   <details><summary>Lizenztext (MIT)</summary><pre>MIT License\n\n${VN_COPYRIGHT}\n\n${esc(VN_MIT)}</pre></details>
-   <details><summary>Verwendete Software</summary><table>
+   <p>${VN_COPYRIGHT}<br>Teil von VanNode – Camper-Elektronik über MQTT<br>${a(VN_REPO,'github.com/hflocki/vannode')}</p>
+   <p>Lizenz: <b>GNU GPL Version 3</b>. ${VN_GPL}</p>
+   <p class="mu">${VN_TERMS}</p>
+   <p>${a(VN_REPO+'/blob/main/firmware/display/LICENSE','Lizenztext (GPL-3.0)')} · ${a(VN_REPO+'/blob/main/firmware/display/NOTICE.md','Hinweise und fremde Teile')}</p>
+   <details><summary>Fremde Teile und verwendete Software</summary><table>
+    <tr><td>Truma-Fehlercodes</td><td>nach Truma-Diagnosekatalog und CP-Plus-Codelisten, Texte eigenständig</td></tr>
+    <tr><td>Schriften Montserrat, Poppins (Logo)</td><td>SIL OFL 1.1</td></tr><tr><td>Symbole Font Awesome Free</td><td>SIL OFL 1.1 / CC BY 4.0</td></tr>
     <tr><td>Arduino-ESP32</td><td>LGPL-2.1</td></tr><tr><td>LVGL</td><td>MIT</td></tr>
     <tr><td>GFX Library for Arduino</td><td>BSD</td></tr><tr><td>ESP Async WebServer, Async TCP</td><td>LGPL-3.0</td></tr>
     <tr><td>PubSubClient</td><td>MIT</td></tr><tr><td>ArduinoJson</td><td>MIT</td></tr>
-    <tr><td>Schriften Montserrat, Poppins (Logo)</td><td>SIL OFL 1.1</td></tr><tr><td>Symbole Font Awesome Free</td><td>SIL OFL 1.1 / CC BY 4.0</td></tr>
    </table></details></details>`;
 }
 function pgSettings(){

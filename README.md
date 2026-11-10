@@ -62,7 +62,7 @@ flowchart TB
 | [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **tool-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/tool` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
-| [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (fork of the level sensor by klehnst) | `camper/level` |
+| [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (based on the [level sensor by klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth thermometers (Govee, Ruuvi, Xiaomi …) through OpenMQTTGateway | `camper/OMG` |
 | [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4" wall panel + the same page for the phone: shows and controls everything, weather, warnings, Pushover | `camper/display` |
 | [`firmware/roadbuddy`](firmware/roadbuddy) | M5Stack Core2 | small battery display: levelling, water, gas | – (receive only) |
@@ -186,14 +186,27 @@ Sample data and simulated behaviour per device are in `tools/mockups/mock/<devic
 
 The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). They were moved here (the former `firmware/battery` is now part of `firmware/ble`); the old repos are or will be archived.
 
-## Licenses
+## License
 
-Every folder keeps its license:
+VanNode is licensed under the **GNU General Public License version 3** ([`LICENSE`](LICENSE)) with
+additional terms under section 7 ([`NOTICE.md`](NOTICE.md)):
 
-| Folder | License |
+- the author attribution "Copyright © 2026 hflocki", the project link and the license information
+  shown by the devices (card "Über VanNode", display info, wall panel, Road Buddy update page) must
+  stay in all copies and modified versions;
+- modified versions must be marked as such and must not be passed off as one's own work;
+- the name "VanNode" and its logo are not part of the license: forks need their own name and logo
+  ([`NAME-UND-LOGO.md`](NAME-UND-LOGO.md), German).
+
+Selling is allowed under the GPL, as long as the complete source code and these notices go with it.
+
+Third-party parts keep their licenses and are listed in [`NOTICE.md`](NOTICE.md):
+
+| Folder | Third-party parts |
 | --- | --- |
-| `firmware/heater` | GPL-3.0 (protocol logic ported from GPL projects, see its README) |
-| `firmware/level` | MIT ([klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT)) |
-| `firmware/tanklevel`, `temp`, `maxxfan`, `display` | MIT |
-| `firmware/ble` | MIT (roof hatch protocol ported from the HA integration rvtech-hacs); battery protocols `bms_proto.*` Apache-2.0 (ported from [aiobmsble](https://github.com/patman15/aiobmsble)) |
-| `firmware/roadbuddy` | MIT |
+| `firmware/heater` | protocol logic from [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) and timer from [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), test captures from [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
+| `firmware/ble` | battery protocols from [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), roof hatch protocol from [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT) |
+| `firmware/level` | based on the level sensor of [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
+| `firmware/display` | fonts Montserrat and Font Awesome Free (OFL), Truma fault texts (own wording) |
+| `firmware/omg` | OpenMQTTGateway (GPL-3.0), downloaded at build time |
+

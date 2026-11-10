@@ -140,4 +140,5 @@ Bis November 2026 war der Emulator ein ESP32-C3 mit eigener Firmware (`firmware/
 
 ## Lizenz
 
-MIT
+GNU GPL Version 3 mit den zusätzlichen Bedingungen aus der [NOTICE.md](../../NOTICE.md) des Repositorys.
+

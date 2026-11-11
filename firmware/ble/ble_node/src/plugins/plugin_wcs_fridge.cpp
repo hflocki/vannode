@@ -5,14 +5,13 @@
 
 // Plugin "fridge": WCS compressor fridge via BLE connection.
 //
-// Protocol (taken from the official WCS Android app, adapter "PG155", used for devices
-// named "WCS..." / "75L..."), plain ASCII, every command ends with "\n":
+// Protocol (devices named "WCS..." / "75L..."), plain ASCII, every command ends with "\n":
 //   GATT:   service E530, write E531, notify E532 (no Bluetooth pairing)
 //   Login:  "/SC0/U"            -> fridge answers with a 32-character id (no "/S" prefix)
 //           "/SC0/P<password>"  -> "/SC0/P/001" = ok, "/SC0/P/000" = wrong password
 //           The password is the app password (factory default 1234), not a Bluetooth PIN.
 //           Without a successful login the fridge sends nothing.
-//   Status: "/SC0/1/-01" (the app polls every 5 s) -> "/SC0/.../f0,f1,...,f18"
+//   Status: "/SC0/1/-01" (poll every 5 s) -> "/SC0/.../f0,f1,...,f18"
 //           f0 zones (1/2), f1 power (1/0), f2 unit (1 = C, 2 = F), f3/f4 temperature
 //           zone 1/2, f5/f6 set point zone 1/2, f7 battery protection level (1-3),
 //           f8 voltage x10, f9 mode ("11" = sleep, 2 digits: "3" first / last = zone 1 / 2
@@ -33,9 +32,9 @@
 
 #define WCS_LINE_MAX      200
 #define WCS_IDLE_FLUSH    300    // ms without new data: drop / evaluate an unfinished frame
-#define WCS_MIN_FIELDS    10     // Status fields the app requires
+#define WCS_MIN_FIELDS    10     // Minimum number of status fields
 #define WCS_ID_LEN        32     // Length of the id answer to "/SC0/U"
-#define WCS_STEP_MS       1000   // Login step interval (as in the app)
+#define WCS_STEP_MS       1000   // Login step interval
 #define WCS_ID_TRIES      3      // "/SC0/U" attempts before the password is sent anyway
 #define WCS_LOGIN_TRIES   3      // Password attempts without answer before polling anyway
 #define WCS_LOGIN_WAIT_MS 4000   // Wait for the password answer
@@ -71,8 +70,8 @@ static const Field WCS_FIELDS[] = {
     FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = E530 (Standard), * = alle Services"),
     FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = E532 (Standard), * = jede, die senden kann"),
     FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard)"),
-    FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = /SC0/1/-01 (wie die App). \\r und \\n erlaubt"),
-    FLD_INT(WcsCfg, poll_s, "poll_s", "Abfrage alle", "s", 2, 3600, "Die App fragt alle 5 s ab"),
+    FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt"),
+    FLD_INT(WcsCfg, poll_s, "poll_s", "Abfrage alle", "s", 2, 3600, "Standard 5 s"),
 };
 
 static const Entity WCS_ENTITIES[] = {
@@ -124,7 +123,7 @@ public:
             updates++;
         }
         unescape(c.poll[0] ? c.poll : "/SC0/1/-01\\n", pollCmd, sizeof(pollCmd));
-        // The app terminates every command with "\n": add it if the field has none
+        // Every command ends with "\n": add it if the field has none
         size_t n = strlen(pollCmd);
         if (n && pollCmd[n - 1] != '\n' && n < sizeof(pollCmd) - 1) { pollCmd[n] = '\n'; pollCmd[n + 1] = '\0'; }
         if (login == WL_FAILED) login = WL_IDLE;   // New password: try again
@@ -344,7 +343,7 @@ private:
         devlogf(id, "%s: %s", what, b);
     }
 
-    // Login sequence of the app: ask for the id each second (max 3 times), then send the
+    // Login sequence: ask for the id each second (max 3 times), then send the
     // password; the fridge only sends status after a successful login
     void loginStep() {
         unsigned long now = millis();
@@ -462,7 +461,7 @@ private:
             }
             if (lineLen < WCS_LINE_MAX) line[lineLen++] = ch;
         }
-        // The id has no terminator in the app either: exactly 32 characters, no "/S"
+        // The id has no terminator: exactly 32 characters, no "/S"
         if (lineLen == WCS_ID_LEN && line[0] != '/') {
             line[lineLen] = '\0';
             handleChunk();

@@ -9,13 +9,12 @@
 //   ASCII over a BLE UART bridge (HM-10 module), characteristic FFE1 (notify + write)
 //   send    "P_d=NNN\r\n"  target position (3 digits)
 //   receive "P_a=NNN\r\n"  reported position (3 digits)
-// Positions 0-100. Special codes (confirmed in the official RV Tech app, RoofVentControllerImpl):
+// Positions 0-100. Special codes:
 //   101 = go to favourite position, 102 = vent ("Lüften", each press extends the vent time),
 //   103 = store the current position as favourite.
-// The app has no stop command: sending "open" (100) or "close" (000) again while the hatch
-// moves stops it (handled by the hatch itself, see the app help text).
-// The app writes with response and does not pair on its own: Android pairs only when the
-// hatch asks for it (insufficient authentication on subscribe).
+// There is no stop command: sending "open" (100) or "close" (000) again while the hatch
+// moves stops it (handled by the hatch itself).
+// Pairing is only needed if the hatch asks for it (insufficient authentication on subscribe).
 
 #include "../core/plugin.h"
 
@@ -315,7 +314,7 @@ private:
     bool writeValue(int v) {
         char buf[12];
         snprintf(buf, sizeof(buf), "P_d=%03d\r\n", v);
-        bool ok = link.write(buf, true);   // With response, like the app
+        bool ok = link.write(buf, true);   // Write with response
         devlogf(id, "Send %d: %s", v, ok ? "OK" : "FAILED");
         return ok;
     }

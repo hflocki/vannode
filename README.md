@@ -141,7 +141,7 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
-Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder and is uploaded separately after an update.
+Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder; it is attached to the release as `<device>-node-web-v<version>.html.gz` and uploaded separately after the firmware update.
 
 **Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file with the firmware version (`temp-node-esp32c3-v1.4.2.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
 

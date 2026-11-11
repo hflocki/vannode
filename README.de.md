@@ -141,7 +141,7 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
-Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Road Buddy über seine Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner und wird nach einem Update separat hochgeladen.
+Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Road Buddy über seine Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner; sie hängt als `<gerät>-node-web-v<version>.html.gz` mit am Release und wird nach dem Firmware-Update separat hochgeladen.
 
 **Namen:** Jedes Gerät heißt `<gerät>-node` – Hostname (`temp-node.local`), Setup-WLAN (`Temp-Node-XXXXXX`) und Release-Datei mit der Firmware-Version (`temp-node-esp32c3-v1.4.2.bin`). Die MQTT-Topics bleiben `camper/<gerät>/…`, die Home-Assistant-IDs bleiben gleich.
 

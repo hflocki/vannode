@@ -185,6 +185,13 @@ jobs:
           bin="${{ matrix.device }}-node-${{ matrix.target }}-v$ver.bin"
           cp "$out"/*.ino.bin "$bin"
           echo "BIN=$bin" >> "$GITHUB_ENV"
+          # Devices with a web page in LittleFS: put it into the device release as well
+          web=""
+          if [[ -f "${{ matrix.sketch }}/data/index.html.gz" ]]; then
+            web="${{ matrix.device }}-node-web-v$ver.html.gz"
+            cp "${{ matrix.sketch }}/data/index.html.gz" "$web"
+          fi
+          echo "WEB=$web" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         if: steps.sel.outputs.skip != '1'
@@ -196,7 +203,9 @@ jobs:
         if: steps.sel.outputs.skip != '1' && startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/bundle-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.BIN }}
+          files: |
+            ${{ env.BIN }}
+            ${{ env.WEB }}
 
   # Tag bundle-v<version>: one release with the firmware files from .github/bundle.txt
   bundle:

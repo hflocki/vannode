@@ -53,6 +53,9 @@
 #ifndef PLUGIN_WCS_FRIDGE
 #define PLUGIN_WCS_FRIDGE     1      // Fridge: WCS compressor fridge, BLE connection
 #endif
+#ifndef PLUGIN_WIPRO
+#define PLUGIN_WIPRO          1      // Alarm: Thitronik WiPro III status (read-only), BLE connection
+#endif
 #ifndef PLUGIN_DALY
 #define PLUGIN_DALY           1      // Battery: Daly smart BMS (BLE name "DL-..."), BLE connection
 #endif
@@ -78,7 +81,7 @@
 #define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
-#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + CT_BMS)
+#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
 
@@ -89,7 +92,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.7"
+#define FW_VERSION            "2.1.8"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -460,6 +463,12 @@
 #endif
 #ifndef MQTT_WCS_MS
 #define MQTT_WCS_MS           30000
+#endif
+#ifndef WIPRO_OFFLINE_MS
+#define WIPRO_OFFLINE_MS      120000 // No status for 2 min = alarm module offline
+#endif
+#ifndef MQTT_WIPRO_MS
+#define MQTT_WIPRO_MS         30000
 #endif
 
 // ============================================================

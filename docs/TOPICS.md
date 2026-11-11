@@ -111,7 +111,7 @@ Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `batte
 
 ## BLE-Node Tool `camper/tool`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -127,6 +127,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/cmd/<plugin>/release/set` | `ON` / `OFF`: Bluetooth für die App freigeben |
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
 | `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `error`, `message` | Kühlschrank; Befehle `power`, `target1`, `target2`, `bpd` |
+| `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |

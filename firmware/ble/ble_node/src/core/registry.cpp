@@ -48,6 +48,9 @@ Plugin* createRvTech(uint8_t index);
 #if PLUGIN_WCS_FRIDGE
 Plugin* createWcsFridge(uint8_t index);
 #endif
+#if PLUGIN_WIPRO
+Plugin* createWipro(uint8_t index);
+#endif
 
 // type id (= id of the first device of this type), name for the web UI, Bluetooth use
 static const PluginType TYPES[] = {
@@ -59,6 +62,9 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_WCS_FRIDGE
     {"fridge", "Kühlschrank WCS", BLE_LINK, createWcsFridge},
+#endif
+#if PLUGIN_WIPRO
+    {"wipro", "Alarm WiPro III (nur lesen)", BLE_LINK, createWipro},
 #endif
 #if PLUGIN_DALY
     {"daly", "Batterie: Daly BMS", BLE_LINK, createDaly},

@@ -14,6 +14,7 @@
 // #define PLUGIN_RVTECH     0      // roof hatch RV Tech
 // #define PLUGIN_CARAWATER  0      // water pump CaraWater
 // #define PLUGIN_WCS_FRIDGE 0      // WCS fridge
+// #define PLUGIN_WIPRO 0           // WiPro III alarm status (read-only)
 // #define MAX_PLUGINS       12     // devices in total
 
 // ---- Passwords -------------------------------------------------------

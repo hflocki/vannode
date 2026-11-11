@@ -16,7 +16,7 @@ Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jet
 | Rolle | Gerätename | Topic | Geräte darauf |
 | --- | --- | --- | --- |
 | battery-node | `battery-node` | `camper/battery` | Daly BMS, Ective BM X, BM2 |
-| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Thermometer, Gas, eigene Sensoren |
+| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Alarm (nur lesen), Thermometer, Gas, eigene Sensoren |
 
 Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
 
@@ -31,6 +31,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Dachhaube RV Tech (Heki-Motorsteuerung; Auf, Zu, Regen, Lüften, Favorit, Favorit speichern, Stopp) | Verbinden | MAC, PIN |
 | Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
 | Kühlschrank WCS (Kompressor; Ein/Aus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
+| Alarm Thitronik WiPro III (**nur lesen**) | Verbinden | MAC, PIN normalerweise leer, Kontaktnamen (mit Komma), optional Status-UUID. Reiner Statusmelder: schaltet die Anlage nie scharf/unscharf |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
@@ -168,6 +169,8 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 
 **Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `error` (E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen); Befehle `power` (`ON`/`OFF`), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3).
 
+**Alarm WiPro III** (`wipro`, **nur lesen**): `armed` (`ON` = scharf), `reason` (Alarmgrund als Text, z. B. „Funkkontakt 5“, „Gaswarner getriggert“, „Panik-Alarm“), je Kontakt `contact0` … `contact7` (`ON` = offen, ein Bit aus Byte 6), `open` (Liste der offenen Kontakte mit ihren Namen) und `raw` (8 Byte als Hex). Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
+
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 
 > **Umstieg von der Toolbox (bis 1.2.x):** Das Gerät stellt ein gespeichertes `camper/toolbox` beim ersten Start selbst auf `camper/ble` um, das Display (ab 2.16.2) ebenso. Danach die alten retained Topics und die alten HA-Entitäten löschen: `python3 tools/mqtt/clean.py --host <broker> camper/toolbox homeassistant/sensor/camper_toolbox …` bzw. die Geräte „Toolbox Node“ in Home Assistant entfernen.
@@ -216,6 +219,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.8 | Neues Plugin **Alarm WiPro III** (`wipro`, nur lesen): meldet Scharf-Zustand, Alarmgrund (ausgelöster Funkkontakt oder Melder), jeden Funk-Kontakt einzeln (`contact0`…`contact7` aus der Bitmaske in Byte 6) und die offenen Kontakte als Namensliste über MQTT. Kontaktnamen im Web-UI einstellbar. Protokoll aus dem eigenen Projekt wipro2ha. Reiner Statusmelder, schaltet nie. Zählt als eine der drei Bluetooth-Verbindungen |
 | 2.1.7 | Stand der camper_toolbox 0.1.18: Kommentare und Hilfetexte von Dachhaube und Kühlschrank neutral formuliert; Über-Karte und NOTICE ohne die Zeilen zu Dachhaube und Kühlschrank (eigene Umsetzung, keine fremde Quelle) |
 | 2.1.6 | Stand der camper_toolbox 0.1.17. **Dachhaube:** neue Befehle **Favorit**, **Favorit speichern** und **Stopp** (in HA als Stopp der Abdeckung), fünfte Kopplungsvariante wie das ESP32-+-HM-10-Beispiel, Schreiben mit Antwort, wenn die Charakteristik nur das kann. **Kühlschrank:** Anmeldung mit dem App-Passwort der WCS-App (Werkseinstellung `1234`), Statusabfrage alle 5 s, alle Statusfelder, Fehlercodes E1–E7, Steuerung Ein/Aus, Soll-Temperatur je Zone und Batterieschutz; bei falschem Passwort Status „Passwort falsch“ und keine weiteren Versuche, bis das Passwort geändert wird |
 | 2.1.5 | Pumpe auf Stand camper_toolbox 0.1.14: **ISP 51 lässt sich jetzt schalten** (an/aus, Druckstufe 1–3), Befehl `AA 39` mit Uhrzeit und Wochentag (Uhr per NTP, Zeitzone Mitteleuropa) und Prüfsumme; es werden nur die bekannten Bits geschrieben (0x01 an, 0x60 Druckstufe), Befehle erst nach dem ersten Statusrahmen; Statusrahmen mit falscher Prüfsumme werden verworfen; Schalter **Leckage-Erkennung** entfällt (Bit unbekannt, in HA ggf. von Hand löschen); Pakete bis 160 Byte (Pumpen-Status hat 150). Quellen der Pumpe genannt: Blackforest-Vanlife-SmartCamper (MIT) und carawater-isp15-ble |

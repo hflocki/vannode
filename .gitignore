@@ -2,6 +2,7 @@
 build/
 .pio/
 .vscode/
+.venv/
 
 # macOS
 .DS_Store

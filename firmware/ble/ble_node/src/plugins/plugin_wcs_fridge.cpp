@@ -15,7 +15,7 @@
 //           f0 zones (1/2), f1 power (1/0), f2 unit (1 = C, 2 = F), f3/f4 temperature
 //           zone 1/2, f5/f6 set point zone 1/2, f7 battery protection level (1-3),
 //           f8 voltage x10, f9 mode ("11" = sleep, 2 digits: "3" first / last = zone 1 / 2
-//           in cool mode), f10 battery %, f11 dual zone power state, f12 fan,
+//           in cool mode), f10 battery %, f11 dual zone power state, f12 fan (circulation, off in sleep mode),
 //           f13 door heating, f15..f18 max / min set point zone 1, max / min zone 2
 //   Error:  "/SCE/<zone>/<code>" or "/SEE/<zone>/<code>", code 1-7 (see errorText())
 //   Commands: "/SC1/1/001|000" power on / off, "/SC3/<unit>/+NN" set point zone 1,
@@ -81,6 +81,8 @@ static const Entity WCS_ENTITIES[] = {
     {E_SENSOR, "set2",      "Soll-Temperatur Zone 2", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
     {E_SENSOR, "voltage",   "Spannung",               "V",  "voltage",         "measurement", nullptr, 0, nullptr},
     {E_SENSOR, "battery",   "Batterie",               "%",  "battery",         "measurement", nullptr, 0, nullptr},
+    {E_BINARY, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
+    {E_BINARY, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
     {E_SENSOR, "error",     "Fehler",                 nullptr, nullptr,        nullptr,       "mdi:alert-circle", EF_ALWAYS, nullptr},
     {E_SWITCH, "power",     "Kühlschrank an",         nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
     {E_SELECT, "target1",   "Soll Zone 1 einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
@@ -151,6 +153,9 @@ public:
             lastLinkChanges = link.changes;
             lineLen = 0;
             if (login != WL_FAILED) login = WL_IDLE;
+            // An error is reported again after the next connect if it is still active
+            errorCode = 0;
+            errorLine[0] = '\0';
             updates++;
         }
 
@@ -194,6 +199,7 @@ public:
         liveRowNum(o, "Spannung", hasData ? voltage : NAN, 1, "V");
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
         if (hasData) liveRowText(o, "Modus", modeText());
+        if (hasData && fanKnown) liveRowText(o, "Umluft", fanOn ? "an" : "aus");
         if (errorCode) liveRowText(o, "Fehler", errorLine);
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
@@ -235,6 +241,8 @@ public:
         out.num("temp1", temp1, 0);
         out.num("set1", set1, 0);
         if (!isnan(set1)) out.integer("target1", lroundf(set1));
+        if (fanKnown) out.onoff("fan", fanOn);
+        out.onoff("night", !strcmp(mode, "11"));
         if (c.zone2) {
             out.num("temp2", temp2, 0);
             out.num("set2", set2, 0);
@@ -321,6 +329,8 @@ private:
     int unit = 1;                 // 1 = Celsius, 2 = Fahrenheit (as reported by the fridge)
     int bpd = 0;                  // Battery protection level 1-3
     char mode[4] = "";
+    bool fanOn = false;           // Circulation fan (status field 12); off in sleep mode
+    bool fanKnown = false;
     int min1 = WCS_SET_MIN, max1 = WCS_SET_MAX, min2 = WCS_SET_MIN, max2 = WCS_SET_MAX;
     int errorCode = 0;
     char errorLine[48] = "";
@@ -405,7 +415,7 @@ private:
     }
 
     const char* modeText() const {
-        if (!strcmp(mode, "11")) return "Schlafmodus";
+        if (!strcmp(mode, "11")) return "Nachtmodus";
         if (strlen(mode) == 2) {
             if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen Zone 1 + 2";
             if (mode[0] == '3') return "Schnellkühlen Zone 1";
@@ -567,6 +577,7 @@ private:
         if (toInt(tok[7], v)) bpd = v;
         if (toInt(tok[8], v)) voltage = v / 10.0f;
         strlcpy(mode, tok[9], sizeof(mode));
+        if (n > 12 && toInt(tok[12], v)) { fanOn = v == 1; fanKnown = true; }
         if (n > 10 && toInt(tok[10], v)) battery = v < 0 ? 0 : (v > 100 ? 100 : v);
         if (n > 18) {
             int a, b, cc, d;

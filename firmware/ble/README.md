@@ -28,9 +28,9 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 
 | Typ | Rubrik | Einstellungen in der Web-UI |
 | --- | --- | --- |
-| Dachhaube RV Tech (Heki-Motorsteuerung) | Verbinden | MAC, PIN |
+| Dachhaube RV Tech (Heki-Motorsteuerung; Auf, Zu, Regen, Lüften, Favorit, Favorit speichern, Stopp) | Verbinden | MAC, PIN |
 | Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
-| Kühlschrank WCS (Kompressor) | Verbinden | MAC, optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-PIN: die PIN der App ist keine Kopplungs-PIN |
+| Kühlschrank WCS (Kompressor; Ein/Aus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
@@ -137,16 +137,17 @@ Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/
 
 1. Plugin aktivieren (Standard bzw. `config_local.h`) und flashen.
 2. Web-UI → Plugin → **„Suchen“** → Gerät aus der Liste wählen (übernimmt die MAC).
-3. Hat das Gerät eine **PIN** (Dachhaube, Kühlschrank): eintragen (1–6 Ziffern, auch `000000`), dieselbe wie in der Hersteller-App.
+3. Hat das Gerät eine **PIN** (Dachhaube): eintragen (1–6 Ziffern, auch `000000`), dieselbe wie in der Hersteller-App.
+   Der **Kühlschrank** braucht keine Bluetooth-Kopplung, aber das **App-Passwort** der WCS-App (Werkseinstellung `1234`, Feld leer = `1234`). Ohne richtiges Passwort sendet er keine Werte; bei falschem Passwort zeigt der Status „Passwort falsch“, und das Plugin wartet, bis das Passwort in den Einstellungen geändert wird.
 4. **Handy-App trennen** (App schließen oder Bluetooth am Handy aus): Die Geräte erlauben nur eine Verbindung. Später kann das Handy über **„Bluetooth für App freigeben“** wieder ran (endet nach 30 min von selbst).
 
 | Status | Bedeutung / was tun |
 | --- | --- |
 | `Nicht erreichbar` | Gerät nicht in Reichweite oder noch mit dem Handy verbunden |
-| `Kopplung fehlgeschlagen` | PIN falsch oder Gerät noch an ein Handy gekoppelt. Mit PIN probiert die Firmware nacheinander vier Kopplungsarten (Secure Connections, Legacy, Legacy nach der Dienstsuche, ohne Anfrage); klappt keine, wartet sie 5 Minuten, damit die anderen Geräte weiterlaufen |
+| `Kopplung fehlgeschlagen` | PIN falsch oder Gerät noch an ein Handy gekoppelt. Mit PIN probiert die Firmware nacheinander fünf Kopplungsarten (Secure Connections, Legacy, Legacy nach der Dienstsuche, ohne Anfrage, wie das ESP32-+-HM-10-Beispiel); klappt keine, wartet sie 5 Minuten, damit die anderen Geräte weiterlaufen |
 | `PIN nötig?` | Gerät verlangt eine Kopplung, aber keine (oder eine falsche) PIN eingetragen |
 | `Falsches Gerät?` | Erwartete Bluetooth-Dienste nicht gefunden – andere MAC gewählt? |
-| `Warte auf Daten` | Verbunden, aber noch keine Werte |
+| `Warte auf Daten` | Verbunden, aber noch keine Werte. Kühlschrank: im Log nachsehen, ob „Password ok“ kommt |
 | `Verbunden` | Alles in Ordnung |
 
 ## MQTT / Home Assistant
@@ -159,9 +160,13 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 | --- | --- |
 | `camper/tool/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
 | `camper/tool/rvtech/cover_position` | 0 … 100 % |
-| `camper/tool/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` |
+| `camper/tool/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` (Stopp nur während Auf/Zu: die Haube hält an, wenn derselbe Befehl noch einmal kommt) |
 | `camper/tool/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`) |
+| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`; Lüften: jedes Drücken verlängert die Lüftzeit) |
+| `camper/tool/cmd/rvtech/fav/set` | gespeicherte Lieblingsposition anfahren |
+| `camper/tool/cmd/rvtech/fav_set/set` | aktuelle Stellung als Favorit speichern |
+
+**Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `error` (E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen); Befehle `power` (`ON`/`OFF`), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3).
 
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 
@@ -211,6 +216,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.6 | Stand der camper_toolbox 0.1.17. **Dachhaube:** neue Befehle **Favorit**, **Favorit speichern** und **Stopp** (in HA als Stopp der Abdeckung), fünfte Kopplungsvariante wie das ESP32-+-HM-10-Beispiel, Schreiben mit Antwort, wenn die Charakteristik nur das kann. **Kühlschrank:** Anmeldung mit dem App-Passwort der WCS-App (Werkseinstellung `1234`), Statusabfrage wie die App, alle Statusfelder, Fehlercodes E1–E7, Steuerung Ein/Aus, Soll-Temperatur je Zone und Batterieschutz; bei falschem Passwort Status „Passwort falsch“ und keine weiteren Versuche, bis das Passwort geändert wird. Quellen in NOTICE ergänzt |
 | 2.1.5 | Pumpe auf Stand camper_toolbox 0.1.14: **ISP 51 lässt sich jetzt schalten** (an/aus, Druckstufe 1–3), Befehl `AA 39` mit Uhrzeit und Wochentag (Uhr per NTP, Zeitzone Mitteleuropa) und Prüfsumme; es werden nur die bekannten Bits geschrieben (0x01 an, 0x60 Druckstufe), Befehle erst nach dem ersten Statusrahmen; Statusrahmen mit falscher Prüfsumme werden verworfen; Schalter **Leckage-Erkennung** entfällt (Bit unbekannt, in HA ggf. von Hand löschen); Pakete bis 160 Byte (Pumpen-Status hat 150). Quellen der Pumpe genannt: Blackforest-Vanlife-SmartCamper (MIT) und carawater-isp15-ble |
 | 2.1.4 | Haftungsausschluss: Über-Karte zeigt „Ohne Gewähr – Nutzung auf eigene Gefahr“ und den Markenhinweis; Lizenzköpfe (SPDX) in allen Quelldateien |
 | 2.1.3 | Lizenz jetzt GNU GPL v3 mit Zusatzbedingungen (Urhebervermerk bleibt, Forks kennzeichnen, Name/Logo nicht lizenziert); Über-Karte nennt Lizenz und fremde Teile |

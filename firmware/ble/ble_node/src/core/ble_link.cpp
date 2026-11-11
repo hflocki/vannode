@@ -256,21 +256,29 @@ static bool isStandardService(const NimBLEUUID& u) {
 
 // Called once the link is up: pairing, service discovery and subscription (typically < 1 s)
 bool BleLink::finishConnect() {
-    // Pairing with a PIN: four variants, one per attempt, because some older modules (BLE 4.0,
-    // e.g. CC2541) do not answer the pairing request of a fresh connection:
-    //   1  secure connections, right after connecting
-    //   2  legacy pairing, right after connecting
-    //   3  legacy pairing after the service discovery (like a phone app)
+    // Pairing with a PIN: five variants, one per attempt, because some older modules (BLE 4.0,
+    // e.g. the HM-10 / HMSoft UART module of the roof hatch) do not answer every pairing request:
+    //   1  secure connections + MITM, right after connecting
+    //   2  legacy pairing + MITM, right after connecting
+    //   3  legacy pairing + MITM after the service discovery (like a phone app)
     //   4  no pairing request: discover and subscribe; the device asks for pairing itself
     //      if it needs it (NimBLE pairs on "insufficient authentication")
-    // After all four failed: a longer pause, so the other devices are not blocked.
-    uint8_t variant = (pin != BLE_NO_PIN) ? pairAttempt % 4 : 0;
+    //   5  like the known working ESP32 + HM-10 example (esp32-server.de/hm-10-esp32):
+    //      bonding only (no MITM flag), IO capability keyboard + display, keys ENC + ID
+    // After all five failed: a longer pause, so the other devices are not blocked.
+    uint8_t variant = (pin != BLE_NO_PIN) ? pairAttempt % BLE_PAIR_VARIANTS : 0;
     if (pin != BLE_NO_PIN) {
-        static const char* const NAMES[] = {"secure connections", "legacy pairing",
-                                            "legacy pairing after service discovery",
-                                            "no request, device decides"};
+        static const char* const NAMES[BLE_PAIR_VARIANTS] = {
+            "secure connections", "legacy pairing", "legacy pairing after service discovery",
+            "no request, device decides", "HM-10 style (bonding only, keyboard + display)"};
         devlogf(tag, "Pairing attempt %u: %s", (unsigned)pairAttempt + 1, NAMES[variant]);
         NimBLEDevice::setSecurityPasskey((uint32_t)pin);   // Also used if the device wants us to display it
+    }
+    if (pin != BLE_NO_PIN && variant == 4) {
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_KEYBOARD_DISPLAY);
+        bool ok = pairNow(false, false, true);
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_KEYBOARD_ONLY);
+        if (!ok) return false;
     }
     if (pin != BLE_NO_PIN && variant <= 1 && !pairNow(variant == 0)) return false;
 
@@ -339,9 +347,9 @@ bool BleLink::writeAuto(const uint8_t* d, size_t n) {
 }
 
 // Pairs with the PIN (blocks until done, at most ~30 s). false = failed, link closed.
-bool BleLink::pairNow(bool sc) {
-    NimBLEDevice::setSecurityAuth(true, true, sc);
-    uint8_t keys = sc ? (BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID) : BLE_SM_PAIR_KEY_DIST_ENC;
+bool BleLink::pairNow(bool sc, bool mitm, bool idKey) {
+    NimBLEDevice::setSecurityAuth(true, mitm, sc);
+    uint8_t keys = (sc || idKey) ? (BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID) : BLE_SM_PAIR_KEY_DIST_ENC;
     NimBLEDevice::setSecurityInitKey(keys);
     NimBLEDevice::setSecurityRespKey(keys);
     bool ok = client->secureConnection(false);
@@ -364,10 +372,10 @@ bool BleLink::pairNow(bool sc) {
     return false;
 }
 
-// Counts a failed pairing; after all four variants a longer pause (see connectFailed)
+// Counts a failed pairing; after all variants a longer pause (see connectFailed)
 void BleLink::pairFailedOnce() {
     pairAttempt++;
-    if (pairAttempt % 4 == 0) {
+    if (pairAttempt % BLE_PAIR_VARIANTS == 0) {
         pairPause = true;
         devlogf(tag, "All pairing variants failed - next try in %lu min", BLE_PAIR_PAUSE_MS / 60000UL);
     }
@@ -458,6 +466,9 @@ void BleLink::loop() {
 
 bool BleLink::write(const uint8_t* d, size_t n, bool response) {
     if (!writeChr || !client || !client->isConnected()) return false;
+    // Use the write type the characteristic supports if the requested one is missing
+    if (response && !writeChr->canWrite() && writeChr->canWriteNoResponse()) response = false;
+    else if (!response && !writeChr->canWriteNoResponse() && writeChr->canWrite()) response = true;
     // NimBLE falls back to a long write if the MTU is smaller than the data
     return writeChr->writeValue(d, n, response);
 }

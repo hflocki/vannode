@@ -30,6 +30,7 @@
 
 #define BLE_PACKET_MAX 160   // Largest known frame: pump status, 150 bytes
 #define BLE_NO_PIN     (-1)
+#define BLE_PAIR_VARIANTS 5   // Pairing variants tried in turn (see BleLink::finishConnect)
 // Own reason codes (below 0x100, NimBLE codes start at 0x100)
 #define BLE_REASON_SILENT     1   // Connected, but the device sent nothing
 #define BLE_REASON_PAIRING    2   // Pairing failed, no detailed code from the stack
@@ -144,7 +145,7 @@ private:
     void markDisconnected();
     bool subscribeChr(NimBLERemoteCharacteristic* c);
     void forgetBond();
-    bool pairNow(bool sc);
+    bool pairNow(bool sc, bool mitm = true, bool idKey = false);
     void pairFailedOnce();
     void dumpGatt();
     void push(const uint8_t* d, size_t n);

@@ -6,10 +6,16 @@
 
 // Plugin "rvtech": RV Tech roof hatch / skylight motor control via BLE connection.
 // Ported from the Home Assistant integration rvtech-hacs (https://github.com/C64Axel/rvtech-hacs):
-//   ASCII over a BLE UART bridge, characteristic FFE1 (notify + write without response)
+//   ASCII over a BLE UART bridge (HM-10 module), characteristic FFE1 (notify + write)
 //   send    "P_d=NNN\r\n"  target position (3 digits)
 //   receive "P_a=NNN\r\n"  reported position (3 digits)
-// Valid values 0-102; 102 is the code of the preset "Lüften" (vent).
+// Positions 0-100. Special codes (confirmed in the official RV Tech app, RoofVentControllerImpl):
+//   101 = go to favourite position, 102 = vent ("Lüften", each press extends the vent time),
+//   103 = store the current position as favourite.
+// The app has no stop command: sending "open" (100) or "close" (000) again while the hatch
+// moves stops it (handled by the hatch itself, see the app help text).
+// The app writes with response and does not pair on its own: Android pairs only when the
+// hatch asks for it (insufficient authentication on subscribe).
 
 #include "../core/plugin.h"
 
@@ -19,7 +25,10 @@
 #include "../core/devlog.h"
 #include <NimBLEDevice.h>
 
-#define RV_MAX_POSITION 102
+#define RV_MAX_POSITION 102   // Highest reported value (vent)
+#define RV_CODE_FAV      101
+#define RV_CODE_VENT     102
+#define RV_CODE_FAV_SET  103
 #define RV_SEND_RETRY_MS 1000
 
 struct RvCfg {
@@ -43,7 +52,10 @@ static const RvPreset RV_PRESETS[] = {
     {"auf", "Auf", 100},
     {"zu", "Zu", 0},
     {"regen", "Regen", 12},
-    {"lueften", "Lüften", 102},
+    {"lueften", "Lüften", RV_CODE_VENT},
+    {"fav", "Favorit", RV_CODE_FAV},
+    {"fav_set", "Favorit speichern", RV_CODE_FAV_SET},
+    {"stop", "Stopp", -2},   // Repeats the running open / close command
 };
 
 static const Entity RV_ENTITIES[] = {
@@ -52,6 +64,9 @@ static const Entity RV_ENTITIES[] = {
     {E_BUTTON, "zu",        "Zu",            nullptr, nullptr,           nullptr,       "mdi:window-closed", 0, nullptr},
     {E_BUTTON, "regen",     "Regen",         nullptr, nullptr,           nullptr,       "mdi:weather-rainy", 0, nullptr},
     {E_BUTTON, "lueften",   "Lüften",        nullptr, nullptr,           nullptr,       "mdi:fan", 0, nullptr},
+    {E_BUTTON, "fav",       "Favorit",       nullptr, nullptr,           nullptr,       "mdi:star", 0, nullptr},
+    {E_BUTTON, "fav_set",   "Favorit speichern", nullptr, nullptr,       nullptr,       "mdi:star-plus", EF_CONFIG, nullptr},
+    {E_BUTTON, "stop",      "Stopp",         nullptr, nullptr,           nullptr,       "mdi:stop", 0, nullptr},
     {E_SENSOR, "reported",  "Position (gemeldet)", nullptr, nullptr,     nullptr,       "mdi:numeric", EF_DIAG | EF_HIDDEN, nullptr},
     {E_BINARY, "connected", "Verbindung",    nullptr, "connectivity",    nullptr,       nullptr, EF_DIAG | EF_ALWAYS, nullptr},
     {E_SENSOR, "rssi",      "Signalstärke",  "dBm",   "signal_strength", "measurement", nullptr, EF_DIAG | EF_HIDDEN | EF_ALWAYS, nullptr},
@@ -130,7 +145,14 @@ public:
         if (sendValue >= 0) {
             if (link.canWrite() && millis() >= sendNotBefore) {
                 if (writeValue(sendValue)) {
-                    setTarget(sendValue);
+                    lastCmd = sendValue;
+                    // Favourite: target position unknown; store: hatch does not move
+                    if (sendValue == RV_CODE_FAV || sendValue == RV_CODE_FAV_SET) {
+                        target = -1;
+                        updates++;
+                    } else {
+                        setTarget(sendValue);
+                    }
                     sendValue = -1;
                 } else if (++sendAttempts >= 2) {
                     devlogf(id, "Sending %d failed", sendValue);
@@ -218,6 +240,7 @@ public:
         } else if (!strcmp(key, "cover")) {
             if (!strcasecmp(value, "OPEN")) v = 100;
             else if (!strcasecmp(value, "CLOSE")) v = 0;
+            else if (!strcasecmp(value, "STOP")) key = "stop";
         } else if (!strcmp(key, "cover_position")) {
             char* end;
             long x = strtol(value, &end, 10);
@@ -228,7 +251,18 @@ public:
         for (const RvPreset& p : RV_PRESETS) {
             if (!strcmp(key, p.key)) v = p.value;
         }
-        if (v < 0 || v > RV_MAX_POSITION) return;
+        if (v == -2) {
+            // Stop: the hatch stops when the running open / close command arrives again.
+            // Moves to other positions (slider, favourite) have no known stop.
+            if (lastCmd == 100 || lastCmd == 0) {
+                devlogf(id, "Stop: repeat %d", lastCmd);
+                v = lastCmd;
+            } else {
+                devlogf(id, "Stop only possible while opening / closing with Auf / Zu");
+                return;
+            }
+        }
+        if (v < 0 || v > RV_CODE_FAV_SET) return;
         // Queue target value to be transmitted inside loop()
         sendValue = v;
         sendAttempts = 0;
@@ -252,6 +286,7 @@ private:
     unsigned long lastRssiPublish = 0;
 
     int sendValue = -1;
+    int lastCmd = -1;                // Last code sent (for stop)
     uint8_t sendAttempts = 0;
     unsigned long sendQueued = 0;
     unsigned long sendNotBefore = 0;
@@ -280,7 +315,7 @@ private:
     bool writeValue(int v) {
         char buf[12];
         snprintf(buf, sizeof(buf), "P_d=%03d\r\n", v);
-        bool ok = link.write(buf, false);
+        bool ok = link.write(buf, true);   // With response, like the app
         devlogf(id, "Send %d: %s", v, ok ? "OK" : "FAILED");
         return ok;
     }

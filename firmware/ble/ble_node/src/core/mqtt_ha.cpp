@@ -204,7 +204,7 @@ static void publishEntity(Plugin* p, const Entity& e) {
             doc["set_position_topic"] = cmdTopic(p, posKey.c_str());
             doc["payload_open"] = "OPEN";
             doc["payload_close"] = "CLOSE";
-            doc["payload_stop"] = nullptr;   // No stop command
+            doc["payload_stop"] = "STOP";   // Plugin decides whether stop is possible
             break;
         }
     }

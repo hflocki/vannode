@@ -89,7 +89,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.4"
+#define FW_VERSION            "2.1.5"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -200,6 +200,13 @@
 #endif
 #ifndef BLE_RETRY_MS
 #define BLE_RETRY_MS          10000  // Wait between connection attempts
+#endif
+// Clock (NTP over WiFi), used e.g. for the time in the pump commands
+#ifndef NTP_SERVER
+#define NTP_SERVER            "pool.ntp.org"
+#endif
+#ifndef TIME_ZONE
+#define TIME_ZONE             "CET-1CEST,M3.5.0,M10.5.0/3"   // POSIX TZ: Central Europe
 #endif
 #ifndef BLE_PAIR_PAUSE_MS
 #define BLE_PAIR_PAUSE_MS     300000 // Pause after all pairing variants failed (other devices keep running)

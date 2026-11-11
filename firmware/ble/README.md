@@ -29,7 +29,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Typ | Rubrik | Einstellungen in der Web-UI |
 | --- | --- | --- |
 | Dachhaube RV Tech (Heki-Motorsteuerung) | Verbinden | MAC, PIN |
-| Wasserpumpe CaraWater (ISP 15, ISP 51 nur Anzeige; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
+| Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
 | Kühlschrank WCS (Kompressor) | Verbinden | MAC, optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-PIN: die PIN der App ist keine Kopplungs-PIN |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
@@ -151,7 +151,7 @@ Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/
 
 ## MQTT / Home Assistant
 
-Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#toolbox-campertoolbox).
+Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#ble-node-tool-campertool).
 
 **Dachhaube** (`rvtech`):
 
@@ -211,6 +211,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.5 | Pumpe auf Stand camper_toolbox 0.1.14: **ISP 51 lässt sich jetzt schalten** (an/aus, Druckstufe 1–3), Befehl `AA 39` mit Uhrzeit und Wochentag (Uhr per NTP, Zeitzone Mitteleuropa) und Prüfsumme; es werden nur die bekannten Bits geschrieben (0x01 an, 0x60 Druckstufe), Befehle erst nach dem ersten Statusrahmen; Statusrahmen mit falscher Prüfsumme werden verworfen; Schalter **Leckage-Erkennung** entfällt (Bit unbekannt, in HA ggf. von Hand löschen); Pakete bis 160 Byte (Pumpen-Status hat 150). Quellen der Pumpe genannt: Blackforest-Vanlife-SmartCamper (MIT) und carawater-isp15-ble |
 | 2.1.4 | Haftungsausschluss: Über-Karte zeigt „Ohne Gewähr – Nutzung auf eigene Gefahr“ und den Markenhinweis; Lizenzköpfe (SPDX) in allen Quelldateien |
 | 2.1.3 | Lizenz jetzt GNU GPL v3 mit Zusatzbedingungen (Urhebervermerk bleibt, Forks kennzeichnen, Name/Logo nicht lizenziert); Über-Karte nennt Lizenz und fremde Teile |
 | 2.1.2 | Build-Fehler aus 2.1.0 behoben: Pumpen-Plugin nutzt wieder `PUMP_UART_*` aus `config.h` (2.1.0 und 2.1.1 ließen sich nicht bauen) |
@@ -238,11 +239,11 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
 
 ## Lizenz
 
-GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll nach der HA-Integration carawater_isp15 eines Community-Mitglieds (eigene Umsetzung, keine Lizenzangabe; der Autor wird auf Wunsch genannt).
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll (eigene Umsetzung, kein Code übernommen) nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (Ordner `carawater-isp-ble`, MIT: Schaltbefehl `AA 39`, Statusrahmen `AA 45`), [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (keine Lizenzangabe: Telemetrie `AA 93`, Status-Bits, Prüfsumme, Umrechnung) und der ersten HA-Integration carawater_isp15 eines Community-Mitglieds.
 
 Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

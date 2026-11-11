@@ -54,7 +54,7 @@ Den Sensor fest mit dem Fahrzeug verbinden. Die Einbaulage (flach oder an einer 
 
 ## Arduino IDE
 
-> **Eigene Passwörter, Pins, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.md#eigene-einstellungen-config_localh).
+> **Eigene Passwörter, Pins, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
 
 Board-Paket: esp32 von Espressif **3.x** (getestet 3.3.2).
 
@@ -198,7 +198,7 @@ Der Schutz greift erst bei Updates, die von dieser Version **aus** gemacht werde
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
 
 ## Lizenz
 

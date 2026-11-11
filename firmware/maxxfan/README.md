@@ -59,7 +59,7 @@ Tasten werden als Impuls ausgegeben (Standard 150 ms, im Web-UI einstellbar), mi
 
 ## Arduino IDE
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.md#eigene-einstellungen-config_localh).
+> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
 
 | Einstellung | Wert |
 | --- | --- |
@@ -205,7 +205,7 @@ Mit Discovery erscheint ein Gerät **„MaxxFan Node“** mit Tasten-Entitäten 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
 
 ## Lizenz
 

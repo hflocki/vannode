@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <esp_mac.h>
 #include <esp_system.h>
+#include <time.h>
 
 static WiFiState wifiState = WIFI_STATE_INIT;
 static unsigned long lastReconnectAttempt = 0;
@@ -138,7 +139,23 @@ static bool blockingConnect() {
     return false;
 }
 
+// Clock via NTP once WiFi is up (devices that need the time of day, e.g. the pump).
+// Without internet the clock simply stays unset; timeValid() then returns false.
+static void startClock() {
+    static bool started = false;
+    if (started || wifiState != WIFI_STATE_CONNECTED || WiFi.status() != WL_CONNECTED) return;
+    started = true;
+    configTzTime(TIME_ZONE, NTP_SERVER);
+    Serial.printf("[Time] NTP %s, zone %s\n", NTP_SERVER, TIME_ZONE);
+}
+
+bool timeValid() {
+    time_t now = time(nullptr);
+    return now > 1700000000;   // After 2023: synchronised at least once
+}
+
 void wifiManagerLoop() {
+    startClock();
     switch (wifiState) {
         case WIFI_STATE_CONNECTED:
             if (WiFi.status() != WL_CONNECTED) {

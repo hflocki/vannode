@@ -39,7 +39,7 @@ Pins lassen sich im jeweiligen Block in `config.h` anpassen. Optional: `LIN_CS_P
 
 ## Arduino IDE einrichten
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.md#eigene-einstellungen-config_localh).
+> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
 
 1. Boardverwalter: **esp32 von Espressif, Version 3.x** (kompiliert mit 3.3).
 2. Bibliotheken über den Bibliotheksverwalter installieren:
@@ -289,7 +289,7 @@ Seit 1.4.0 hat jede Firmware eine Kennung (`CAMPER-FW:heater:<version>:<chip>;`)
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
 
 ## Lizenz
 

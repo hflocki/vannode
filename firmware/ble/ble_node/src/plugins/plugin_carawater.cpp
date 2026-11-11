@@ -3,12 +3,19 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
-// Plugin "pump": CaraWater water pump (tested protocol: ISP 15) via BLE connection.
-// Protocol ported from the Home Assistant integration "carawater_isp15":
+// Plugin "pump": CaraWater water pump (ISP 10 / 15 / 20 / 51) via BLE connection.
+// Protocol sources (no code copied), see also NOTICE.md:
+//   github.com/toms2k84/Blackforest-Vanlife-SmartCamper (carawater-isp-ble, MIT): command AA 39, frame AA 45
+//   github.com/geierwally1978/carawater-isp15-ble: telemetry AA 93, status bits, checksum
+// First version ported from the Home Assistant integration "carawater_isp15":
 //   notify FF01 (FF02 also notifies, both are subscribed): status frame AA 93 <status> .. <U16LE values at 6..19>
 //   write  FF02: 60 byte frame AA 39 <status> .. 22 12 07 .. <checksum>
-// ISP 51 (TD5322A): status frame AA 45 with the same layout (2D idle / 3D running);
-// its write frame is unknown, so control is disabled for it.
+// ISP 51 (TD5322A): status frame AA 45 with the same layout (2D idle / 3D running).
+// AA 45 is also the answer of the ISP 15 in the capture with working control (first source
+// above), so AA 39 is used for both.
+// Command: AA 39 MODE 00 00 00 <minute> <hour> <weekday 1=Mon..7=Sun> 00.. <sum of bytes 0..58>
+//   MODE bit 0x01 = pump on, bits 0x60 = pressure level 1..3 (0x20 / 0x40 / 0x60).
+// Status bits 0x04 and 0x08 are not understood (second source) and are never written. Byte 149 of the 150-byte status frame: sum of bytes 0..148.
 // Some pumps use FFF0/FFF1/FFF2 or FFE0/FFE1 instead; all layouts are tried automatically.
 
 #include "../core/plugin.h"
@@ -18,6 +25,8 @@
 #include "../core/ble_link.h"
 #include "../core/devlog.h"
 #include "../core/util.h"
+#include "../core/wifi_manager.h"
+#include <time.h>
 
 // Known GATT layouts: FF00/FF01/FF02 (ISP 15, as in the HA integration),
 // FFF0/FFF1/FFF2 (other Seaflo based pumps) and FFE0/FFE1 (BLE UART bridge).
@@ -62,7 +71,6 @@ static const Entity PUMP_ENTITIES[] = {
     {E_BINARY, "running",      "Pumpe läuft",      nullptr, "running",          nullptr,            "mdi:water-pump", 0, nullptr},
     {E_BINARY, "connected",    "Verbindung",       nullptr, "connectivity",     nullptr,            "mdi:bluetooth-connect", EF_DIAG | EF_ALWAYS, nullptr},
     {E_SWITCH, "enable",       "Pumpenfreigabe",   nullptr, nullptr,            nullptr,            "mdi:water-pump", 0, nullptr},
-    {E_SWITCH, "leak",         "Leckage-Erkennung",nullptr, nullptr,            nullptr,            "mdi:pipe-leak", EF_CONFIG, nullptr},
     {E_SWITCH, "release",      "Bluetooth für App freigeben", nullptr, nullptr, nullptr,            "mdi:bluetooth-off", EF_CONFIG | EF_ALWAYS, nullptr},
     {E_SELECT, "pressure_level","Konstantdruck",   nullptr, nullptr,            nullptr,            "mdi:gauge", EF_CONFIG, "Stufe 1|Stufe 2|Stufe 3"},
 };
@@ -154,7 +162,6 @@ public:
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         if (hasData) {
             liveCtrl(o, "switch", "enable", "Pumpenfreigabe")["v"] = pumpEnabled;
-            liveCtrl(o, "switch", "leak", "Leckage-Erkennung")["v"] = leakDetection;
             JsonObject s = liveCtrl(o, "select", "pressure_level", "Konstantdruck");
             s["o"] = "Stufe 1|Stufe 2|Stufe 3";
             s["v"] = pressureLevel >= 1 && pressureLevel <= 3 ? pressureLevel - 1 : 0;
@@ -176,7 +183,6 @@ public:
         // Values only once a real status frame exists
         if (!hasData) return;
         out.onoff("enable", pumpEnabled);
-        out.onoff("leak", leakDetection);
         out.onoff("running", running);
         char buf[12];
         snprintf(buf, sizeof(buf), "Stufe %u", (unsigned)pressureLevel);
@@ -197,11 +203,11 @@ public:
             updates++;
             return;
         }
-        uint8_t status = statusRaw;
+        // Only the known MODE bits: 0x01 on/off, 0x60 pressure level (never 0 = invalid)
+        uint8_t status = statusRaw & 0x61;
+        if (!(status & 0x60)) status |= 0x20;
         if (!strcmp(key, "enable")) {
             status = payloadOn(value) ? (status | 0x01) : (status & ~0x01);
-        } else if (!strcmp(key, "leak")) {
-            status = payloadOn(value) ? (status | 0x04) : (status & ~0x04);
         } else if (!strcmp(key, "pressure_level")) {
             // Accepts "2" as well as "Stufe 2" (select option)
             size_t n = strlen(value);
@@ -216,14 +222,15 @@ public:
             updates++;   // Re-publish the real state so HA switches snap back
             return;
         }
-        if (frameType == 0x45) {
-            // The write frame of the ISP 51 is not known yet; the ISP 15 frame (AA 39) could
-            // set wrong values, so nothing is written. Needed: the app traffic (HCI snoop log).
-            devlogf(id, "Command %s=%s ignored - control of the ISP 51 is not supported yet", key, value);
-            updates++;   // Re-publish the real state so HA switches snap back
+        if (!hasData) {
+            // Without a status frame the current level is unknown; a write could change it
+            devlogf(id, "Command ignored - no status from the pump yet");
+            updates++;
             return;
         }
-        if (status != statusRaw && writeStatus(status)) applyStatus(status);   // Optimistic
+        if (status != (statusRaw & 0x61) && writeStatus(status)) {
+            applyStatus((statusRaw & ~0x61) | status);   // Optimistic; the next frame confirms
+        }
         updates++;
     }
 
@@ -238,7 +245,6 @@ private:
     uint8_t statusRaw = 0;
     uint8_t pressureLevel = 0;
     bool pumpEnabled = false;
-    bool leakDetection = false;
     bool running = false;
     float voltage = 0, current = 0, temperature = 0, pressure = 0, flow = 0;
     uint16_t dailyLiters = 0, totalLiters = 0;
@@ -264,7 +270,6 @@ private:
         statusRaw = status;
         pressureLevel = (status & 0x60) >> 5;
         pumpEnabled = (status & 0x01) != 0;
-        leakDetection = (status & 0x04) != 0;
     }
 
     // Status frame: AA 93 (ISP 15) or AA 45 (ISP 51) <status> ... U16LE at 6 voltage, 8 current, 10 pressure raw (psi*10),
@@ -280,6 +285,14 @@ private:
                 devlogf(id, "Frame type %02X ignored", d[1]);
             }
             return;
+        }
+        if (n >= 150) {
+            uint8_t sum = 0;
+            for (int i = 0; i < 149; i++) sum += d[i];
+            if (sum != d[149]) {
+                devlogf(id, "Status frame with wrong checksum ignored (%02X != %02X)", sum, d[149]);
+                return;
+            }
         }
         uint8_t oldStatus = statusRaw;
         bool hadData = hasData;
@@ -318,19 +331,31 @@ private:
     }
 
     // 60 byte command frame, same layout as the Home Assistant integration
-    bool writeStatus(uint8_t status) {
+    bool writeStatus(uint8_t mode) {
         uint8_t cmd[60] = {0};
         cmd[0] = 0xAA;
         cmd[1] = 0x39;
-        cmd[2] = status;
-        cmd[6] = 0x22;
-        cmd[7] = 0x12;
-        cmd[8] = 0x07;
+        cmd[2] = mode;
+        // Local time like the app sends it; fixed value if the clock is not set (no NTP)
+        uint8_t minute = 0x22, hour = 0x12, weekday = 7;
+        if (timeValid()) {
+            time_t now = time(nullptr);
+            struct tm t;
+            localtime_r(&now, &t);
+            minute = t.tm_min;
+            hour = t.tm_hour;
+            weekday = t.tm_wday == 0 ? 7 : t.tm_wday;   // tm: 0 = Sunday; pump: 1 = Monday .. 7 = Sunday
+        }
+        cmd[6] = minute;
+        cmd[7] = hour;
+        cmd[8] = weekday;
         uint8_t sum = 0;
         for (int i = 0; i < 59; i++) sum += cmd[i];
         cmd[59] = sum;
         bool ok = link.write(cmd, sizeof(cmd), true);
-        devlogf(id, "Write status 0x%02X: %s", status, ok ? "OK" : "FAILED");
+        devlogf(id, "Write mode 0x%02X (%s, level %u, time %02u:%02u day %u): %s", mode,
+                (mode & 0x01) ? "on" : "off", (unsigned)((mode & 0x60) >> 5), hour, minute, weekday,
+                ok ? "OK" : "FAILED");
         return ok;
     }
 };

@@ -45,7 +45,7 @@ static void appendLog(DevLog* l, const char* s, size_t n) {
 }
 
 void devlogf(const char* tag, const char* fmt, ...) {
-    char msg[600];
+    char msg[720];   // Fits a 160-byte packet as hex and text
     va_list ap;
     va_start(ap, fmt);
     int n = vsnprintf(msg, sizeof(msg), fmt, ap);

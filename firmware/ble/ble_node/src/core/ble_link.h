@@ -28,7 +28,7 @@
 // All methods must be called from the loop task.
 // ============================================================
 
-#define BLE_PACKET_MAX 128
+#define BLE_PACKET_MAX 160   // Largest known frame: pump status, 150 bytes
 #define BLE_NO_PIN     (-1)
 // Own reason codes (below 0x100, NimBLE codes start at 0x100)
 #define BLE_REASON_SILENT     1   // Connected, but the device sent nothing

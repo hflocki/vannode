@@ -36,3 +36,6 @@ bool isValidTxPower(int v);
 const char* defaultApSsid();
 
 #endif // WIFI_MANAGER_H
+
+// true once the clock was set via NTP (local time with TIME_ZONE)
+bool timeValid();

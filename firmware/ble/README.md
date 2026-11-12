@@ -30,7 +30,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | --- | --- | --- |
 | Dachhaube RV Tech (Heki-Motorsteuerung; Auf, Zu, Regen, Lüften, Favorit, Favorit speichern, Stopp) | Verbinden | MAC, PIN |
 | Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
-| Kühlschrank WCS (Kompressor; Ein/Aus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
+| Kühlschrank WCS (Kompressor; Ein/Aus, Zonen einzeln ein/aus, Umluft, Nachtmodus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
 | Alarm Thitronik WiPro III (**nur lesen**) | Verbinden | MAC, PIN normalerweise leer, Kontaktnamen (mit Komma), optional Status-UUID. Reiner Statusmelder: schaltet die Anlage nie scharf/unscharf |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
@@ -167,7 +167,7 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 | `camper/tool/cmd/rvtech/fav/set` | gespeicherte Lieblingsposition anfahren |
 | `camper/tool/cmd/rvtech/fav_set/set` | aktuelle Stellung als Favorit speichern |
 
-**Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `fan` (Umluft; im Nachtmodus aus), `night` (Nachtmodus, nur lesen), `error` (E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen); Befehle `power` (`ON`/`OFF`), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3).
+**Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `fan` (Umluft; im Nachtmodus aus), `night` (Nachtmodus), `zone1`/`zone2` (Zone läuft, nur mit „Zweite Zone“), `error` (E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen); Befehle `power` (`ON`/`OFF`, ganzer Kühlschrank), `zone1`/`zone2` (`ON`/`OFF`, Kühl- bzw. Gefrierfach einzeln; die andere Zone bleibt, wie sie ist), `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3).
 
 **Alarm WiPro III** (`wipro`, **nur lesen**): `armed` (`ON` = scharf), `reason` (Alarmgrund als Text, z. B. „Funkkontakt 5“, „Gaswarner getriggert“, „Panik-Alarm“), je Kontakt `contact0` … `contact7` (`ON` = offen, ein Bit aus Byte 6), `open` (Liste der offenen Kontakte mit ihren Namen) und `raw` (8 Byte als Hex). Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
 
@@ -219,6 +219,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.10 | Kühlschrank: neue Schalter **Zone 1 an** und **Zone 2 an** (Kühl- und Gefrierfach einzeln, nur mit „Zweite Zone“), **Umluft** und **Nachtmodus** (bisher nur Anzeigen, jetzt schaltbar; in Home Assistant als Schalter statt Binärsensor). Der Schalter zeigt den neuen Zustand sofort, die nächste Statusmeldung bestätigt ihn. Im Log steht der Status jetzt bei jeder Änderung von Ein/Aus, Zonen, Umluft oder Modus. README: Danksagung |
 | 2.1.9 | Kühlschrank: neue Anzeigen **Umluft** und **Nachtmodus** (nur lesen, aus dem Status), Modus „11“ heißt jetzt Nachtmodus. Ein gemeldeter Fehler (z. B. E6) wird bei der nächsten Verbindung gelöscht und erscheint nur noch, wenn der Kühlschrank ihn erneut meldet |
 | 2.1.8 | Neues Plugin **Alarm WiPro III** (`wipro`, nur lesen): meldet Scharf-Zustand, Alarmgrund (ausgelöster Funkkontakt oder Melder), jeden Funk-Kontakt einzeln (`contact0`…`contact7` aus der Bitmaske in Byte 6) und die offenen Kontakte als Namensliste über MQTT. Kontaktnamen im Web-UI einstellbar. Protokoll aus dem eigenen Projekt wipro2ha. Reiner Statusmelder, schaltet nie. Zählt als eine der drei Bluetooth-Verbindungen |
 | 2.1.7 | Stand der camper_toolbox 0.1.18: Kommentare und Hilfetexte von Dachhaube und Kühlschrank neutral formuliert; Über-Karte und NOTICE ohne die Zeilen zu Dachhaube und Kühlschrank (eigene Umsetzung, keine fremde Quelle) |
@@ -248,6 +249,10 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 | 1.0.1 | Web-Oberfläche im Aussehen der übrigen VanNode-Geräte (Farben, Kopfzeile mit Statuspunkten, Tab-Leiste mit Symbolen, Werte als Kacheln, Schalter statt Häkchen) |
 | 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/toolbox`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
 | 0.1.x | Eigenes Repo `camper_toolbox`: Plugins Gas (DIMES, Mopeka), Wasserpumpe, Dachhaube, Kühlschrank |
+
+## Danke
+
+Mein Dank geht an **mot flash** für das Testen und die Anregung, die Plugins für die Dachhaube RV Tech, den Kühlschrank WCS und die Wasserpumpe CaraWater zu bauen.
 
 ## Fertige Firmware
 

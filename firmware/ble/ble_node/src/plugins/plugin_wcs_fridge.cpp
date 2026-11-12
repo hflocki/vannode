@@ -15,11 +15,14 @@
 //           f0 zones (1/2), f1 power (1/0), f2 unit (1 = C, 2 = F), f3/f4 temperature
 //           zone 1/2, f5/f6 set point zone 1/2, f7 battery protection level (1-3),
 //           f8 voltage x10, f9 mode ("11" = sleep, 2 digits: "3" first / last = zone 1 / 2
-//           in cool mode), f10 battery %, f11 dual zone power state, f12 fan (circulation, off in sleep mode),
+//           in cool mode), f10 battery %, f11 zones running (bit mask: 1 = zone 1,
+//           2 = zone 2, 3 = both, 0 = none), f12 fan (circulation, off in sleep mode),
 //           f13 door heating, f15..f18 max / min set point zone 1, max / min zone 2
 //   Error:  "/SCE/<zone>/<code>" or "/SEE/<zone>/<code>", code 1-7 (see errorText())
 //   Commands: "/SC1/1/001|000" power on / off, "/SC3/<unit>/+NN" set point zone 1,
-//           "/SC5/<unit>/+NN" set point zone 2, "/SC4/1/00<1-3>" battery protection.
+//           "/SC5/<unit>/+NN" set point zone 2, "/SC4/1/00<1-3>" battery protection,
+//           "/SCA/1/00<0-3>" zones on / off (same bit mask as f11, always both zones),
+//           "/SC2/2/001|000" fan on / off, "/SC6/1/011|022" sleep mode on / off.
 // Frames may be split over several notifications: collected from "/S" to "\n".
 
 #include "../core/plugin.h"
@@ -81,10 +84,12 @@ static const Entity WCS_ENTITIES[] = {
     {E_SENSOR, "set2",      "Soll-Temperatur Zone 2", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
     {E_SENSOR, "voltage",   "Spannung",               "V",  "voltage",         "measurement", nullptr, 0, nullptr},
     {E_SENSOR, "battery",   "Batterie",               "%",  "battery",         "measurement", nullptr, 0, nullptr},
-    {E_BINARY, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
-    {E_BINARY, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
+    {E_SWITCH, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
+    {E_SWITCH, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
     {E_SENSOR, "error",     "Fehler",                 nullptr, nullptr,        nullptr,       "mdi:alert-circle", EF_ALWAYS, nullptr},
     {E_SWITCH, "power",     "Kühlschrank an",         nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
+    {E_SWITCH, "zone1",     "Zone 1 an",              nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
+    {E_SWITCH, "zone2",     "Zone 2 an",              nullptr, nullptr,        nullptr,       "mdi:fridge-bottom", 0, nullptr},
     {E_SELECT, "target1",   "Soll Zone 1 einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
     {E_SELECT, "target2",   "Soll Zone 2 einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
     {E_SELECT, "bpd",       "Batterieschutz",         nullptr, nullptr,        nullptr,       "mdi:battery-lock", EF_CONFIG, WCS_BPD_OPTIONS},
@@ -199,13 +204,18 @@ public:
         liveRowNum(o, "Spannung", hasData ? voltage : NAN, 1, "V");
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
         if (hasData) liveRowText(o, "Modus", modeText());
-        if (hasData && fanKnown) liveRowText(o, "Umluft", fanOn ? "an" : "aus");
         if (errorCode) liveRowText(o, "Fehler", errorLine);
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
         if (hasData && login == WL_OK) {
             liveCtrl(o, "switch", "power", "Kühlschrank an")["v"] = powerOn;
+            if (c.zone2 && zonesKnown) {
+                liveCtrl(o, "switch", "zone1", "Zone 1 an")["v"] = (zones & 1) != 0;
+                liveCtrl(o, "switch", "zone2", "Zone 2 an")["v"] = (zones & 2) != 0;
+            }
+            if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
+            liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
             JsonObject s = liveCtrl(o, "slider", "target1", "Soll Zone 1");
             s["min"] = min1; s["max"] = max1; s["v"] = isnan(set1) ? 0 : (int)lroundf(set1);
             if (c.zone2) {
@@ -225,7 +235,8 @@ public:
         return sizeof(WCS_ENTITIES) / sizeof(WCS_ENTITIES[0]);
     }
     bool entityActive(const Entity& e) override {
-        if (!strcmp(e.key, "temp2") || !strcmp(e.key, "set2") || !strcmp(e.key, "target2")) return c.zone2;
+        if (!strcmp(e.key, "temp2") || !strcmp(e.key, "set2") || !strcmp(e.key, "target2") ||
+            !strcmp(e.key, "zone1") || !strcmp(e.key, "zone2")) return c.zone2;
         return true;
     }
     uint32_t publishIntervalMs() const override { return MQTT_WCS_MS; }
@@ -242,8 +253,12 @@ public:
         out.num("set1", set1, 0);
         if (!isnan(set1)) out.integer("target1", lroundf(set1));
         if (fanKnown) out.onoff("fan", fanOn);
-        out.onoff("night", !strcmp(mode, "11"));
+        out.onoff("night", sleepOn());
         if (c.zone2) {
+            if (zonesKnown) {
+                out.onoff("zone1", (zones & 1) != 0);
+                out.onoff("zone2", (zones & 2) != 0);
+            }
             out.num("temp2", temp2, 0);
             out.num("set2", set2, 0);
             if (!isnan(set2)) out.integer("target2", lroundf(set2));
@@ -287,9 +302,28 @@ public:
             else if (value[0] >= '0' && value[0] <= '2' && !value[1]) l = value[0] - '0' + 1;   // Select index
             if (l < 1 || l > 3) return;
             snprintf(cmd, sizeof(cmd), "/SC4/1/00%d\n", l);
+        } else if (!strcmp(key, "zone1") || !strcmp(key, "zone2")) {
+            // The command always sets both zones: keep the other one as reported
+            if (!zonesKnown) {
+                devlogf(id, "Command %s ignored: zone state not reported yet", key);
+                return;
+            }
+            int bit = key[4] == '2' ? 2 : 1;
+            zones = payloadOn(value) ? (zones | bit) : (zones & ~bit);
+            snprintf(cmd, sizeof(cmd), "/SCA/1/00%d\n", zones);
+        } else if (!strcmp(key, "fan")) {
+            fanOn = payloadOn(value);
+            snprintf(cmd, sizeof(cmd), "/SC2/2/%s\n", fanOn ? "001" : "000");
+        } else if (!strcmp(key, "night")) {
+            bool on = payloadOn(value);
+            strlcpy(mode, on ? "11" : "22", sizeof(mode));
+            snprintf(cmd, sizeof(cmd), "/SC6/1/%s\n", on ? "011" : "022");
         } else {
             return;
         }
+        // The new state is shown at once (a second switch in quick succession builds on
+        // it); the next status overwrites it with what the fridge really does
+        updates++;
         logCmd("Command", cmd);
         if (!link.write(cmd, true)) devlogf(id, "Command failed");
         lastPoll = millis() - (uint32_t)c.poll_s * 1000UL + 500;   // Fresh status shortly after
@@ -331,6 +365,8 @@ private:
     char mode[4] = "";
     bool fanOn = false;           // Circulation fan (status field 12); off in sleep mode
     bool fanKnown = false;
+    int zones = 0;                // Zones running (status field 11): bit 1 = zone 1, bit 2 = zone 2
+    bool zonesKnown = false;
     int min1 = WCS_SET_MIN, max1 = WCS_SET_MAX, min2 = WCS_SET_MIN, max2 = WCS_SET_MAX;
     int errorCode = 0;
     char errorLine[48] = "";
@@ -414,8 +450,10 @@ private:
         return link.state();
     }
 
+    bool sleepOn() const { return !strcmp(mode, "11"); }
+
     const char* modeText() const {
-        if (!strcmp(mode, "11")) return "Nachtmodus";
+        if (sleepOn()) return "Nachtmodus";
         if (strlen(mode) == 2) {
             if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen Zone 1 + 2";
             if (mode[0] == '3') return "Schnellkühlen Zone 1";
@@ -566,6 +604,12 @@ private:
         }
         if (login != WL_OK) { login = WL_OK; updates++; }   // Status arrives: logged in
 
+        // Remember the switchable states to log every change (not only every 60th status)
+        int oldZones = zones;
+        bool oldFan = fanOn, oldPower = powerOn;
+        char oldMode[sizeof(mode)];
+        strlcpy(oldMode, mode, sizeof(oldMode));
+
         int v;
         if (toInt(tok[0], v) && !c.zone2 && v == 2) devlogf(id, "Fridge reports 2 zones: enable \"Zweite Zone\"");
         if (toInt(tok[1], v)) powerOn = v == 1;
@@ -577,6 +621,7 @@ private:
         if (toInt(tok[7], v)) bpd = v;
         if (toInt(tok[8], v)) voltage = v / 10.0f;
         strlcpy(mode, tok[9], sizeof(mode));
+        if (n > 11 && toInt(tok[11], v) && v >= 0 && v <= 3) { zones = v; zonesKnown = true; }
         if (n > 12 && toInt(tok[12], v)) { fanOn = v == 1; fanKnown = true; }
         if (n > 10 && toInt(tok[10], v)) battery = v < 0 ? 0 : (v > 100 ? 100 : v);
         if (n > 18) {
@@ -590,9 +635,11 @@ private:
         lastMsg = millis();
         messages++;
         // Full status only now and then, it repeats every few seconds
-        if (messages <= 3 || messages % 60 == 0) {
-            devlogf(id, "Status: %s | zone 1 %.0f (set %.0f) | zone 2 %.0f (set %.0f) | %.1f V | %.0f%% | protection %d | mode %s",
-                    powerOn ? "on" : "off", temp1, set1, temp2, set2, voltage, battery, bpd, mode);
+        bool changed = messages > 1 && (zones != oldZones || fanOn != oldFan || powerOn != oldPower ||
+                                        strcmp(mode, oldMode) != 0);
+        if (messages <= 3 || messages % 60 == 0 || changed) {
+            devlogf(id, "Status: %s | zone 1 %.0f (set %.0f) | zone 2 %.0f (set %.0f) | %.1f V | %.0f%% | protection %d | mode %s | zones %d | fan %d",
+                    powerOn ? "on" : "off", temp1, set1, temp2, set2, voltage, battery, bpd, mode, zones, fanOn ? 1 : 0);
         }
     }
 };

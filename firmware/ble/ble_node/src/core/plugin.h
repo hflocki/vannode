@@ -143,6 +143,7 @@ public:
 
     // ---- Web UI ----
     // Fills o with: "state" (text), "ok" (bool), optional "gauge" {v, unit, label, max},
+    // "zones" [{l, v, unit, s, k, on}, ...] (equal panels side by side, optional switch k),
     // "rows" [[label, value, unit], ...], "ctrl" [{t: switch|select|buttons|slider, ...}], "raw"
     virtual void live(JsonObject o) = 0;
 
@@ -164,6 +165,10 @@ JsonArray liveRow(JsonObject o, const char* label);   // adds [label, ...] to o[
 void liveRowNum(JsonObject o, const char* label, float v, int decimals, const char* unit);
 void liveRowText(JsonObject o, const char* label, const char* v);
 JsonObject liveCtrl(JsonObject o, const char* t, const char* key, const char* label);
+// Adds a zone panel to o["zones"]: big value, small line below, optional on / off switch
+// (switchKey nullptr = no switch)
+void liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
+              const char* sub, const char* switchKey, bool on);
 bool payloadOn(const char* v);   // "ON", "on", "true", "1"
 
 #endif // CT_PLUGIN_H

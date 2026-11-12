@@ -82,6 +82,15 @@
       .bar { height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
       .bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s; }
       .card.ok .bar i { background: var(--success); }
+      /* Zones: equal panels side by side (e.g. freezer / fridge), each with its own switch */
+      .zones { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+      .zone { background: var(--bg-input); border-radius: 10px; padding: 10px 8px; text-align: center; min-width: 0; }
+      .zone .l { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .zone .v { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; color: var(--accent); }
+      .card.ok .zone .v { color: var(--success); }
+      .zone.off .v, .card.ok .zone.off .v { color: var(--text-muted); }
+      .zone .s { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px; }
+      .zone label { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); }
       .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
       .tile { background: var(--bg-input); border-radius: 8px; padding: 8px 6px; text-align: center; min-width: 0; }
       .tile span { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px;
@@ -487,6 +496,23 @@ nav button .ico{display:inline-flex}
             ),
           );
         }
+        if (p.zones)
+          c.append(
+            el(
+              "div",
+              { className: "zones" },
+              ...p.zones.map((z) =>
+                el(
+                  "div",
+                  { className: "zone" + (z.k && !z.on ? " off" : "") },
+                  el("div", { className: "l" }, z.l),
+                  el("div", { className: "v" }, fmt(z.v, z.unit)),
+                  el("div", { className: "s" }, z.s || ""),
+                  z.k ? ctrl(p.id, { t: "switch", k: z.k, l: "An", v: z.on }) : "",
+                ),
+              ),
+            ),
+          );
         if (p.rows)
           c.append(
             el(

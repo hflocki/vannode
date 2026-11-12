@@ -1,4 +1,4 @@
-// ble-node: Bluetooth devices as plugins (here: an RV Tech roof hatch and an own BLE sensor)
+// ble-node: Bluetooth devices as plugins (here: an RV Tech roof hatch, a two zone fridge and an own BLE sensor)
 const M = {
   id: 'ble',
   config: {
@@ -13,7 +13,10 @@ const M = {
                cfg: {enabled: true, name: 'Thermometer Bad', mac: 'A4:C1:38:12:34:56', source: 1, company: '', uuid: '181A',
                      v1_name: 'Temperatur', v1_pos: 6, v1_len: 1, v1_signed: true, v1_big: false, v1_factor: 0.01, v1_add: 0, v1_dec: 1, v1_unit: '°C', v1_kind: 1,
                      v2_name: 'Luftfeuchte', v2_pos: 8, v2_len: 1, v2_signed: false, v2_big: false, v2_factor: 0.01, v2_add: 0, v2_dec: 0, v2_unit: '%', v2_kind: 2,
-                     v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3}}],
+                     v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3}},
+              // two zone compressor fridge: zone 1 freezer, zone 2 fridge
+              {id: 'fridge', type: 'fridge', type_name: 'Kühlschrank WCS', ble: 2, running: true,
+               cfg: {enabled: true, name: 'Kühlschrank', mac: 'C4:00:00:00:00:05', pin: '', zone2: true, service: '', notify: '', write: '', poll: '', poll_s: 5}}],
     // field descriptions once per type (as the firmware sends them since 1.5.2)
     schemas: {
       rvtech: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
@@ -28,6 +31,10 @@ const M = {
               {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
       bthome: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (passt: Dienst FCD2)'},
                {k: 'objs', l: 'Erkannte Werte', t: 'text', max: 24, h: 'Füllt sich beim Empfang von selbst. Leeren und speichern, um die Werte neu zu erkennen'}],
+      fridge: [{k: 'mac', l: 'Kühlschrank-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+               {k: 'pin', l: 'App-Passwort', t: 'text', max: 7, h: 'Werkseinstellung 1234; leer = 1234'},
+               {k: 'zone2', l: 'Zweite Zone', t: 'bool', h: 'Kühlschrank mit zweitem Fach / Gefrierfach'},
+               {k: 'poll_s', l: 'Abfrage alle', t: 'int', min: 2, max: 3600, u: 's', h: 'Standard 5 s'}],
       blesensor: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
@@ -52,6 +59,8 @@ const M = {
     max_links: 3
   },
   pos: 0, target: -1, release: false,
+  // fridge: zones bit mask (1 = freezer, 2 = fridge), set points, fan, sleep mode, main power
+  fr: {zones: 3, set1: -18, set2: 4, fan: true, night: false, power: true},
   // device changes are saved at once and take effect with the restart (restart_needed)
   keep(plugins) {
     M.save({plugins, restart_needed: plugins.some(p => p.pending || p.removed || p.cfg.enabled !== p.running)});
@@ -96,6 +105,16 @@ const M = {
       if (k === 'release') M.release = body.v === 'true' || body.v === 'ON' || body.v === '1';
       else if (k in P) M.target = P[k];
       else if (k === 'cover_position') M.target = +body.v;
+      else {
+        const on = body.v === 'true' || body.v === 'ON' || body.v === '1', F = M.fr;
+        if (k === 'zone1') F.zones = on ? F.zones | 1 : F.zones & ~1;
+        else if (k === 'zone2') F.zones = on ? F.zones | 2 : F.zones & ~2;
+        else if (k === 'fan') F.fan = on;
+        else if (k === 'night') { F.night = on; if (on) F.fan = false; }
+        else if (k === 'power') F.power = on;
+        else if (k === 'target1') F.set1 = +body.v;
+        else if (k === 'target2') F.set2 = +body.v;
+      }
       return {status: 'ok'};
     }
     if (path === '/api/log') {
@@ -135,6 +154,22 @@ const M = {
         raw: '40 00 A5 01 57 02 BC 07 03 2C 15 0C 5E 0B'});
       if (p.type === 'govee' && p.cfg.mac) return Object.assign(o, {state: 'OK', ok: true,
         rows: [['Temperatur', 4.3, '°C'], ['Luftfeuchte', 71, '%'], ['Batterie', 100, '%'], ['Modell', 'H5072/H5075', ''], ['Bluetooth', -83, 'dBm'], ['Alter', 12, 's']]});
+      if (p.type === 'fridge' && p.cfg.mac) {
+        const F = M.fr, z1 = F.power && (F.zones & 1), z2 = F.power && (F.zones & 2);
+        return Object.assign(o, {state: 'Verbunden', ok: true,
+          zones: [{l: 'Gefrierfach', v: z1 ? -17 : 2, unit: '°C', s: `Soll ${F.set1} °C`, k: 'zone1', on: !!(F.zones & 1)},
+                  {l: 'Kühlfach', v: z2 ? 5 : 9, unit: '°C', s: `Soll ${F.set2} °C`, k: 'zone2', on: !!(F.zones & 2)}],
+          rows: [['Spannung', 12.9, 'V'], ['Batterie', 96, '%'], ['Modus', F.night ? 'Nachtmodus' : 'Normal', ''],
+                 ['Bluetooth', -66, 'dBm'], ['Nachrichten', 412, '']],
+          ctrl: [{t: 'switch', k: 'power', l: 'Kühlschrank an', v: F.power},
+                 {t: 'switch', k: 'fan', l: 'Umluft', v: F.fan},
+                 {t: 'switch', k: 'night', l: 'Nachtmodus', v: F.night},
+                 {t: 'slider', k: 'target1', l: 'Soll Gefrierfach', min: -22, max: 10, v: F.set1},
+                 {t: 'slider', k: 'target2', l: 'Soll Kühlfach', min: -22, max: 10, v: F.set2},
+                 {t: 'select', k: 'bpd', l: 'Batterieschutz', o: 'Stufe 1|Stufe 2|Stufe 3', v: 1},
+                 {t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: false}],
+          raw: '/SC0/2,1,1,-17,5,-18,4,2,129,22,96,3,1,0,0,-10,-22,10,-10'});
+      }
       if (p.type !== 'blesensor') return Object.assign(o, {state: 'Warte auf Daten', ok: false, rows: []});
       const t = 21.4 + Math.sin((Date.now() - M.t0) / 60000) * 0.3;
       return Object.assign(o, {state: 'OK', ok: true,

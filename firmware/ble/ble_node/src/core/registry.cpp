@@ -295,6 +295,25 @@ JsonObject liveCtrl(JsonObject o, const char* t, const char* key, const char* la
     return x;
 }
 
+void liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
+              const char* sub, const char* switchKey, bool on) {
+    JsonArray zs = o["zones"].is<JsonArray>() ? o["zones"].as<JsonArray>() : o["zones"].to<JsonArray>();
+    JsonObject z = zs.add<JsonObject>();
+    z["l"] = label;
+    if (isnan(v)) {
+        z["v"] = nullptr;
+    } else {
+        float f = powf(10.0f, (float)decimals);
+        z["v"] = roundf(v * f) / f;
+    }
+    if (unit) z["unit"] = unit;
+    if (sub) z["s"] = sub;
+    if (switchKey) {
+        z["k"] = switchKey;
+        z["on"] = on;
+    }
+}
+
 bool payloadOn(const char* v) {
     return v && (strcasecmp(v, "on") == 0 || strcasecmp(v, "true") == 0 || strcmp(v, "1") == 0);
 }

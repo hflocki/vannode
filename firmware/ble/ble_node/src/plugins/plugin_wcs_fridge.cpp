@@ -78,20 +78,20 @@ static const Field WCS_FIELDS[] = {
 };
 
 static const Entity WCS_ENTITIES[] = {
-    {E_SENSOR, "temp1",     "Ist-Temperatur Zone 1",  "°C", "temperature",     "measurement", nullptr, 0, nullptr},
-    {E_SENSOR, "temp2",     "Ist-Temperatur Zone 2",  "°C", "temperature",     "measurement", nullptr, 0, nullptr},
-    {E_SENSOR, "set1",      "Soll-Temperatur Zone 1", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
-    {E_SENSOR, "set2",      "Soll-Temperatur Zone 2", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
+    {E_SENSOR, "temp1",     "Ist-Temperatur Gefrierfach", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
+    {E_SENSOR, "temp2",     "Ist-Temperatur Kühlfach", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
+    {E_SENSOR, "set1",      "Soll-Temperatur Gefrierfach", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
+    {E_SENSOR, "set2",      "Soll-Temperatur Kühlfach", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
     {E_SENSOR, "voltage",   "Spannung",               "V",  "voltage",         "measurement", nullptr, 0, nullptr},
     {E_SENSOR, "battery",   "Batterie",               "%",  "battery",         "measurement", nullptr, 0, nullptr},
     {E_SWITCH, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
     {E_SWITCH, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
     {E_SENSOR, "error",     "Fehler",                 nullptr, nullptr,        nullptr,       "mdi:alert-circle", EF_ALWAYS, nullptr},
     {E_SWITCH, "power",     "Kühlschrank an",         nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
-    {E_SWITCH, "zone1",     "Zone 1 an",              nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
-    {E_SWITCH, "zone2",     "Zone 2 an",              nullptr, nullptr,        nullptr,       "mdi:fridge-bottom", 0, nullptr},
-    {E_SELECT, "target1",   "Soll Zone 1 einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
-    {E_SELECT, "target2",   "Soll Zone 2 einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
+    {E_SWITCH, "zone1",     "Gefrierfach an",         nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
+    {E_SWITCH, "zone2",     "Kühlfach an",            nullptr, nullptr,        nullptr,       "mdi:fridge-bottom", 0, nullptr},
+    {E_SELECT, "target1",   "Soll Gefrierfach einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
+    {E_SELECT, "target2",   "Soll Kühlfach einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
     {E_SELECT, "bpd",       "Batterieschutz",         nullptr, nullptr,        nullptr,       "mdi:battery-lock", EF_CONFIG, WCS_BPD_OPTIONS},
     {E_BINARY, "connected", "Verbindung",             nullptr, "connectivity", nullptr,       nullptr, EF_DIAG | EF_ALWAYS, nullptr},
     {E_SENSOR, "state",     "Status",                 nullptr, nullptr,        nullptr,       "mdi:bluetooth-connect", EF_DIAG | EF_ALWAYS, nullptr},
@@ -189,17 +189,19 @@ public:
     void live(JsonObject o) override {
         o["state"] = stateText();
         o["ok"] = available();
-        JsonObject g = o["gauge"].to<JsonObject>();
-        if (hasData) g["v"] = roundf(temp1 * 10.0f) / 10.0f;
-        else g["v"] = nullptr;
-        g["unit"] = "°C";
-        g["label"] = "Zone 1";
-        g["min"] = -25;
-        g["max"] = 15;
-        liveRowNum(o, "Soll Zone 1", hasData ? set1 : NAN, 0, "°C");
+        // One panel per compartment: actual temperature big, set point below; with two
+        // zones each panel has its own on / off switch (only once the zone state is known)
+        bool ctl = hasData && login == WL_OK;
+        char sub[24];
+        if (hasData && !isnan(set1)) snprintf(sub, sizeof(sub), "Soll %.0f °C", set1);
+        else strlcpy(sub, "Soll –", sizeof(sub));
+        liveZone(o, zoneName(1), hasData ? temp1 : NAN, 0, "°C", sub,
+                 c.zone2 && ctl && zonesKnown ? "zone1" : nullptr, (zones & 1) != 0);
         if (c.zone2) {
-            liveRowNum(o, "Ist Zone 2", hasData ? temp2 : NAN, 0, "°C");
-            liveRowNum(o, "Soll Zone 2", hasData ? set2 : NAN, 0, "°C");
+            if (hasData && !isnan(set2)) snprintf(sub, sizeof(sub), "Soll %.0f °C", set2);
+            else strlcpy(sub, "Soll –", sizeof(sub));
+            liveZone(o, zoneName(2), hasData ? temp2 : NAN, 0, "°C", sub,
+                     ctl && zonesKnown ? "zone2" : nullptr, (zones & 2) != 0);
         }
         liveRowNum(o, "Spannung", hasData ? voltage : NAN, 1, "V");
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
@@ -208,18 +210,16 @@ public:
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
-        if (hasData && login == WL_OK) {
+        if (ctl) {
             liveCtrl(o, "switch", "power", "Kühlschrank an")["v"] = powerOn;
-            if (c.zone2 && zonesKnown) {
-                liveCtrl(o, "switch", "zone1", "Zone 1 an")["v"] = (zones & 1) != 0;
-                liveCtrl(o, "switch", "zone2", "Zone 2 an")["v"] = (zones & 2) != 0;
-            }
             if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
             liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
-            JsonObject s = liveCtrl(o, "slider", "target1", "Soll Zone 1");
+            char lbl[32];
+            snprintf(lbl, sizeof(lbl), "Soll %s", zoneName(1));
+            JsonObject s = liveCtrl(o, "slider", "target1", lbl);
             s["min"] = min1; s["max"] = max1; s["v"] = isnan(set1) ? 0 : (int)lroundf(set1);
             if (c.zone2) {
-                s = liveCtrl(o, "slider", "target2", "Soll Zone 2");
+                s = liveCtrl(o, "slider", "target2", "Soll Kühlfach");
                 s["min"] = min2; s["max"] = max2; s["v"] = isnan(set2) ? 0 : (int)lroundf(set2);
             }
             s = liveCtrl(o, "select", "bpd", "Batterieschutz");
@@ -452,12 +452,18 @@ private:
 
     bool sleepOn() const { return !strcmp(mode, "11"); }
 
+    // Compartment names: with two zones zone 1 is the freezer, zone 2 the fridge
+    const char* zoneName(int zone) const {
+        if (zone == 2) return "Kühlfach";
+        return c.zone2 ? "Gefrierfach" : "Innenraum";
+    }
+
     const char* modeText() const {
         if (sleepOn()) return "Nachtmodus";
         if (strlen(mode) == 2) {
-            if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen Zone 1 + 2";
-            if (mode[0] == '3') return "Schnellkühlen Zone 1";
-            if (mode[1] == '3') return "Schnellkühlen Zone 2";
+            if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen beide Fächer";
+            if (mode[0] == '3') return c.zone2 ? "Schnellkühlen Gefrierfach" : "Schnellkühlen";
+            if (mode[1] == '3') return "Schnellkühlen Kühlfach";
         }
         return mode[0] ? mode : "-";
     }
@@ -556,7 +562,7 @@ private:
             if (strlen(f) >= 8 && f[6] == '/') {
                 int zone = f[5] - '0', code = f[7] - '0';
                 errorCode = code;
-                snprintf(errorLine, sizeof(errorLine), "E%d %s (Zone %d)", code, errorText(code), zone);
+                snprintf(errorLine, sizeof(errorLine), "E%d %s (%s)", code, errorText(code), zoneName(zone));
                 devlogf(id, "Error: %s", errorLine);
             } else {
                 devlogf(id, "Error frame not understood: %s", lastLine);

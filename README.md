@@ -188,6 +188,10 @@ Sample data and simulated behaviour per device are in `tools/mockups/mock/<devic
 
 The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). They were moved here (the former `firmware/battery` is now part of `firmware/ble`); the old repos are or will be archived.
 
+## Thanks
+
+Many thanks to **mot flash** for testing and for the idea to build the BLE plugins for the RV Tech roof hatch, the WCS fridge and the CaraWater water pump.
+
 ## No warranty, no liability – use at your own risk
 
 VanNode is a private hobby project. It is given away free of charge and without any business

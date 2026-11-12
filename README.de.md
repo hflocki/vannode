@@ -188,6 +188,10 @@ Die Beispieldaten und das simulierte Verhalten stehen je Gerät in `tools/mockup
 
 Die Geräte waren vorher einzelne Repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). Sie wurden hierher übernommen (das frühere `firmware/battery` ist jetzt Teil von `firmware/ble`); die alten Repos sind archiviert bzw. werden es.
 
+## Danke
+
+Mein Dank geht an **mot flash** für das Testen und die Anregung, die BLE-Plugins für die Dachhaube RV Tech, den Kühlschrank WCS und die Wasserpumpe CaraWater zu bauen.
+
 ## Haftungsausschluss – Nutzung auf eigene Gefahr
 
 VanNode ist ein privates Hobbyprojekt, unentgeltlich und ohne Geschäftstätigkeit. Es überwacht und

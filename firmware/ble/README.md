@@ -219,7 +219,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
-| 2.1.10 | Kühlschrank: neue Schalter **Zone 1 an** und **Zone 2 an** (Kühl- und Gefrierfach einzeln, nur mit „Zweite Zone“), **Umluft** und **Nachtmodus** (bisher nur Anzeigen, jetzt schaltbar; in Home Assistant als Schalter statt Binärsensor). Der Schalter zeigt den neuen Zustand sofort, die nächste Statusmeldung bestätigt ihn. Im Log steht der Status jetzt bei jeder Änderung von Ein/Aus, Zonen, Umluft oder Modus. README: Danksagung |
+| 2.1.10 | Kühlschrank: neue Schalter **Zone 1 an** und **Zone 2 an** (Kühl- und Gefrierfach einzeln, nur mit „Zweite Zone“), **Umluft** und **Nachtmodus** (bisher nur Anzeigen, jetzt schaltbar; in Home Assistant als Schalter statt Binärsensor). Der Schalter zeigt den neuen Zustand sofort, die nächste Statusmeldung bestätigt ihn. Im Log steht der Status jetzt bei jeder Änderung von Ein/Aus, Zonen, Umluft oder Modus. |
 | 2.1.9 | Kühlschrank: neue Anzeigen **Umluft** und **Nachtmodus** (nur lesen, aus dem Status), Modus „11“ heißt jetzt Nachtmodus. Ein gemeldeter Fehler (z. B. E6) wird bei der nächsten Verbindung gelöscht und erscheint nur noch, wenn der Kühlschrank ihn erneut meldet |
 | 2.1.8 | Neues Plugin **Alarm WiPro III** (`wipro`, nur lesen): meldet Scharf-Zustand, Alarmgrund (ausgelöster Funkkontakt oder Melder), jeden Funk-Kontakt einzeln (`contact0`…`contact7` aus der Bitmaske in Byte 6) und die offenen Kontakte als Namensliste über MQTT. Kontaktnamen im Web-UI einstellbar. Protokoll aus dem eigenen Projekt wipro2ha. Reiner Statusmelder, schaltet nie. Zählt als eine der drei Bluetooth-Verbindungen |
 | 2.1.7 | Stand der camper_toolbox 0.1.18: Kommentare und Hilfetexte von Dachhaube und Kühlschrank neutral formuliert; Über-Karte und NOTICE ohne die Zeilen zu Dachhaube und Kühlschrank (eigene Umsetzung, keine fremde Quelle) |
@@ -249,10 +249,6 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 | 1.0.1 | Web-Oberfläche im Aussehen der übrigen VanNode-Geräte (Farben, Kopfzeile mit Statuspunkten, Tab-Leiste mit Symbolen, Werte als Kacheln, Schalter statt Häkchen) |
 | 1.0.0 | Ins VanNode-Repo übernommen: sicheres Update (Kennung, Prüfung im Browser und im Gerät), Ereignis-Log, Rückfall und WLAN-Rückweg, Topic `info`; Basis-Topic `camper/toolbox`, Hostname `camper-toolbox`; ab Werk nur die Dachhaube (RV Tech) |
 | 0.1.x | Eigenes Repo `camper_toolbox`: Plugins Gas (DIMES, Mopeka), Wasserpumpe, Dachhaube, Kühlschrank |
-
-## Danke
-
-Mein Dank geht an **mot flash** für das Testen und die Anregung, die Plugins für die Dachhaube RV Tech, den Kühlschrank WCS und die Wasserpumpe CaraWater zu bauen.
 
 ## Fertige Firmware
 

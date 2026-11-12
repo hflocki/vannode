@@ -14,7 +14,7 @@ Hier liegt das **Original** von Quelldateien, die mehrere Geräte benutzen. Jede
   python3 tools/common/sync_common.py
   ```
 
-  Das Skript listet die betroffenen Geräte. Bei jedem davon `FW_VERSION` erhöhen und taggen (siehe `AGENTS.md`).
+  Das Skript listet die betroffenen Geräte. Bei jedem davon `FW_VERSION` erhöhen und taggen.
 - Nur prüfen, ohne zu schreiben: `python3 tools/common/sync_common.py --check`.
 
 ## Inhalt

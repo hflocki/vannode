@@ -16,7 +16,11 @@ ROADMAP.md
 # Personal settings of each device (see config_local.h.example)
 config_local.h
 
+# Local notes, project state and assistant rules (never published)
+_local/
 plan/
+AGENTS.md
+CLAUDE.md
 
 # Downloads (firmware, PCB files, screenshots) that end up in the repo root by accident
 /*.bin

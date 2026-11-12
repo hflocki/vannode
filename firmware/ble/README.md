@@ -219,6 +219,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.12 | MQTT-Befehle laufen erst nach dem Empfang in der normalen Schleife statt direkt im MQTT-Empfang. Behebt den Absturz, wenn die Pumpe per MQTT eine Stufe bekam (über das Web-UI ging es schon). Pumpe: jedes Schreiben steht im Ereignis-Log (System), auch nach einem Neustart |
 | 2.1.11 | Kühlschrank: neue Ansicht im Web-UI mit zwei gleich großen Feldern nebeneinander, links **Gefrierfach**, rechts **Kühlfach**: Ist-Temperatur groß, Sollwert darunter, je ein Ein/Aus-Schalter (bei zwei Zonen). „Zone 1“ / „Zone 2“ heißen überall Gefrierfach / Kühlfach (auch die Namen in Home Assistant); ohne zweite Zone heißt das Fach „Innenraum“. MQTT-Topics unverändert. Web-UI: neues Element für solche Felder |
 | 2.1.10 | Kühlschrank: neue Schalter **Zone 1 an** und **Zone 2 an** (Kühl- und Gefrierfach einzeln, nur mit „Zweite Zone“), **Umluft** und **Nachtmodus** (bisher nur Anzeigen, jetzt schaltbar; in Home Assistant als Schalter statt Binärsensor). Der Schalter zeigt den neuen Zustand sofort, die nächste Statusmeldung bestätigt ihn. Im Log steht der Status jetzt bei jeder Änderung von Ein/Aus, Zonen, Umluft oder Modus. |
 | 2.1.9 | Kühlschrank: neue Anzeigen **Umluft** und **Nachtmodus** (nur lesen, aus dem Status), Modus „11“ heißt jetzt Nachtmodus. Ein gemeldeter Fehler (z. B. E6) wird bei der nächsten Verbindung gelöscht und erscheint nur noch, wenn der Kühlschrank ihn erneut meldet |

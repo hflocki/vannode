@@ -26,6 +26,7 @@
 #include "../core/devlog.h"
 #include "../core/util.h"
 #include "../core/wifi_manager.h"
+#include "../../evlog.h"
 #include <time.h>
 
 // Known GATT layouts: FF00/FF01/FF02 (ISP 15, as in the HA integration),
@@ -336,7 +337,7 @@ private:
         cmd[0] = 0xAA;
         cmd[1] = 0x39;
         cmd[2] = mode;
-        // Local time like the app sends it; fixed value if the clock is not set (no NTP)
+        // Local time; fixed value if the clock is not set (no NTP)
         uint8_t minute = 0x22, hour = 0x12, weekday = 7;
         if (timeValid()) {
             time_t now = time(nullptr);
@@ -352,6 +353,8 @@ private:
         uint8_t sum = 0;
         for (int i = 0; i < 59; i++) sum += cmd[i];
         cmd[59] = sum;
+        // Kept in the event log (survives a restart), so a crash during the write shows up
+        evlog::add("Pumpe: sende %s, Stufe %u", (mode & 0x01) ? "an" : "aus", (unsigned)((mode >> 5) & 0x03));
         bool ok = link.write(cmd, sizeof(cmd), true);
         devlogf(id, "Write mode 0x%02X (%s, level %u, time %02u:%02u day %u): %s", mode,
                 (mode & 0x01) ? "on" : "off", (unsigned)((mode & 0x60) >> 5), hour, minute, weekday,

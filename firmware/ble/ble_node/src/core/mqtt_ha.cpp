@@ -256,6 +256,30 @@ static void publishDiscovery() {
 // Commands
 // ============================================================
 
+// Commands are only queued in the MQTT callback and run after mqtt.loop() has returned:
+// a command may block for a while (Bluetooth write with response) and must not run
+// inside the MQTT client's own receive code (the web UI runs them in its own task).
+struct PendingCmd {
+    char id[24];
+    char key[32];
+    char value[64];
+};
+#define CMD_QUEUE 6
+static PendingCmd cmdQueue[CMD_QUEUE];
+static uint8_t cmdHead = 0, cmdCount = 0;
+
+static void runQueuedCommands() {
+    while (cmdCount) {
+        PendingCmd c = cmdQueue[cmdHead];
+        cmdHead = (cmdHead + 1) % CMD_QUEUE;
+        cmdCount--;
+        Plugin* p = pluginById(c.id);
+        if (!p || !p->enabled || p->removed) continue;
+        Serial.printf("[MQTT] Command %s/%s = %s\n", c.id, c.key, c.value);
+        p->command(c.key, c.value);
+    }
+}
+
 static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
     // <prefix>/cmd/<plugin>/<key>/set
     String prefix = topic("cmd/");
@@ -274,10 +298,15 @@ static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
     String v = value;
     v.trim();
 
-    Plugin* p = pluginById(id.c_str());
-    if (!p || !p->enabled || p->removed) return;
-    Serial.printf("[MQTT] Command %s/%s = %s\n", id.c_str(), key.c_str(), v.c_str());
-    p->command(key.c_str(), v.c_str());
+    if (cmdCount == CMD_QUEUE) {
+        Serial.printf("[MQTT] Command queue full, %s/%s dropped\n", id.c_str(), key.c_str());
+        return;
+    }
+    PendingCmd& c = cmdQueue[(cmdHead + cmdCount) % CMD_QUEUE];
+    strlcpy(c.id, id.c_str(), sizeof(c.id));
+    strlcpy(c.key, key.c_str(), sizeof(c.key));
+    strlcpy(c.value, v.c_str(), sizeof(c.value));
+    cmdCount++;
 }
 
 // ============================================================
@@ -334,6 +363,8 @@ void mqttLoop() {
     }
 
     mqtt.loop();
+    runQueuedCommands();
+    if (!mqtt.connected()) return;
 
     if (devinfoDue(mqtt.connected())) mqtt.publish(topic("info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 

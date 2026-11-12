@@ -74,7 +74,6 @@ Not in this repo: **router data (GPS, mobile signal)** is sent by the RUT956 its
 - **Testing at home:** [`tools/emulator`](tools/emulator) is a Python tool with a local web page. It sends the topics of all devices, the router and Zigbee with values you can change, plus scenarios (tanks running empty, departure, a device dropping out …), so the displays can be tested without the vehicle
 - All topics at a glance: [`docs/TOPICS.md`](docs/TOPICS.md)
 - Clickable mockups of every web interface: [`docs/mockups/`](docs/mockups/index.html)
-- Notes for AI assistants and contributors: [`AGENTS.md`](AGENTS.md)
 
 The documentation of the individual devices and the web interfaces are in German.
 

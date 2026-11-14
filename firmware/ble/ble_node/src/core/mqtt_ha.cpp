@@ -6,6 +6,7 @@
 #include "mqtt_ha.h"
 #include "wifi_manager.h"
 #include "registry.h"
+#include "devlog.h"
 #include "../../devinfo.h"
 #include "../plugins/bms_plugin.h"
 
@@ -276,6 +277,7 @@ static void runQueuedCommands() {
         Plugin* p = pluginById(c.id);
         if (!p || !p->enabled || p->removed) continue;
         Serial.printf("[MQTT] Command %s/%s = %s\n", c.id, c.key, c.value);
+        devlogf(p->id, "MQTT command %s = %s", c.key, c.value);
         p->command(c.key, c.value);
     }
 }
@@ -297,6 +299,11 @@ static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
     value[n] = '\0';
     String v = value;
     v.trim();
+    // Tools like MQTT Explorer in JSON mode send "2" with quotes: drop them
+    if (v.length() >= 2 && v[0] == '"' && v[v.length() - 1] == '"') {
+        v = v.substring(1, v.length() - 1);
+        v.trim();
+    }
 
     if (cmdCount == CMD_QUEUE) {
         Serial.printf("[MQTT] Command queue full, %s/%s dropped\n", id.c_str(), key.c_str());

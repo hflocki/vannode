@@ -166,9 +166,11 @@ void liveRowNum(JsonObject o, const char* label, float v, int decimals, const ch
 void liveRowText(JsonObject o, const char* label, const char* v);
 JsonObject liveCtrl(JsonObject o, const char* t, const char* key, const char* label);
 // Adds a zone panel to o["zones"]: big value, small line below, optional on / off switch
-// (switchKey nullptr = no switch)
-void liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
+// (switchKey nullptr = no switch). Returns the panel, e.g. for liveZoneStep().
+JsonObject liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
               const char* sub, const char* switchKey, bool on);
+// Adds - / + buttons to a zone panel: command key, current value, range, step
+void liveZoneStep(JsonObject z, const char* key, int v, int min, int max, int step = 1);
 bool payloadOn(const char* v);   // "ON", "on", "true", "1"
 
 #endif // CT_PLUGIN_H

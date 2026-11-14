@@ -295,8 +295,8 @@ JsonObject liveCtrl(JsonObject o, const char* t, const char* key, const char* la
     return x;
 }
 
-void liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
-              const char* sub, const char* switchKey, bool on) {
+JsonObject liveZone(JsonObject o, const char* label, float v, int decimals, const char* unit,
+                    const char* sub, const char* switchKey, bool on) {
     JsonArray zs = o["zones"].is<JsonArray>() ? o["zones"].as<JsonArray>() : o["zones"].to<JsonArray>();
     JsonObject z = zs.add<JsonObject>();
     z["l"] = label;
@@ -312,6 +312,16 @@ void liveZone(JsonObject o, const char* label, float v, int decimals, const char
         z["k"] = switchKey;
         z["on"] = on;
     }
+    return z;
+}
+
+void liveZoneStep(JsonObject z, const char* key, int v, int min, int max, int step) {
+    JsonObject s = z["step"].to<JsonObject>();
+    s["k"] = key;
+    s["v"] = v;
+    s["min"] = min;
+    s["max"] = max;
+    s["d"] = step;
 }
 
 bool payloadOn(const char* v) {

@@ -157,15 +157,16 @@ const M = {
       if (p.type === 'fridge' && p.cfg.mac) {
         const F = M.fr, z1 = F.power && (F.zones & 1), z2 = F.power && (F.zones & 2);
         return Object.assign(o, {state: 'Verbunden', ok: true,
-          zones: [{l: 'Gefrierfach', v: z1 ? -17 : 2, unit: '°C', s: `Soll ${F.set1} °C`, k: 'zone1', on: !!(F.zones & 1)},
-                  {l: 'Kühlfach', v: z2 ? 5 : 9, unit: '°C', s: `Soll ${F.set2} °C`, k: 'zone2', on: !!(F.zones & 2)}],
+          zones: [{l: 'Gefrierfach', v: z1 ? -17 : 2, unit: '°C', s: `Soll ${F.set1} °C`, k: 'zone1', on: !!(F.zones & 1),
+                   step: {k: 'target1', v: F.set1, min: -22, max: 10, d: 1}},
+                  {l: 'Kühlfach', v: z2 ? 5 : 9, unit: '°C', s: `Soll ${F.set2} °C`, k: 'zone2', on: !!(F.zones & 2),
+                   step: {k: 'target2', v: F.set2, min: -22, max: 10, d: 1}}],
           rows: [['Spannung', 12.9, 'V'], ['Batterie', 96, '%'], ['Modus', F.night ? 'Nachtmodus' : 'Normal', ''],
+                 ['Grenzen laut Gerät', '-22…-10 / -10…10 °C', ''],
                  ['Bluetooth', -66, 'dBm'], ['Nachrichten', 412, '']],
           ctrl: [{t: 'switch', k: 'power', l: 'Kühlschrank an', v: F.power},
                  {t: 'switch', k: 'fan', l: 'Umluft', v: F.fan},
                  {t: 'switch', k: 'night', l: 'Nachtmodus', v: F.night},
-                 {t: 'slider', k: 'target1', l: 'Soll Gefrierfach', min: -22, max: 10, v: F.set1},
-                 {t: 'slider', k: 'target2', l: 'Soll Kühlfach', min: -22, max: 10, v: F.set2},
                  {t: 'select', k: 'bpd', l: 'Batterieschutz', o: 'Stufe 1|Stufe 2|Stufe 3', v: 1},
                  {t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: false}],
           raw: '/SC0/2,1,1,-17,5,-18,4,2,129,22,96,3,1,0,0,-10,-22,10,-10'});

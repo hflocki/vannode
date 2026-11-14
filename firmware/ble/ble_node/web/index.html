@@ -91,6 +91,9 @@
       .zone.off .v, .card.ok .zone.off .v { color: var(--text-muted); }
       .zone .s { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px; }
       .zone label { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+      .zone .step { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .zone .step button.b { width: 40px; height: 36px; padding: 0; margin: 0; font-size: 1.2rem; line-height: 1; }
+      .zone .step b { min-width: 3.6em; font-variant-numeric: tabular-nums; }
       .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
       .tile { background: var(--bg-input); border-radius: 8px; padding: 8px 6px; text-align: center; min-width: 0; }
       .tile span { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px;
@@ -419,6 +422,9 @@ nav button .ico{display:inline-flex}
       }
 
       // ---------------- Live ----------------
+      let ctlTouch = 0; // last time a live control was used
+      const pending = {}; // value sent with - / +, shown until the device reports it (max 10 s)
+      document.addEventListener("pointerdown", () => (ctlTouch = Date.now()), true);
       function cmd(p, k, v) {
         api("/api/cmd", { p, k, v: String(v) }).catch((e) => toast(e.message, true));
       }
@@ -447,8 +453,10 @@ nav button .ico{display:inline-flex}
         const g = $("#live");
         if (!g || !LIVE) return;
         const a = document.activeElement;
-        if (a && g.contains(a) && (a.type == "range" || a.tagName == "SELECT"))
-          return; // Do not disturb an open control
+        // Do not disturb a control that is in use (open select, slider being dragged).
+        // Controls lose focus after a change, so the view never freezes afterwards.
+        if (a && g.contains(a) && (a.type == "range" || a.tagName == "SELECT") && Date.now() - ctlTouch < 15000)
+          return;
         g.replaceChildren(...LIVE.plugins.filter((p) => p.enabled).map(card));
       }
       function card(p) {
@@ -507,7 +515,7 @@ nav button .ico{display:inline-flex}
                   { className: "zone" + (z.k && !z.on ? " off" : "") },
                   el("div", { className: "l" }, z.l),
                   el("div", { className: "v" }, fmt(z.v, z.unit)),
-                  el("div", { className: "s" }, z.s || ""),
+                  z.step ? step(p.id, z.step) : el("div", { className: "s" }, z.s || ""),
                   z.k ? ctrl(p.id, { t: "switch", k: z.k, l: "An", v: z.on }) : "",
                 ),
               ),
@@ -539,6 +547,29 @@ nav button .ico{display:inline-flex}
           );
         return c;
       }
+      // Set point with - / + buttons; each press sends the new value at once
+      function step(id, x) {
+        const key = id + "/" + x.k,
+          p = pending[key];
+        if (p && (p.v == x.v || Date.now() - p.t > 10000)) delete pending[key];
+        let v = pending[key] ? pending[key].v : x.v;
+        const out = el("b", { textContent: "Soll " + v + " °C" });
+        const go = (d) => {
+          const n = Math.max(x.min, Math.min(x.max, v + d * (x.d || 1)));
+          if (n == v) return;
+          v = n;
+          pending[key] = { v, t: Date.now() };
+          out.textContent = "Soll " + v + " °C";
+          cmd(id, x.k, v);
+        };
+        return el(
+          "div",
+          { className: "step" },
+          el("button", { className: "b s", textContent: "−", title: "1 °C kälter", on: { click: () => go(-1) } }),
+          out,
+          el("button", { className: "b s", textContent: "+", title: "1 °C wärmer", on: { click: () => go(1) } }),
+        );
+      }
       function ctrl(id, x) {
         if (x.t == "switch") {
           const i = el("input", {
@@ -554,7 +585,14 @@ nav button .ico{display:inline-flex}
           const o = x.o.split("|");
           const s = el(
             "select",
-            { on: { change: (e) => cmd(id, x.k, e.target.value) } },
+            {
+              on: {
+                change: (e) => {
+                  cmd(id, x.k, e.target.value);
+                  e.target.blur();
+                },
+              },
+            },
             ...o.map((t, i) =>
               el("option", { value: t, textContent: t, selected: i == x.v }),
             ),
@@ -584,7 +622,10 @@ nav button .ico{display:inline-flex}
             value: x.v,
             on: {
               input: (e) => (out.textContent = e.target.value),
-              change: (e) => cmd(id, x.k, e.target.value),
+              change: (e) => {
+                cmd(id, x.k, e.target.value);
+                e.target.blur();
+              },
             },
           });
           return el("label", {}, x.l + " ", r, out);

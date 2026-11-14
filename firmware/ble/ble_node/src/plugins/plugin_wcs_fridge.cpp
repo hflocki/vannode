@@ -42,8 +42,8 @@
 #define WCS_LOGIN_TRIES   3      // Password attempts without answer before polling anyway
 #define WCS_LOGIN_WAIT_MS 4000   // Wait for the password answer
 #define WCS_DEFAULT_PWD   "1234" // Factory default of the app password (printed in the manual)
-#define WCS_SET_MIN       -22    // Set point range if the fridge does not report its own
-#define WCS_SET_MAX       10
+#define WCS_SET_MIN       -22    // Allowed set point range (°C). The limits the fridge reports
+#define WCS_SET_MAX       10     // (f15..f18) are only shown and logged, not used to clamp
 
 // GATT layout of the fridge, used when the web UI fields are empty
 #define WCS_SERVICE_UUID "0000e530-1212-efde-1523-785feabcd123"
@@ -195,18 +195,27 @@ public:
         char sub[24];
         if (hasData && !isnan(set1)) snprintf(sub, sizeof(sub), "Soll %.0f °C", set1);
         else strlcpy(sub, "Soll –", sizeof(sub));
-        liveZone(o, zoneName(1), hasData ? temp1 : NAN, 0, "°C", sub,
-                 c.zone2 && ctl && zonesKnown ? "zone1" : nullptr, (zones & 1) != 0);
+        // Set point with - / + in 1 °C steps instead of a slider
+        JsonObject z = liveZone(o, zoneName(1), hasData ? temp1 : NAN, 0, "°C", sub,
+                                c.zone2 && ctl && zonesKnown ? "zone1" : nullptr, (zones & 1) != 0);
+        if (ctl && !isnan(set1)) liveZoneStep(z, "target1", (int)lroundf(set1), WCS_SET_MIN, WCS_SET_MAX);
         if (c.zone2) {
             if (hasData && !isnan(set2)) snprintf(sub, sizeof(sub), "Soll %.0f °C", set2);
             else strlcpy(sub, "Soll –", sizeof(sub));
-            liveZone(o, zoneName(2), hasData ? temp2 : NAN, 0, "°C", sub,
-                     ctl && zonesKnown ? "zone2" : nullptr, (zones & 2) != 0);
+            z = liveZone(o, zoneName(2), hasData ? temp2 : NAN, 0, "°C", sub,
+                         ctl && zonesKnown ? "zone2" : nullptr, (zones & 2) != 0);
+            if (ctl && !isnan(set2)) liveZoneStep(z, "target2", (int)lroundf(set2), WCS_SET_MIN, WCS_SET_MAX);
         }
         liveRowNum(o, "Spannung", hasData ? voltage : NAN, 1, "V");
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
         if (hasData) liveRowText(o, "Modus", modeText());
         if (errorCode) liveRowText(o, "Fehler", errorLine);
+        if (limitsKnown) {
+            char lim[40];
+            if (c.zone2) snprintf(lim, sizeof(lim), "%d…%d / %d…%d °C", min1, max1, min2, max2);
+            else snprintf(lim, sizeof(lim), "%d…%d °C", min1, max1);
+            liveRowText(o, "Grenzen laut Gerät", lim);
+        }
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
@@ -214,15 +223,7 @@ public:
             liveCtrl(o, "switch", "power", "Kühlschrank an")["v"] = powerOn;
             if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
             liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
-            char lbl[32];
-            snprintf(lbl, sizeof(lbl), "Soll %s", zoneName(1));
-            JsonObject s = liveCtrl(o, "slider", "target1", lbl);
-            s["min"] = min1; s["max"] = max1; s["v"] = isnan(set1) ? 0 : (int)lroundf(set1);
-            if (c.zone2) {
-                s = liveCtrl(o, "slider", "target2", "Soll Kühlfach");
-                s["min"] = min2; s["max"] = max2; s["v"] = isnan(set2) ? 0 : (int)lroundf(set2);
-            }
-            s = liveCtrl(o, "select", "bpd", "Batterieschutz");
+            JsonObject s = liveCtrl(o, "select", "bpd", "Batterieschutz");
             s["o"] = WCS_BPD_OPTIONS;
             s["v"] = bpd >= 1 && bpd <= 3 ? bpd - 1 : 0;
         }
@@ -290,9 +291,13 @@ public:
         } else if (!strcmp(key, "target1") || !strcmp(key, "target2")) {
             bool z2 = key[6] == '2';
             int t = atoi(value);   // Degrees Celsius from the web UI / Home Assistant
+            // Only the fixed range is enforced. The limits read from f15..f18 are not
+            // confirmed yet: clamping to them is the likely cause of -16 being sent as -20.
+            if (t < WCS_SET_MIN) t = WCS_SET_MIN;
+            if (t > WCS_SET_MAX) t = WCS_SET_MAX;
             int lo = z2 ? min2 : min1, hi = z2 ? max2 : max1;
-            if (t < lo) t = lo;
-            if (t > hi) t = hi;
+            if (limitsKnown && (t < lo || t > hi))
+                devlogf(id, "Set point %d outside reported limits %d..%d - sent anyway", t, lo, hi);
             int dev = unit == 2 ? (int)lroundf(t * 9.0f / 5.0f + 32.0f) : t;   // Fridge in F
             snprintf(cmd, sizeof(cmd), "/SC%c/%d/%c%02d\n", z2 ? '5' : '3', unit == 2 ? 2 : 1,
                      dev >= 0 ? '+' : '-', abs(dev));
@@ -368,6 +373,8 @@ private:
     int zones = 0;                // Zones running (status field 11): bit 1 = zone 1, bit 2 = zone 2
     bool zonesKnown = false;
     int min1 = WCS_SET_MIN, max1 = WCS_SET_MAX, min2 = WCS_SET_MIN, max2 = WCS_SET_MAX;
+    bool limitsKnown = false;   // f15..f18 received (shown and logged only)
+    int rawLim[4] = {0, 0, 0, 0};
     int errorCode = 0;
     char errorLine[48] = "";
     unsigned long lastMsg = 0;
@@ -635,6 +642,11 @@ private:
             if (toInt(tok[15], a) && toInt(tok[16], b) && toInt(tok[17], cc) && toInt(tok[18], d)) {
                 max1 = (int)lroundf(toCelsius(a)); min1 = (int)lroundf(toCelsius(b));
                 max2 = (int)lroundf(toCelsius(cc)); min2 = (int)lroundf(toCelsius(d));
+                if (!limitsKnown || a != rawLim[0] || b != rawLim[1] || cc != rawLim[2] || d != rawLim[3]) {
+                    devlogf(id, "Limits f15..f18: %d %d %d %d (unit %d)", a, b, cc, d, unit);
+                    rawLim[0] = a; rawLim[1] = b; rawLim[2] = cc; rawLim[3] = d;
+                    limitsKnown = true;
+                }
             }
         }
         hasData = true;

@@ -27,25 +27,29 @@ So the rules here are:
 This is not criticism of ESPHome or Home Assistant – both are great. For this one vehicle a leaner setup simply fit better.
 
 ```mermaid
-flowchart TB
+flowchart LR
   subgraph sens["Sensors"]
+    direction TB
     tank["tanklevel<br/>fresh, grey, gas"]
     temp["temp<br/>DS18B20, alarms"]
     level["level<br/>BNO085, wedges"]
     omg["omg<br/>BLE thermometers"]
   end
   subgraph clim["Climate"]
+    direction TB
     heater["heater<br/>Truma Combi"]
     alde["alde<br/>Alde 3020 HE"]
     fan["maxxfan<br/>roof fan"]
   end
   subgraph ble["ble – one firmware"]
+    direction TB
     bat["battery-node<br/>Daly · Ective · BM2"]
     tool["tool-node<br/>roof hatch · pump<br/>fridge · thermometers"]
     more["tool2 / tool3<br/>(optional)"]
   end
   broker(("MQTT broker<br/>e.g. RUT956"))
   subgraph ui["Displays"]
+    direction TB
     display["display<br/>wall panel + web page"]
     rb["roadbuddy<br/>M5Stack Core2"]
     ha["Home Assistant<br/>(optional)"]

@@ -27,25 +27,29 @@ Deshalb gilt hier:
 Das ist keine Kritik an ESPHome oder Home Assistant – beide sind großartig. Für dieses eine Fahrzeug passte ein schlankerer Aufbau einfach besser.
 
 ```mermaid
-flowchart TB
+flowchart LR
   subgraph sens["Sensoren"]
+    direction TB
     tank["tanklevel<br/>Wasser, Grau, Gas"]
     temp["temp<br/>DS18B20, Alarme"]
     level["level<br/>BNO085, Keile"]
     omg["omg<br/>BLE-Thermometer"]
   end
   subgraph clim["Klima"]
+    direction TB
     heater["heater<br/>Truma Combi"]
     alde["alde<br/>Alde 3020 HE"]
     fan["maxxfan<br/>Dachlüfter"]
   end
   subgraph ble["ble – eine Firmware"]
+    direction TB
     bat["battery-node<br/>Daly · Ective · BM2"]
     tool["tool-node<br/>Dachhaube · Pumpe<br/>Kühlschrank · Thermometer"]
     more["tool2 / tool3<br/>(optional)"]
   end
   broker(("MQTT-Broker<br/>z. B. RUT956"))
   subgraph ui["Anzeige"]
+    direction TB
     display["display<br/>Wandpanel + Webseite"]
     rb["roadbuddy<br/>M5Stack Core2"]
     ha["Home Assistant<br/>(optional)"]

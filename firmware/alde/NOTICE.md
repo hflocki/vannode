@@ -64,5 +64,6 @@ determined only to make the devices work together (interoperability).
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
 | `camper_alde/alde_lin.*` – frame layout, field offsets, encodings and plausibility gates of the Alde Compact 3020 HE LIN bus | ported from the ESPHome reader (receive-only parser, signal frames) | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | code MIT ([`LICENSE-alde-MIT`](LICENSE-alde-MIT)), protocol documentation CC BY 4.0 |
+| `camper_alde/alde_ci.*` – frames, encodings, registration and command sequence of the Alde external panel bus (CI-bus) | ported from the Python bridge (protocol part) | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`LICENSE-alde3030-MIT`](LICENSE-alde3030-MIT)) |
 
 Besides that only the libraries the Arduino IDE downloads when building (see the repository `NOTICE.md`).

@@ -7,7 +7,7 @@
 #define CONFIG_H
 
 // =====================================================================
-//  Alde Node - passive LIN reader for the Alde Compact 3020 HE
+//  Alde Node - LIN reader (and optional control) for the Alde Compact 3020 HE
 //  Created from firmware/_template.
 // =====================================================================
 
@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.1.0"
+#define FW_VERSION            "0.2.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -115,7 +115,35 @@
 #define DEFAULT_INTERVAL_S    5      // Minimum gap between two MQTT updates in seconds (web UI, 1-600)
 #endif
 #ifndef MAX_VALUES
-#define MAX_VALUES            16     // Values the device publishes (see VALUES[] in sensor.cpp)
+#define MAX_VALUES            32     // Values the device publishes (see VALUES[] in sensor.cpp)
+#endif
+
+// ============================================================
+// EXTERNAL PANEL BUS ("CI-bus", optional, ESP32 / ESP32-S3 only)
+// Second LIN transceiver on the external panel port of the Alde panel. Here the ESP
+// is the LIN master: it polls the panel for its state and - only if allowed in the
+// web UI - sends control frames. 19200 baud 8N1. Off by default (ci_mode 0).
+// ============================================================
+#ifndef CI_RX_PIN
+#define CI_RX_PIN             26     // RXD of the 2nd LIN transceiver
+#endif
+#ifndef CI_TX_PIN
+#define CI_TX_PIN             25     // TXD of the 2nd LIN transceiver
+#endif
+#ifndef CI_SLP_PIN
+#define CI_SLP_PIN            -1     // SLP/NSLP of the 2nd transceiver if wired to the ESP (driven HIGH), -1 = not wired
+#endif
+#ifndef CI_BAUD
+#define CI_BAUD               19200
+#endif
+#ifndef CI_POLL_MS
+#define CI_POLL_MS            1000   // Info poll interval
+#endif
+#ifndef DEFAULT_CI_MODE
+#define DEFAULT_CI_MODE       0      // 0 = off, 1 = read only (ESP polls as master), 2 = read and control
+#endif
+#ifndef DEFAULT_CI_FUNCTION
+#define DEFAULT_CI_FUNCTION   1      // Function id in the registration: 1 = Compact 3020, 2 = 3030, 3 = 3030 Plus
 #endif
 
 // ============================================================
@@ -140,6 +168,8 @@ struct AppConfig {
 
     // ---- Device settings (load/save/validate in webserver.cpp) ----
     uint16_t interval_s;   // Minimum gap between MQTT updates in seconds
+    uint8_t ci_mode;       // External panel bus: 0 = off, 1 = read, 2 = read + control
+    uint8_t ci_function;   // Function id for the registration (1/2/3)
 };
 
 // ============================================================

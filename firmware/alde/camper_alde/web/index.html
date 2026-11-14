@@ -295,6 +295,23 @@ nav button .ico{display:inline-flex}
         <div class="temps" id="live-values"></div>
         <div class="card"><div class="temp-state" id="live-state" style="margin:0">--</div></div>
         <div class="btn-row"><button class="btn btn-secondary" onclick="measureNow()">🔄 Jetzt senden</button></div>
+        <!-- Control of the Alde panel over the external bus, only with ci_mode 2 -->
+        <div class="card" id="ctl-card" style="display:none">
+            <div class="card-title accent">Heizung steuern</div>
+            <div class="form-row">
+                <div class="form-group"><label>Sollwert (°C)</label><input type="number" id="ctl-target" min="5" max="30" step="0.5"></div>
+                <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="sendControl({target: $('ctl-target').value})">Setzen</button></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Gasbetrieb</label>
+                    <select id="ctl-gas" onchange="sendControl({gas: this.value})"><option value="0">Aus</option><option value="1">An</option></select></div>
+                <div class="form-group"><label>Heizstab</label>
+                    <select id="ctl-el" onchange="sendControl({el_level: this.value})"><option value="0">Aus</option><option value="1">1 kW</option><option value="2">2 kW</option><option value="3">3 kW</option></select></div>
+                <div class="form-group"><label>Warmwasser</label>
+                    <select id="ctl-water" onchange="sendControl({water: this.value})"><option value="0">Aus</option><option value="1">An</option><option value="2">Boost</option></select></div>
+            </div>
+            <div class="form-hint" id="ctl-state">Jeder Befehl liest zuerst den aktuellen Stand des Bedienteils und ändert nur den gewählten Wert.</div>
+        </div>
     </div>
 
     <!-- SETTINGS TAB (ids cfg-* are read in loadSetup() / saveSettings()) -->
@@ -307,6 +324,18 @@ nav button .ico{display:inline-flex}
             </div>
             <div class="form-hint">Der Bus liefert alle 388 ms neue Werte. Geänderte Werte gehen höchstens in diesem Abstand per MQTT raus, unverändert spätestens jede Minute. Das Gerät liest nur mit und sendet nichts auf den Bus.</div>
             <div class="btn-row"><button class="btn btn-primary" onclick="saveSettings()">💾 Speichern</button></div>
+        </div>
+        <div class="card">
+            <div class="card-title accent">Bedienteil-Bus (Steuerung)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Modus</label>
+                    <select id="cfg-ci-mode"><option value="0">Aus</option><option value="1">Nur lesen</option><option value="2">Lesen und steuern</option></select></div>
+                <div class="form-group"><label>Heizung</label>
+                    <select id="cfg-ci-function"><option value="1">Compact 3020</option><option value="2">3030</option><option value="3">3030 Plus</option></select></div>
+            </div>
+            <div class="form-hint">Zweiter LIN-Transceiver am Anschluss für ein externes Bedienteil (CI-Bus, 19200 Baud). Hier fragt der ESP das Alde-Bedienteil als Master ab und kann – nur bei „Lesen und steuern“ – Sollwert, Gas, Heizstab und Warmwasser setzen. Ungetestet an der 3020. Nur nutzen, wenn du die Heizung dabei im Blick hast.</div>
+            <div class="form-hint" id="ci-link">--</div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="saveCi()">💾 Speichern</button></div>
         </div>
     </div>
 
@@ -437,10 +466,14 @@ function formatAge(s) {
     return 'vor ' + Math.floor(s / 3600) + ' h';
 }
 
-const BIN_KEYS = ['gas', 'ac_active', 'bus_ok'];
+const BIN_KEYS = ['gas', 'ac_active', 'bus_ok', 'gas_enabled', 'pump', 'panel_on', 'error', 'ac_input', 'ci_ok'];
+const CI_KEYS = ['target', 'panel_room', 'outdoor', 'gas_enabled', 'el_level', 'water_mode', 'pump', 'panel_on', 'error', 'ac_input', 'ci_ok'];
+const WATER_TXT = ['Aus', 'An', 'Boost'];
+let ciMode = 0;
 
 function updateLiveData(d) {
-    const list = d.values || [];
+    // Values of the external panel bus only when it is switched on
+    const list = (d.values || []).filter(v => ciMode > 0 || !CI_KEYS.includes(v.key));
     const box = $('live-values');
     const sig = list.map(v => v.key).join('|');
     if (sig !== lastSig) {
@@ -457,7 +490,19 @@ function updateLiveData(d) {
         // Binary values (1/0) as text; "Warmwasser Ziel" 0 means off
         if (BIN_KEYS.includes(v.key)) el.textContent = (v.v === null || v.v === undefined) ? '--' : (v.v ? 'An' : 'Aus');
         else if (v.key === 'hotwater_target' && v.v === 0) el.textContent = 'Aus';
+        else if (v.key === 'water_mode' && v.v !== null && v.v !== undefined) el.textContent = WATER_TXT[v.v] ?? v.v;
         else el.textContent = fmt(v.v, v.dec);
+    }
+    // Control card follows the panel state, but never overwrites a field being edited
+    if (ciMode === 2) {
+        const byKey = Object.fromEntries(list.map(v => [v.key, v.v]));
+        const setIf = (id, val) => { const e = $(id); if (e && document.activeElement !== e && val !== null && val !== undefined) e.value = String(val); };
+        setIf('ctl-target', byKey.target);
+        setIf('ctl-gas', byKey.gas_enabled);
+        setIf('ctl-el', byKey.el_level);
+        setIf('ctl-water', byKey.water_mode);
+        $('ctl-state').textContent = byKey.ci_ok ? 'Verbunden mit dem Bedienteil. Jeder Befehl liest zuerst den aktuellen Stand und ändert nur den gewählten Wert.'
+                                                 : 'Keine Verbindung zum Bedienteil – Befehle werden abgelehnt.';
     }
     $('live-state').textContent = d.ok ? 'LIN-Bus aktiv · letzter Frame ' + formatAge(d.age) + ' · ' + d.reads + ' Updates · ' + d.errors + ' verworfen'
                                        : 'Kein LIN-Verkehr – Bedienteil angeschlossen? (' + d.errors + ' verworfene Frames)';
@@ -505,6 +550,12 @@ async function loadSetup() {
         $('reset-reason').textContent = cfg.reset_reason || '--';
         // Device settings
         $('cfg-interval').value = cfg.interval ?? 5;
+        ciMode = cfg.ci_mode ?? 0;
+        $('cfg-ci-mode').value = String(ciMode);
+        $('cfg-ci-function').value = String(cfg.ci_function ?? 1);
+        $('ci-link').textContent = ciMode === 0 ? 'Bedienteil-Bus aus.' : (cfg.ci_ok ? 'Bedienteil antwortet.' : 'Bedienteil antwortet nicht.');
+        $('ctl-card').style.display = ciMode === 2 ? '' : 'none';
+        lastSig = '';   // rebuild the tiles (CI values shown / hidden)
     } catch (e) {
         showToast('Fehler beim Laden der Einstellungen', true);
     }
@@ -519,6 +570,33 @@ async function saveSettings() {
         showToast('Gespeichert');
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function saveCi() {
+    const ci_mode = parseInt($('cfg-ci-mode').value);
+    const ci_function = parseInt($('cfg-ci-function').value);
+    if (ci_mode === 2 && ciMode !== 2 &&
+        !confirm('Steuerung einschalten? Der ESP sendet dann Befehle an das Alde-Bedienteil (Gas, Heizstab, Warmwasser). Ungetestet an der 3020 – nur, wenn du die Heizung dabei im Blick hast.')) return;
+    try {
+        await postConfig({ci_mode, ci_function});
+        showToast('Gespeichert');
+        loadSetup();
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+// Command for the Alde panel (only with ci_mode 2); the device checks everything again
+async function sendControl(params) {
+    const q = new URLSearchParams(params).toString();
+    try {
+        const r = await fetch('/api/control?' + q, {method: 'POST'});
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.status);
+        showToast('Befehl gesendet');
+    } catch (e) {
+        showToast('Abgelehnt: ' + e.message, true);
     }
 }
 

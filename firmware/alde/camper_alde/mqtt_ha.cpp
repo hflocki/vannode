@@ -17,10 +17,15 @@
 //   <prefix>/rssi            WiFi signal
 //   <prefix>/<key>           one topic per entry of VALUES[] (sensor.cpp), retained
 //   <prefix>/cmd/measure     any payload: publish the current readings right away
+//   <prefix>/cmd/target      setpoint 5-30 (0.5 steps)          \
+//   <prefix>/cmd/gas         1 / 0 (also ON / OFF)               | only with ci_mode 2,
+//   <prefix>/cmd/el_level    0-3 (kW)                            | sent to the Alde panel
+//   <prefix>/cmd/water       0 = off, 1 = on, 2 = boost          /  over the external bus
 //
 // Home Assistant: one device DEVICE_NAME, one sensor entity per value (keys in
 // BINARY_KEYS become binary sensors), plus WiFi signal, status and a "send now" button.
-// There are NO control commands: the firmware only listens on the LIN bus.
+// Values of the external panel bus only with ci_mode > 0, control entities (number,
+// switch, selects) only with ci_mode 2.
 
 #define HA_NODE_ID  "camper_alde"
 
@@ -50,7 +55,31 @@ static void onMessage(char* t, byte* payload, unsigned int len) {
 
     if (cmd == "measure") {
         sensorRequestMeasure();
+        return;
     }
+
+    // Commands for the Alde panel
+    AldeCiCommand c;
+    aldeCiCommandClear(c);
+    msg.trim();
+    String up = msg;
+    up.toUpperCase();
+    if (cmd == "target") {
+        c.hasTarget = true;
+        c.target = (msg.length() > 0 && (isDigit(msg[0]))) ? msg.toFloat() : -1;   // -1 is rejected
+    } else if (cmd == "gas") {
+        c.gas = (up == "ON" || up == "1") ? 1 : (up == "OFF" || up == "0") ? 0 : 9;
+    } else if (cmd == "el_level") {
+        // Junk must not become 0 (= heating element off): unknown text -> invalid value 9
+        c.el_level = (msg.length() == 1 && isDigit(msg[0])) ? (int8_t)(msg[0] - '0') : 9;
+    } else if (cmd == "water") {
+        c.water = (up == "OFF" || up == "AUS" || up == "0") ? 0 : (up == "ON" || up == "AN" || up == "1") ? 1
+                : (up == "BOOST" || up == "2") ? 2 : 9;
+    } else {
+        return;
+    }
+    const char* err = sensorControl(c);
+    if (err) Serial.printf("[MQTT] Command rejected: %s\n", err);
 }
 
 void mqttInit() {
@@ -181,6 +210,12 @@ static const char* const BINARY_KEYS[][2] = {
     {"gas",         nullptr},
     {"ac_active",   "running"},
     {"bus_ok",      "connectivity"},
+    {"gas_enabled", nullptr},
+    {"pump",        "running"},
+    {"panel_on",    "power"},
+    {"error",       "problem"},
+    {"ac_input",    "plug"},
+    {"ci_ok",       "connectivity"},
 };
 
 static const char* binaryClass(const char* key, bool* isBinary) {
@@ -217,15 +252,84 @@ static void publishButton(const char* name, const char* id, const char* cmd, con
     publishJson(String("homeassistant/button/" HA_NODE_ID "/") + id + "/config", doc);
 }
 
+// Empty retained config = entity removed in Home Assistant
+static void removeEntity(const char* component, const char* id) {
+    mqtt.publish((String("homeassistant/") + component + "/" HA_NODE_ID "/" + id + "/config").c_str(), "", true);
+}
+
+static void publishControl(const char* component, const char* id, JsonDocument& doc) {
+    doc["unique_id"] = String(HA_NODE_ID "_") + id;
+    doc["availability_topic"] = topic("status");
+    addDevice(doc);
+    publishJson(String("homeassistant/") + component + "/" HA_NODE_ID "/" + id + "/config", doc);
+}
+
+// Control entities for the Alde panel (ci_mode 2). The state comes from the info frame.
+static void publishControls(bool on) {
+    if (!on) {
+        removeEntity("number", "set_target");
+        removeEntity("switch", "set_gas");
+        removeEntity("select", "set_el_level");
+        removeEntity("select", "set_water");
+        return;
+    }
+    {
+        JsonDocument d;
+        d["name"] = "Sollwert einstellen";
+        d["command_topic"] = topic("cmd/target");
+        d["state_topic"] = topic("target");
+        d["min"] = 5; d["max"] = 30; d["step"] = 0.5;
+        d["unit_of_measurement"] = "°C";
+        d["mode"] = "box";
+        d["icon"] = "mdi:thermostat";
+        publishControl("number", "set_target", d);
+    }
+    {
+        JsonDocument d;
+        d["name"] = "Gasbetrieb schalten";
+        d["command_topic"] = topic("cmd/gas");
+        d["state_topic"] = topic("gas_enabled");
+        d["payload_on"] = "1"; d["payload_off"] = "0";
+        d["icon"] = "mdi:fire";
+        publishControl("switch", "set_gas", d);
+    }
+    {
+        JsonDocument d;
+        d["name"] = "Heizstab Stufe einstellen";
+        d["command_topic"] = topic("cmd/el_level");
+        d["state_topic"] = topic("el_level");
+        JsonArray o = d["options"].to<JsonArray>();
+        o.add("0"); o.add("1"); o.add("2"); o.add("3");
+        d["icon"] = "mdi:flash";
+        publishControl("select", "set_el_level", d);
+    }
+    {
+        JsonDocument d;
+        d["name"] = "Warmwasser einstellen";
+        d["command_topic"] = topic("cmd/water");
+        d["state_topic"] = topic("water_mode");
+        d["value_template"] = "{{ ['aus','an','boost'][value|int(0)] }}";
+        JsonArray o = d["options"].to<JsonArray>();
+        o.add("aus"); o.add("an"); o.add("boost");
+        d["icon"] = "mdi:water-boiler";
+        publishControl("select", "set_water", d);
+    }
+}
+
 void mqttPublishDiscovery() {
     Serial.println("[MQTT] Publishing HA Discovery...");
     for (uint8_t i = 0; i < VALUE_COUNT; i++) {
         const ValueDef& v = VALUES[i];
         bool isBinary;
         const char* binClass = binaryClass(v.key, &isBinary);
+        if (v.ci && config.ci_mode == 0) {
+            removeEntity(isBinary ? "binary_sensor" : "sensor", v.key);
+            continue;
+        }
         if (isBinary) publishBinary(v.name, v.key, binClass, v.icon);
         else publishSensor(v.name, v.key, topic(v.key), v.unit, v.devClass, v.icon, v.decimals, true);
     }
+    publishControls(config.ci_mode == 2);
     publishSensor("WLAN Signal", "rssi", topic("rssi"), "dBm", "signal_strength", "mdi:wifi", 0, true);
     publishSensor("Status", "status", topic("status"), "", nullptr, "mdi:check-circle", -1, false);
     publishButton("Jetzt senden", "measure", "measure", "mdi:refresh");

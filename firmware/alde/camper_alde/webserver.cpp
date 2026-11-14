@@ -23,6 +23,7 @@
 //   POST /api/config     partial settings as JSON, validated first, saved in loop()
 //   POST /api/update     file upload: .bin = firmware (restart), .gz = web page (no restart)
 //   POST /api/measure    publish the current readings right away
+//   POST /api/control    command for the Alde panel (query: target, gas, el_level, water), only with ci_mode 2
 //   POST /api/restart
 //   WS   /ws             live values every WS_UPDATE_MS
 
@@ -84,6 +85,8 @@ static void setDefaults() {
 
     // Device settings
     config.interval_s = DEFAULT_INTERVAL_S;
+    config.ci_mode = DEFAULT_CI_MODE;
+    config.ci_function = DEFAULT_CI_FUNCTION;
 }
 
 static bool isNumber(JsonVariantConst v) {
@@ -203,6 +206,29 @@ void webserverInit() {
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
 
+    // Command for the Alde panel. Only queued here, sent in loop() (sensor.cpp)
+    server.on("/api/control", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        AldeCiCommand cmd;
+        aldeCiCommandClear(cmd);
+        // One digit each; anything else becomes 9 and is rejected (junk must never turn into 0 = off)
+        auto digit = [request](const char* name) -> int8_t {
+            const String& v = request->getParam(name)->value();
+            return (v.length() == 1 && isDigit(v[0])) ? (int8_t)(v[0] - '0') : 9;
+        };
+        if (request->hasParam("target")) {
+            const String& v = request->getParam("target")->value();
+            cmd.hasTarget = true;
+            cmd.target = (v.length() > 0 && isDigit(v[0])) ? v.toFloat() : -1;
+        }
+        if (request->hasParam("gas")) cmd.gas = digit("gas");
+        if (request->hasParam("el_level")) cmd.el_level = digit("el_level");
+        if (request->hasParam("water")) cmd.water = digit("water");
+        const char* err = sensorControl(cmd);
+        if (err) { sendError(request, err); return; }
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+
     // Firmware info for the update check in the browser, and the event log
 
     server.on("/api/system", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -285,7 +311,7 @@ void wsSendLiveData() {
     doc["wifi"] = getWiFiStateString();
     doc["mqtt"] = mqttIsConnected();
 
-    static char buffer[2048];   // static: keeps it off the stack
+    static char buffer[4096];   // static: keeps it off the stack
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     if (len == 0 || len >= sizeof(buffer)) return;
     ws.textAll(buffer, len);
@@ -324,6 +350,9 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
 
     // Device settings
     doc["interval"] = config.interval_s;
+    doc["ci_mode"] = config.ci_mode;
+    doc["ci_function"] = config.ci_function;
+    doc["ci_ok"] = sensorCiOk();
 
     String response;
     serializeJson(doc, response);
@@ -374,6 +403,12 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     bool hasInterval = isNumber(doc["interval"]);
     int newInterval = hasInterval ? doc["interval"].as<int>() : 0;
     if (hasInterval && (newInterval < 1 || newInterval > 600)) { sendError(request, "Interval must be 1-600 s"); return; }
+    bool hasCiMode = isNumber(doc["ci_mode"]);
+    int newCiMode = hasCiMode ? doc["ci_mode"].as<int>() : 0;
+    if (hasCiMode && (newCiMode < 0 || newCiMode > 2)) { sendError(request, "ci_mode must be 0-2"); return; }
+    bool hasCiFn = isNumber(doc["ci_function"]);
+    int newCiFn = hasCiFn ? doc["ci_function"].as<int>() : 0;
+    if (hasCiFn && (newCiFn < 1 || newCiFn > 3)) { sendError(request, "ci_function must be 1-3"); return; }
 
     // ---- Apply ----
     // Empty values clear SSID/server/user; empty passwords are ignored (= keep the stored one)
@@ -410,6 +445,13 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     // Device settings
     if (hasInterval) config.interval_s = (uint16_t)newInterval;
     if (hasInterval) sensorRequestMeasure();   // publish right away
+    if (hasCiFn) config.ci_function = (uint8_t)newCiFn;
+    if (hasCiMode && newCiMode != config.ci_mode) {
+        evlog::add("Bedienteil-Bus: Modus %d", newCiMode);
+        config.ci_mode = (uint8_t)newCiMode;      // picked up by sensorLoop(), no restart needed
+        mqttRequestDiscovery();                   // control entities appear / disappear in HA
+        sensorRequestMeasure();
+    }
 
     configDirty = true;   // Flash write in loop(), not in the web task
     request->send(200, "application/json", "{\"status\":\"ok\"}");
@@ -455,6 +497,10 @@ void loadConfig() {
     // Device settings (always with a range check, the file could be old or edited)
     int iv = doc["interval"] | DEFAULT_INTERVAL_S;
     config.interval_s = (iv >= 1 && iv <= 600) ? (uint16_t)iv : DEFAULT_INTERVAL_S;
+    int cm = doc["ci_mode"] | DEFAULT_CI_MODE;
+    config.ci_mode = (cm >= 0 && cm <= 2) ? (uint8_t)cm : DEFAULT_CI_MODE;
+    int cf = doc["ci_function"] | DEFAULT_CI_FUNCTION;
+    config.ci_function = (cf >= 1 && cf <= 3) ? (uint8_t)cf : DEFAULT_CI_FUNCTION;
 }
 
 void saveConfig() {
@@ -476,6 +522,8 @@ void saveConfig() {
 
     // Device settings
     doc["interval"] = config.interval_s;
+    doc["ci_mode"] = config.ci_mode;
+    doc["ci_function"] = config.ci_function;
 
     // Write to a temp file first so a power loss cannot leave a half-written config
     const char* tmpPath = "/config.tmp";

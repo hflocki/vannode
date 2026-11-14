@@ -36,7 +36,7 @@ flowchart TB
   end
   subgraph clim["Klima"]
     heater["heater<br/>Truma Combi"]
-    alde["alde<br/>Alde 3020 HE (read only)"]
+    alde["alde<br/>Alde 3020 HE"]
     fan["maxxfan<br/>Dachlüfter"]
   end
   subgraph ble["ble – eine Firmware"]
@@ -64,7 +64,7 @@ flowchart TB
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
 | [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | Eine Firmware für alle Bluetooth-Geräte als Plugins. Läuft zweimal: **battery-node** (Daly BMS, Ective BM X, BM2) und **tool-node** (Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren) | `camper/battery`, `camper/tool` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
-| [`firmware/alde`](firmware/alde) | ESP32 + LIN-Transceiver | Alde Compact 3020 HE: liest 13 Werte passiv vom LIN-Bus (Raum, Glykol, Warmwasser, Gas, Heizstab …), **keine Steuerung**, in Entwicklung (basiert auf [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), MIT) | `camper/alde` |
+| [`firmware/alde`](firmware/alde) | ESP32 + LIN-Transceiver | Alde Compact 3020 HE: liest den Heizbus passiv (Raum, Glykol, Warmwasser, Gas, Heizstab …) und setzt optional Sollwert, Gas, Heizstab und Warmwasser über den Bedienteil-Bus, in Entwicklung (basiert auf [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) und [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), MIT) | `camper/alde` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (basiert auf dem [Levelsensor von klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth-Thermometer (Govee, Ruuvi, Xiaomi …) über OpenMQTTGateway | `camper/OMG` |
@@ -274,7 +274,7 @@ Fremde Teile behalten ihre Lizenz und sind in der [`NOTICE.md`](NOTICE.md) aufge
 | Ordner | Fremde Teile |
 | --- | --- |
 | `firmware/heater` | Protokoll-Logik aus [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) und Timer aus [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), Test-Mitschnitte aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
-| `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0) |
+| `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0), Protokoll des Bedienteil-Busses aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT) |
 | `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen) |
 | `firmware/level` | basiert auf dem Levelsensor von [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
 | `firmware/display` | Schriften Montserrat und Font Awesome Free (OFL), Truma-Fehlertexte (eigene Formulierung) |

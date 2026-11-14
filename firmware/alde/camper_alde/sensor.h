@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "alde_ci.h"
 
 // One published value. The list VALUES[] in sensor.cpp drives everything else:
 // MQTT topics, Home Assistant entities and the tiles of the web UI.
@@ -18,6 +19,7 @@ struct ValueDef {
     const char* devClass;  // Home Assistant device_class, nullptr = none
     const char* icon;      // mdi icon
     uint8_t decimals;      // Digits after the decimal point (MQTT, web UI)
+    bool ci;               // true = comes from the external panel bus (only with ci_mode > 0)
 };
 
 extern const ValueDef VALUES[];
@@ -34,5 +36,12 @@ void sensorToggleSigLog();
 
 // Serial command "read"
 void sensorPrint();
+
+// Queue a command for the external panel bus. Safe to call from the web / MQTT task.
+// Returns nullptr if accepted, otherwise a German error text for the user.
+const char* sensorControl(const AldeCiCommand& cmd);
+
+// True while the external panel bus answers (ci_mode > 0)
+bool sensorCiOk();
 
 #endif // SENSOR_H

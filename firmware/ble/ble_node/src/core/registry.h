@@ -46,6 +46,9 @@ uint8_t pluginCount();
 Plugin* pluginAt(uint8_t i);
 Plugin* pluginById(const char* id);
 
+// Safe start (see SAFE_START_BOOTS): all devices off for this boot, saved state unchanged
+extern bool registrySafeStart;
+
 // True if at least one enabled plugin uses Bluetooth
 bool registryNeedsBle();
 // Plugins switched on for the next restart that keep a Bluetooth connection

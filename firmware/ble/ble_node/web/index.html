@@ -405,6 +405,19 @@ nav button .ico{display:inline-flex}
         tabs();
         const m = $("#main");
         m.replaceChildren();
+        if (CFG.safe)
+          m.append(
+            el(
+              "div",
+              { className: "card", style: "border:1px solid var(--warning)" },
+              el("b", { style: "color:var(--warning)" }, "Sicherer Start – alle Geräte sind aus"),
+              el(
+                "small",
+                { style: "display:block;margin-top:6px" },
+                "Der Node wurde mehrmals schnell hintereinander gestartet. Unter Geräte das Gerät abschalten, das Probleme macht, dann neu starten. Ohne Änderung laufen nach dem nächsten Neustart wieder alle Geräte.",
+              ),
+            ),
+          );
         if (tab == "live") renderLive();
         else if (tab == "dev") renderPlugins();
         else if (tab.startsWith("p:")) {
@@ -504,6 +517,13 @@ nav button .ico{display:inline-flex}
             ),
           );
         }
+        // Main switch of a device (e.g. whole fridge) above its compartments
+        const top = (p.ctrl || []).filter((x) => x.top);
+        if (top.length) {
+          const box = el("div", { className: "ctl" });
+          for (const x of top) box.append(ctrl(p.id, x));
+          c.append(box);
+        }
         if (p.zones)
           c.append(
             el(
@@ -533,7 +553,7 @@ nav button .ico{display:inline-flex}
           );
         if (p.ctrl) {
           const box = el("div", { className: "ctl" });
-          for (const x of p.ctrl) box.append(ctrl(p.id, x));
+          for (const x of p.ctrl) if (!x.top) box.append(ctrl(p.id, x));
           c.append(box);
         }
         if (p.raw)
@@ -1403,6 +1423,12 @@ nav button .ico{display:inline-flex}
                   "Freier Speicher",
                   L.heap != null ? Math.round(L.heap / 1024) + " kB" : "–",
                 ],
+                [
+                  "Speicher minimal / größter Block",
+                  L.heap_min != null
+                    ? Math.round(L.heap_min / 1024) + " kB / " + Math.round(L.heap_block / 1024) + " kB"
+                    : "–",
+                ],
                 ["WLAN", L.wifi || "–"],
                 ["WLAN-Signal", L.rssi ? L.rssi + " dBm" : "–"],
                 ["WLAN-Abbrüche", L.wifi_drops ?? "–"],
@@ -1553,6 +1579,7 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
           b.firstChild.className = "status-dot" + (LIVE.ble.scanning ? " active" : "");
         } else b.classList.add("hide");
       }
+      let oomShown = false;
       function connect() {
         ws = new WebSocket(
           (location.protocol == "https:" ? "wss://" : "ws://") +
@@ -1560,7 +1587,15 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
             "/ws",
         );
         ws.onmessage = (e) => {
-          LIVE = JSON.parse(e.data);
+          const d = JSON.parse(e.data);
+          if (d.oom) {
+            // Device out of memory: keep the last values, tell once
+            if (!oomShown)
+              toast("Zu wenig Speicher auf dem Gerät (frei " + Math.round(d.heap / 1024) + " kB) – ein Gerät abschalten", true);
+            oomShown = true;
+            return;
+          }
+          LIVE = d;
           chips();
           if (tab == "live") updateLive();
         };

@@ -117,6 +117,7 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     coreConfigToJson(doc["core"].to<JsonObject>());
     // Device changes are saved right away but only take effect with the next restart
     doc["restart_needed"] = registryRestartNeeded();
+    if (registrySafeStart) doc["safe"] = true;
 
     // Field descriptions are the same for every device of a type, so they are sent once
     // per type under "schemas" (one copy per device made /api/config too large for the
@@ -261,6 +262,9 @@ void buildLiveJson(JsonDocument& doc) {
     doc["rssi"] = coreData.rssi;
     doc["uptime"] = millis() / 1000;
     doc["heap"] = ESP.getFreeHeap();
+    doc["heap_min"] = ESP.getMinFreeHeap();
+    doc["heap_block"] = ESP.getMaxAllocHeap();
+    if (registrySafeStart) doc["safe"] = true;
     doc["wifi_drops"] = coreData.wifi_drops;
     doc["wifi_reason"] = (const char*)coreData.wifi_reason;
     doc["wifi"] = getWiFiStateString();
@@ -286,7 +290,12 @@ static void wsSendLive() {
     JsonDocument doc;
     buildLiveJson(doc);
     String s;
-    serializeJson(doc, s);
+    if (doc.overflowed()) {
+        // Out of memory: a short note instead of a page without values
+        s = "{\"oom\":true,\"heap\":" + String(ESP.getFreeHeap()) + "}";
+    } else {
+        serializeJson(doc, s);
+    }
     ws.textAll(s);
 }
 

@@ -26,6 +26,8 @@
 #include <ArduinoOTA.h>   // also provides U_FLASH for the web upload
 #include <LittleFS.h>
 #include <WiFi.h>
+#include <Preferences.h>
+#include <esp_system.h>
 
 #include "config.h"
 #include "evlog.h"
@@ -41,6 +43,50 @@ AppConfig config;
 CoreData coreData;
 
 static unsigned long lastStatusPrint = 0;
+
+// ---------------- Safe start ----------------
+// Counts starts that end within SAFE_START_WINDOW_MS. Planned restarts (web UI, update)
+// do not count, power-on, crash, watchdog and brown-out do. After SAFE_START_BOOTS such
+// starts the node runs this boot without devices, so a device that breaks the node can be
+// switched off in the web UI instead of flashing again.
+static bool bootCountOpen = false;
+
+static bool safeStartCheck() {
+    esp_reset_reason_t r = esp_reset_reason();
+    if (r == ESP_RST_SW || r == ESP_RST_DEEPSLEEP) return false;
+    Preferences p;
+    if (!p.begin("bootcnt", false)) return false;
+    uint8_t n = p.getUChar("n", 0) + 1;
+    bool safe = n >= SAFE_START_BOOTS;
+    p.putUChar("n", safe ? 0 : n);
+    p.end();
+    bootCountOpen = !safe;
+    return safe;
+}
+
+static void safeStartLoop() {
+    if (!bootCountOpen || millis() < SAFE_START_WINDOW_MS) return;
+    bootCountOpen = false;
+    Preferences p;
+    if (p.begin("bootcnt", false)) {
+        p.putUChar("n", 0);
+        p.end();
+    }
+}
+
+// Event log entry once per boot when the heap gets tight (kept over restarts)
+static void heapWatch() {
+    static bool warned = false;
+    static unsigned long last = 0;
+    if (warned || millis() - last < 5000) return;
+    last = millis();
+    uint32_t block = ESP.getMaxAllocHeap();
+    if (block < HEAP_LOW_WARN) {
+        warned = true;
+        evlog::add("Wenig Speicher: frei %u, größter Block %u, Minimum %u Bytes",
+                   (unsigned)ESP.getFreeHeap(), (unsigned)block, (unsigned)ESP.getMinFreeHeap());
+    }
+}
 
 // ---- Status LED (AtomS3 Lite or STATUS_LED_PIN in config_local.h) ---------
 #if STATUS_LED_PIN >= 0
@@ -145,8 +191,16 @@ void setup() {
     memset(&coreData, 0, sizeof(coreData));
 
     // Phase 1: mount LittleFS, create the plugins, load the config
+    bool safe = safeStartCheck();
     settingsInit();
     registryEnforceLinkLimit();
+    if (safe) {
+        // Devices stay switched on in the settings; they just do not run this boot
+        registrySafeStart = true;
+        FOR_EACH_PLUGIN(p) p->enabled = false;
+        evlog::add("Sicherer Start nach %d schnellen Starts: alle Geräte aus", SAFE_START_BOOTS);
+        Serial.println("[MAIN] Safe start - all devices off for this boot");
+    }
     FOR_EACH_PLUGIN(p) {
         Serial.printf("[MAIN] Plugin %-10s %-22s %s\n", p->id, p->typeName, p->enabled ? "on" : "off");
     }
@@ -177,6 +231,8 @@ void loop() {
     ArduinoOTA.handle();
 #endif
 
+    safeStartLoop();
+    heapWatch();
     bleLoop();
     FOR_EACH_ENABLED_PLUGIN(p) p->loop();
     mqttLoop();

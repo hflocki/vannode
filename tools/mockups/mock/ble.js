@@ -60,7 +60,7 @@ const M = {
   },
   pos: 0, target: -1, release: false,
   // fridge: zones bit mask (1 = freezer, 2 = fridge), set points, fan, sleep mode, main power
-  fr: {zones: 3, set1: -18, set2: 4, fan: true, night: false, power: true},
+  fr: {zones: 3, set1: -18, set2: 4, fan: true, night: false, power: true, q1: false, q2: false, door: false},
   // device changes are saved at once and take effect with the restart (restart_needed)
   keep(plugins) {
     M.save({plugins, restart_needed: plugins.some(p => p.pending || p.removed || p.cfg.enabled !== p.running)});
@@ -112,6 +112,9 @@ const M = {
         else if (k === 'fan') F.fan = on;
         else if (k === 'night') { F.night = on; if (on) F.fan = false; }
         else if (k === 'power') F.power = on;
+        else if (k === 'quick1') F.q1 = on;
+        else if (k === 'quick2') F.q2 = on;
+        else if (k === 'doorheat') F.door = on;
         else if (k === 'target1') F.set1 = +body.v;
         else if (k === 'target2') F.set2 = +body.v;
       }
@@ -164,9 +167,12 @@ const M = {
           rows: [['Spannung', 12.9, 'V'], ['Batterie', 96, '%'], ['Modus', F.night ? 'Nachtmodus' : 'Normal', ''],
                  ['Grenzen laut Gerät', '-22…-10 / -10…10 °C', ''],
                  ['Bluetooth', -66, 'dBm'], ['Nachrichten', 412, '']],
-          ctrl: [{t: 'switch', k: 'power', l: 'Kühlschrank an', v: F.power},
+          ctrl: [{t: 'switch', k: 'power', l: 'Kühlschrank an', v: F.power, top: true},
                  {t: 'switch', k: 'fan', l: 'Umluft', v: F.fan},
                  {t: 'switch', k: 'night', l: 'Nachtmodus', v: F.night},
+                 {t: 'switch', k: 'quick1', l: 'Superfrost (Gefrierfach)', v: F.q1},
+                 {t: 'switch', k: 'quick2', l: 'Superkühlung (Kühlfach)', v: F.q2},
+                 {t: 'switch', k: 'doorheat', l: 'Türheizung', v: F.door},
                  {t: 'select', k: 'bpd', l: 'Batterieschutz', o: 'Stufe 1|Stufe 2|Stufe 3', v: 1},
                  {t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: false}],
           raw: '/SC0/2,1,1,-17,5,-18,4,2,129,22,96,3,1,0,0,-10,-22,10,-10'});

@@ -22,7 +22,9 @@
 //   Commands: "/SC1/1/001|000" power on / off, "/SC3/<unit>/+NN" set point zone 1,
 //           "/SC5/<unit>/+NN" set point zone 2, "/SC4/1/00<1-3>" battery protection,
 //           "/SCA/1/00<0-3>" zones on / off (same bit mask as f11, always both zones),
-//           "/SC2/2/001|000" fan on / off, "/SC6/1/011|022" sleep mode on / off.
+//           "/SC2/2/001|000" fan on / off, "/SC6/1/011|022" sleep mode on / off,
+//           "/SC2/3/001|000" door frame heating on / off (f13),
+//           "/SC8/1/0<z1><z2>" quick cooling per zone (1 = on; shown as "3" in f9).
 // Frames may be split over several notifications: collected from "/S" to "\n".
 
 #include "../core/plugin.h"
@@ -86,6 +88,9 @@ static const Entity WCS_ENTITIES[] = {
     {E_SENSOR, "battery",   "Batterie",               "%",  "battery",         "measurement", nullptr, 0, nullptr},
     {E_SWITCH, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
     {E_SWITCH, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
+    {E_SWITCH, "quick1",    "Superfrost",             nullptr, nullptr,        nullptr,       "mdi:snowflake-alert", 0, nullptr},
+    {E_SWITCH, "quick2",    "Superkühlung",           nullptr, nullptr,        nullptr,       "mdi:snowflake", 0, nullptr},
+    {E_SWITCH, "doorheat",  "Türheizung",             nullptr, nullptr,        nullptr,       "mdi:door", 0, nullptr},
     {E_SENSOR, "error",     "Fehler",                 nullptr, nullptr,        nullptr,       "mdi:alert-circle", EF_ALWAYS, nullptr},
     {E_SWITCH, "power",     "Kühlschrank an",         nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
     {E_SWITCH, "zone1",     "Gefrierfach an",         nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
@@ -220,9 +225,14 @@ public:
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
         if (ctl) {
-            liveCtrl(o, "switch", "power", "Kühlschrank an")["v"] = powerOn;
+            JsonObject pw = liveCtrl(o, "switch", "power", "Kühlschrank an");
+            pw["v"] = powerOn;
+            pw["top"] = true;   // Shown above the compartments
             if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
             liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
+            liveCtrl(o, "switch", "quick1", c.zone2 ? "Superfrost (Gefrierfach)" : "Schnellkühlen")["v"] = quickOn(0);
+            if (c.zone2) liveCtrl(o, "switch", "quick2", "Superkühlung (Kühlfach)")["v"] = quickOn(1);
+            if (doorKnown) liveCtrl(o, "switch", "doorheat", "Türheizung")["v"] = doorOn;
             JsonObject s = liveCtrl(o, "select", "bpd", "Batterieschutz");
             s["o"] = WCS_BPD_OPTIONS;
             s["v"] = bpd >= 1 && bpd <= 3 ? bpd - 1 : 0;
@@ -237,6 +247,7 @@ public:
     }
     bool entityActive(const Entity& e) override {
         if (!strcmp(e.key, "temp2") || !strcmp(e.key, "set2") || !strcmp(e.key, "target2") ||
+            !strcmp(e.key, "quick2") ||
             !strcmp(e.key, "zone1") || !strcmp(e.key, "zone2")) return c.zone2;
         return true;
     }
@@ -255,6 +266,9 @@ public:
         if (!isnan(set1)) out.integer("target1", lroundf(set1));
         if (fanKnown) out.onoff("fan", fanOn);
         out.onoff("night", sleepOn());
+        out.onoff("quick1", quickOn(0));
+        if (c.zone2) out.onoff("quick2", quickOn(1));
+        if (doorKnown) out.onoff("doorheat", doorOn);
         if (c.zone2) {
             if (zonesKnown) {
                 out.onoff("zone1", (zones & 1) != 0);
@@ -323,6 +337,17 @@ public:
             bool on = payloadOn(value);
             strlcpy(mode, on ? "11" : "22", sizeof(mode));
             snprintf(cmd, sizeof(cmd), "/SC6/1/%s\n", on ? "011" : "022");
+        } else if (!strcmp(key, "quick1") || !strcmp(key, "quick2")) {
+            // Quick cooling per zone; the other zone keeps its state
+            bool q1 = quickOn(0), q2 = quickOn(1);
+            if (key[5] == '1') q1 = payloadOn(value); else q2 = payloadOn(value);
+            mode[0] = q1 ? '3' : '2';
+            mode[1] = q2 ? '3' : '2';
+            mode[2] = '\0';
+            snprintf(cmd, sizeof(cmd), "/SC8/1/0%d%d\n", q1 ? 1 : 0, q2 ? 1 : 0);
+        } else if (!strcmp(key, "doorheat")) {
+            doorOn = payloadOn(value);
+            snprintf(cmd, sizeof(cmd), "/SC2/3/%s\n", doorOn ? "001" : "000");
         } else {
             return;
         }
@@ -370,6 +395,8 @@ private:
     char mode[4] = "";
     bool fanOn = false;           // Circulation fan (status field 12); off in sleep mode
     bool fanKnown = false;
+    bool doorOn = false;          // Door frame heating (status field 13)
+    bool doorKnown = false;
     int zones = 0;                // Zones running (status field 11): bit 1 = zone 1, bit 2 = zone 2
     bool zonesKnown = false;
     int min1 = WCS_SET_MIN, max1 = WCS_SET_MAX, min2 = WCS_SET_MIN, max2 = WCS_SET_MAX;
@@ -458,6 +485,8 @@ private:
     }
 
     bool sleepOn() const { return !strcmp(mode, "11"); }
+    // Quick cooling of zone 0 / 1: digit "3" in the mode field
+    bool quickOn(int z) const { return strlen(mode) == 2 && mode[z] == '3'; }
 
     // Compartment names: with two zones zone 1 is the freezer, zone 2 the fridge
     const char* zoneName(int zone) const {
@@ -636,6 +665,7 @@ private:
         strlcpy(mode, tok[9], sizeof(mode));
         if (n > 11 && toInt(tok[11], v) && v >= 0 && v <= 3) { zones = v; zonesKnown = true; }
         if (n > 12 && toInt(tok[12], v)) { fanOn = v == 1; fanKnown = true; }
+        if (n > 13 && toInt(tok[13], v)) { doorOn = v == 1; doorKnown = true; }
         if (n > 10 && toInt(tok[10], v)) battery = v < 0 ? 0 : (v > 100 ? 100 : v);
         if (n > 18) {
             int a, b, cc, d;

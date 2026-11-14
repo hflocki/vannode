@@ -241,6 +241,8 @@ void registryEnforceLinkLimit() {
     }
 }
 
+bool registrySafeStart = false;
+
 bool registryNeedsBle() {
     for (uint8_t i = 0; i < count; i++) {
         if (plugins[i]->enabled && plugins[i]->bleUse() != BLE_NONE) return true;

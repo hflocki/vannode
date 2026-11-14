@@ -92,7 +92,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.13"
+#define FW_VERSION            "2.1.14"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -182,6 +182,19 @@
 // BLUETOOTH (shared by all BLE plugins)
 // ============================================================
 // Passive scan duty cycle (units of 0.625 ms). Window < interval leaves airtime for WiFi.
+// Safe start: this many power-on / crash starts in a row, each ending before the
+// window is over, start the node with all devices switched off (web UI stays usable)
+#ifndef SAFE_START_BOOTS
+#define SAFE_START_BOOTS      3
+#endif
+#ifndef SAFE_START_WINDOW_MS
+#define SAFE_START_WINDOW_MS  30000
+#endif
+// Event log entry when the largest free heap block drops below this (bytes)
+#ifndef HEAP_LOW_WARN
+#define HEAP_LOW_WARN         16000
+#endif
+
 #ifndef BLE_SCAN_INTERVAL
 #define BLE_SCAN_INTERVAL     160    // 100 ms
 #endif

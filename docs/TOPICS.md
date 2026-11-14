@@ -126,7 +126,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/cmd/rvtech/<preset>/set` | Voreinstellung `auf`, `zu`, `regen`, `lueften`, `fav` (Favorit), `fav_set` (Favorit speichern) (Payload beliebig) |
 | `…/cmd/<plugin>/release/set` | `ON` / `OFF`: Bluetooth für die App freigeben |
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
-| `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `zone1`, `zone2` (`ON`/`OFF`, Zone läuft; nur mit zweiter Zone), `error`, `message` | Kühlschrank; Befehle `power`, `zone1`, `zone2`, `fan`, `night`, `target1`, `target2`, `bpd` |
+| `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `zone1`, `zone2` (`ON`/`OFF`, Zone läuft; nur mit zweiter Zone), `quick1` (Superfrost), `quick2` (Superkühlung), `doorheat` (Türheizung), `error`, `message` | Kühlschrank; Befehle `power`, `zone1`, `zone2`, `fan`, `night`, `quick1`, `quick2`, `doorheat`, `target1`, `target2`, `bpd` |
 | `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |

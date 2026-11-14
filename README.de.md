@@ -191,6 +191,35 @@ Die Geräte waren vorher einzelne Repos (`camper-tanklevel`, `camper-temp`, `cam
 
 Mein Dank geht an **mot flash** für das Testen und die Anregung, die BLE-Plugins für die Dachhaube RV Tech, den Kühlschrank WCS und die Wasserpumpe CaraWater zu bauen.
 
+## Bitte um Nennung
+
+VanNode ist ein Hobbyprojekt mit viel Arbeit dahinter. Wenn du Code, Protokolle oder Ideen daraus
+für dein eigenes Projekt nutzt – auch privat –, nenne bitte VanNode mit Link auf
+<https://github.com/hflocki/vannode>. Das ist eine Bitte, keine Lizenzbedingung. Wer Code aus
+VanNode weitergibt, muss die Hinweise ohnehin stehen lassen (siehe [Lizenz](#lizenz)).
+
+Zum Kopieren:
+
+Für eine README (Markdown):
+
+```markdown
+Basiert auf / angeregt durch [VanNode](https://github.com/hflocki/vannode) von hflocki.
+```
+
+Für Quellcode:
+
+```c
+// Based on / inspired by VanNode by hflocki - https://github.com/hflocki/vannode
+```
+
+Für einen Forenbeitrag oder eine Videobeschreibung:
+
+```text
+Idee / Protokoll aus VanNode von hflocki: https://github.com/hflocki/vannode
+```
+
+Danke!
+
 ## Haftungsausschluss – Nutzung auf eigene Gefahr
 
 VanNode ist ein privates Hobbyprojekt, unentgeltlich und ohne Geschäftstätigkeit. Es überwacht und

@@ -191,6 +191,35 @@ The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `campe
 
 Many thanks to **mot flash** for testing and for the idea to build the BLE plugins for the RV Tech roof hatch, the WCS fridge and the CaraWater water pump.
 
+## Please credit VanNode
+
+VanNode is a hobby project with a lot of work behind it. If you use code, protocols or ideas from
+it in your own project – privately too – please name VanNode with a link to
+<https://github.com/hflocki/vannode>. This is a request, not a license term. If you pass on code
+from VanNode, the license already requires the notices (see [License](#license)).
+
+Ready to copy:
+
+For a README (Markdown):
+
+```markdown
+Based on / inspired by [VanNode](https://github.com/hflocki/vannode) by hflocki.
+```
+
+For source code:
+
+```c
+// Based on / inspired by VanNode by hflocki - https://github.com/hflocki/vannode
+```
+
+For a forum post or a video description:
+
+```text
+Idea / protocol from VanNode by hflocki: https://github.com/hflocki/vannode
+```
+
+Thank you!
+
 ## No warranty, no liability – use at your own risk
 
 VanNode is a private hobby project. It is given away free of charge and without any business

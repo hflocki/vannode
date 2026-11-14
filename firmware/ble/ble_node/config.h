@@ -92,7 +92,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.14"
+#define FW_VERSION            "2.1.15"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -200,6 +200,9 @@
 #endif
 #ifndef BLE_SCAN_WINDOW
 #define BLE_SCAN_WINDOW       80     // 50 ms (50 % duty cycle)
+#endif
+#ifndef BLE_SCAN_WINDOW_LINKED
+#define BLE_SCAN_WINDOW_LINKED 32    // 20 ms (20 %) while a device connection is up
 #endif
 #ifndef BLE_MAX_SEEN
 #define BLE_MAX_SEEN          30     // Devices kept in the "nearby" list of the web UI

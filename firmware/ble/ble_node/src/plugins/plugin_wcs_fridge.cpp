@@ -236,6 +236,8 @@ public:
             JsonObject s = liveCtrl(o, "select", "bpd", "Batterieschutz");
             s["o"] = WCS_BPD_OPTIONS;
             s["v"] = bpd >= 1 && bpd <= 3 ? bpd - 1 : 0;
+            // Diagnosis: send any text to the fridge, the answer goes into the log
+            liveCtrl(o, "text", "raw", "Testbefehl (Diagnose)")["ph"] = "/SC3/1/-018";
         }
         liveCtrl(o, "switch", "release", "Bluetooth für App freigeben")["v"] = link.released();
         o["raw"] = (const char*)lastLine;
@@ -289,6 +291,23 @@ public:
     }
 
     void command(const char* key, const char* value) override {
+        if (!strcmp(key, "raw")) {
+            // Diagnosis: send any text to the fridge and log its answer
+            if (login != WL_OK || !link.canWrite() || !value[0]) {
+                devlogf(id, "Test command ignored: not connected / empty");
+                return;
+            }
+            char raw[48];
+            snprintf(raw, sizeof(raw), "%s", value);
+            size_t n = strlen(raw);
+            while (n && (raw[n - 1] == '\n' || raw[n - 1] == '\r' || raw[n - 1] == ' ')) raw[--n] = '\0';
+            if (n + 1 < sizeof(raw)) { raw[n++] = '\n'; raw[n] = '\0'; }
+            logCmd("Test command", raw);
+            link.logNextRx(10);
+            if (!link.write(raw, true)) devlogf(id, "Command failed");
+            lastPoll = millis() - (uint32_t)c.poll_s * 1000UL + 1500;   // Fresh status shortly after
+            return;
+        }
         if (!strcmp(key, "release")) {
             link.setReleased(payloadOn(value));
             updates++;
@@ -355,6 +374,7 @@ public:
         // it); the next status overwrites it with what the fridge really does
         updates++;
         logCmd("Command", cmd);
+        link.logNextRx(6);   // The answer and the next status frames go into the log
         if (!link.write(cmd, true)) devlogf(id, "Command failed");
         lastPoll = millis() - (uint32_t)c.poll_s * 1000UL + 500;   // Fresh status shortly after
     }
@@ -418,7 +438,7 @@ private:
 
     // Log a command without the password
     void logCmd(const char* what, const char* cmd) {
-        char b[32];
+        char b[52];
         printableCopy((const uint8_t*)cmd, strlen(cmd), b, sizeof(b));
         devlogf(id, "%s: %s", what, b);
     }

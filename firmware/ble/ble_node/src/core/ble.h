@@ -28,6 +28,9 @@ bool bleActive();
 // pause the scan while they connect (counted, every pause needs a resume)
 void bleScanPause();
 void bleScanResume();
+// Connected links (+1 / -1): while at least one is up the scan runs with the smaller
+// window BLE_SCAN_WINDOW_LINKED, so the radio has more time for the connections and WiFi
+void bleLinkCount(int delta);
 
 // Only one connection attempt at a time (owner = any unique pointer)
 bool bleConnectLock(const void* owner);

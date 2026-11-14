@@ -182,7 +182,10 @@ void BleLink::markDisconnected() {
     writeChr = nullptr;
     subscribed = 0;
     lastRssiValue = 0;
-    if (was) changes++;
+    if (was) {
+        changes++;
+        bleLinkCount(-1);
+    }
 }
 
 void BleLink::disconnect() {
@@ -330,6 +333,7 @@ bool BleLink::finishConnect() {
 
     linkLost = false;
     linkUp = true;
+    bleLinkCount(1);
     if (pin != BLE_NO_PIN) devlogf(tag, "Pairing variant %u works", (unsigned)variant + 1);
     lastReason = 0;
     rxLogged = 0;
@@ -434,9 +438,12 @@ void BleLink::loop() {
         }
         if (result != 0) {
             isConnecting = false;
+            // Service discovery, pairing and subscriptions run before the scan resumes:
+            // a scan in parallel made these steps fail when a passive sensor was enabled
+            bool ok = result == 1 && finishConnect();
             bleScanResume();
             bleConnectUnlock(this);
-            if (result == 1 && finishConnect()) {
+            if (ok) {
                 retryDelay = 0;
                 setState("Verbunden");
             } else {

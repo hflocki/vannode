@@ -133,8 +133,16 @@ class ScanCallbacks : public NimBLEScanCallbacks {
 };
 static ScanCallbacks scanCallbacks;
 
+static int linksUp = 0;          // Connected BleLinks
+static uint16_t scanWindow = 0;  // Window currently set on the scan
+
 static void startScan() {
     if (!scan || pauseCount > 0 || scan->isScanning()) return;
+    uint16_t w = linksUp > 0 ? BLE_SCAN_WINDOW_LINKED : BLE_SCAN_WINDOW;
+    if (w != scanWindow) {
+        scan->setWindow(w);
+        scanWindow = w;
+    }
     // 0 = scan forever, results are not stored (setMaxResults(0)) to save RAM
     if (!scan->start(0, false, true)) Serial.println("[BLE] Scan start FAILED");
     else Serial.println("[BLE] Scan started");
@@ -163,6 +171,7 @@ void bleInit() {
     scan->setActiveScan(false);                    // Passive: battery friendly for the sensors
     scan->setInterval(BLE_SCAN_INTERVAL);
     scan->setWindow(BLE_SCAN_WINDOW);
+    scanWindow = BLE_SCAN_WINDOW;
     scan->setDuplicateFilter(false);
     scan->setMaxResults(0);
     active = true;
@@ -191,6 +200,17 @@ void bleScanPause() {
 void bleScanResume() {
     if (pauseCount > 0) pauseCount--;
     if (pauseCount == 0) startScan();
+}
+
+void bleLinkCount(int delta) {
+    linksUp += delta;
+    if (linksUp < 0) linksUp = 0;
+    uint16_t w = linksUp > 0 ? BLE_SCAN_WINDOW_LINKED : BLE_SCAN_WINDOW;
+    // Restart a running scan so the new window takes effect
+    if (scan && w != scanWindow && scan->isScanning() && pauseCount == 0) {
+        scan->stop();
+        startScan();
+    }
 }
 
 bool bleConnectLock(const void* owner) {
@@ -298,6 +318,7 @@ void bleLoop() {}
 bool bleActive() { return false; }
 void bleScanPause() {}
 void bleScanResume() {}
+void bleLinkCount(int) {}
 bool bleConnectLock(const void*) { return false; }
 void bleConnectUnlock(const void*) {}
 bool bleFindAddrType(const char*, uint8_t*) { return false; }

@@ -46,6 +46,7 @@ jobs:
       - run: python3 tools/emulator/emulator.py --selftest
       - run: bash firmware/ble/tests/run.sh
       - run: bash firmware/heater/tests/run.sh
+      - run: bash firmware/alde/tests/run.sh
 
   build:
     needs: common
@@ -78,6 +79,11 @@ jobs:
             target: esp32
             fqbn: esp32:esp32:esp32:PartitionScheme=min_spiffs
             sketch: firmware/heater/truma_heater
+            libs: ''
+          - device: alde
+            target: esp32
+            fqbn: esp32:esp32:esp32:PartitionScheme=min_spiffs
+            sketch: firmware/alde/camper_alde
             libs: ''
           - device: maxxfan
             target: esp32c3

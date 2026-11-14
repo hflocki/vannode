@@ -36,6 +36,7 @@ flowchart TB
   end
   subgraph clim["Climate"]
     heater["heater<br/>Truma Combi"]
+    alde["alde<br/>Alde 3020 HE (read only)"]
     fan["maxxfan<br/>roof fan"]
   end
   subgraph ble["ble – one firmware"]
@@ -63,6 +64,7 @@ flowchart TB
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | up to 8 DS18B20 (fridge, freezer …) with alarm limits | `camper/temp` |
 | [`firmware/ble`](firmware/ble) | ESP32-C3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **tool-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/tool` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
+| [`firmware/alde`](firmware/alde) | ESP32 + LIN transceiver | Alde Compact 3020 HE: reads 13 values passively from the LIN bus (room, glycol, hot water, gas, electric power …), **no control**, in development (based on [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), MIT) | `camper/alde` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (based on the [level sensor by klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth thermometers (Govee, Ruuvi, Xiaomi …) through OpenMQTTGateway | `camper/OMG` |
@@ -268,6 +270,7 @@ Third-party parts keep their licenses and are listed in [`NOTICE.md`](NOTICE.md)
 | Folder | Third-party parts |
 | --- | --- |
 | `firmware/heater` | protocol logic from [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) and timer from [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), test captures from [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
+| `firmware/alde` | LIN decoding from [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (code MIT, documentation CC BY 4.0) |
 | `firmware/ble` | battery protocols from [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), roof hatch protocol from [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), pump protocol after [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) and [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (own implementation, no code copied) |
 | `firmware/level` | based on the level sensor of [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
 | `firmware/display` | fonts Montserrat and Font Awesome Free (OFL), Truma fault texts (own wording) |

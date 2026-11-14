@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode - GNU GPL v3 with additional terms, see NOTICE.md. NO WARRANTY, use at your own risk. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Alde Node</title>
+<style>
+:root {
+    --bg-primary: #0f1419;
+    --bg-secondary: #1a2332;
+    --bg-card: #1e2d3d;
+    --bg-input: #0d1b2a;
+    --accent: #4fc3f7;
+    --accent-glow: rgba(79,195,247,0.3);
+    --cold: #4fc3f7;
+    --mild: #00d4aa;
+    --warm: #ff9f43;
+    --hot: #ff4757;
+    --warning: #ffb800;
+    --danger: #ff4757;
+    --success: #00d4aa;
+    --text-primary: #e8f0f8;
+    --text-secondary: #8899aa;
+    --text-muted: #556677;
+    --border: #2a3a4a;
+    --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+.header {
+    background: var(--bg-secondary); padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.header h1 { font-size: 1.15rem; font-weight: 600; color: var(--accent); }
+.status-dots { display: flex; gap: 6px; align-items: center; font-size: 0.65rem; color: var(--text-muted); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); display: inline-block; margin-right: 4px; }
+.status-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(0,212,170,0.3); }
+.status-dot.warning { background: var(--warning); }
+.tabs { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
+/* Icon above the label: all tabs fit even on small phones (320 px) */
+.tab {
+    flex: 1; min-width: 0; padding: 8px 1px 7px; text-align: center; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+}
+.tab .ico { font-size: 1.05rem; line-height: 1; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(79,195,247,0.05); }
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+.card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 12px; }
+.card-title.accent { color: var(--accent); }
+
+/* Live: one tile per sensor */
+.temps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.temps.cols-1 { grid-template-columns: 1fr; }
+.temp-tile {
+    position: relative; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 14px 12px 20px; overflow: hidden; min-width: 0;
+}
+.temp-tile::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--tile-color, var(--text-muted));
+}
+.temp-name { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.temp-value { font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 6px 0 4px; color: var(--tile-color, var(--text-primary)); line-height: 1.1; }
+.temp-value small { font-size: 1rem; font-weight: 500; color: var(--text-secondary); margin-left: 2px; }
+.temp-minmax { display: flex; gap: 12px; font-size: 0.75rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.temp-minmax b { color: var(--text-primary); font-weight: 600; }
+.temp-state { font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; }
+.temp-tile.error .temp-value { color: var(--text-muted); }
+.temp-tile.error .temp-state { color: var(--danger); }
+.temp-tile.alarm { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
+.temp-tile.alarm .temp-state { color: var(--danger); font-weight: 600; }
+.alarm-banner { border-color: var(--danger); background: rgba(255,71,87,0.12); color: var(--danger);
+    font-size: 0.85rem; font-weight: 600; line-height: 1.4; }
+.sensor-alarm { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Values */
+.values-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.value-item { background: var(--bg-input); border-radius: 8px; padding: 12px; text-align: center; }
+.value-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px; }
+.value-num { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Forms */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+.form-group input, .form-group select {
+    width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; outline: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+.form-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; width: 100%; }
+.btn-primary { background: var(--accent); color: var(--bg-primary); }
+.btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-danger { background: rgba(255,71,87,0.15); color: var(--danger); border: 1px solid var(--danger); }
+.btn-small { width: auto; padding: 6px 10px; font-size: 0.75rem; }
+.btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+.info-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-secondary); }
+
+/* Sensor editor */
+.sensor-edit { background: var(--bg-input); border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); }
+.sensor-edit.missing { border-color: rgba(255,71,87,0.5); }
+.sensor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.sensor-addr { font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem; color: var(--text-secondary); word-break: break-all; }
+.sensor-live { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sensor-edit .form-group { margin-bottom: 8px; }
+.sensor-edit .form-group input { background: var(--bg-card); padding: 8px 10px; font-size: 0.85rem; }
+.sensor-grid { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px; }
+.sensor-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.badge { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px;
+    background: rgba(79,195,247,0.15); color: var(--accent); vertical-align: middle; }
+.badge.err { background: rgba(255,71,87,0.15); color: var(--danger); }
+.badge.new { background: rgba(255,184,0,0.15); color: var(--warning); }
+
+/* Bus list */
+.dev-list { display: flex; flex-direction: column; gap: 6px; }
+.dev { display: flex; align-items: center; gap: 10px; background: var(--bg-input); border-radius: 8px; padding: 8px 10px; }
+.dev-main { flex: 1; min-width: 0; }
+.dev-addr { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-all; }
+.dev-name { font-size: 0.7rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-temp { font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 12px 0; }
+
+.enable-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle span { position: absolute; inset: 0; background: var(--border); border-radius: 13px; cursor: pointer; transition: 0.2s; }
+.toggle span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--text-primary); border-radius: 50%; transition: 0.2s; }
+.toggle input:checked + span { background: var(--accent); }
+.toggle input:checked + span::before { transform: translateX(20px); }
+
+code { font-family: ui-monospace, Menlo, monospace; }
+.hidden { display: none !important; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 20px; font-size: 0.85rem; color: var(--accent); opacity: 0; transition: all 0.3s; z-index: 999; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.err { border-color: var(--danger); color: var(--danger); }
+
+/* Small phones: keep the title on one line, one tile per row */
+@media (max-width: 374px) {
+    .header { padding: 14px 12px; gap: 8px; }
+    .header h1 { font-size: 1rem; white-space: nowrap; }
+    .status-dots { gap: 4px; font-size: 0.6rem; }
+    .temps { grid-template-columns: 1fr; }
+    .sensor-grid { grid-template-columns: 1fr 1fr; }
+    .sensor-grid .form-group:last-child { grid-column: span 2; }
+}
+@media (min-width: 600px) { body { display: flex; justify-content: center; } .app-wrap { width: 100%; max-width: 520px; } }
+:root{--fwu-ok:var(--success);--fwu-warn:var(--warning);--fwu-bad:var(--danger);--fwu-mute:var(--text-secondary);--fwu-line:var(--border)}
+.fwu-cur{font-size:.8rem;margin:0 0 10px}
+.fwu-chk{font-size:.8rem;margin:8px 0;line-height:1.4}
+.fwu-chk.ok{color:var(--fwu-ok)}.fwu-chk.warn{color:var(--fwu-warn)}.fwu-chk.bad{color:var(--fwu-bad)}
+.fwu-force{display:flex;gap:8px;align-items:center;font-size:.8rem;margin:0 0 8px}
+.fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
+.fwu-ev{padding:4px 0;border-bottom:1px solid var(--fwu-line)}.fwu-ev:last-child{border-bottom:0}
+.fwu-ev span{color:var(--fwu-mute);margin-right:8px;white-space:nowrap}.fwu-ev.bad{color:var(--fwu-bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+/* camper-theme:begin */
+/* VanNode design (same look as the display): calm and technical, colour means state,
+   blue means control. Shared block, edit firmware/_common/web/camper-theme.css and run
+   tools/common/sync_common.py; it overrides the page's own styles above it. */
+:root{
+ --bg-primary:#0D1115;--bg-secondary:#11161B;--bg-card:#151B21;--bg-input:#0D1115;--border:#222B34;--radius:14px;
+ --accent:#4DA3F0;--accent-glow:rgba(77,163,240,.25);--success:#46B97C;--warning:#E5A23B;--danger:#E5534B;
+ --text-primary:#E7ECF0;--text-secondary:#B4BEC8;--text-muted:#8B98A5;
+ --water:#3E9BE0;--water-glow:rgba(62,155,224,.25);--gas:#D9893A;--grey:#8A96A3;
+ --cold:#3E9BE0;--mild:#46B97C;--warm:#E5A23B;--hot:#E5534B;
+ --bg:#0D1115;--bg2:#11161B;--card:#151B21;--input:#0D1115;--acc:#4DA3F0;--acc-glow:rgba(77,163,240,.25);--warn:#E5A23B;
+ --ok:#46B97C;--ink:#E7ECF0;--mute:#8B98A5;--dim:#6F7C89;--line:#222B34;--r:14px;--bad:#E5534B;
+ --cm-line2:#2F3A45;--cm-hi:#1C242C;--cm-acx:#06131F;color-scheme:dark}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.4}
+svg.i{width:20px;height:20px;flex:none;vertical-align:-4px}
+.header{background:var(--bg-primary);padding:14px 16px;border-bottom:1px solid var(--border);gap:12px}
+.header h1{font-size:1.15rem;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:10px;min-width:0}
+.header h1 svg.i{color:var(--accent)}
+.status-dots{gap:6px;font-size:.75rem;color:var(--text-primary);flex-wrap:wrap;justify-content:flex-end}
+.status-dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.status-dot{width:8px;height:8px;margin-right:6px;background:var(--cm-line2);box-shadow:none}
+.status-dot.active{background:var(--success);box-shadow:none}
+.status-dot.warning{background:var(--warning)}
+.tabs{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font-size:.72rem;color:var(--text-muted);border-bottom:2px solid transparent;border-radius:10px 10px 0 0;padding:8px 2px 8px;gap:4px}
+.tab .ico{display:inline-flex;font-size:1.05rem}
+.tab .ico svg.i{width:20px;height:20px}
+.tab.active,.tab.gas.active,.tab.grey.active{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+.tab.active .ico{color:var(--accent)}
+.tab-content{padding:16px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+.card-title,.card-title.accent,.card-title.water,.card-title.gas{font-size:.85rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-secondary);margin-bottom:12px}
+.values-grid{gap:10px}
+.value-item{background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:left}
+.value-label{font-size:.75rem;color:var(--text-muted)}
+.value-num{font-size:1.35rem;font-weight:600}
+.info-row{padding:10px 0;font-size:.9rem}
+.info-label{color:var(--text-muted)}
+.form-group label{font-size:.8rem;color:var(--text-muted);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{min-height:40px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--cm-line2);border-radius:10px;font-size:.95rem;color:var(--text-primary)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
+.form-hint{font-size:.78rem;color:var(--text-muted)}
+.btn{min-height:44px;border-radius:10px;font-size:.95rem;font-weight:600;gap:8px}
+.btn-primary{background:var(--accent);color:var(--cm-acx);border:1px solid var(--accent)}
+.btn-secondary{background:var(--cm-hi);color:var(--text-primary);border:1px solid var(--cm-line2)}
+.btn-danger{background:transparent;color:#F08A84;border:1px solid #5A2A2A}
+.btn-small{min-height:34px;padding:6px 12px;font-size:.85rem;border-radius:9px}
+.btn-row{gap:10px}
+.enable-row{padding:4px 0}
+.toggle{width:44px;height:26px}
+.toggle span{background:var(--cm-line2);border-radius:999px}
+.toggle span::before{width:20px;height:20px;left:3px;top:3px;background:#fff}
+.toggle input:checked+span{background:var(--accent)}
+.toggle input:checked+span::before{transform:translateX(18px)}
+.badge{border-radius:999px;padding:2px 8px;background:rgba(77,163,240,.15);color:var(--accent)}
+.badge.err{background:rgba(229,83,75,.15);color:var(--danger)}
+.badge.new{background:rgba(229,162,59,.15);color:var(--warning)}
+.dev{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.empty{color:var(--text-muted)}
+.toast{background:var(--text-primary);color:var(--bg-primary);border:0;border-radius:10px}
+.toast.err{background:var(--danger);color:#fff}
+.alarm-banner{background:#2A2213;border-color:#4A3A1C;color:#F6D9A3}
+a{color:var(--accent)}
+@media (min-width:600px){.app-wrap{max-width:560px}}
+/* the same parts under other names (toolbox: header/nav, maxxfan: .dots/.dot/.ct) */
+header{background:var(--bg-primary);border-bottom:1px solid var(--border)}
+header h1{color:var(--text-primary);display:flex;align-items:center;gap:10px}
+header h1 svg.i{color:var(--accent)}
+nav{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+nav button{color:var(--text-muted);border-radius:10px 10px 0 0;font-size:.72rem}
+nav button.on{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+nav button.on .ico{color:var(--accent)}
+nav button .ico{display:inline-flex}
+.dots{gap:6px;font-size:.75rem;color:var(--text-primary)}
+.dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.dot{background:var(--cm-line2);margin-right:6px;box-shadow:none}
+.dot.on{background:var(--ok);box-shadow:none}
+/* labels in sentence case instead of capitals, no coloured side stripes, flat fills */
+.ct,.temp-name,.bat-name,.gauge-title,.grp,.wedge .wl{text-transform:none;letter-spacing:0;font-size:.85rem}
+.ct{font-weight:600;color:var(--text-secondary)}
+.temp-tile::before{display:none}
+.temp-tile{padding:14px}
+.tank-fill{background:var(--water)}
+.bat::before{display:none}
+.bat{padding-left:16px}
+.ct.acc{color:var(--text-secondary)}
+.header h1,header h1{white-space:normal}
+.header h1 span,header h1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card h2{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:600}
+.card.dev-card::before{display:none}
+/* camper-theme:end */
+/* vannode-symbol:begin */
+/* VanNode symbol left of the page title, generated by tools/logo/make_logo.py */
+.vn{display:inline-block;width:26px;height:26px;flex:none;vertical-align:-6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E") center/contain no-repeat}
+/* vannode-symbol:end */
+/* vannode-logo-wide:begin */
+/* VanNode logo with wordmark ("Über VanNode"), generated by tools/logo/make_logo.py */
+.vnlogo{display:block;width:240px;max-width:100%;aspect-ratio:681.5/200;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='682' height='200' viewBox='0.0 0.0 681.5 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3Cg transform='translate(225,136.8)'%3E%3Cpath transform='translate(0.00,0) scale(0.10000,-0.10000)' d='M313 160 434 558H616L418 0H207L9 558H192Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(60.60,0) scale(0.10000,-0.10000)' d='M274 566Q333 566 377.5 542.0Q422 518 446 479V558H617V0H446V79Q421 40 376.5 16.0Q332 -8 273 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(126.50,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(191.90,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(257.30,0) scale(0.10000,-0.10000)' d='M28 279Q28 365 66.0 430.5Q104 496 170.0 531.0Q236 566 318 566Q400 566 466.0 531.0Q532 496 570.0 430.5Q608 365 608 279Q608 193 569.5 127.5Q531 62 464.5 27.0Q398 -8 316 -8Q234 -8 168.5 27.0Q103 62 65.5 127.0Q28 192 28 279ZM434 279Q434 346 400.5 382.0Q367 418 318 418Q268 418 235.0 382.5Q202 347 202 279Q202 212 234.5 176.0Q267 140 316 140Q365 140 399.5 176.0Q434 212 434 279Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(319.00,0) scale(0.10000,-0.10000)' d='M274 566Q329 566 374.5 543.0Q420 520 446 481V740H617V0H446V80Q422 40 377.5 16.0Q333 -8 274 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(384.90,0) scale(0.10000,-0.10000)' d='M585 238H198Q202 186 231.5 158.5Q261 131 304 131Q368 131 393 185H575Q561 130 524.5 86.0Q488 42 433.0 17.0Q378 -8 310 -8Q228 -8 164.0 27.0Q100 62 64.0 127.0Q28 192 28 279Q28 366 63.5 431.0Q99 496 163.0 531.0Q227 566 310 566Q391 566 454.0 532.0Q517 498 552.5 435.0Q588 372 588 288Q588 264 585 238ZM413 333Q413 377 383.0 403.0Q353 429 308 429Q265 429 235.5 404.0Q206 379 199 333Z' fill='%232F8AE0'/%3E%3Ccircle cx='289.10' cy='-27.90' r='5.00' fill='%232F8AE0'/%3E%3Cg stroke='%232F8AE0' stroke-width='5.50' stroke-linecap='round'%3E%3Cline x1='289.10' y1='-51.10' x2='289.10' y2='-69.60'/%3E%3Cline x1='306.10' y1='-48.60' x2='316.10' y2='-61.60'/%3E%3C/g%3E%3Ccircle cx='289.10' cy='-74.10' r='7.50' fill='%232F8AE0'/%3E%3Ccircle cx='318.10' cy='-64.60' r='7.50' fill='%232F8AE0'/%3E%3C/g%3E%3C/svg%3E") left center/contain no-repeat}
+/* vannode-logo-wide:end */
+</style>
+<!-- vannode-icon:begin -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E">
+<!-- vannode-icon:end -->
+</head>
+<body>
+<div class="app-wrap">
+    <div class="header">
+        <h1><i class="vn" aria-hidden="true"></i><span>Example</span></h1>
+        <div class="status-dots">
+            <span><span class="status-dot" id="dot-sensor"></span>Sensor</span>
+            <span><span class="status-dot" id="dot-wifi"></span>WiFi</span>
+            <span><span class="status-dot" id="dot-mqtt"></span>MQTT</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="live"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16M8 15l3-4 3 3 5-6"/></svg></span><span>Live</span></div>
+        <div class="tab" data-tab="settings"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg></span><span>Einstellungen</span></div>
+        <div class="tab" data-tab="mqtt"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg></span><span>MQTT</span></div>
+        <div class="tab" data-tab="wifi"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></svg></span><span>WiFi</span></div>
+    </div>
+
+    <!-- LIVE TAB: one tile per value, built from the list the device sends (VALUES[] in sensor.cpp) -->
+    <div class="tab-content active" id="tab-live">
+        <div class="temps" id="live-values"></div>
+        <div class="card"><div class="temp-state" id="live-state" style="margin:0">--</div></div>
+        <div class="btn-row"><button class="btn btn-secondary" onclick="measureNow()">🔄 Jetzt senden</button></div>
+    </div>
+
+    <!-- SETTINGS TAB (ids cfg-* are read in loadSetup() / saveSettings()) -->
+    <div class="tab-content" id="tab-settings">
+        <div class="card">
+            <div class="card-title accent">LIN-Bus</div>
+            <div class="form-group">
+                <label>Sendeabstand (Sekunden)</label>
+                <input type="number" id="cfg-interval" min="1" max="600" step="1">
+            </div>
+            <div class="form-hint">Der Bus liefert alle 388 ms neue Werte. Geänderte Werte gehen höchstens in diesem Abstand per MQTT raus, unverändert spätestens jede Minute. Das Gerät liest nur mit und sendet nichts auf den Bus.</div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="saveSettings()">💾 Speichern</button></div>
+        </div>
+    </div>
+
+    <!-- MQTT TAB -->
+    <div class="tab-content" id="tab-mqtt">
+        <div class="card">
+            <div class="card-title">MQTT Settings (Home Assistant)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Server</label><input type="text" id="cfg-mqtt-server"></div>
+                <div class="form-group"><label>Port</label><input type="number" id="cfg-mqtt-port" value="1883"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Benutzer</label><input type="text" id="cfg-mqtt-user"></div>
+                <div class="form-group"><label>Passwort</label><input type="password" id="cfg-mqtt-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            </div>
+            <div class="form-group">
+                <label>Topic-Prefix</label><input type="text" id="cfg-mqtt-prefix" value="camper/alde">
+                <div class="form-hint">Werte unter <code>&lt;prefix&gt;/&lt;key&gt;</code>, Status unter <code>&lt;prefix&gt;/status</code></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Web-Oberfläche Login</div>
+            <div class="form-row">
+                <div class="form-group"><label>Benutzer</label><input type="text" id="cfg-web-user" autocomplete="off" autocapitalize="none"></div>
+                <div class="form-group"><label>Passwort</label><input type="password" id="cfg-web-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            </div>
+            <div class="form-hint">Leerer Benutzer = kein Login. Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden.</div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveSetup()">💾 Speichern</button></div>
+    </div>
+
+    <!-- WIFI TAB -->
+    <div class="tab-content" id="tab-wifi">
+        <div class="card">
+            <div class="card-title">Verbindungsstatus</div>
+            <div class="info-row"><span class="info-label">Status</span><span id="wifi-state">--</span></div>
+            <div class="info-row"><span class="info-label">RSSI</span><span id="wifi-rssi">--</span></div>
+            <div class="info-row"><span class="info-label">Firmware</span><span id="fw-version">--</span></div>
+            <div class="info-row"><span class="info-label">Laufzeit</span><span id="uptime">--</span></div>
+            <div class="info-row"><span class="info-label">Freier Speicher</span><span id="heap">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Neustart</span><span id="reset-reason">--</span></div>
+            <div class="info-row"><span class="info-label">WLAN-Abbrüche</span><span id="wifi-drops">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Abbruchgrund</span><span id="wifi-reason" style="text-align:right;word-break:break-all">--</span></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">WLAN-Verbindung</div>
+            <div class="form-group"><label>SSID</label><input type="text" id="cfg-wifi-ssid"></div>
+            <div class="form-group"><label>Passwort</label><input type="password" id="cfg-wifi-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            <div class="form-group">
+                <label>Sendeleistung</label>
+                <select id="cfg-tx-power">
+                    <option value="34">8,5 dBm</option><option value="44">11 dBm</option><option value="52">13 dBm</option>
+                    <option value="60">15 dBm</option><option value="70">17,5 dBm (Standard)</option><option value="78">19,5 dBm (Maximum)</option>
+                </select>
+                <div class="form-hint">Bricht die Verbindung oft ab, zuerst eine niedrigere Stufe probieren.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Access Point</div>
+            <div class="form-group"><label>Name (SSID)</label><input type="text" id="cfg-ap-ssid"></div>
+            <div class="form-group"><label>Passwort (min. 8 Zeichen)</label><input type="password" id="cfg-ap-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            <div class="enable-row">
+                <div>
+                    <div style="font-size:0.85rem">Access Point immer an</div>
+                    <div class="form-hint" style="margin-top:2px">Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Das Gerät ist dann über seine IP im WLAN oder <code>alde-node.local</code> erreichbar.</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfg-ap-always"><span></span></label>
+            </div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveWifi()">💾 Speichern & Verbinden</button></div>
+        <div class="card" style="margin-top:12px">
+            <div class="card-title">Firmware- &amp; Web-Update</div>
+            <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
+            <div class="form-hint" style="margin:0 0 8px">Firmware: die <code>.bin</code> aus dem Release (<code>alde-node-….bin</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>camper_alde.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>), danach Neustart.<br>
+                Web-Oberfläche: <code>data/index.html.gz</code>, ohne Neustart. Die Einstellungen bleiben erhalten. Die Datei wird vor dem Hochladen geprüft.</div>
+            <div class="form-group"><input type="file" id="fwu-file" accept=".bin,.gz" onchange="fwChosen(false)"></div>
+            <div class="fwu-chk" id="fwu-chk"></div>
+            <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()">Ohne Kennung hochladen</label>
+            <progress id="fwu-pr" value="0" max="100" class="hidden" style="width:100%"></progress>
+            <div class="btn-row"><button class="btn btn-secondary" id="fwu-btn" disabled onclick="fwUpload('f', (m, e) => showToast(m, e))">⬆ Hochladen</button></div>
+        </div>
+        <div class="card">
+            <div class="card-title">Ereignisse</div>
+            <div class="fwu-log" id="fwu-log">Lade …</div>
+            <div class="form-hint" style="margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-danger" onclick="restartDevice()">🔄 Neustart</button></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+let ws = null;
+let lastSig = '';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (v, d = 1) => (v === null || v === undefined) ? '--' : Number(v).toFixed(d).replace('.', ',');
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        $('tab-' + tab.dataset.tab).classList.add('active');
+    });
+});
+
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/ws');
+    ws.onmessage = (evt) => { try { updateLiveData(JSON.parse(evt.data)); } catch (e) {} };
+    ws.onclose = () => { setTimeout(connectWS, 3000); };
+}
+
+function formatUptime(s) {
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    return (d ? d + ' d ' : '') + (d || h ? h + ' h ' : '') + m + ' min';
+}
+function formatAge(s) {
+    if (s < 0) return 'noch kein Wert';
+    if (s < 60) return 'vor ' + s + ' s';
+    if (s < 3600) return 'vor ' + Math.floor(s / 60) + ' min';
+    return 'vor ' + Math.floor(s / 3600) + ' h';
+}
+
+const BIN_KEYS = ['gas', 'ac_active', 'bus_ok'];
+
+function updateLiveData(d) {
+    const list = d.values || [];
+    const box = $('live-values');
+    const sig = list.map(v => v.key).join('|');
+    if (sig !== lastSig) {
+        lastSig = sig;
+        box.innerHTML = list.map(v => `
+            <div class="temp-tile" style="--tile-color:var(--accent)">
+                <div class="temp-name">${esc(v.name)}</div>
+                <div class="temp-value"><span id="val-${v.key}">--</span><small>${esc(v.unit)}</small></div>
+            </div>`).join('');
+    }
+    for (const v of list) {
+        const el = $('val-' + v.key);
+        if (!el) continue;
+        // Binary values (1/0) as text; "Warmwasser Ziel" 0 means off
+        if (BIN_KEYS.includes(v.key)) el.textContent = (v.v === null || v.v === undefined) ? '--' : (v.v ? 'An' : 'Aus');
+        else if (v.key === 'hotwater_target' && v.v === 0) el.textContent = 'Aus';
+        else el.textContent = fmt(v.v, v.dec);
+    }
+    $('live-state').textContent = d.ok ? 'LIN-Bus aktiv · letzter Frame ' + formatAge(d.age) + ' · ' + d.reads + ' Updates · ' + d.errors + ' verworfen'
+                                       : 'Kein LIN-Verkehr – Bedienteil angeschlossen? (' + d.errors + ' verworfene Frames)';
+    $('dot-sensor').className = 'status-dot ' + (d.ok ? 'active' : 'warning');
+    $('dot-wifi').className = 'status-dot ' + (d.rssi ? 'active' : '');
+    $('dot-mqtt').className = 'status-dot ' + (d.mqtt ? 'active' : '');
+    $('wifi-state').textContent = d.wifi || '--';
+    $('wifi-rssi').textContent = d.rssi ? d.rssi + ' dBm' : '--';
+    $('uptime').textContent = formatUptime(d.uptime || 0);
+    $('heap').textContent = Math.round((d.heap || 0) / 1024) + ' kB';
+    $('wifi-drops').textContent = d.wifi_drops ?? '--';
+    $('wifi-reason').textContent = d.wifi_reason || '--';
+}
+
+// POST a (partial) config object; throws with the device's error message if rejected
+async function postConfig(obj) {
+    const resp = await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(obj)
+    });
+    if (!resp.ok) {
+        let msg = 'HTTP ' + resp.status;
+        try { msg = (await resp.json()).error || msg; } catch (e) {}
+        throw new Error(msg);
+    }
+}
+
+async function loadSetup() {
+    try {
+        const resp = await fetch('/api/config');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const cfg = await resp.json();
+        // Passwords are never sent by the device; the fields stay empty on purpose
+        $('cfg-mqtt-server').value = cfg.mqtt_server || '';
+        $('cfg-mqtt-port').value = cfg.mqtt_port || 1883;
+        $('cfg-mqtt-user').value = cfg.mqtt_user || '';
+        $('cfg-mqtt-prefix').value = cfg.mqtt_prefix || 'camper/alde';
+        $('cfg-wifi-ssid').value = cfg.wifi_ssid || '';
+        $('cfg-ap-ssid').value = cfg.ap_ssid || '';
+        $('cfg-tx-power').value = String(cfg.wifi_tx_power || 70);
+        $('cfg-ap-always').checked = !!cfg.ap_always;
+        $('cfg-web-user').value = cfg.web_user || '';
+        $('fw-version').textContent = cfg.version || '--';
+        $('reset-reason').textContent = cfg.reset_reason || '--';
+        // Device settings
+        $('cfg-interval').value = cfg.interval ?? 5;
+    } catch (e) {
+        showToast('Fehler beim Laden der Einstellungen', true);
+    }
+}
+
+// Device settings (checked here and again on the device)
+async function saveSettings() {
+    const interval = parseInt($('cfg-interval').value);
+    if (!(interval >= 1 && interval <= 600)) { showToast('Intervall 1-600 s', true); return; }
+    try {
+        await postConfig({interval});
+        showToast('Gespeichert');
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function measureNow() {
+    try { await fetch('/api/measure', {method: 'POST'}); showToast('Werte gesendet'); }
+    catch (e) { showToast('Fehler', true); }
+}
+
+async function saveSetup() {
+    const cfg = {
+        mqtt_server: $('cfg-mqtt-server').value.trim(),
+        mqtt_port: parseInt($('cfg-mqtt-port').value) || 1883,
+        mqtt_user: $('cfg-mqtt-user').value.trim(),
+        mqtt_prefix: $('cfg-mqtt-prefix').value.trim().replace(/\/+$/, '')
+    };
+    const pass = $('cfg-mqtt-pass').value;
+    if (pass) cfg.mqtt_pass = pass;
+    cfg.web_user = $('cfg-web-user').value.trim();
+    const webPass = $('cfg-web-pass').value;
+    if (webPass) cfg.web_pass = webPass;
+    try {
+        await postConfig(cfg);
+        showToast('Gespeichert – Neustart...');
+        setTimeout(restartDevice, 800);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function saveWifi() {
+    const cfg = {
+        wifi_ssid: $('cfg-wifi-ssid').value.trim(),
+        ap_ssid: $('cfg-ap-ssid').value.trim(),
+        wifi_tx_power: parseInt($('cfg-tx-power').value),
+        ap_always: $('cfg-ap-always').checked
+    };
+    const pass = $('cfg-wifi-pass').value;
+    if (pass) cfg.wifi_pass = pass;
+    const apPass = $('cfg-ap-pass').value;
+    if (apPass) {
+        if (apPass.length < 8) { showToast('AP-Passwort: mindestens 8 Zeichen', true); return; }
+        cfg.ap_pass = apPass;
+    }
+    try {
+        await postConfig(cfg);
+        showToast('Gespeichert – Neustart...');
+        setTimeout(restartDevice, 800);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function restartDevice() {
+    try { await fetch('/api/restart', {method: 'POST'}); } catch (e) {}
+    showToast('Neustart... Seite lädt in 10 s neu');
+    setTimeout(() => location.reload(), 10000);
+}
+
+function showToast(msg, isErr) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+loadSetup();
+connectWS();
+// ---- Firmware update with checks, event log (same checks as fwcheck.cpp on the device) ----
+// Elements: fwu-cur, fwu-file, fwu-chk, fwu-force-row, fwu-force, fwu-btn, fwu-pr, fwu-log
+let FWI = null;   // running firmware: {dev, ver, chip, chip_id, max}
+const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
+const fwEl = id => document.getElementById(id);
+const fwEsc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+function fwVerCmp(a, b) {
+    const x = String(a).split('.').map(n => parseInt(n) || 0), y = String(b).split('.').map(n => parseInt(n) || 0);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+}
+function fwAgo(s) { return s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; }
+async function fwLoad() {
+    try {
+        const r = await fetch('/api/system', {cache: 'no-store'});
+        if (!r.ok) return;
+        const d = await r.json();
+        FWI = d.fw || null;
+        if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB` +
+            (FWI.hw ? `<br>Passende Datei aus dem Release: <b>…-node-${fwEsc(FWI.hw)}-v….bin</b>` : '');
+        const box = fwEl('fwu-log');
+        if (box) box.innerHTML = (d.log || []).length ? d.log.map(e => {
+            const when = e.b === 0 ? 'vor ' + fwAgo(Math.max(0, (d.up || 0) - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + fwAgo(e.t);
+            const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
+            return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${fwEsc(when)}</span>${fwEsc(e.m)}</div>`;
+        }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
+    } catch (e) {}
+}
+// Which release file fits this device (FW_HW of the running firmware), added to "wrong chip" errors
+function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : ''; }
+// Checks the chosen file in the browser: {ok, kind, msg, warn, force}
+async function fwInspect(file, fsImages) {
+    const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
+    if (n.endsWith('.gz')) return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
+    if (fsImages && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
+    if (!n.endsWith('.bin')) return {ok: false, msg: 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)'};
+    const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
+    if (n.includes('merged')) return {ok: false, msg: merged};
+    const u = new Uint8Array(await file.arrayBuffer());
+    if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
+    const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
+    if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
+    const chip = u[12] | (u[13] << 8);
+    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${fwHwHint()}`};
+    if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
+    const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
+    if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
+    if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
+    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${fwHwHint()}`};
+    const c = FWI ? fwVerCmp(m[2], FWI.ver) : 1;
+    return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
+        (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
+}
+let fwPick = null;
+async function fwChosen(fsImages) {
+    const f = fwEl('fwu-file').files[0], chk = fwEl('fwu-chk');
+    fwPick = null;
+    fwEl('fwu-force-row').style.display = 'none';
+    fwEl('fwu-force').checked = false;
+    if (!f) { chk.textContent = ''; fwEl('fwu-btn').disabled = true; return; }
+    chk.className = 'fwu-chk'; chk.textContent = 'Prüfe …';
+    const r = await fwInspect(f, fsImages);
+    fwPick = r;
+    chk.textContent = (r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg;
+    chk.className = 'fwu-chk ' + (r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+    if (r.force) fwEl('fwu-force-row').style.display = '';
+    fwEl('fwu-btn').disabled = !r.ok;
+}
+function fwForce() { fwEl('fwu-btn').disabled = !(fwPick && (fwPick.ok || (fwPick.force && fwEl('fwu-force').checked))); }
+function fwUpload(field, toast) {
+    const f = fwEl('fwu-file').files[0];
+    if (!f || !fwPick) { toast('Erst eine Datei wählen', true); return; }
+    if (fwPick.warn && fwPick.kind === 'fw' && !confirm(fwPick.msg + '\nTrotzdem installieren?')) return;
+    const force = !fwPick.ok && fwPick.force && fwEl('fwu-force').checked;
+    const fd = new FormData();
+    fd.append(field, f);
+    const x = new XMLHttpRequest(), pr = fwEl('fwu-pr');
+    pr.classList.remove('hide', 'hidden'); pr.style.display = ''; pr.value = 0;
+    fwEl('fwu-btn').disabled = true;
+    x.upload.onprogress = e => { if (e.lengthComputable) pr.value = e.loaded / e.total * 100; };
+    x.onload = () => {
+        if (x.status === 200 && x.responseText === 'OK web') { toast('Web-Oberfläche ersetzt – lädt neu …'); setTimeout(() => location.reload(), 1500); return; }
+        if (x.status === 200) { toast('Update ok – Neustart …'); setTimeout(() => location.reload(), 15000); return; }
+        toast(x.responseText || ('Fehler HTTP ' + x.status), true);
+        const chk = fwEl('fwu-chk'); chk.textContent = '✕ ' + (x.responseText || 'Fehler HTTP ' + x.status); chk.className = 'fwu-chk bad';
+        fwEl('fwu-btn').disabled = false;
+        fwLoad();
+    };
+    x.onerror = () => { toast('Verbindung abgebrochen', true); fwEl('fwu-btn').disabled = false; fwLoad(); };
+    x.open('POST', '/api/update' + (force ? '?force=1' : ''));
+    x.send(fd);
+}
+fwLoad();
+setInterval(fwLoad, 15000);
+// vannode-about:begin
+// VanNode "Über" card: logo, author, license, third-party parts and project link, placed right
+// below the firmware update card of every device page. Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// This card is part of the Appropriate Legal Notices of VanNode. Under the additional terms of
+// its GNU GPL v3 license (section 7 b/c, see NOTICE.md) the author attribution, the project link
+// and the license information must stay in every copy and modified version.
+(function () {
+  const REPO = 'https://github.com/hflocki/vannode';
+  const COPY = 'Copyright © 2026 hflocki';
+  const A = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
+  const GPL = 'Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
+  const TERMS = 'Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
+  const RISK = 'Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
+  // firmware id (FW_DEVICE) -> name, repo folder, third-party parts in this firmware
+  const DEV = {
+    tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel', x: [
+      'Mopeka-Dekodierung nach ' + A('https://github.com/Bluetooth-Devices/mopeka-iot-ble', 'mopeka-iot-ble') + ' (MIT, eigene Umsetzung)']},
+    temp:      {n: 'Temp-Node', d: 'temp'},
+    maxxfan:   {n: 'MaxxFan-Node', d: 'maxxfan'},
+    example:   {n: 'Vorlage', d: '_template'},
+    toolbox:   {n: 'BLE-Node', d: 'ble', x: [
+      'Batterie-Protokolle (Daly, Ective, BM2) portiert aus ' + A('https://github.com/patman15/aiobmsble', 'aiobmsble') + ' (Apache-2.0)',
+      'Dachhauben-Protokoll portiert aus ' + A('https://github.com/C64Axel/rvtech-hacs', 'rvtech-hacs') + ', © 2026 C64Axel (MIT)',
+      'Pumpen-Protokoll nach ' + A('https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper', 'Blackforest-Vanlife-SmartCamper') + ' (MIT) und ' + A('https://github.com/geierwally1978/carawater-isp15-ble', 'carawater-isp15-ble') + ' (eigene Umsetzung, kein Code übernommen)',
+      'BM2-Format nach bm2-esphome und ha_bm2monitor, Govee und Mopeka nach govee-ble und mopeka-iot-ble (alle MIT, eigene Umsetzung)']},
+    heater:    {n: 'Heater-Node', d: 'heater', x: [
+      'Protokoll-Logik portiert aus ' + A('https://github.com/skrebber/esphome-truma_inetbox', 'skrebber/esphome-truma_inetbox') + ' (Fork von Fabian-Schmidt, GPL-3.0)',
+      'Timer aus ' + A('https://github.com/havanti/esphome-truma', 'havanti/esphome-truma') + ' (GPL-3.0); Vorarbeit ' + A('https://github.com/danielfett/inetbox.py', 'inetbox.py') + ' und ' + A('https://github.com/muccc/WomoLIN', 'WomoLIN') + ' (GPL-3.0)',
+      'Fehlercodes nach dem Truma-Diagnosekatalog und den CP-Plus-Codelisten, Texte eigenständig formuliert']},
+    level:     {n: 'Level-Node', d: 'level', x: [
+      'Basiert auf dem ' + A('https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT', 'BNO085-Levelsensor von klehnst') + ', © 2026 klehnst (MIT)']},
+  };
+  DEV.ble = DEV.toolbox;   // mockups use the folder name
+  DEV.template = DEV.example;
+  const HW = {esp32: 'ESP32', esp32c3: 'ESP32-C3', esp32s3: 'ESP32-S3', esp32c6: 'ESP32-C6', esp8266: 'ESP8266', atoms3: 'AtomS3', core2: 'Core2'};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const small = 'margin:6px 0;font-size:.85em;opacity:.8';
+
+  function card(upd, fw) {
+    const info = DEV[fw.dev] || {n: fw.dev || 'VanNode', d: ''};
+    const c = document.createElement('div');
+    c.className = upd.className;
+    c.id = 'vn-about';
+    c.style.marginTop = '12px';
+    const t = upd.firstElementChild;
+    const title = document.createElement(t ? t.tagName : 'h2');
+    if (t) title.className = t.className;
+    title.textContent = 'Über VanNode';
+    const base = info.d ? REPO + '/blob/main/firmware/' + info.d + '/' : REPO + '/blob/main/';
+    c.append(title);
+    c.insertAdjacentHTML('beforeend',
+      '<i class="vnlogo" role="img" aria-label="VanNode" style="margin:4px 0 10px"></i>' +
+      '<p style="margin:6px 0"><b>' + esc(info.n) + '</b> · Firmware ' + esc(fw.ver || '--') + (fw.hw ? ' · ' + esc(HW[fw.hw] || fw.hw) : '') + '</p>' +
+      '<p style="margin:6px 0">' + COPY + '<br>Teil von VanNode – Camper-Elektronik über MQTT<br>' + A(REPO, 'github.com/hflocki/vannode') + '</p>' +
+      '<p style="margin:6px 0">Lizenz: <b>GNU GPL Version 3</b>. ' + GPL + '</p>' +
+      '<p style="' + small + '">' + TERMS + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em"><b>Ohne Gewähr.</b> ' + RISK + '</p>' +
+      (info.x ? '<p style="' + small + '">Enthält fremde Teile:<br>' + info.x.join('<br>') + '</p>' : '') +
+      '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(base + 'NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
+    upd.insertAdjacentElement('afterend', c);
+  }
+
+  let fw = null, busy = false;
+  function place() {
+    const cur = document.getElementById('fwu-cur');
+    const upd = cur && cur.closest('.card');
+    if (!upd || document.getElementById('vn-about')) return;
+    if (fw) return card(upd, fw);
+    if (busy) return;
+    busy = true;
+    fetch('/api/system', {cache: 'no-store'}).then((r) => r.json()).then((j) => { fw = j.fw || {}; })
+      .catch(() => { fw = {}; }).finally(() => { busy = false; place(); });
+  }
+  // The update card is built by the page (sometimes only when its tab opens): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+})();
+// vannode-about:end
+</script>
+</body>
+</html>

@@ -20,8 +20,9 @@
 //           f13 door heating, f15..f18 max / min set point zone 1, max / min zone 2
 //   Error:  "/SCE/<zone>/<code>" or "/SEE/<zone>/<code>", code 1-7 (see errorText())
 //   Commands: "/SC1/1/001|000" power on / off, "/SC3/<u>/+NN" set point zone 1,
-//           "/SC5/<u>/+NN" set point zone 2 (u = unit of the value: 2 = C, 1 = F -
-//           the opposite of f2 in the status; with 1 the value is read as F), "/SC4/1/00<1-3>" battery protection,
+//           "/SC5/<u>/+NN" set point zone 2. The value is always Fahrenheit with u = 1
+//           (tested: "/SC5/1/+46" sets 8 C, "/SC5/2/..." is ignored); the fridge converts
+//           and rounds to its display unit. "/SC4/1/00<1-3>" battery protection,
 //           "/SCA/1/00<0-3>" zones on / off (same bit mask as f11, always both zones),
 //           "/SC2/2/001|000" fan on / off, "/SC6/1/011|022" sleep mode on / off,
 //           "/SC2/3/001|000" door frame heating on / off (f13),
@@ -238,7 +239,7 @@ public:
             s["o"] = WCS_BPD_OPTIONS;
             s["v"] = bpd >= 1 && bpd <= 3 ? bpd - 1 : 0;
             // Diagnosis: send any text to the fridge, the answer goes into the log
-            liveCtrl(o, "text", "raw", "Testbefehl (Diagnose)")["ph"] = "/SC5/2/+06";
+            liveCtrl(o, "text", "raw", "Testbefehl (Diagnose)")["ph"] = "/SC5/1/+43";
         }
         liveCtrl(o, "switch", "release", "Bluetooth für App freigeben")["v"] = link.released();
         o["raw"] = (const char*)lastLine;
@@ -331,9 +332,9 @@ public:
             int lo = z2 ? min2 : min1, hi = z2 ? max2 : max1;
             if (limitsKnown && (t < lo || t > hi))
                 devlogf(id, "Set point %d outside reported limits %d..%d - sent anyway", t, lo, hi);
-            int dev = unit == 2 ? (int)lroundf(t * 9.0f / 5.0f + 32.0f) : t;   // Fridge in F
-            // Unit digit in commands: 2 = Celsius, 1 = Fahrenheit (status f2 uses 1 = C)
-            snprintf(cmd, sizeof(cmd), "/SC%c/%d/%c%02d\n", z2 ? '5' : '3', unit == 2 ? 1 : 2,
+            // The fridge takes the set point in Fahrenheit only (rounded back to C by the fridge)
+            int dev = (int)lroundf(t * 9.0f / 5.0f + 32.0f);
+            snprintf(cmd, sizeof(cmd), "/SC%c/1/%c%02d\n", z2 ? '5' : '3',
                      dev >= 0 ? '+' : '-', abs(dev));
         } else if (!strcmp(key, "bpd")) {
             int l = 0;

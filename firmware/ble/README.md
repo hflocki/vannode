@@ -1,5 +1,5 @@
 > [!WARNING]
-> **IN ENTWICKLUNG.** Die Plugins sind teils mangels Hardware noch nicht am echten Gerät getestet, auch die Dachhaube (RV Tech) noch nicht.
+> **IN ENTWICKLUNG.**
 
 # BLE Node / Battery Node
 

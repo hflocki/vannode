@@ -12,6 +12,8 @@
 // Positions 0-100. Special codes:
 //   101 = go to favourite position, 102 = vent ("Lüften", each press extends the vent time),
 //   103 = store the current position as favourite.
+// Rain, vent and favourite can be set to fixed positions in the settings (per hatch);
+// 0 for vent / favourite keeps the hatch's own function (102 / 101).
 // There is no stop command: sending "open" (100) or "close" (000) again while the hatch
 // moves stops it (handled by the hatch itself).
 // Pairing is only needed if the hatch asks for it (insufficient authentication on subscribe).
@@ -33,12 +35,22 @@
 struct RvCfg {
     char mac[18];
     char pin[8];           // Optional pairing PIN (digits), empty = no pairing
+    int32_t pos_rain;      // Position for "Regen" in %
+    int32_t pos_vent;      // Position for "Lüften" in %, 0 = vent function of the hatch
+    int32_t pos_fav;       // Position for "Favorit" in %, 0 = favourite stored in the hatch
 };
+
+#define RV_DEFAULT_RAIN 12
 
 static const Field RV_FIELDS[] = {
     FLD_MAC(RvCfg, mac, "mac", "Hauben-MAC", "Über \"Suchen\" aus der Liste wählen"),
     FLD_TEXT(RvCfg, pin, "pin", "PIN", "Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist. "
                                        "Kein anderes Gerät (Handy) darf gleichzeitig verbunden sein."),
+    FLD_INT(RvCfg, pos_rain, "pos_rain", "Stellung Regen", "%", 1, 100, "Standard 12 %"),
+    FLD_INT(RvCfg, pos_vent, "pos_vent", "Stellung Lüften", "%", 0, 100,
+            "0 = Lüften-Funktion der Haube (jedes Drücken verlängert die Lüftzeit)"),
+    FLD_INT(RvCfg, pos_fav, "pos_fav", "Stellung Favorit", "%", 0, 100,
+            "0 = in der Haube gespeicherter Favorit (\"Favorit speichern\")"),
 };
 
 // Presets: key, name, value (same telegrams as the HA integration)
@@ -50,7 +62,7 @@ struct RvPreset {
 static const RvPreset RV_PRESETS[] = {
     {"auf", "Auf", 100},
     {"zu", "Zu", 0},
-    {"regen", "Regen", 12},
+    {"regen", "Regen", RV_DEFAULT_RAIN},   // Value from the settings, see presetValue()
     {"lueften", "Lüften", RV_CODE_VENT},
     {"fav", "Favorit", RV_CODE_FAV},
     {"fav_set", "Favorit speichern", RV_CODE_FAV_SET},
@@ -82,7 +94,10 @@ public:
         return sizeof(RV_FIELDS) / sizeof(RV_FIELDS[0]);
     }
     void* cfg() override { return &c; }
-    void setDefaults() override { memset(&c, 0, sizeof(c)); }
+    void setDefaults() override {
+        memset(&c, 0, sizeof(c));
+        c.pos_rain = RV_DEFAULT_RAIN;
+    }
     void onConfigChanged() override {
         pinValue = blePinParse(c.pin);
         if (strcmp(c.mac, lastMac) != 0) {
@@ -200,9 +215,18 @@ public:
         JsonObject b = liveCtrl(o, "buttons", "preset", nullptr);
         JsonArray arr = b["b"].to<JsonArray>();
         for (const RvPreset& p : RV_PRESETS) {
+            // "Favorit speichern" only makes sense while the hatch's own favourite is used
+            if (!strcmp(p.key, "fav_set") && c.pos_fav > 0) continue;
             JsonArray x = arr.add<JsonArray>();
             x.add(p.key);
-            x.add(p.name);
+            int v = presetValue(p);
+            if (v >= 0 && v <= 100 && strcmp(p.key, "auf") && strcmp(p.key, "zu")) {
+                char lbl[32];
+                snprintf(lbl, sizeof(lbl), "%s (%d %%)", p.name, v);
+                x.add(String(lbl));
+            } else {
+                x.add(p.name);
+            }
         }
         JsonObject s = liveCtrl(o, "slider", "cover_position", "Position");
         s["min"] = 0;
@@ -215,6 +239,9 @@ public:
     size_t entities(const Entity*& out) override {
         out = RV_ENTITIES;
         return sizeof(RV_ENTITIES) / sizeof(RV_ENTITIES[0]);
+    }
+    bool entityActive(const Entity& e) override {
+        return strcmp(e.key, "fav_set") != 0 || c.pos_fav == 0;
     }
     uint32_t publishIntervalMs() const override { return MQTT_RVTECH_MS; }
 
@@ -248,7 +275,7 @@ public:
             key = value;   // Web UI: preset key as value
         }
         for (const RvPreset& p : RV_PRESETS) {
-            if (!strcmp(key, p.key)) v = p.value;
+            if (!strcmp(key, p.key)) v = presetValue(p);
         }
         if (v == -2) {
             // Stop: the hatch stops when the running open / close command arrives again.
@@ -293,6 +320,14 @@ private:
     // Buffer for assembling fragmented UART ASCII telegrams from ESP32 BLE link
     char rx[32];
     size_t rxLen = 0;
+
+    // Value sent for a preset: rain / vent / favourite from the settings if set
+    int presetValue(const RvPreset& p) const {
+        if (!strcmp(p.key, "regen")) return c.pos_rain >= 1 && c.pos_rain <= 100 ? c.pos_rain : RV_DEFAULT_RAIN;
+        if (!strcmp(p.key, "lueften") && c.pos_vent > 0 && c.pos_vent <= 100) return c.pos_vent;
+        if (!strcmp(p.key, "fav") && c.pos_fav > 0 && c.pos_fav <= 100) return c.pos_fav;
+        return p.value;
+    }
 
     // Cap position display at 100% (preset 102 represents "vent" state)
     int displayPosition() const { return position > 100 ? 100 : position; }

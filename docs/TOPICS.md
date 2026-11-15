@@ -123,7 +123,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/rvtech/reported` | gemeldeter Rohwert (0 … 100, `102` = Lüften) |
 | `…/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` |
 | `…/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `…/cmd/rvtech/<preset>/set` | Voreinstellung `auf`, `zu`, `regen`, `lueften`, `fav` (Favorit), `fav_set` (Favorit speichern) (Payload beliebig) |
+| `…/cmd/rvtech/<preset>/set` | Voreinstellung `auf`, `zu`, `regen`, `lueften`, `fav` (Favorit), `fav_set` (Favorit speichern) (Payload beliebig). Die Werte für Regen, Lüften und Favorit stehen in den Einstellungen der Haube |
 | `…/cmd/<plugin>/release/set` | `ON` / `OFF`: Bluetooth für die App freigeben |
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
 | `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `zone1`, `zone2` (`ON`/`OFF`, Zone läuft; nur mit zweiter Zone), `quick1`, `quick2` (Schnellkühlen Zone 1 / 2), `doorheat` (Türheizung), `error` (aktueller Fehler), `error_last` (letzter Fehler mit Zeit), `errors` (letzte 5 Fehler, JSON), `message`. Zone 1 / 2 = Fächer laut *Name Zone 1/2* (Standard Gefrierfach / Kühlfach) | Kühlschrank; Befehle `power` (Power Gesamt), `zone1`, `zone2`, `fan`, `night`, `quick1`, `quick2`, `doorheat`, `target1`, `target2`, `bpd`, `raw` (Diagnose) |

@@ -28,7 +28,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 
 | Typ | Rubrik | Einstellungen in der Web-UI |
 | --- | --- | --- |
-| Dachhaube RV Tech (Heki-Motorsteuerung; Auf, Zu, Regen, Lüften, Favorit, Favorit speichern, Stopp) | Verbinden | MAC, PIN |
+| Dachhaube RV Tech (Heki-Motorsteuerung; Auf, Zu, Regen, Lüften, Favorit, Favorit speichern, Stopp) | Verbinden | MAC, PIN, Stellungen Regen / Lüften / Favorit in % (je Haube) |
 | Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
 | Kühlschrank WCS (Kompressor; Ein/Aus, Zonen einzeln ein/aus, Umluft, Nachtmodus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes mit Verlauf, Schnellkühlen je Zone, Türheizung) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), Namen der Zonen (Standard Gefrierfach / Kühlfach), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
 | Alarm Thitronik WiPro III (**nur lesen**) | Verbinden | MAC, PIN normalerweise leer, Kontaktnamen (mit Komma), optional Status-UUID. Reiner Statusmelder: schaltet die Anlage nie scharf/unscharf |
@@ -177,9 +177,11 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 | `camper/tool/rvtech/cover_position` | 0 … 100 % |
 | `camper/tool/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` (Stopp nur während Auf/Zu: die Haube hält an, wenn derselbe Befehl noch einmal kommt) |
 | `camper/tool/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`; Lüften: jedes Drücken verlängert die Lüftzeit) |
-| `camper/tool/cmd/rvtech/fav/set` | gespeicherte Lieblingsposition anfahren |
+| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`); Inhalt beliebig, z. B. `PRESS` |
+| `camper/tool/cmd/rvtech/fav/set` | Favorit anfahren |
 | `camper/tool/cmd/rvtech/fav_set/set` | aktuelle Stellung als Favorit speichern |
+
+Die Stellungen stellst du je Haube in den Einstellungen ein (zweite Haube `rvtech2` eigene Werte und Topics `…/cmd/rvtech2/…`): **Stellung Regen** (Standard 12 %), **Stellung Lüften** (0 = Lüften-Funktion der Haube, jedes Drücken verlängert die Lüftzeit; sonst fester Wert in %), **Stellung Favorit** (0 = in der Haube gespeicherter Favorit, dann gibt es „Favorit speichern“; sonst fester Wert in %, „Favorit speichern“ entfällt). Die Knöpfe in der Karte zeigen den eingestellten Wert.
 
 **Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `fan` (Umluft; im Nachtmodus aus), `night` (Nachtmodus), `zone1`/`zone2` (Zone läuft, nur mit „Zweite Zone“), `error` (aktueller Fehler: E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen), `error_last` (letzter Fehler mit Zeit, bleibt nach dem Ende stehen), `errors` (die letzten 5 Fehler als JSON: `code`, `text`, `zone`, `zone_name`, `first`, `last`, `ago_s`, `count`; nur im RAM, nach einem Neustart leer); Befehle `power` (`ON`/`OFF`, „Power Gesamt“, ganzer Kühlschrank), `zone1`/`zone2` (`ON`/`OFF`, Zone 1 bzw. 2 einzeln; die andere Zone bleibt, wie sie ist), `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `quick1`/`quick2` (`ON`/`OFF`, Schnellkühlen Zone 1 / 2), `doorheat` (`ON`/`OFF`, Türheizung), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3). Die Topics heißen immer nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum). Die Namen erscheinen in der Karte und in den Home-Assistant-Namen. Diagnose: `raw` schickt einen beliebigen Befehl an den Kühlschrank, die Antwort steht im Geräte-Log (nur per MQTT).
 
@@ -235,6 +237,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.21 | **Dachhaube:** Stellungen für Regen, Lüften und Favorit je Haube einstellbar (in %, auch für `rvtech2`). Lüften und Favorit mit 0 nutzen wie bisher die Funktionen der Haube; mit festem Wert fährt die Haube genau dorthin. Die Topics `…/cmd/rvtech/regen|lueften|fav/set` bleiben gleich |
 | 2.1.20 | Neue Release-Datei **`ble-node-esp32s3`** für ESP32-S3-Boards (z. B. DevKitC-1, mehr Arbeitsspeicher für mehrere Bluetooth-Geräte). Firmware sonst unverändert |
 | 2.1.19 | Neues Plugin **OBD2-Adapter** (Fahrzeug, nur lesen) für ELM327-BLE-Adapter und STN-Adapter wie den vLinker MC+: Standardwerte des Motorsteuergeräts (Drehzahl, Geschwindigkeit, Temperaturen, Tankfüllstand, Verbrauch, Kilometerstand …), Bordspannung, Motorkontrollleuchte und Fehlercodes. Abfrage ab Werk nur bei laufendem Motor, danach Ruhepause für den Adapter. Testbefehl `raw` per MQTT. Host-Test `tests/obd_test.cpp`. **Bluetooth:** Write-UUID `*` = erste beschreibbare Characteristic eines sendenden Dienstes; der Firmware-Update-Dienst FE59 wird beim Abonnieren aller Characteristics übersprungen |
 | 2.1.18 | **Kühlschrank:** Namen der Zonen einstellbar (*Name Zone 1/2*, leer = Gefrierfach / Kühlfach), gelten in der Karte und in Home Assistant; die Topics bleiben `zone1`/`temp1` …. „Kühlschrank an“ heißt jetzt **Power Gesamt** und steht unten in der Schalterliste. **Fehlerverlauf:** die letzten 5 Fehler mit Zeit und Anzahl unter „Letzte Fehler“ in der Karte, per MQTT als `errors` (JSON) und `error_last` (auch in Home Assistant). Testbefehl-Feld aus der Karte entfernt (per MQTT `raw` weiter möglich). Superfrost / Superkühlung heißen jetzt „Schnellkühlen <Zone>“ |

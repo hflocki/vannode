@@ -221,12 +221,12 @@ static inline const char* elmProtocolName(char p) {
 // "P0133" from the two bytes of a trouble code
 static inline void obdDtcText(uint8_t a, uint8_t b, char* out) {
     static const char LETTER[] = "PCBU";
-    static const char HEX[] = "0123456789ABCDEF";
+    static const char DIGITS[] = "0123456789ABCDEF";
     out[0] = LETTER[a >> 6];
-    out[1] = HEX[(a >> 4) & 0x03];
-    out[2] = HEX[a & 0x0F];
-    out[3] = HEX[b >> 4];
-    out[4] = HEX[b & 0x0F];
+    out[1] = DIGITS[(a >> 4) & 0x03];
+    out[2] = DIGITS[a & 0x0F];
+    out[3] = DIGITS[b >> 4];
+    out[4] = DIGITS[b & 0x0F];
     out[5] = '\0';
 }
 

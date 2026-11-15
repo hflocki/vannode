@@ -252,7 +252,7 @@ bool BleLink::subscribeChr(NimBLERemoteCharacteristic* c) {
 // "every notifying characteristic", otherwise e.g. Service Changed (0x2A05) counts
 // as a subscription and a failed data subscription goes unnoticed.
 static bool isStandardService(const NimBLEUUID& u) {
-    static const uint16_t STD[] = {0x1800, 0x1801, 0x180A, 0x180F};
+    static const uint16_t STD[] = {0x1800, 0x1801, 0x180A, 0x180F, 0xFE59};   // FE59 = firmware update (DFU)
     for (uint16_t s : STD) if (u == NimBLEUUID(s)) return true;
     return false;
 }
@@ -298,13 +298,26 @@ bool BleLink::finishConnect() {
         // Legacy settings in case the device starts the pairing on the subscription
         NimBLEDevice::setSecurityAuth(true, true, false);
     }
+    // Write UUID "*": the first writable characteristic of a service that also notifies
+    // (serial-over-BLE adapters with different UUIDs, e.g. OBD adapters)
+    bool anyWrite = !strcmp(writeUuid, "*");
     for (NimBLERemoteService* s : services) {
         if (service[0] && !(s->getUUID() == NimBLEUUID(service))) continue;
         if (!service[0] && !notifyUuid[0] && isStandardService(s->getUUID())) continue;
         const std::vector<NimBLERemoteCharacteristic*>& chrs = s->getCharacteristics(false);   // Fetched above
+        uint8_t subscribedBefore = subscribed;
+        NimBLERemoteCharacteristic* serviceWrite = nullptr;
         for (NimBLERemoteCharacteristic* c : chrs) {
             if (notifyUuid[0] ? (c->getUUID() == NimBLEUUID(notifyUuid)) : true) subscribeChr(c);
-            if (writeUuid[0] && !writeChr && (c->getUUID() == NimBLEUUID(writeUuid))) writeChr = c;
+            if (anyWrite) {
+                if (!serviceWrite && (c->canWrite() || c->canWriteNoResponse())) serviceWrite = c;
+            } else if (writeUuid[0] && !writeChr && (c->getUUID() == NimBLEUUID(writeUuid))) {
+                writeChr = c;
+            }
+        }
+        if (anyWrite && !writeChr && serviceWrite && subscribed > subscribedBefore) {
+            writeChr = serviceWrite;
+            devlogf(tag, "Write characteristic %s", serviceWrite->getUUID().toString().c_str());
         }
     }
     if (pin != BLE_NO_PIN && variant == 3) {

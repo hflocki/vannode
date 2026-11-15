@@ -56,6 +56,9 @@
 #ifndef PLUGIN_WIPRO
 #define PLUGIN_WIPRO          1      // Alarm: Thitronik WiPro III status (read-only), BLE connection
 #endif
+#ifndef PLUGIN_OBD
+#define PLUGIN_OBD            1      // Vehicle: OBD2 adapter ELM327 / vLinker (BLE), base values of the engine
+#endif
 #ifndef PLUGIN_DALY
 #define PLUGIN_DALY           1      // Battery: Daly smart BMS (BLE name "DL-..."), BLE connection
 #endif
@@ -81,7 +84,7 @@
 #define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
-#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + CT_BMS)
+#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
 
@@ -92,7 +95,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.18"
+#define FW_VERSION            "2.1.19"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -485,6 +488,45 @@
 #endif
 #ifndef MQTT_WIPRO_MS
 #define MQTT_WIPRO_MS         30000
+#endif
+
+// ============================================================
+// PLUGIN: OBD2 ADAPTER (ELM327 / STN, e.g. vLinker MC+)
+// ------------------------------------------------------------
+// Text commands over BLE ("010C\r"), answers end with '>'. Standard values (SAE J1979
+// mode 01) only, polled only while the engine runs (voltage or engine speed), so the
+// starter battery is spared. With the engine off the node lets the adapter sleep and
+// checks again after "Ruhepause" minutes (web UI).
+// ============================================================
+#ifndef OBD_CMD_TIMEOUT_MS
+#define OBD_CMD_TIMEOUT_MS    4000   // Answer ('>') expected within this time (ATZ: OBD_RESET_TIMEOUT_MS)
+#endif
+#ifndef OBD_RESET_TIMEOUT_MS
+#define OBD_RESET_TIMEOUT_MS  6000
+#endif
+#ifndef OBD_SEARCH_TIMEOUT_MS
+#define OBD_SEARCH_TIMEOUT_MS 15000  // First request after ATSP0: the adapter searches the protocol
+#endif
+#ifndef OBD_VOLT_IDLE_MS
+#define OBD_VOLT_IDLE_MS      20000  // Engine off: read the voltage this often
+#endif
+#ifndef OBD_PROBE_MS
+#define OBD_PROBE_MS          60000  // Engine off: ask the control unit again at most this often
+#endif
+#ifndef OBD_STOP_MS
+#define OBD_STOP_MS           30000  // Engine not running for this long: stop polling
+#endif
+#ifndef OBD_IDLE_MS
+#define OBD_IDLE_MS           120000 // Engine off for this long: pause the connection (Ruhepause)
+#endif
+#ifndef OBD_STALE_MS
+#define OBD_STALE_MS          30000  // No answer of the control unit for this long = unavailable
+#endif
+#ifndef OBD_RUN_RPM
+#define OBD_RUN_RPM           300    // Engine speed above this = engine running
+#endif
+#ifndef MQTT_OBD_MS
+#define MQTT_OBD_MS           5000   // Periodic publish while values come in
 #endif
 
 // ============================================================

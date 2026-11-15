@@ -111,7 +111,7 @@ Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `batte
 
 ## BLE-Node Tool `camper/tool`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -128,6 +128,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
 | `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `zone1`, `zone2` (`ON`/`OFF`, Zone läuft; nur mit zweiter Zone), `quick1`, `quick2` (Schnellkühlen Zone 1 / 2), `doorheat` (Türheizung), `error` (aktueller Fehler), `error_last` (letzter Fehler mit Zeit), `errors` (letzte 5 Fehler, JSON), `message`. Zone 1 / 2 = Fächer laut *Name Zone 1/2* (Standard Gefrierfach / Kühlfach) | Kühlschrank; Befehle `power` (Power Gesamt), `zone1`, `zone2`, `fan`, `night`, `quick1`, `quick2`, `doorheat`, `target1`, `target2`, `bpd`, `raw` (Diagnose) |
 | `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) |
+| `…/obd/rpm`, `speed`, `coolant`, `oil_temp`, `fuel`, `fuel_rate`, `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count`, `voltage`, `running` (`ON`/`OFF`), `mil` (`ON`/`OFF`), `dtc`, `protocol`, `adapter`, `raw` | OBD2-Adapter (nur lesen): Standardwerte des Motorsteuergeräts (nur die, die das Fahrzeug meldet), Bordspannung am Adapter, Motor läuft, Motorkontrollleuchte, Fehlercodes als Text. Befehle `…/cmd/obd/read_dtc/set` (`PRESS`), `…/cmd/obd/raw/set` (Adapter-Befehl, Antwort in `raw`) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |

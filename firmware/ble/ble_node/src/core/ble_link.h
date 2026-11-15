@@ -53,7 +53,8 @@ struct BlePacket {
 class BleLink : public NimBLEClientCallbacks {
 public:
     // tag: log prefix. Empty notify UUID = subscribe to every characteristic that can notify
-    // (in the given service, or in all services if service is empty). Empty write UUID = read only.
+    // (in the given service, or in all services if service is empty). Empty write UUID = read only,
+    // "*" = the first writable characteristic of a service with a subscribed characteristic.
     void begin(const char* tag, const char* service, const char* notifyUuid, const char* writeUuid);
     void setUuids(const char* service, const char* notifyUuid, const char* writeUuid);
 

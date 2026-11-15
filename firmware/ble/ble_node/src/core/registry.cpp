@@ -51,6 +51,9 @@ Plugin* createWcsFridge(uint8_t index);
 #if PLUGIN_WIPRO
 Plugin* createWipro(uint8_t index);
 #endif
+#if PLUGIN_OBD
+Plugin* createObd(uint8_t index);
+#endif
 
 // type id (= id of the first device of this type), name for the web UI, Bluetooth use
 static const PluginType TYPES[] = {
@@ -65,6 +68,9 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_WIPRO
     {"wipro", "Alarm WiPro III (nur lesen)", BLE_LINK, createWipro},
+#endif
+#if PLUGIN_OBD
+    {"obd", "Fahrzeug: OBD2-Adapter (ELM327 / vLinker)", BLE_LINK, createObd},
 #endif
 #if PLUGIN_DALY
     {"daly", "Batterie: Daly BMS", BLE_LINK, createDaly},

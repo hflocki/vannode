@@ -16,7 +16,7 @@ Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jet
 | Rolle | Gerätename | Topic | Geräte darauf |
 | --- | --- | --- | --- |
 | battery-node | `battery-node` | `camper/battery` | Daly BMS, Ective BM X, BM2 |
-| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Alarm (nur lesen), Thermometer, Gas, eigene Sensoren |
+| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Alarm (nur lesen), OBD2-Adapter, Thermometer, Gas, eigene Sensoren |
 
 Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
 
@@ -32,6 +32,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Wasserpumpe CaraWater (ISP 10/15/20/51, an/aus und Druckstufe; GATT FF00, FFF0 oder FFE0 wird selbst erkannt) | Verbinden | MAC |
 | Kühlschrank WCS (Kompressor; Ein/Aus, Zonen einzeln ein/aus, Umluft, Nachtmodus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes mit Verlauf, Schnellkühlen je Zone, Türheizung) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), Namen der Zonen (Standard Gefrierfach / Kühlfach), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
 | Alarm Thitronik WiPro III (**nur lesen**) | Verbinden | MAC, PIN normalerweise leer, Kontaktnamen (mit Komma), optional Status-UUID. Reiner Statusmelder: schaltet die Anlage nie scharf/unscharf |
+| Fahrzeug: OBD2-Adapter ELM327 / vLinker (**nur lesen**; Standardwerte des Motorsteuergeräts, Fehlercodes lesen) | Verbinden | MAC, Bluetooth-Kanäle (Automatisch), Abfragen nur bei laufendem Motor oder immer, Spannung „Motor läuft ab“, Abfrageintervall, Ruhepause (siehe unten) |
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
@@ -92,6 +93,17 @@ Beispiel: Xiaomi-Thermometer LYWSD03MMC mit der Firmware von pvvx (Service-Daten
 | Batterie | 12 | 1 Byte | nein | 1 | % | Batterie |
 
 Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/tool/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
+
+### OBD2-Adapter (Fahrzeug)
+
+Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und ELM327-Befehlssatz: günstige ELM327-BLE-Adapter oder Adapter mit STN-Chip wie der **vLinker MC+** (im BLE-Modus). Adapter nur mit klassischem Bluetooth (SPP) gehen nicht, der ESP32-C3 kann nur BLE.
+
+- **Nur lesen:** Das Plugin fragt Werte und Fehlercodes ab (OBD2 Mode 01 und 03). Es löscht keine Fehler und ändert nichts am Fahrzeug.
+- **Werte:** Alles, was das Fahrzeug als Standardwert meldet: Drehzahl, Geschwindigkeit, Kühlwasser, Öl, Tankfüllstand, Verbrauch, Motorlast, Außen- und Ansaugluft, Saugrohr- und Luftdruck, Luftmasse, Drosselklappe, Spannung, Laufzeit, Kilometerstand, Motorkontrollleuchte und Fehlercodes. Dazu die Bordspannung, die der Adapter selbst misst. Welche Werte ein Fahrzeug liefert, fragt das Plugin beim ersten Kontakt ab; nur diese erscheinen in Home Assistant.
+- **Herstellerwerte** (AdBlue, Diesel bei Fahrzeugen ohne Standardwert, DPF) brauchen eigene Abfragen je Fahrzeug. Sie kommen als Fahrzeugprofile dazu, sobald sie an einem echten Fahrzeug bestätigt sind. Zum Ausprobieren gibt es den Testbefehl (unten).
+- **Starterbatterie schonen:** Ab Werk fragt das Plugin das Fahrzeug nur bei laufendem Motor ab (Bordspannung ab „Motor läuft ab“, Standard 13,2 V, bzw. Drehzahl). Ist der Motor 30 s aus, hört es auf; nach 2 Minuten trennt es die Bluetooth-Verbindung für die **Ruhepause** (Standard 2 min), damit der Adapter schlafen kann, und schaut danach wieder nach. *Abfragen: Immer, wenn das Steuergerät antwortet* liest auch bei Zündung an und stehendem Motor, z. B. den Tankfüllstand.
+- **Bluetooth-Kanäle:** *Automatisch* nimmt die Kanäle, die der Adapter anbietet; das Log zeigt nach dem Verbinden alle Dienste. Klappt das nicht, einen der bekannten Aufbauten wählen (FFF0, FFE0, 18F0, vLinker) oder *Eigene UUIDs* eintragen.
+- **Testbefehl** (nur per MQTT): `camper/tool/cmd/obd/raw/set` mit einem Adapter-Befehl, z. B. `ATRV` oder `0105`. Die Antwort steht im Geräte-Log und unter `camper/tool/obd/raw`. `04` (Fehler löschen) wird abgelehnt. Nach Versuchen mit `ATSH…` (anderes Steuergerät) mit `ATSH7DF` zurückstellen oder den Adapter neu verbinden.
 
 ## Hardware
 
@@ -171,6 +183,8 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 
 **Alarm WiPro III** (`wipro`, **nur lesen**): `armed` (`ON` = scharf), `reason` (Alarmgrund als Text, z. B. „Funkkontakt 5“, „Gaswarner getriggert“, „Panik-Alarm“), je Kontakt `contact0` … `contact7` (`ON` = offen, ein Bit aus Byte 6), `open` (Liste der offenen Kontakte mit ihren Namen) und `raw` (8 Byte als Hex). Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
 
+**OBD2-Adapter** (`obd`, **nur lesen**): Werte `rpm`, `speed`, `coolant`, `oil_temp`, `fuel` (%), `fuel_rate` (l/h), `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count` – jeweils nur, wenn das Fahrzeug den Wert meldet; dazu `voltage` (Bordspannung am Adapter), `running` (`ON` = Motor läuft), `mil` (Motorkontrollleuchte), `dtc` (Fehlercodes, z. B. `P0133, P0234`, oder `keine`), `protocol`, `adapter`, `raw` (Antwort auf den Testbefehl). Befehle `read_dtc` (Fehlercodes neu lesen) und `raw` (Testbefehl, siehe oben).
+
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 
 > **Umstieg von der Toolbox (bis 1.2.x):** Das Gerät stellt ein gespeichertes `camper/toolbox` beim ersten Start selbst auf `camper/ble` um, das Display (ab 2.16.2) ebenso. Danach die alten retained Topics und die alten HA-Entitäten löschen: `python3 tools/mqtt/clean.py --host <broker> camper/toolbox homeassistant/sensor/camper_toolbox …` bzw. die Geräte „Toolbox Node“ in Home Assistant entfernen.
@@ -219,6 +233,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.19 | Neues Plugin **OBD2-Adapter** (Fahrzeug, nur lesen) für ELM327-BLE-Adapter und STN-Adapter wie den vLinker MC+: Standardwerte des Motorsteuergeräts (Drehzahl, Geschwindigkeit, Temperaturen, Tankfüllstand, Verbrauch, Kilometerstand …), Bordspannung, Motorkontrollleuchte und Fehlercodes. Abfrage ab Werk nur bei laufendem Motor, danach Ruhepause für den Adapter. Testbefehl `raw` per MQTT. Host-Test `tests/obd_test.cpp`. **Bluetooth:** Write-UUID `*` = erste beschreibbare Characteristic eines sendenden Dienstes; der Firmware-Update-Dienst FE59 wird beim Abonnieren aller Characteristics übersprungen |
 | 2.1.18 | **Kühlschrank:** Namen der Zonen einstellbar (*Name Zone 1/2*, leer = Gefrierfach / Kühlfach), gelten in der Karte und in Home Assistant; die Topics bleiben `zone1`/`temp1` …. „Kühlschrank an“ heißt jetzt **Power Gesamt** und steht unten in der Schalterliste. **Fehlerverlauf:** die letzten 5 Fehler mit Zeit und Anzahl unter „Letzte Fehler“ in der Karte, per MQTT als `errors` (JSON) und `error_last` (auch in Home Assistant). Testbefehl-Feld aus der Karte entfernt (per MQTT `raw` weiter möglich). Superfrost / Superkühlung heißen jetzt „Schnellkühlen <Zone>“ |
 | 2.1.17 | **Kühlschrank-Sollwert, zweiter Anlauf:** Der Kühlschrank nimmt den Sollwert nur in **Fahrenheit** an (Befehl mit `1`, z. B. `/SC5/1/+45` = 7 °C); mit `2` ignoriert er ihn (2.1.16: Wert sprang nach ein paar Sekunden zurück). Die Firmware rechnet jetzt immer °C → °F um, der Kühlschrank rechnet zurück und rundet |
 | 2.1.16 | Kühlschrank: Sollwert mit `2` als Einheit gesendet (erwies sich als falsch, siehe 2.1.17). **MQTT:** jeder empfangene Befehl steht im Geräte-Log („MQTT command …“); Inhalte in Anführungszeichen (`"2"`, wie MQTT Explorer im JSON-Modus sendet) werden angenommen |

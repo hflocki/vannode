@@ -105,6 +105,13 @@ jobs:
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+          # Same firmware on a plain ESP32-S3 board (e.g. DevKitC-1): more RAM for several BLE devices.
+          # No PSRAM setting, so it runs on every S3 variant (N8, N16, N16R8 ...)
+          - device: ble
+            target: esp32s3
+            fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
+            sketch: firmware/ble/ble_node
+            libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
           # Same firmware on the M5Stack AtomS3 Lite (formerly the battery-node, status LED)
           - device: ble
             target: atoms3

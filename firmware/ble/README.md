@@ -107,7 +107,7 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 
 ## Hardware
 
-**ESP32-C3 Super Mini** oder **M5Stack AtomS3 Lite** (beide baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-atoms3-v<version>.bin`), ESP32-S3 und klassischer ESP32 gehen ebenso. Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
+**ESP32-C3 Super Mini**, **ESP32-S3** (z. B. DevKitC-1) oder **M5Stack AtomS3 Lite** – alle drei baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-esp32s3-v<version>.bin`, `ble-node-atoms3-v<version>.bin`. Der S3 hat mehr Arbeitsspeicher als der C3 und ist die bessere Wahl, wenn viele Bluetooth-Geräte gleichzeitig verbunden sind. Auf ein ESP32-S3-Board nicht die AtomS3-Datei spielen: Sie schaltet eine LED an GPIO35, der auf Boards mit 8 MB PSRAM (N16R8) zum Speicher gehört. Klassischer ESP32 geht ebenso (selbst bauen). Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
 
 ## Arduino IDE
 
@@ -118,6 +118,8 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 | Board | ESP32C3 Dev Module |
 | USB CDC On Boot | **Enabled** |
 | Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** – WLAN und Bluetooth brauchen gut 1,4 MB |
+
+ESP32-S3 (DevKitC-1 o. Ä.): Board **ESP32S3 Dev Module**, USB CDC On Boot **Enabled**, Partition Scheme **Minimal SPIFFS**, PSRAM aus; am Anschluss „USB“ flashen (nicht „UART“), dort kommt auch das serielle Log.
 
 AtomS3 Lite: Board **M5AtomS3**, USB CDC On Boot **Enabled**, Partition Scheme **8M with spiffs (3MB APP/1.5MB SPIFFS)**. Wird der AtomS3 beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken des USB-Kabels ca. 2 s halten (Download-Modus).
 
@@ -233,6 +235,7 @@ Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MA
 
 | Version | Änderungen |
 | --- | --- |
+| 2.1.20 | Neue Release-Datei **`ble-node-esp32s3`** für ESP32-S3-Boards (z. B. DevKitC-1, mehr Arbeitsspeicher für mehrere Bluetooth-Geräte). Firmware sonst unverändert |
 | 2.1.19 | Neues Plugin **OBD2-Adapter** (Fahrzeug, nur lesen) für ELM327-BLE-Adapter und STN-Adapter wie den vLinker MC+: Standardwerte des Motorsteuergeräts (Drehzahl, Geschwindigkeit, Temperaturen, Tankfüllstand, Verbrauch, Kilometerstand …), Bordspannung, Motorkontrollleuchte und Fehlercodes. Abfrage ab Werk nur bei laufendem Motor, danach Ruhepause für den Adapter. Testbefehl `raw` per MQTT. Host-Test `tests/obd_test.cpp`. **Bluetooth:** Write-UUID `*` = erste beschreibbare Characteristic eines sendenden Dienstes; der Firmware-Update-Dienst FE59 wird beim Abonnieren aller Characteristics übersprungen |
 | 2.1.18 | **Kühlschrank:** Namen der Zonen einstellbar (*Name Zone 1/2*, leer = Gefrierfach / Kühlfach), gelten in der Karte und in Home Assistant; die Topics bleiben `zone1`/`temp1` …. „Kühlschrank an“ heißt jetzt **Power Gesamt** und steht unten in der Schalterliste. **Fehlerverlauf:** die letzten 5 Fehler mit Zeit und Anzahl unter „Letzte Fehler“ in der Karte, per MQTT als `errors` (JSON) und `error_last` (auch in Home Assistant). Testbefehl-Feld aus der Karte entfernt (per MQTT `raw` weiter möglich). Superfrost / Superkühlung heißen jetzt „Schnellkühlen <Zone>“ |
 | 2.1.17 | **Kühlschrank-Sollwert, zweiter Anlauf:** Der Kühlschrank nimmt den Sollwert nur in **Fahrenheit** an (Befehl mit `1`, z. B. `/SC5/1/+45` = 7 °C); mit `2` ignoriert er ihn (2.1.16: Wert sprang nach ein paar Sekunden zurück). Die Firmware rechnet jetzt immer °C → °F um, der Kühlschrank rechnet zurück und rundet |

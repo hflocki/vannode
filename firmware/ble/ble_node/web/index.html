@@ -552,6 +552,16 @@ nav button .ico{display:inline-flex}
               ),
             ),
           );
+        // Short history, e.g. the last errors of the fridge
+        if (p.list && p.list.items && p.list.items.length)
+          c.append(
+            el(
+              "details",
+              {},
+              el("summary", {}, p.list.l + " (" + p.list.items.length + ")"),
+              ...p.list.items.map((t) => el("div", { className: "raw" }, t)),
+            ),
+          );
         if (p.ctrl) {
           const box = el("div", { className: "ctl" });
           for (const x of p.ctrl) if (!x.top) box.append(ctrl(p.id, x));

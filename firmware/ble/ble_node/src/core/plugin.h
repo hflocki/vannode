@@ -150,6 +150,8 @@ public:
     // ---- MQTT / Home Assistant ----
     virtual size_t entities(const Entity*& out) { out = nullptr; return 0; }
     virtual bool entityActive(const Entity& e) { return true; }  // false = removed from HA
+    // Name shown in Home Assistant; plugins may build it at runtime (e.g. from settings)
+    virtual const char* entityName(const Entity& e, char* buf, size_t size) { return e.name; }
     virtual void publish(MqttOut& out) {}
     virtual uint32_t publishIntervalMs() const { return 30000; }
     virtual bool available() { return true; }        // Device reachable (HA availability)

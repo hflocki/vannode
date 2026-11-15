@@ -36,6 +36,8 @@
 #include "../core/ble_link.h"
 #include "../core/devlog.h"
 #include "../core/util.h"
+#include "../core/wifi_manager.h"
+#include <time.h>
 
 #define WCS_LINE_MAX      200
 #define WCS_IDLE_FLUSH    300    // ms without new data: drop / evaluate an unfinished frame
@@ -57,11 +59,15 @@
 // Options of the set point selects in Home Assistant (WCS_SET_MIN .. WCS_SET_MAX)
 #define WCS_SET_OPTIONS "-22|-21|-20|-19|-18|-17|-16|-15|-14|-13|-12|-11|-10|-9|-8|-7|-6|-5|-4|-3|-2|-1|0|1|2|3|4|5|6|7|8|9|10"
 #define WCS_BPD_OPTIONS "Stufe 1|Stufe 2|Stufe 3"
+#define WCS_ERR_HIST      5             // Error history entries (RAM only, lost at restart)
+#define WCS_ERR_MERGE_MS  (10 * 60000UL) // Same error again within this time: same entry
 
 struct WcsCfg {
     char mac[18];
     char pin[8];           // App password (digits), empty = factory default 1234
     bool zone2;            // Fridge has a second zone (freezer)
+    char name1[24];        // Display name of zone 1, empty = "Gefrierfach" / "Innenraum"
+    char name2[24];        // Display name of zone 2, empty = "Kühlfach"
     char service[40];      // GATT service UUID, empty = E530, "*" = all services
     char notify[40];       // Notify characteristic, empty = E532, "*" = every one that can notify
     char write[40];        // Write characteristic, empty = E531
@@ -74,6 +80,9 @@ static const Field WCS_FIELDS[] = {
     FLD_TEXT(WcsCfg, pin, "pin", "App-Passwort", "Das Passwort der WCS-App (Werkseinstellung 1234). "
                                             "Leer = 1234. Keine Bluetooth-Kopplung nötig."),
     FLD_BOOL(WcsCfg, zone2, "zone2", "Zweite Zone", "Kühlschrank mit zweitem Fach / Gefrierfach"),
+    FLD_TEXT(WcsCfg, name1, "name1", "Name Zone 1", "Leer = Gefrierfach (bei einer Zone: Innenraum). "
+                                              "Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …"),
+    FLD_TEXT(WcsCfg, name2, "name2", "Name Zone 2", "Leer = Kühlfach"),
     FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = E530 (Standard), * = alle Services"),
     FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = E532 (Standard), * = jede, die senden kann"),
     FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard)"),
@@ -82,23 +91,24 @@ static const Field WCS_FIELDS[] = {
 };
 
 static const Entity WCS_ENTITIES[] = {
-    {E_SENSOR, "temp1",     "Ist-Temperatur Gefrierfach", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
-    {E_SENSOR, "temp2",     "Ist-Temperatur Kühlfach", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
-    {E_SENSOR, "set1",      "Soll-Temperatur Gefrierfach", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
-    {E_SENSOR, "set2",      "Soll-Temperatur Kühlfach", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
+    {E_SENSOR, "temp1",     "Ist-Temperatur {1}", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
+    {E_SENSOR, "temp2",     "Ist-Temperatur {2}", "°C", "temperature",     "measurement", nullptr, 0, nullptr},
+    {E_SENSOR, "set1",      "Soll-Temperatur {1}", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
+    {E_SENSOR, "set2",      "Soll-Temperatur {2}", "°C", "temperature",     nullptr,       "mdi:thermometer-check", 0, nullptr},
     {E_SENSOR, "voltage",   "Spannung",               "V",  "voltage",         "measurement", nullptr, 0, nullptr},
     {E_SENSOR, "battery",   "Batterie",               "%",  "battery",         "measurement", nullptr, 0, nullptr},
     {E_SWITCH, "fan",       "Umluft",                 nullptr, nullptr,        nullptr,       "mdi:fan", 0, nullptr},
     {E_SWITCH, "night",     "Nachtmodus",             nullptr, nullptr,        nullptr,       "mdi:weather-night", 0, nullptr},
-    {E_SWITCH, "quick1",    "Superfrost",             nullptr, nullptr,        nullptr,       "mdi:snowflake-alert", 0, nullptr},
-    {E_SWITCH, "quick2",    "Superkühlung",           nullptr, nullptr,        nullptr,       "mdi:snowflake", 0, nullptr},
+    {E_SWITCH, "quick1",    "Schnellkühlen {1}",      nullptr, nullptr,        nullptr,       "mdi:snowflake-alert", 0, nullptr},
+    {E_SWITCH, "quick2",    "Schnellkühlen {2}",      nullptr, nullptr,        nullptr,       "mdi:snowflake", 0, nullptr},
     {E_SWITCH, "doorheat",  "Türheizung",             nullptr, nullptr,        nullptr,       "mdi:door", 0, nullptr},
     {E_SENSOR, "error",     "Fehler",                 nullptr, nullptr,        nullptr,       "mdi:alert-circle", EF_ALWAYS, nullptr},
-    {E_SWITCH, "power",     "Kühlschrank an",         nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
-    {E_SWITCH, "zone1",     "Gefrierfach an",         nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
-    {E_SWITCH, "zone2",     "Kühlfach an",            nullptr, nullptr,        nullptr,       "mdi:fridge-bottom", 0, nullptr},
-    {E_SELECT, "target1",   "Soll Gefrierfach einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
-    {E_SELECT, "target2",   "Soll Kühlfach einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
+    {E_SENSOR, "error_last", "Letzter Fehler",        nullptr, nullptr,        nullptr,       "mdi:alert-circle-outline", EF_DIAG | EF_ALWAYS, nullptr},
+    {E_SWITCH, "power",     "Power Gesamt",           nullptr, nullptr,        nullptr,       "mdi:fridge", 0, nullptr},
+    {E_SWITCH, "zone1",     "{1} an",                 nullptr, nullptr,        nullptr,       "mdi:fridge-top", 0, nullptr},
+    {E_SWITCH, "zone2",     "{2} an",                 nullptr, nullptr,        nullptr,       "mdi:fridge-bottom", 0, nullptr},
+    {E_SELECT, "target1",   "Soll {1} einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
+    {E_SELECT, "target2",   "Soll {2} einstellen", nullptr, nullptr,        nullptr,       "mdi:thermometer-lines", 0, WCS_SET_OPTIONS},
     {E_SELECT, "bpd",       "Batterieschutz",         nullptr, nullptr,        nullptr,       "mdi:battery-lock", EF_CONFIG, WCS_BPD_OPTIONS},
     {E_BINARY, "connected", "Verbindung",             nullptr, "connectivity", nullptr,       nullptr, EF_DIAG | EF_ALWAYS, nullptr},
     {E_SENSOR, "state",     "Status",                 nullptr, nullptr,        nullptr,       "mdi:bluetooth-connect", EF_DIAG | EF_ALWAYS, nullptr},
@@ -217,6 +227,13 @@ public:
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
         if (hasData) liveRowText(o, "Modus", modeText());
         if (errorCode) liveRowText(o, "Fehler", errorLine);
+        if (errN) {
+            JsonObject l = o["list"].to<JsonObject>();
+            l["l"] = "Letzte Fehler";
+            JsonArray items = l["items"].to<JsonArray>();
+            char b[96];
+            for (uint8_t i = 0; i < errN; i++) items.add(String(errEntryText(errs[i], b, sizeof(b))));
+        }
         if (limitsKnown) {
             char lim[40];
             if (c.zone2) snprintf(lim, sizeof(lim), "%d…%d / %d…%d °C", min1, max1, min2, max2);
@@ -227,19 +244,22 @@ public:
         liveRowNum(o, "Nachrichten", (float)messages, 0, "");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
         if (ctl) {
-            JsonObject pw = liveCtrl(o, "switch", "power", "Kühlschrank an");
-            pw["v"] = powerOn;
-            pw["top"] = true;   // Shown above the compartments
             if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
             liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
-            liveCtrl(o, "switch", "quick1", c.zone2 ? "Superfrost (Gefrierfach)" : "Schnellkühlen")["v"] = quickOn(0);
-            if (c.zone2) liveCtrl(o, "switch", "quick2", "Superkühlung (Kühlfach)")["v"] = quickOn(1);
+            char ql[48];
+            if (c.zone2) snprintf(ql, sizeof(ql), "Schnellkühlen %s", zoneName(1));
+            else strlcpy(ql, "Schnellkühlen", sizeof(ql));
+            liveCtrl(o, "switch", "quick1", ql)["v"] = quickOn(0);
+            if (c.zone2) {
+                snprintf(ql, sizeof(ql), "Schnellkühlen %s", zoneName(2));
+                liveCtrl(o, "switch", "quick2", ql)["v"] = quickOn(1);
+            }
             if (doorKnown) liveCtrl(o, "switch", "doorheat", "Türheizung")["v"] = doorOn;
             JsonObject s = liveCtrl(o, "select", "bpd", "Batterieschutz");
             s["o"] = WCS_BPD_OPTIONS;
             s["v"] = bpd >= 1 && bpd <= 3 ? bpd - 1 : 0;
-            // Diagnosis: send any text to the fridge, the answer goes into the log
-            liveCtrl(o, "text", "raw", "Testbefehl (Diagnose)")["ph"] = "/SC5/1/+43";
+            // Whole fridge on / off (the zone switches only control one compartment)
+            liveCtrl(o, "switch", "power", "Power Gesamt")["v"] = powerOn;
         }
         liveCtrl(o, "switch", "release", "Bluetooth für App freigeben")["v"] = link.released();
         o["raw"] = (const char*)lastLine;
@@ -255,6 +275,13 @@ public:
             !strcmp(e.key, "zone1") || !strcmp(e.key, "zone2")) return c.zone2;
         return true;
     }
+    // "{1}" / "{2}" in the entity names become the zone names from the settings
+    const char* entityName(const Entity& e, char* buf, size_t size) override {
+        const char* m = strchr(e.name, '{');
+        if (!m || (m[1] != '1' && m[1] != '2') || m[2] != '}') return e.name;
+        snprintf(buf, size, "%.*s%s%s", (int)(m - e.name), e.name, zoneName(m[1] - '0'), m + 3);
+        return buf;
+    }
     uint32_t publishIntervalMs() const override { return MQTT_WCS_MS; }
 
     void publish(MqttOut& out) override {
@@ -263,6 +290,7 @@ public:
         out.onoff("release", link.released());
         out.text("message", lastLine);
         out.text("error", errorCode ? errorLine : "Kein Fehler");
+        publishErrors(out);
         if (link.connected()) out.integer("ble_rssi", link.rssi());
         if (!hasData) return;
         out.num("temp1", temp1, 0);
@@ -294,7 +322,7 @@ public:
 
     void command(const char* key, const char* value) override {
         if (!strcmp(key, "raw")) {
-            // Diagnosis: send any text to the fridge and log its answer
+            // Diagnosis (MQTT only, no web UI field): send any text to the fridge and log its answer
             if (login != WL_OK || !link.canWrite() || !value[0]) {
                 devlogf(id, "Test command ignored: not connected / empty");
                 return;
@@ -426,6 +454,78 @@ private:
     int rawLim[4] = {0, 0, 0, 0};
     int errorCode = 0;
     char errorLine[48] = "";
+
+    // Error history, newest first. One entry per error; repeats within WCS_ERR_MERGE_MS
+    // only update "last" and the count
+    struct ErrEntry {
+        uint8_t code, zone;
+        uint16_t count;
+        time_t first, last;        // Wall clock (0 = clock not set yet)
+        uint32_t firstMs, lastMs;  // millis() for entries without wall clock
+    };
+    ErrEntry errs[WCS_ERR_HIST];
+    uint8_t errN = 0;
+
+    void recordError(int code, int zone) {
+        time_t now = timeValid() ? time(nullptr) : 0;
+        uint32_t ms = millis();
+        if (errN && errs[0].code == code && errs[0].zone == zone && ms - errs[0].lastMs < WCS_ERR_MERGE_MS) {
+            errs[0].last = now;
+            errs[0].lastMs = ms;
+            if (errs[0].count < 65535) errs[0].count++;
+            return;
+        }
+        if (errN < WCS_ERR_HIST) errN++;
+        for (int i = errN - 1; i > 0; i--) errs[i] = errs[i - 1];
+        errs[0] = {(uint8_t)code, (uint8_t)zone, 1, now, now, ms, ms};
+    }
+
+    // "15.11. 09:30" with wall clock, otherwise "vor 12 min"
+    static void fmtWhen(time_t t, uint32_t ms, char* buf, size_t size) {
+        if (t) {
+            struct tm tm;
+            localtime_r(&t, &tm);
+            strftime(buf, size, "%d.%m. %H:%M", &tm);
+        } else {
+            snprintf(buf, size, "vor %lu min", (unsigned long)((millis() - ms) / 60000UL));
+        }
+    }
+
+    const char* errEntryText(const ErrEntry& e, char* buf, size_t size) const {
+        char when[20];
+        fmtWhen(e.first, e.firstMs, when, sizeof(when));
+        int n = snprintf(buf, size, "%s  E%d %s (%s)", when, e.code, errorText(e.code), zoneName(e.zone));
+        if (e.count > 1 && n > 0 && (size_t)n < size) {
+            char last[20];
+            fmtWhen(e.last, e.lastMs, last, sizeof(last));
+            snprintf(buf + n, size - n, ", %u×, zuletzt %s", (unsigned)e.count, last);
+        }
+        return buf;
+    }
+
+    // "error_last": newest entry as text; "errors": the whole history as JSON
+    void publishErrors(MqttOut& out) {
+        char b[96];
+        out.text("error_last", errN ? errEntryText(errs[0], b, sizeof(b)) : "Keiner");
+        JsonDocument doc;
+        JsonArray a = doc.to<JsonArray>();
+        for (uint8_t i = 0; i < errN; i++) {
+            const ErrEntry& e = errs[i];
+            JsonObject x = a.add<JsonObject>();
+            x["code"] = e.code;
+            x["text"] = errorText(e.code);
+            x["zone"] = e.zone;
+            x["zone_name"] = zoneName(e.zone);
+            char t[24];
+            if (e.first) { struct tm tm; localtime_r(&e.first, &tm); strftime(t, sizeof(t), "%Y-%m-%dT%H:%M:%S", &tm); x["first"] = String(t); }
+            if (e.last) { struct tm tm; localtime_r(&e.last, &tm); strftime(t, sizeof(t), "%Y-%m-%dT%H:%M:%S", &tm); x["last"] = String(t); }
+            x["ago_s"] = (millis() - e.lastMs) / 1000UL;
+            x["count"] = e.count;
+        }
+        String js;
+        serializeJson(doc, js);
+        out.text("errors", js.c_str());
+    }
     unsigned long lastMsg = 0;
     uint32_t messages = 0;
 
@@ -510,18 +610,28 @@ private:
     // Quick cooling of zone 0 / 1: digit "3" in the mode field
     bool quickOn(int z) const { return strlen(mode) == 2 && mode[z] == '3'; }
 
-    // Compartment names: with two zones zone 1 is the freezer, zone 2 the fridge
+    // Compartment names from the settings; defaults: with two zones zone 1 is the
+    // freezer, zone 2 the fridge
     const char* zoneName(int zone) const {
-        if (zone == 2) return "Kühlfach";
+        if (zone == 2) return c.name2[0] ? c.name2 : "Kühlfach";
+        if (c.name1[0]) return c.name1;
         return c.zone2 ? "Gefrierfach" : "Innenraum";
     }
 
     const char* modeText() const {
         if (sleepOn()) return "Nachtmodus";
         if (strlen(mode) == 2) {
+            static char b[48];
             if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen beide Fächer";
-            if (mode[0] == '3') return c.zone2 ? "Schnellkühlen Gefrierfach" : "Schnellkühlen";
-            if (mode[1] == '3') return "Schnellkühlen Kühlfach";
+            if (mode[0] == '3') {
+                if (!c.zone2) return "Schnellkühlen";
+                snprintf(b, sizeof(b), "Schnellkühlen %s", zoneName(1));
+                return b;
+            }
+            if (mode[1] == '3') {
+                snprintf(b, sizeof(b), "Schnellkühlen %s", zoneName(2));
+                return b;
+            }
         }
         return mode[0] ? mode : "-";
     }
@@ -622,6 +732,8 @@ private:
                 errorCode = code;
                 snprintf(errorLine, sizeof(errorLine), "E%d %s (%s)", code, errorText(code), zoneName(zone));
                 devlogf(id, "Error: %s", errorLine);
+                recordError(code, zone);
+                updates++;
             } else {
                 devlogf(id, "Error frame not understood: %s", lastLine);
             }

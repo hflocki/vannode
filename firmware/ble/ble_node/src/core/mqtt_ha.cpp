@@ -154,7 +154,8 @@ static void publishEntity(Plugin* p, const Entity& e) {
     String objectId = String(p->id) + "_" + e.key;
     String uid = String(mqttNodeId()) + "_" + objectId;
     JsonDocument doc;
-    doc["name"] = e.name;
+    char nameBuf[64];
+    doc["name"] = String(p->entityName(e, nameBuf, sizeof(nameBuf)));
     doc["unique_id"] = uid;
     if (e.icon) doc["icon"] = e.icon;
     if (e.devClass) doc["device_class"] = e.devClass;

@@ -61,53 +61,9 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 ## MQTT / Home Assistant
 
-| Topic | Inhalt | Quelle (Frame @ Byte) |
-|---|---|---|
-| `camper/alde/room` | Raumtemperatur °C | `0x47` @0–1 |
-| `camper/alde/setpoint` | Sollwert vom Heizbus °C – **nur verlässlich, solange die Klimaanlage ruht** (sonst Ziel- bzw. Raumtemperatur − 3 °C), nicht für Frostschutz verwenden | `0x03` @0–1 |
-| `camper/alde/glycol` | Glykol-Temperatur °C | `0x5B` @0–1 |
-| `camper/alde/water` | Warmwasser-Temperatur °C | `0xD6` @4–5 |
-| `camper/alde/hotwater_target` | Warmwasser-Ziel: `0` = aus, `50` = normal, `65` = voll | `0xC4` @0–1 |
-| `camper/alde/pcb` | Platinentemperatur °C | `0xD3` @0–1 |
-| `camper/alde/battery` | 12-V-Batterie V | `0xD6` @6–7 |
-| `camper/alde/mains_current` | Landstrom des ganzen Fahrzeugs A (nicht nur der Heizung) | `0x5B` @2–3 |
-| `camper/alde/el_power` | Heizstab-Leistung W (0/1000/2000) | `0x55` @0–1 |
-| `camper/alde/el_allowed` | erlaubte Heizstab-Leistung W – ein Zustand, sinkt bei Lastabwurf von selbst | `0x06` @0–1 |
-| `camper/alde/burner_fan` | Brennergebläse U/min (0 = Brenner aus) | `0x5B` @6 |
-| `camper/alde/gas` | `1` = Gas an, `0` = aus | `0x85` @0 |
-| `camper/alde/ac_active` | `1` = Klimaanlage wach (abgeleitet: `0x08` antwortet in den letzten 20 s) | `0x08` |
-| `camper/alde/ac_light` | Licht der Klimaanlage % | `0x97` @6 |
-| `camper/alde/bus_ok` | `1` = gültige LIN-Frames in den letzten 5 s | – |
-| `camper/alde/status` | `online` / `offline` (Last Will) | |
-| `camper/alde/info` | Diagnose (retained): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime`, `reset`, `heap`, `hw` | |
-| `camper/alde/cmd/measure` | beliebiger Inhalt: Werte sofort senden | |
+Basis-Topic `camper/alde`: Werte vom Heizbus (Raum, Glykol, Warmwasser, Gas, Heizstab …), mit Bedienteil-Bus zusätzlich Sollwert, Außentemperatur und Status, Befehle unter `…/cmd/…` (nur im Modus „Lesen und steuern“). Alle Topics mit Quelle (LIN-Frame und Byte): **[docs/TOPICS.md](../../docs/TOPICS.md#alde-heizung-camperalde)**.
 
-**Bedienteil-Bus** (nur mit Modus „Nur lesen“ oder „Lesen und steuern“), Quelle Info-Frame `0x1B`:
-
-| Topic | Inhalt |
-|---|---|
-| `camper/alde/target` | Sollwert °C (der echte Sollwert des Bedienteils) |
-| `camper/alde/panel_room` | Raumtemperatur am Bedienteil °C |
-| `camper/alde/outdoor` | Außentemperatur °C (fehlt ohne Fühler) |
-| `camper/alde/gas_enabled` | `1` = Gasbetrieb an |
-| `camper/alde/el_level` | Heizstab-Stufe 0–3 (kW) |
-| `camper/alde/water_mode` | Warmwasser `0` = aus, `1` = an, `2` = Boost |
-| `camper/alde/pump` | `1` = Umwälzpumpe läuft |
-| `camper/alde/panel_on` | `1` = Bedienteil an |
-| `camper/alde/error` | `1` = Störung |
-| `camper/alde/ac_input` | `1` = 230 V liegen an |
-| `camper/alde/ci_ok` | `1` = Bedienteil antwortet (letzte 5 s) |
-
-**Befehle** (nur mit Modus „Lesen und steuern“, nicht retained):
-
-| Topic | Inhalt |
-|---|---|
-| `camper/alde/cmd/target` | Sollwert 5–30 (0,5er-Schritte) |
-| `camper/alde/cmd/gas` | `1`/`0` bzw. `ON`/`OFF` |
-| `camper/alde/cmd/el_level` | `0`–`3` |
-| `camper/alde/cmd/water` | `0`/`1`/`2` bzw. `aus`/`an`/`boost` |
-
-Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Home Assistant bekommt dafür eine Zahl (Sollwert), einen Schalter (Gas) und zwei Auswahlen (Heizstab, Warmwasser); sie verschwinden wieder, wenn die Steuerung ausgeschaltet wird. Alle Werte retained.
+Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Home Assistant bekommt für die Steuerung eine Zahl (Sollwert), einen Schalter (Gas) und zwei Auswahlen (Heizstab, Warmwasser); sie verschwinden wieder, wenn die Steuerung ausgeschaltet wird. Alle Werte retained.
 
 ## Bedienteil-Bus einschalten
 

@@ -77,121 +77,33 @@ flowchart LR
 
 Not in this repo: **router data (GPS, mobile signal)** is sent by the RUT956 itself over MQTT, see [router data in the display README](firmware/display/README.md#router-daten-rut956).
 
-- **Testing at home:** [`tools/emulator`](tools/emulator) is a Python tool with a local web page. It sends the topics of all devices, the router and Zigbee with values you can change, plus scenarios (tanks running empty, departure, a device dropping out …), so the displays can be tested without the vehicle
-- All topics at a glance: [`docs/TOPICS.md`](docs/TOPICS.md)
-- Clickable mockups of every web interface: [`docs/mockups/`](docs/mockups/index.html)
-
-The documentation of the individual devices and the web interfaces are in German.
+The documentation of the individual devices and the web interfaces are in German (see *Documentation* below).
 
 ## Quick start
 
-1. **Get the firmware:** download the device's `.bin` from [Releases](https://github.com/hflocki/vannode/releases) – or build it yourself (Arduino IDE or `arduino-cli`; Arduino IDE setup in [docs/ARDUINO.md](docs/ARDUINO.md) (German), device specifics in the device README).
-2. **Flash once over USB.** After that, updates go through the web interface.
-3. **Set up:** without WiFi credentials the device opens an access point `<device>-Node-XXXXXX`. Connect, open `http://192.168.4.1`, enter WiFi and MQTT broker.
-4. The device appears under `camper/<device>/…` on the broker; the display finds it by itself.
+1. **Get the firmware:** download the `.bin` for your device and board from [Releases](https://github.com/hflocki/vannode/releases), or build it yourself with the Arduino IDE ([docs/ARDUINO.md](docs/ARDUINO.md)).
+2. **Flash once over USB.** After that, updates go through the device's web interface.
+3. **Set up:** without WiFi credentials the device opens a setup access point, e.g. `Temp-Node-XXXXXX`. Connect, open `http://192.168.4.1`, enter WiFi and MQTT broker. Names and factory passwords of all devices: [setup WiFi table](README.de.md#setup-wlan-und-passwörter-ab-werk). Change the factory passwords – they are public.
+4. The device publishes under `camper/<device>/…` (retained, with `status` online/offline and a JSON `info`); the display and Home Assistant (discovery) find it by themselves.
 
-## Common rules
+Your own passwords, WiFi and broker go into `config_local.h` next to the device's `config.h` (template `config_local.h.example`). The file is excluded by `.gitignore` and never ends up on GitHub.
 
-All devices follow the same scheme, so the displays and Home Assistant understand them without special cases:
+## Documentation
 
-| What | How |
+The detailed documentation is in German:
+
+| Topic | Where |
 | --- | --- |
-| Topics | `camper/<device>/…`, values **retained** |
-| Availability | `camper/<device>/status` = `online` / `offline` as last will (retained, QoS 1) |
-| Diagnostics | `camper/<device>/info`: JSON with version, IP, signal, uptime |
-| Commands | `…/cmd/…` or `…/set/…`, not retained |
-| Home Assistant | auto discovery under `homeassistant/…`, one device per firmware |
-| Setup | access point `<device>-Node-XXXXXX`, settings in the browser at `http://192.168.4.1` |
-| Web interface | same look on every device, optional login (HTTP basic auth); forgot the login → `noauth` in the serial monitor or factory reset |
-| Updates | in the browser, with checks (wrong device, `.merged.bin`, too large), event log and fallback to the previous firmware |
-| Firmware version | `FW_VERSION` in the device's `config.h`, shown in the web UI and in HA |
+| Overview, common rules, own settings, releases, new device | [README.de.md](README.de.md) |
+| One device: hardware, wiring, settings, build specifics | `firmware/<device>/README.md` |
+| Changes per version | `firmware/<device>/CHANGELOG.md` (also the text of each GitHub release) |
+| All MQTT topics and commands | [docs/TOPICS.md](docs/TOPICS.md) |
+| Arduino IDE, boards, libraries, flashing problems | [docs/ARDUINO.md](docs/ARDUINO.md) |
+| New device from the template | [firmware/_template/ANLEITUNG.md](firmware/_template/ANLEITUNG.md) |
+| Clickable mockups of every web interface | [docs/mockups/](docs/mockups/index.html) |
+| Testing without the vehicle (MQTT emulator) | [tools/emulator](tools/emulator) |
 
-## Your own settings (`config_local.h`)
-
-Passwords, WiFi and broker do not belong in the repo. Next to its `config.h`, every device has a template `config_local.h.example`:
-
-```bash
-cd firmware/temp/camper_temp
-cp config_local.h.example config_local.h   # then edit
-```
-
-Everything in `config_local.h` replaces the default from `config.h`. The file is excluded by `.gitignore`, so it never ends up on GitHub, and updates or patches do not overwrite it. Typical values:
-
-| Value | Effect |
-| --- | --- |
-| `DEFAULT_AP_PASSWORD` | password of the setup access point |
-| `DEFAULT_OTA_PASSWORD` | password for updates through the network port of the Arduino IDE |
-| `DEFAULT_WIFI_SSID` / `DEFAULT_WIFI_PASSWORD` | WiFi a freshly flashed device joins right away |
-| `DEFAULT_MQTT_SERVER`, `_USER`, `_PASSWORD` | factory broker |
-| `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASSWORD` | factory login for the web interface |
-
-Any other value from `config.h` can be overridden as well (pins, prefix, tank size …).
-
-Note: factory WiFi, MQTT and login only apply while nothing is stored on the device yet. A normal update over existing settings does not change them. They are taken over again after a **factory reset** in the web UI, after flashing with **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Tools menu), or for temp, tanklevel and level after uploading the LittleFS image. The access point and OTA passwords always apply immediately.
-
-The Road Buddy has no settings page, only an update page; there the whole `config.h` is the personal file (template `config.example.h`). A firmware built with your own `config.h` stores the credentials in flash, so the Actions firmware can be installed through the update page afterwards.
-
-## Warnings
-
-`firmware/temp` reports exceeded limits (e.g. "fridge above 8 °C for 15 min") under `camper/temp/alarm_text`. The wall panel shows these, heater errors and battery, tank, frost and weather warnings in the status tile and as a yellow banner in the header – optionally also as a **Pushover** message on the phone, with its own priority per kind of warning, up to an emergency that keeps ringing until it is confirmed. Home Assistant gets the same alarms as binary sensors.
-
-## Ready-made firmware
-
-Every push builds all devices with GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)), using exactly the board package and library versions listed in [docs/ARDUINO.md](docs/ARDUINO.md) (checked by `tools/docs/check_arduino.py`). The `.bin` files are available in the **Actions** tab of each run.
-
-A release for **one** device is made with a tag `<device>-v<version>`:
-
-```bash
-git tag temp-v1.1.0
-git push origin temp-v1.1.0
-```
-
-Then only this device is built and the `.bin` is attached to the release. All devices install it through their web interface (Road Buddy through its update page). For temp, tanklevel, level, maxxfan and ble the web interface also lives as `data/index.html.gz` in the sketch folder; it is attached to the release as `<device>-node-web-v<version>.html.gz` and uploaded separately after the firmware update.
-
-**Names:** every device is called `<device>-node` – hostname (`temp-node.local`), setup access point (`Temp-Node-XXXXXX`) and release file with the firmware version (`temp-node-esp32c3-v1.4.2.bin`). MQTT topics stay `camper/<device>/…`, Home Assistant IDs stay unchanged.
-
-**All devices in one release:** a tag `bundle-v<version>` builds every device and creates one release with the files listed in [`.github/bundle.txt`](.github/bundle.txt) (one device and target per line, e.g. `heater esp32`), plus the web pages as `<device>-node-web.html.gz` and a table of all versions.
-
-```bash
-git tag bundle-v2026.11.07
-git push origin bundle-v2026.11.07
-```
-
-## Build just one device
-
-Take the device folder and follow its README. If you do not want the whole repo:
-
-```bash
-git clone --filter=blob:none --sparse https://github.com/hflocki/vannode.git
-cd vannode
-git sparse-checkout set firmware/temp
-```
-
-## New device
-
-[`firmware/_template`](firmware/_template) is a working sample device with everything shared (WiFi with setup access point, web interface, settings, MQTT with Home Assistant discovery, updates without USB). One command copies it as a new device; then you only fill in the sensor part (`sensor.cpp`). Guide (German): [`firmware/_template/ANLEITUNG.md`](firmware/_template/ANLEITUNG.md).
-
-```bash
-python firmware/_template/tools/new_device.py waste "Abwasser"
-```
-
-Every folder has its own README with hardware, build specifics and topics (common Arduino IDE setup in [docs/ARDUINO.md](docs/ARDUINO.md)), the Arduino sketch in a subfolder named like the `.ino` (e.g. `camper_temp/`, heater `truma_heater/`). Everything is built with Arduino (IDE or `arduino-cli`); PlatformIO is only used for the Bluetooth gateway `firmware/omg`, because OpenMQTTGateway is a third-party PlatformIO project.
-
-## Mockups
-
-[`docs/mockups/`](docs/mockups/index.html) has a clickable mockup of every web interface: the real page from the firmware with simulated data. Buttons, settings, saving and uploads react like on the device, but nothing is sent. `index.html` shows all devices side by side in phone size. The design draft that all pages follow (colours, type, icons, building blocks, plus drafts of the display page) is in [`docs/mockups/design/`](docs/mockups/design/system.html) and linked from the same index.
-
-To view them, download the folder and open `index.html` in a browser. Regenerate after changing a web interface (Python standard library only, no venv needed):
-
-```bash
-python3 tools/mockups/make_mockups.py
-```
-
-Sample data and simulated behaviour per device are in `tools/mockups/mock/<device>.js`, the shared part (fetch, WebSocket, upload) in `core.js`. For a new device, add a file there and register it in `make_mockups.py`. The Road Buddy only has a small update page and is therefore missing.
-
-## Origin
-
-The devices used to be separate repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). They were moved here (the former `firmware/battery` is now part of `firmware/ble`); the old repos are or will be archived.
+Releases: a tag `<device>-v<version>` builds one device, `bundle-v<version>` builds all devices into one release (see [README.de.md](README.de.md#fertige-firmware)).
 
 ## Thanks
 

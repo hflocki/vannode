@@ -208,51 +208,7 @@ Gas wird als Gasflasche, Frisch- und Grauwasser als Tank mit Skala (25/50/75 %) 
 
 ## MQTT
 
-Das Display abonniert `<Basis-Topic>/#` jedes Geräts und die Topics der Kacheln. Befehle werden nicht retained gesendet.
-
-**Gelesene Werte**
-
-| Seite | Topics |
-| --- | --- |
-| Tanks | `water/percent`, `water/liters`, `grey/percent`, `grey/liters`, `gas/level`, `gas/content`, `status` |
-| Ausrichtung | `pitch`, `roll`, `is_level`, `tolerance`, `wedge_fl/fr/rl/rr`, `status` |
-| Heizung | `control_status/current_temp_room`, `room_setpoint`, `hvac_mode`, `fan_mode`, `water_mode`, `current_temp_water`, `operating_status_text`, `error_code`, `heater_error`, `decoke`, `decoke_remaining`, `alive`; `status` |
-| MaxxFan | `p<n>/auto_hold`, `p<n>/led`, `status` |
-| Dachhaube (BLE-Node) | `rvtech/cover`, `rvtech/cover_position`, `rvtech/reported` (102 = Lüften), `rvtech/connected`, `status` |
-| Temperaturen | `sensors` (JSON-Liste aller Sensoren mit Name, Wert und Alarm), `alarm_text`, `status` |
-| Batterien | `batteries` (JSON-Liste aller Batterien mit Ladestand, Spannung, Leistung, Restlaufzeit, BM2-Zustand), `status`. Seite *Batterien*: je Batterie eine Karte mit Ladestand-Balken, Leistung (▲ lädt / ▼ entlädt), Restlaufzeit; beim BM2 Spannung und Zustand |
-
-**Gesendete Befehle**
-
-| Bedienung | Topic | Payload |
-| --- | --- | --- |
-| Heizung an/aus | `<heizung>/set/hvac_mode` | `heat` / `off` |
-| Solltemperatur | `<heizung>/set/room_setpoint` | `5` … `30` (1 s nach dem letzten Tippen) |
-| Gebläse | `<heizung>/set/fan_mode` | `eco` / `high` |
-| Warmwasser | `<heizung>/set/water_mode` | `off` / `eco` / `high` |
-| Freibrennen | `<heizung>/set/decoke` | `ON` / `OFF` (am Display lange drücken) |
-| Lüfter-Tasten | `<maxxfan>/cmd/p<n>/<taste>` | `PRESS` (`on_off`, `auto`, `faster`, `slower`, `direction`, `close` = Haube schließen, ab maxxfan-node 1.4.0) |
-| Lüfter-Stufe | `<maxxfan>/cmd/p<n>/speed/set` | `1` … `10` |
-| Sync AUS | `<maxxfan>/cmd/sync_off` | `PRESS` |
-| Tara | `<level>/cmd/tare/set` | `PRESS` (am Display lange drücken) |
-| Dachhaube Auf / Zu / Regen / Lüften | `<ble>/cmd/rvtech/<auf\|zu\|regen\|lueften>/set` | `PRESS` |
-| Dachhaube Position | `<ble>/cmd/rvtech/cover_position/set` | `0` … `100` (beim Loslassen des Reglers) |
-
-**Eigene Topics** (Basis `camper/display`)
-
-| Topic | Inhalt |
-| --- | --- |
-| `camper/display/status` | `online` / `offline` (Last Will) |
-| `camper/display/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `camper/display/ip`, `/rssi`, `/brightness`, `/screen` | Zustand (retained) |
-| `camper/display/cmd/brightness` | `5` … `100` |
-| `camper/display/cmd/screen` | `ON` / `OFF` |
-| `camper/display/cmd/page` | Seitenname (`Heizung`) oder Nummer (`0` = erste) |
-| `camper/display/awning` | Markise `ON` (ausgefahren) / `OFF` / `unknown` (retained) |
-| `camper/display/cmd/awning` | `ON` / `OFF` / `TOGGLE` (nur ohne Kontakt-Sensor) |
-| `camper/display/driving` | Abfahrtscheck: `ON` während der Fahrt, sonst `OFF` (retained) |
-| `camper/display/depart` | Abfahrtscheck: `OK` oder die offenen Teile, z. B. `Tür offen, Markise ausgefahren` (retained) |
-| `camper/display/cmd/reboot` | beliebig |
+Das Display abonniert `<Basis-Topic>/#` jedes Geräts und die Topics der Kacheln, eigene Topics unter `camper/display` (Helligkeit, Bildschirm, Seite, Markise, Abfahrtscheck). Befehle werden nicht retained gesendet. Was das Display von welchem Gerät liest, welche Befehle es sendet und seine eigenen Topics: **[docs/TOPICS.md](../../docs/TOPICS.md#display-camperdisplay)**.
 
 Beispiel: `mosquitto_pub -h <broker> -t camper/display/cmd/screen -m OFF`
 

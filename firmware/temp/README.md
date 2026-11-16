@@ -74,19 +74,7 @@ Eine feste IP vergibt man am einfachsten als DHCP-Reservierung im Router; im Net
 
 ## MQTT / Home Assistant
 
-Prefix (Web-UI) Standard `camper/temp`:
-
-| Topic | Wert |
-|---|---|
-| `<prefix>/status` | `online` / `offline` (Last Will) |
-| `<prefix>/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `<prefix>/rssi` | WLAN-Signal |
-| `<prefix>/<id>` | Temperatur in °C (2 Nachkommastellen), retained |
-| `<prefix>/<id>/available` | `online` / `offline` – Sensor antwortet am Bus |
-| `<prefix>/<id>/alarm` | `ON` / `OFF` – Grenzwert dieses Sensors verletzt |
-| `<prefix>/alarm` | `ON`, solange irgendein Sensor im Alarm ist |
-| `<prefix>/alarm_text` | Lesbarer Text aller Alarme, z. B. `Kühlschrank zu warm: 9,2 °C (Grenze 8,0 °C)`; leer = kein Alarm |
-| `<prefix>/sensors` | Alle Sensoren als eine JSON-Liste für Displays: `[{"id":"fridge","name":"Kühlschrank","t":4.31,"alarm":0}, …]` (`t` = `null` ohne gültigen Wert, `alarm` 0 = keiner, 1 = zu kalt, 2 = zu warm) |
+Basis-Topic `camper/temp` (in der Web-UI änderbar): je Sensor `…/<id>` in °C, Alarme unter `…/<id>/alarm`, `…/alarm` und `…/alarm_text`, alle Sensoren als JSON in `…/sensors`. Alle Topics und Befehle: **[docs/TOPICS.md](../../docs/TOPICS.md#temperaturen-campertemp)**.
 
 Gesendet wird nach jeder Messung (Intervall in der Web-UI, Standard 10 s), spätestens jede Minute. Liefert ein Sensor keinen gültigen Wert (abgezogen, Kabelbruch, 85-°C-Startwert), wird kein Wert gesendet und die Entität in HA als nicht verfügbar markiert.
 

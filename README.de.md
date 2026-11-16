@@ -90,6 +90,24 @@ Die Doku der einzelnen Geräte ist auf Deutsch.
 3. **Einrichten:** Ohne WLAN-Daten startet ein Access Point `<Gerät>-Node-XXXXXX`. Verbinden, `http://192.168.4.1` öffnen, WLAN und MQTT-Broker eintragen.
 4. Das Gerät meldet sich unter `camper/<gerät>/…` am Broker, das Display findet es von selbst.
 
+## Setup-WLAN und Passwörter ab Werk
+
+Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, die Seite öffnet sich meist von selbst, sonst `http://192.168.4.1`. Dort WLAN und MQTT eintragen. `XXXXXX` sind die letzten Stellen der MAC-Adresse, so lassen sich mehrere Geräte auseinanderhalten.
+
+| Gerät | Setup-WLAN | Passwort ab Werk | Danach erreichbar unter | Setup-WLAN aktiv |
+| --- | --- | --- | --- | --- |
+| ble | `BLE-Node-XXXXXX` | `blenode1234` | `http://ble-node.local` (Name im Web-UI änderbar) | immer (abschaltbar) |
+| tanklevel | `Tanklevel-Node-XXXXXX` | `tanklevel1234` | `http://tanklevel-node.local` | immer (abschaltbar) |
+| temp | `Temp-Node-XXXXXX` | `camptemp1234` | `http://temp-node.local` | immer (abschaltbar) |
+| level | `Level-Node-XXXXXX` | `level1234` | `http://level-node.local` | immer (abschaltbar) |
+| maxxfan | `MaxxFan-Node-XXXXXX` | `maxxfan1234` | `http://maxxfan-node.local` | ohne WLAN |
+| heater | `heater-node-XXXX` | `truma1234` | `http://heater-node.local` | ohne WLAN oder 60 s ohne Verbindung |
+| alde | `Alde-Node-XXXXXX` | `alde1234` | `http://alde-node.local` | ohne WLAN oder 60 s ohne Verbindung |
+| display | `Display-Node-XXXXXX` | `display1234` | `http://display-node.local` | ohne WLAN oder 1 min ohne Verbindung |
+| roadbuddy | – (WLAN steht in `config_local.h`) | – | – | – |
+
+**Passwörter ändern:** Die Passwörter oben sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`), spätestens danach im Web-UI. Ein Login für die Web-Oberfläche ist ab Werk aus und lässt sich im Web-UI einschalten. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
+
 ## Gemeinsame Regeln
 
 Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant sie ohne Sonderfälle verstehen:
@@ -129,7 +147,7 @@ Außerdem lässt sich jeder andere Wert aus `config.h` überschreiben (Pins, Pre
 
 Wichtig: WLAN, MQTT und Login ab Werk wirken nur, solange auf dem Gerät noch nichts gespeichert ist. Ein normales Update über bestehende Einstellungen ändert sie nicht. Neu übernommen werden sie nach **Werkseinstellungen** im Web-UI, nach dem Flashen mit **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Menü Werkzeuge) bzw. bei temp, tanklevel und level nach dem Hochladen des LittleFS-Images. Die Passwörter für Access Point und OTA gelten dagegen immer sofort.
 
-Der Road Buddy hat keine Einstellungsseite, nur eine Update-Seite; dort ist die ganze `config.h` die persönliche Datei (Vorlage `config.example.h`). Eine Firmware mit eigener `config.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
+Der Road Buddy hat keine Einstellungsseite, nur eine Update-Seite; WLAN und MQTT kommen deshalb nur über `config_local.h` (Namen siehe seine README). Eine Firmware mit eigener `config_local.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
 
 ## Warnungen
 

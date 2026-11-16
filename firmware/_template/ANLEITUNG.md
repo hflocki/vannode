@@ -39,7 +39,9 @@ Alle Stellen, an denen du etwas tun musst, sind im Code mit **`TODO`** markiert 
 | `webserver.cpp` | Eigene Einstellungen an 5 Stellen ergänzen: `setDefaults()`, `handleApiGetConfig()`, Prüfen und Übernehmen in `handleApiSaveConfig()`, `loadConfig()`, `saveConfig()`. Eigene Aktionen wie `/api/measure` |
 | `mqtt_ha.cpp` | Eigene Befehle in `onMessage()` (`<prefix>/cmd/...`) und passende HA-Entitäten (Taste, Schalter) in `mqttPublishDiscovery()` |
 | `web/index.html` | Tab **Einstellungen**: Eingabefelder `cfg-…`, dazu `loadSetup()` und `saveSettings()`. Die Live-Kacheln brauchen keine Änderung. |
-| `README.md` | TODO-Stellen: Beschreibung, Hardware, zusätzliche Bibliotheken, Topics. Allgemeines zur Arduino IDE steht in `docs/ARDUINO.md`, nicht in der README |
+| `README.md` | TODO-Stellen: Beschreibung, Hardware, zusätzliche Bibliotheken, Basis-Topic. Allgemeines zur Arduino IDE steht in `docs/ARDUINO.md`, die Topics in `docs/TOPICS.md` |
+| `docs/TOPICS.md` | eigenen Abschnitt mit allen Topics und Befehlen anlegen (Vorlage: Abschnitt *Muster-Gerät*) und in der *Übersicht* eintragen |
+| `README.de.md` | Setup-WLAN und Passwort ab Werk in die Tabelle *Setup-WLAN und Passwörter ab Werk* eintragen |
 | `docs/ARDUINO.md` | zusätzliche Bibliothek in die Tabelle *Zusätzlich je Gerät* eintragen (mit Quelle `owner/repo` und Version wie in `build.yml`, sonst schlägt die CI-Prüfung fehl) |
 | `CHANGELOG.md` | Titel auf das neue Gerät ändern, alte Zeilen löschen, erste Version eintragen. Bei jeder neuen `FW_VERSION` eine Zeile oben ergänzen – sie wird beim Tag zum Text des GitHub-Release. |
 

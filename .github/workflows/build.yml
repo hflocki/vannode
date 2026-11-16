@@ -180,10 +180,6 @@ jobs:
           if [[ "${{ matrix.device }}" == display ]]; then
             cp firmware/display/lv_conf.h "$(arduino-cli config get directories.user)/libraries/"
           fi
-          # CI build only: the real config.h with credentials is never in git
-          if [[ "${{ matrix.device }}" == roadbuddy ]]; then
-            cp "${{ matrix.sketch }}/config.example.h" "${{ matrix.sketch }}/config.h"
-          fi
 
       - name: Compile
         if: steps.sel.outputs.skip != '1'

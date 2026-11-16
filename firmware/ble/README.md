@@ -144,27 +144,15 @@ Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwo
 
 ## MQTT / Home Assistant
 
-Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics: [`docs/TOPICS.md`](../../docs/TOPICS.md#ble-node-tool-campertool).
+Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics und Befehle der Plugins (Dachhaube, Pumpe, Kühlschrank, WiPro, OBD2, Thermometer …): **[docs/TOPICS.md](../../docs/TOPICS.md#ble-node-tool-campertool)**.
 
-**Dachhaube** (`rvtech`):
+**Dachhaube:** Die Stellungen für Regen, Lüften und Favorit stellst du je Haube in den Einstellungen ein (zweite Haube `rvtech2` mit eigenen Werten und Topics `…/cmd/rvtech2/…`): **Stellung Regen** (Standard 12 %), **Stellung Lüften** (0 = Lüften-Funktion der Haube, jedes Drücken verlängert die Lüftzeit; sonst fester Wert in %), **Stellung Favorit** (0 = in der Haube gespeicherter Favorit, dann gibt es „Favorit speichern“; sonst fester Wert in %, „Favorit speichern“ entfällt). Die Knöpfe in der Karte zeigen den eingestellten Wert.
 
-| Topic | Inhalt |
-| --- | --- |
-| `camper/tool/rvtech/cover` | `open` / `closed` / `opening` / `closing` |
-| `camper/tool/rvtech/cover_position` | 0 … 100 % |
-| `camper/tool/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` (Stopp nur während Auf/Zu: die Haube hält an, wenn derselbe Befehl noch einmal kommt) |
-| `camper/tool/cmd/rvtech/cover_position/set` | `0` … `100` |
-| `camper/tool/cmd/rvtech/regen/set` | Voreinstellung Regen (ebenso `auf`, `zu`, `lueften`); Inhalt beliebig, z. B. `PRESS` |
-| `camper/tool/cmd/rvtech/fav/set` | Favorit anfahren |
-| `camper/tool/cmd/rvtech/fav_set/set` | aktuelle Stellung als Favorit speichern |
+**Kühlschrank:** Die Topics heißen nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum). Die Namen erscheinen in der Karte und in den Home-Assistant-Namen. Die letzten 5 Fehler stehen in der Karte unter „Letzte Fehler“ und als JSON in `…/fridge/errors`.
 
-Die Stellungen stellst du je Haube in den Einstellungen ein (zweite Haube `rvtech2` eigene Werte und Topics `…/cmd/rvtech2/…`): **Stellung Regen** (Standard 12 %), **Stellung Lüften** (0 = Lüften-Funktion der Haube, jedes Drücken verlängert die Lüftzeit; sonst fester Wert in %), **Stellung Favorit** (0 = in der Haube gespeicherter Favorit, dann gibt es „Favorit speichern“; sonst fester Wert in %, „Favorit speichern“ entfällt). Die Knöpfe in der Karte zeigen den eingestellten Wert.
+**Alarm WiPro III** (nur lesen): Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
 
-**Kühlschrank** (`fridge`): Werte `temp1`, `temp2`, `set1`, `set2` (°C), `voltage`, `battery`, `fan` (Umluft; im Nachtmodus aus), `night` (Nachtmodus), `zone1`/`zone2` (Zone läuft, nur mit „Zweite Zone“), `error` (aktueller Fehler: E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen), `error_last` (letzter Fehler mit Zeit, bleibt nach dem Ende stehen), `errors` (die letzten 5 Fehler als JSON: `code`, `text`, `zone`, `zone_name`, `first`, `last`, `ago_s`, `count`; nur im RAM, nach einem Neustart leer); Befehle `power` (`ON`/`OFF`, „Power Gesamt“, ganzer Kühlschrank), `zone1`/`zone2` (`ON`/`OFF`, Zone 1 bzw. 2 einzeln; die andere Zone bleibt, wie sie ist), `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `quick1`/`quick2` (`ON`/`OFF`, Schnellkühlen Zone 1 / 2), `doorheat` (`ON`/`OFF`, Türheizung), `target1`/`target2` (Soll-Temperatur in °C, auch wenn der Kühlschrank auf °F steht), `bpd` (Batterieschutz Stufe 1–3). Die Topics heißen immer nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum). Die Namen erscheinen in der Karte und in den Home-Assistant-Namen. Diagnose: `raw` schickt einen beliebigen Befehl an den Kühlschrank, die Antwort steht im Geräte-Log (nur per MQTT).
-
-**Alarm WiPro III** (`wipro`, **nur lesen**): `armed` (`ON` = scharf), `reason` (Alarmgrund als Text, z. B. „Funkkontakt 5“, „Gaswarner getriggert“, „Panik-Alarm“), je Kontakt `contact0` … `contact7` (`ON` = offen, ein Bit aus Byte 6), `open` (Liste der offenen Kontakte mit ihren Namen) und `raw` (8 Byte als Hex). Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
-
-**OBD2-Adapter** (`obd`, **nur lesen**): Werte `rpm`, `speed`, `coolant`, `oil_temp`, `fuel` (%), `fuel_rate` (l/h), `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count` – jeweils nur, wenn das Fahrzeug den Wert meldet; dazu `voltage` (Bordspannung am Adapter), `running` (`ON` = Motor läuft), `mil` (Motorkontrollleuchte), `dtc` (Fehlercodes, z. B. `P0133, P0234`, oder `keine`), `protocol`, `adapter`, `raw` (Antwort auf den Testbefehl). Befehle `read_dtc` (Fehlercodes neu lesen) und `raw` (Testbefehl, siehe oben).
+**OBD2-Adapter** (nur lesen): Es kommen nur die Werte, die das Fahrzeug meldet. Fehlercodes neu lesen mit `…/cmd/obd/read_dtc/set`.
 
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 

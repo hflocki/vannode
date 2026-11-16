@@ -80,62 +80,7 @@ Zum Ausprobieren ohne Gerät: [`docs/mockup/truma-heater-mockup.html`](docs/mock
 
 ## MQTT
 
-Basis-Topic standardmäßig `camper/heater` (in den Einstellungen änderbar; bis Version 1.0 war es `service/truma`, bestehende Geräte behalten ihre Einstellung). Zustände werden **retained** veröffentlicht, Änderungen innerhalb einer Sekunde, alles einmal pro Minute.
-
-### Status `camper/heater/control_status/<key>`
-
-| Key | Werte | Bedeutung |
-|---|---|---|
-| `alive` | ON / OFF | CP Plus fragt dieses Gerät ab |
-| `current_temp_room` | °C | Raumtemperatur |
-| `target_temp_room` | 0, 5–30 | Raum-Zieltemperatur (0 = aus) |
-| `heating_mode` | off / eco / high | Lüfterstufe |
-| `current_temp_water` | °C | Wassertemperatur |
-| `target_temp_water` | 0 / 40 / 60 / 200 | Warmwasser aus / eco / hot / boost |
-| `water_mode` | off / eco / high | wie oben als Text |
-| `energy_mix` | gas / mix / electricity | Energiequelle (Diesel = gas) |
-| `el_power_level` | 0 / 900 / 1800 | Elektroleistung |
-| `operating_status` | 0–9 | 0/1 aus, 4 Start/Nachlauf, ≥5 läuft |
-| `operating_status_text` | Text | |
-| `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe `error_text` |
-| `error_text` | Text | Kurzer deutscher Text zum Fehlercode passend zum eingestellten Heizungsmodell (Gas-Combi, Combi D, VarioHeat; z. B. 122 = `Kraftstoffmangel (…)` bei der Combi D), leer = kein Fehler oder unbekannter Code. Tabelle: `truma_errors.h` (gemeinsam mit dem Display, Quelle `firmware/_common`) |
-| `error_kind` | `E` / `W` / leer | `E` = Fehler (muss am CP Plus quittiert werden), `W` = Warnung (verschwindet von selbst), leer = unbekannt |
-| `heater_error` | ON / OFF | Fehler oder Warnung aktiv (jeder Code ≠ 0) |
-| `clock` | hh:mm | Uhrzeit des CP Plus |
-| `vent_level` | 0–10 | Lüftungsstufe (0 = kein Lüften). Nur bei Heizungen, die den LIN-Frame 0x20 nutzen, sonst nicht gesendet |
-| `vent_mode` | off / 1–10 / eco / high | Rohwert dazu (eco/high = Lüfter beim Heizen) |
-| `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
-| `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |
-| `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat; `hvac_action` = `fan`, wenn die Heizung ohne Raum- und Wasserheizung läuft (Lüften am CP Plus oder Nachlauf) |
-| `decoke`, `decoke_remaining`, `decoke_minutes` | ON/OFF, min, min | Freibrennen |
-| `heater_model` | combi / combi_e / combi_d / combi_d_e / vario | gewähltes Heizungsmodell |
-| `energy_select` | gas / mix_900 / mix_1800 / electricity_900 / electricity_1800 | Energie als ein Wert (nur E-Modelle) |
-| `cpplus_version`, `heater_version`, `release`, `rssi`, `lin_traffic` | | Diagnose |
-
-Verfügbarkeit: `camper/heater/status` = `online` / `offline` (Last Will).
-Diagnose: `camper/heater/info` (retained, beim Verbinden und jede Minute) – JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap`.
-
-### Befehle `camper/heater/set/<key>`
-
-| Key | Payload | Wirkung |
-|---|---|---|
-| `target_temp_room` | 0, 5–30 | 0 = Raumheizung aus, sonst einschalten mit dieser Temperatur |
-| `heating_mode` | off / eco / high | Lüfterstufe; schaltet bei Bedarf ein (letzte Temperatur) |
-| `target_temp_water` | 0 / 40 / 60 | Warmwasser |
-| `water_mode` | off / eco / high | Warmwasser |
-| `hvac_mode` | heat / off | Raumheizung an/aus mit letzter Temperatur + Lüfterstufe |
-| `room_setpoint` | 5–30 | Solltemperatur; bei ausgeschalteter Heizung nur gemerkt |
-| `fan_mode` | eco / high (Gas-Combi auch boost, VarioHeat night / auto / boost) | Lüfterstufe; bei ausgeschalteter Heizung nur gemerkt |
-| `energy_mix` / `el_power_level` | gas / mix / electricity, 0 / 900 / 1800 | nur bei E-Modellen |
-| `energy_select` | gas / mix_900 / … / electricity_1800 | Energie und Leistung in einem Befehl (nur E-Modelle) |
-| `heater_model` | combi / combi_e / combi_d / combi_d_e / vario | Heizungsmodell umstellen (sofort wirksam) |
-| `decoke` | ON / OFF | Freibrennen starten / beenden |
-| `decoke_minutes` | 5–120 | Dauer des Freibrennens |
-| `sync_clock` | 1 | Uhrzeit sofort ans CP Plus senden |
-| `timer` | `22:00-06:30[,temp[,eco/high[,off/eco/high]]]`, `on`, `off` | Timer setzen. Fehlende Werte: bisherige Timer-Werte, sonst gemerkte Solltemperatur und Lüfterstufe. Warmwasser ohne Angabe bleibt unverändert |
-| `timer_active` | ON/OFF | Timer mit den gespeicherten Zeiten ein- oder ausschalten |
-| `sniffer` | ON / OFF | LIN-Sniffer (Diagnose, siehe unten), nach Neustart aus |
-| `reboot` | 1 | Neustart |
+Basis-Topic standardmäßig `camper/heater` (in den Einstellungen änderbar; bis Version 1.0 war es `service/truma`, bestehende Geräte behalten ihre Einstellung). Zustände unter `…/control_status/<key>` (retained, Änderungen innerhalb einer Sekunde, alles einmal pro Minute), Befehle unter `…/set/<key>`. Alle Keys mit Werten und Bedeutung: **[docs/TOPICS.md](../../docs/TOPICS.md#heizung-camperheater)**.
 
 Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam gesendet werden – fehlende Werte werden sinnvoll ergänzt.
 

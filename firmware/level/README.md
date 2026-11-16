@@ -78,32 +78,7 @@ Die Wasserwaage zeigt wie eine echte Libelle: Die Blase wandert zur **hohen** Se
 
 ## MQTT / Home Assistant
 
-Prefix (Web-UI) Standard `camper/level`:
-
-| Topic | Wert |
-|---|---|
-| `<prefix>/status` | `online` / `offline` (Last Will) |
-| `<prefix>/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `<prefix>/pitch` | Längsneigung in °, positiv = vorne höher |
-| `<prefix>/roll` | Querneigung in °, positiv = links höher |
-| `<prefix>/wedge_fl`, `wedge_fr`, `wedge_rl`, `wedge_rr` | Keilhöhe in cm vorne links / vorne rechts / hinten links / hinten rechts |
-| `<prefix>/is_level` | `ON`, wenn Längs- und Querneigung innerhalb der Toleranz liegen |
-| `<prefix>/sensor` | `OK` / `ERROR` |
-| `<prefix>/rssi` | WLAN-Signal |
-| `<prefix>/tolerance`, `track_width`, `wheelbase`, `mount`, `tare_active`, `tare_pitch`, `tare_roll`, `filter_active`, `mqtt_fast` | Einstellungen (bei Änderung und einmal pro Minute) |
-
-**Befehle** (`PRESS` bzw. Wert, nicht retained):
-
-| Topic | Payload |
-|---|---|
-| `<prefix>/cmd/tare/set` | `PRESS` – aktuelle Lage als waagerecht speichern |
-| `<prefix>/cmd/tare_reset/set` | `PRESS` |
-| `<prefix>/cmd/sensor_restart/set` | `PRESS` – BNO085 neu starten |
-| `<prefix>/cmd/tolerance/set` | `0.1` … `5` |
-| `<prefix>/cmd/track_width/set`, `wheelbase/set` | cm |
-| `<prefix>/cmd/mount/set` | Name der Einbaulage, z. B. `Wand links` |
-| `<prefix>/cmd/tare_pitch/set`, `tare_roll/set` | `-10` … `10` |
-| `<prefix>/cmd/filter/set`, `mqtt_speed/set` | `ON` / `OFF` / `TOGGLE` |
+Basis-Topic `camper/level` (in der Web-UI änderbar): Neigung `…/pitch`, `…/roll`, Keilhöhen `…/wedge_fl` …, Befehle wie Tara unter `…/cmd/…`. Alle Topics und Befehle: **[docs/TOPICS.md](../../docs/TOPICS.md#levelsensor-camperlevel)**.
 
 In Home Assistant erscheint ein Gerät „Level Node“. Beim ersten Verbinden löscht die Firmware die Einträge der Original-Firmware (`wowa_level`), damit kein zweites, totes Gerät stehen bleibt.
 

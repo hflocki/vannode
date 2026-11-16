@@ -25,8 +25,8 @@
 
 
 // ---------- Sensor selection ----------
-// Choose in config.h which sensors are used (1 = enabled, 0 = disabled).
-// Disabled sensors get no page and no MQTT subscription. Defaults apply if config.h does not define them.
+// Choose in config_local.h which sensors are used (1 = enabled, 0 = disabled).
+// Disabled sensors get no page and no MQTT subscription. Defaults come from config.h.
 #ifndef USE_LEVEL
 #define USE_LEVEL 1   // pitch / roll level sensor
 #endif
@@ -73,8 +73,8 @@ const char* TOPIC_BAT_STATUS      = "camper/battery/status";
 String levelPrefix;   // level topic without the trailing '#', e.g. "camper/level/"
 
 // ---------- Credentials ----------
-// A build with a real config.h stores WiFi / MQTT settings in flash (NVS). The CI build from GitHub Actions
-// only has the placeholders of config.example.h and reads them back from there, so its .bin can be
+// A build with real values in config_local.h stores WiFi / MQTT settings in flash (NVS). The CI build from GitHub Actions
+// has no config_local.h (empty values) and reads them back from there, so its .bin can be
 // installed over the update page without losing the connection.
 String cfgSsid, cfgPass, cfgBroker, cfgMqttUser, cfgMqttPass, cfgLevelTopic, cfgWebUser, cfgWebPass;
 int cfgPort = 1883;
@@ -296,11 +296,11 @@ void loadCredentials() {
     cfgWebUser = p.getString("wuser", "");
     cfgWebPass = p.getString("wpass", "");
   } else {
-    // Placeholder build and nothing stored: flash once over USB with a real config.h
+    // Placeholder build and nothing stored: flash once over USB with your own config_local.h
     cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port;
     cfgMqttUser = mqtt_user; cfgMqttPass = mqtt_pass; cfgLevelTopic = mqtt_topic;
     cfgWebUser = WEB_USER; cfgWebPass = WEB_PASS;
-    Serial.println("No credentials: flash once over USB with your own config.h");
+    Serial.println("No credentials: flash once over USB with your own config_local.h");
   }
   p.end();
 }

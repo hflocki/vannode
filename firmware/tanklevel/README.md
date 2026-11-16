@@ -108,22 +108,7 @@ Siehe **[docs/ARDUINO.md → Probleme beim Hochladen](../../docs/ARDUINO.md#prob
 
 ## MQTT / Home Assistant
 
-Prefix (Web-UI) Standard `camper/tanklevel`:
-
-| Topic | Wert |
-| --- | --- |
-| `<prefix>/status` | `online` / `offline` (Last Will) |
-| `<prefix>/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `<prefix>/rssi` | WLAN-Signal |
-| `<prefix>/water/liters`, `percent`, `voltage` | Frischwasser |
-| `<prefix>/water/filter_active` | `ON` / `OFF` |
-| `<prefix>/cmd/water/filter/set` | `ON` / `OFF` / `TOGGLE` |
-| `<prefix>/grey/liters`, `percent`, `voltage` | Grauwasser (nur wenn eingeschaltet) |
-| `<prefix>/grey/filter_active` | `ON` / `OFF` |
-| `<prefix>/cmd/grey/filter/set` | `ON` / `OFF` / `TOGGLE` |
-| `<prefix>/gas/level`, `raw_level`, `content` | Gas (nur nach erstem gültigen Wert) |
-| `<prefix>/gas/battery`, `ble_rssi`, `ble_state` | Gassensor |
-| `<prefix>/gas/distance`, `temperature`, `quality` | nur Mopeka: Füllhöhe in mm, Sensortemperatur in °C, Messqualität 0–3 |
+Basis-Topic `camper/tanklevel` (in der Web-UI änderbar): Frischwasser unter `…/water/…`, Grauwasser unter `…/grey/…`, Gas unter `…/gas/…`. Alle Topics und Befehle: **[docs/TOPICS.md](../../docs/TOPICS.md#tanks-campertanklevel)**.
 
 In Home Assistant erscheint **ein** Gerät „Tanklevel Node“ mit allen Entitäten.
 

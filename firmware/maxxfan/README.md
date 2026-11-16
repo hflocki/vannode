@@ -126,28 +126,7 @@ Ist das WLAN länger als eine Minute weg, öffnet sich der Setup-AP wieder; der 
 
 ## MQTT
 
-Prefix (Web-UI) Standard `camper/maxxfan`. Zustände sind retained.
-
-| Topic | Wert |
-| --- | --- |
-| `<prefix>/status` | `online` / `offline` (Last Will) |
-| `<prefix>/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `<prefix>/p<n>/auto_hold` | `ON` / `OFF` |
-| `<prefix>/p<n>/led` | `ON` / `OFF` |
-| `<prefix>/expander` | `ON` / `OFF` (TCA9555 erreichbar) |
-| `<prefix>/rssi` | WLAN-Signal (dBm) |
-
-**Befehle**
-
-| Topic | Payload | Wirkung |
-| --- | --- | --- |
-| `<prefix>/cmd/p<n>/<taste>` | beliebig (HA: `PRESS`) | Taste drücken: `auto`, `direction`, `on_off`, `faster`, `slower`, `beep` |
-| `<prefix>/cmd/p<n>/press` | Tastenname | dasselbe, Taste im Payload |
-| `<prefix>/cmd/p<n>/speed/set` | `0` … `10` | Stufe setzen (Lüfter muss laufen), `0` = Haube schließen |
-| `<prefix>/cmd/p<n>/close` | beliebig | Haube schließen (11× Langsamer) |
-| `<prefix>/cmd/p<n>/led/set` | `ON` / `OFF` / `TOGGLE` | Controller-LED |
-| `<prefix>/cmd/sync_off` | beliebig | Lüfter auf AUS synchronisieren |
-| `<prefix>/cmd/reboot` | beliebig | Neustart |
+Basis-Topic `camper/maxxfan` (in der Web-UI änderbar). Je Anschluss `p<n>` gibt es Tasten-Befehle (`…/cmd/p1/faster` …), die Stufe (`…/cmd/p1/speed/set`) und „Haube schließen“. Alle Topics und Befehle: **[docs/TOPICS.md](../../docs/TOPICS.md#dachlüfter-campermaxxfan)**.
 
 Beispiel:
 

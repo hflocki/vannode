@@ -10,9 +10,9 @@ Optik und Farben entsprechen dem großen Wandpanel [display-node](../display): d
 
 ## Flashen
 
-Allgemeines zur Arduino IDE und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Road Buddy hat aber eigene Bibliotheken und eine eigene `config.h`, deshalb hier vollständig.
+Allgemeines zur Arduino IDE und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Road Buddy hat aber eigene Bibliotheken, deshalb hier vollständig.
 
-Gebaut wird mit der Arduino IDE (1.x und 2.x). Der Quellcode liegt in `roadbuddy/`. Du brauchst eine eigene `roadbuddy/config.h` mit WLAN- und MQTT-Zugangsdaten. Als Vorlage liegt `config.example.h` bei, deine `config.h` ist per `.gitignore` vom Git ausgeschlossen.
+Gebaut wird mit der Arduino IDE (1.x und 2.x). Der Quellcode liegt in `roadbuddy/`. Deine WLAN- und MQTT-Zugangsdaten kommen wie bei allen VanNode-Geräten in `roadbuddy/config_local.h` (Vorlage `config_local.h.example`). Die Datei ist per `.gitignore` vom Git ausgeschlossen; `config.h` enthält nur die Standardwerte und bleibt unverändert.
 
 ### Voraussetzungen
 
@@ -26,19 +26,19 @@ Gebaut wird mit der Arduino IDE (1.x und 2.x). Der Quellcode liegt in `roadbuddy
 ### Schritte
 
 1. Den Ordner [`roadbuddy/`](roadbuddy/) in der Arduino IDE öffnen (`roadbuddy.ino`). Der Ordner muss genauso heißen wie die Hauptdatei, sonst findet die IDE den Sketch nicht.
-2. In diesem Ordner `config.example.h` nach `config.h` kopieren und die eigenen Zugangsdaten eintragen:
+2. In diesem Ordner `config_local.h.example` nach `config_local.h` kopieren und die eigenen Zugangsdaten eintragen:
 
    ```cpp
-   const char* ssid = "YOUR_WIFI_SSID";
-   const char* password = "YOUR_WIFI_PASSWORD";
+   #define DEFAULT_WIFI_SSID      "YOUR_WIFI_SSID"
+   #define DEFAULT_WIFI_PASSWORD  "YOUR_WIFI_PASSWORD"
 
-   const char* mqtt_server = "192.168.1.10";
-   const int mqtt_port = 1883;
-   const char* mqtt_user = "YOUR_MQTT_USER";
-   const char* mqtt_pass = "YOUR_MQTT_PASSWORD";
-
-   const char* mqtt_topic = "camper/level/#";
+   #define DEFAULT_MQTT_SERVER    "192.168.1.10"
+   #define DEFAULT_MQTT_PORT      1883
+   #define DEFAULT_MQTT_USER      "YOUR_MQTT_USER"
+   #define DEFAULT_MQTT_PASSWORD  "YOUR_MQTT_PASSWORD"
    ```
+
+   Dort lassen sich auch Topics (`LEVEL_TOPIC`, `ROUTER_TOPIC`, `SELF_TOPIC`), der Login der Update-Seite und die angezeigten Seiten (`USE_…`) ändern.
 
 3. Unter *Werkzeuge → Board* **M5Core2** wählen (Eintrag unter „M5Stack“).
 4. Den Core2 per USB-C verbinden, unter *Werkzeuge → Port* den Anschluss wählen (auf dem Mac z. B. `/dev/cu.usbserial-…`).
@@ -50,7 +50,7 @@ Der Serial Monitor (115200 Baud) gibt jedes eingehende MQTT-Topic mit Wert aus, 
 ### Fehlersuche
 
 - **`rom/miniz.h: No such file or directory`:** Die alte `M5Core2`-Bibliothek ist noch installiert, siehe Voraussetzungen Punkt 3.
-- **`config.h: No such file or directory`:** `config.example.h` wurde noch nicht nach `config.h` kopiert.
+- **„No credentials“ im Serial Monitor:** `config_local.h` fehlt oder enthält kein WLAN, und im Flash ist noch nichts gespeichert. `config_local.h.example` nach `config_local.h` kopieren und ausfüllen.
 - **„Multiple libraries were found for WiFi.h“:** Nur eine Warnung. Die WiFi-Bibliothek aus dem ESP32-Core wird verwendet. Eine zusätzliche `WiFi`-Bibliothek in `Documents/Arduino/libraries` kann gelöscht werden.
 - **Display zeigt falsche Pitch-/Roll-Werte:** Im Serial Monitor prüfen, welche Topics wirklich ankommen.
 - **Upload bricht ab oder Port fehlt:** Anderes USB-Kabel (Datenkabel) testen, bei Bedarf den Treiber für den USB-Seriell-Chip installieren.
@@ -73,7 +73,7 @@ Die Seiten werden mit den beiden äußeren Touch-Tasten (links/rechts) umgeschal
 | Batterien | Bis zu 3 Batterien von battery-node: Name, Ladestand (rot unter 20 %, gelb unter 40 %), Spannung, Leistung (+ = lädt, z. B. Solar), Restlaufzeit beim Entladen mit Uhr-Symbol („3,2 Tage“, „5 h 20 min“). Darunter eine Segmentanzeige mit 13 Feldern von Rot nach Grün nach dem Ladezustand, ohne Ladezustand (z. B. BM2) nach der Spannung von 11,8 bis 12,8 V. Der BM2 an der Starterbatterie zeigt statt Leistung seinen Zustand (Normal, Schwach, Kritisch, Lädt, Erhaltungsladung). Fehler oder schwache Starterbatterie = roter Rahmen |
 | System | WLAN, Mobilfunk des Routers, MQTT-Broker, Akku, Firmware-Version und Laufzeit, IP-Adresse für die Update-Seite. Solange diese Seite offen ist, bleibt der RoadBuddy bis zu 15 Minuten wach (Update-Modus) |
 
-Welche Seiten es gibt, steht in `config.h` (`USE_LEVEL`, `USE_WATER`, `USE_GAS`, `USE_TEMP`, `USE_BATTERY`). Start- und System-Seite gibt es immer. Das Logo kommt aus `logo_img.h`, erzeugt mit `tools/logo/make_logo.py`.
+Welche Seiten es gibt, stellst du in `config_local.h` ein (`USE_LEVEL`, `USE_WATER`, `USE_GAS`, `USE_TEMP`, `USE_BATTERY`). Start- und System-Seite gibt es immer. Das Logo kommt aus `logo_img.h`, erzeugt mit `tools/logo/make_logo.py`.
 
 In der Kopfzeile stehen links Signalbalken: mit Router-Daten die Mobilfunkstärke (5 Balken nach RSRP bzw. RSSI, dazu das Netz, z. B. „LTE“), sonst die WLAN-Stärke des RoadBuddy (4 Balken). Grün = WLAN und MQTT ok, gelb = MQTT fehlt, rotes Kreuz = kein WLAN. In der Mitte die Seitenanzeige (aktive Seite als Pille), rechts der Akku des Core2 (blau mit „+“ beim Laden).
 
@@ -96,37 +96,9 @@ Level-Werte, die länger als 30 Sekunden nicht aktualisiert wurden, behalten ihr
 
 ## MQTT-Topics
 
-Das Display ist reiner Empfänger und fragt nichts ab, die Aktualisierungsrate bestimmen die Sensoren. Bei `retain`-Meldungen erscheinen die Werte direkt nach dem Aufwachen.
+Das Display ist reiner Empfänger und fragt nichts ab, die Aktualisierungsrate bestimmen die Sensoren. Bei `retain`-Meldungen erscheinen die Werte direkt nach dem Aufwachen. Es liest Ausrichtung (`camper/level/…`), Wasser und Gas (`camper/tanklevel/…`), `camper/temp/sensors`, `camper/battery/batteries` und das Mobilfunk-Topic des Routers; selbst sendet es nur `camper/roadbuddy/status` und `…/info`. Die genaue Liste: **[docs/TOPICS.md](../../docs/TOPICS.md#road-buddy-camperroadbuddy)**.
 
-| Topic | Bedeutung |
-| ----- | --------- |
-| `camper/level/pitch` | Neigung vorne/hinten in Grad |
-| `camper/level/roll` | Neigung links/rechts in Grad |
-| `camper/level/wedge_fl`, `_fr`, `_rl`, `_rr` | Keilhöhe in cm unter jedem Rad (vorne links, vorne rechts, hinten links, hinten rechts) |
-| `camper/level/is_level` | `ON` / `OFF`: steht das Fahrzeug innerhalb der Toleranz |
-| `camper/level/tolerance` | Toleranz in Grad (Größe des Zielrings) |
-| `camper/level/status` | `online` / `offline` von level-node |
-| `camper/tanklevel/water/percent` | Füllstand Frischwasser in % |
-| `camper/tanklevel/water/liters` | Tankinhalt in Litern |
-| `camper/tanklevel/gas/level` | Füllstand Gasflasche in % |
-| `camper/tanklevel/gas/content` | Restmenge der Gasflasche (kg) |
-| `camper/tanklevel/gas/battery` | Akku des Gassensors in % |
-| `camper/tanklevel/gas/ble_state` | `OK`, sonst wird „BLE“ als Warnung gezeigt |
-| `camper/tanklevel/status` | `online` / `offline` (Last Will, gilt für Wasser und Gas) |
-| `camper/temp/sensors` | Alle Temperatursensoren als JSON-Liste: `[{"id":"fridge","name":"Kühlschrank","t":4.31,"alarm":0}, …]` |
-| `camper/temp/status` | `online` / `offline` von temp-node |
-| `camper/battery/batteries` | Alle Batterien als JSON-Liste: `[{"name":"Bordbatterie","ok":true,"soc":78,"v":13.31,"w":-56,"rt":2830}, …]` (ab battery-node 1.2.2 mit Restlaufzeit) |
-| `camper/battery/status` | `online` / `offline` von battery-node |
-| `camper/router/mobile` | Mobilfunkdaten des Routers als JSON (`rsrp`, `rssi`, Netztyp), für die Signalbalken. Einstellbar mit `ROUTER_TOPIC` in `config.h`, `""` schaltet es ab |
-
-Eigene Topics (sendet der Road Buddy selbst, Präfix änderbar mit `#define SELF_TOPIC` in `config.h`):
-
-| Topic | Bedeutung |
-| ----- | --------- |
-| `camper/roadbuddy/status` | `online` / `offline` (Last Will) |
-| `camper/roadbuddy/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
-
-Weitere Topics unter diesen Präfixen (z. B. `rssi`, `voltage`, `raw_level`, `tare_*`, Grauwasser) werden ignoriert. Die Topics für Wasser und Gas stehen als Konstanten am Anfang des Sketches, das Level-Topic in `config.h`. Die früheren getrennten Geräte (`camper/waterlevel`, `camper/gaslevel`) werden nicht mehr unterstützt.
+Die Topics für Wasser und Gas stehen als Konstanten am Anfang des Sketches, Level-, Router- und eigenes Topic (`ROUTER_TOPIC`, `SELF_TOPIC`) in `config.h` und lassen sich in `config_local.h` ändern. Die früheren getrennten Geräte (`camper/waterlevel`, `camper/gaslevel`) werden nicht mehr unterstützt.
 
 Die Sensoren dazu:
 
@@ -155,11 +127,11 @@ Seit 1.3.0 hat jede Firmware eine Kennung (`CAMPER-FW:roadbuddy:<version>:<chip>
 - **Prüfung beim Update** (Update-Webseite): Die installierte Version steht dabei. Eine gewählte Datei wird schon im Browser und beim Hochladen im Gerät noch einmal geprüft, bevor etwas aktiviert wird. Abgelehnt werden eine `.merged.bin` (komplettes Flash-Abbild für USB), Firmware für ein anderes Gerät oder einen anderen Chip und zu große Dateien. Eine Datei ohne Kennung (Version vor 1.3.0) geht nur mit „Ohne Kennung hochladen“. Fehler stehen im Klartext da statt „Update failed“.
 - **Ereignisse:** Die letzten Ereignisse (Start mit Grund, WLAN und MQTT verbunden/getrennt, Uploads mit Ergebnis, Rückfall, gespeicherte Einstellungen) stehen in der Web-Oberfläche. Sie bleiben bei Neustart, Absturz und Update erhalten, nach einem Stromausfall ist das Log leer.
 - **Rückfall nach Update:** Hat eine neue Firmware nach 5 Minuten kein WLAN oder startet sie mehr als dreimal neu, startet wieder die vorherige. Kam das Update über den Setup-AP (ohne WLAN), wird nur auf Neustart-Schleifen geachtet.
-- Aufwachen aus dem Deep Sleep zählt nicht als Neustart und wird nicht eingetragen. Eine neue Firmware gilt nach 15 s mit WLAN als gut. WLAN-Daten kommen nur über USB (`config.h`), deshalb gibt es keinen WLAN-Rückweg.
+- Aufwachen aus dem Deep Sleep zählt nicht als Neustart und wird nicht eingetragen. Eine neue Firmware gilt nach 15 s mit WLAN als gut. WLAN-Daten kommen nur über USB (`config_local.h`), deshalb gibt es keinen WLAN-Rückweg.
 
-**Einmal per USB mit eigener `config.h` flashen:** Der Build aus GitHub Actions enthält keine Zugangsdaten (er nutzt `config.example.h`). Ab Version 1.1.0 speichert eine Firmware mit echter `config.h` WLAN, MQTT und den Web-Login im Flash, die Actions-Firmware liest sie von dort. Deshalb das erste Mal (und nach einem Löschen des Flash) per USB mit eigener `config.h` flashen, danach reichen die Updates über die Webseite.
+**Einmal per USB mit eigener `config_local.h` flashen:** Der Build aus GitHub Actions enthält keine Zugangsdaten (ohne `config_local.h` gebaut). Ab Version 1.1.0 speichert eine Firmware mit eigenen Zugangsdaten WLAN, MQTT und den Web-Login im Flash, die Actions-Firmware liest sie von dort. Deshalb das erste Mal (und nach einem Löschen des Flash) per USB mit eigener `config_local.h` flashen, danach reichen die Updates über die Webseite.
 
-Ein Login für die Seite lässt sich mit `WEB_USER` / `WEB_PASS` in `config.h` setzen (leer = ohne Login).
+Ein Login für die Seite lässt sich mit `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASSWORD` in `config_local.h` setzen (leer = ohne Login).
 
 ---
 
@@ -193,14 +165,16 @@ m5core2-roadbuddy/
     ├── roadbuddy.ino            – Sketch (Seiten, MQTT, Stromsparen)
     ├── logo_img.h               – Logo der Startseite (erzeugt, nicht von Hand ändern)
     ├── webota.cpp / .h          – Update-Webseite
-    └── config.example.h         – Vorlage für WLAN- und MQTT-Daten
+    ├── config.h                 – Standardwerte (nicht ändern)
+    └── config_local.h.example   – Vorlage für eigene WLAN- und MQTT-Daten (`config_local.h`)
 ```
 
 ---
 
 ## Hinweise
 
-- Zugangsdaten gehören nur in `config.h`, diese Datei ist in `.gitignore` eingetragen und darf nie committet werden.
+- Zugangsdaten gehören nur in `config_local.h`, diese Datei ist in `.gitignore` eingetragen und darf nie committet werden.
+- **Umstieg von Version 1.5.7 oder älter:** Früher war `config.h` die eigene Datei. Die Werte aus der alten `config.h` in eine neue `config_local.h` übertragen (`ssid` → `DEFAULT_WIFI_SSID`, `password` → `DEFAULT_WIFI_PASSWORD`, `mqtt_server` → `DEFAULT_MQTT_SERVER`, `mqtt_port` → `DEFAULT_MQTT_PORT`, `mqtt_user` → `DEFAULT_MQTT_USER`, `mqtt_pass` → `DEFAULT_MQTT_PASSWORD`, `mqtt_topic` → `LEVEL_TOPIC`, `WEB_USER`/`WEB_PASS` → `DEFAULT_WEB_USER`/`DEFAULT_WEB_PASSWORD`).
 - Der Prozentwert des Core2-Akkus ist nur eine Schätzung aus der Spannung.
 
 ---
@@ -211,7 +185,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware). Der CI-Build nutzt `config.example.h` als `config.h`, die `.bin` enthält also keine Zugangsdaten. Sie übernimmt die Zugangsdaten, die eine eigene Firmware vorher im Flash gespeichert hat (siehe [Update über WLAN](#update-über-wlan)).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware). Der CI-Build hat keine `config_local.h`, die `.bin` enthält also keine Zugangsdaten. Sie übernimmt die Zugangsdaten, die eine eigene Firmware vorher im Flash gespeichert hat (siehe [Update über WLAN](#update-über-wlan)).
 
 ## Lizenz
 

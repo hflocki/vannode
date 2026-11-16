@@ -8,8 +8,8 @@
 Usage: notes.py <device> [<version>]     version defaults to FW_VERSION of the device
 
 The changelog is a Markdown table "| Version | Änderungen |"; the row of the version
-becomes the text of the GitHub release. Without a row a short hint is printed and a
-warning goes to stderr (the release is still created). Standard library only.
+becomes the text of the GitHub release. Without a row the script exits with code 1,
+so the release step fails and no release without changelog text is published. Standard library only.
 """
 import re
 import sys
@@ -37,8 +37,10 @@ def main():
     ver = sys.argv[2] if len(sys.argv) == 3 else version(device)
     text = notes(device, ver)
     if text is None:
-        print(f"::warning::No entry for {device} {ver} in CHANGELOG.md", file=sys.stderr)
-        text = "Keine Änderungsnotiz zu dieser Version."
+        # No release without its changelog row: add "| <version> | ... |" to CHANGELOG.md
+        print(f"::error::No entry for {device} {ver} in firmware/{FOLDER.get(device, device)}/CHANGELOG.md",
+              file=sys.stderr)
+        sys.exit(1)
     print(f"**{device}-node {ver}**\n\n{text}\n\n"
           f"Installieren: `.bin` über die Web-Oberfläche des Geräts hochladen (Road Buddy: Update-Seite); "
           f"wo eine `.html.gz` dabei ist, diese danach ebenfalls. Alle Versionen: "

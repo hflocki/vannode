@@ -1,6 +1,6 @@
 # MQTT-Topics
 
-Alle Topics der VanNode-Geräte auf einen Blick. Die Tabellen nennen die Vorgaben ab Werk; das Basis-Topic jedes Geräts (`<prefix>`) lässt sich in seiner Web-Oberfläche ändern. Einzelheiten zu Werten und Einheiten stehen in der README des jeweiligen Geräts.
+Alle Topics der VanNode-Geräte auf einen Blick. Die Tabellen nennen die Vorgaben ab Werk; das Basis-Topic jedes Geräts (`<prefix>`) lässt sich in seiner Web-Oberfläche ändern. Diese Datei ist die vollständige Liste; die README eines Geräts nennt nur das Basis-Topic und verweist hierher. Wer Topics in der Firmware ändert, trägt sie hier ein.
 
 ## Gemeinsames Schema
 
@@ -22,6 +22,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Tanks (Frischwasser, Grauwasser, Gas) | `camper/tanklevel` | tanklevel | [firmware/tanklevel](../firmware/tanklevel/README.md) |
 | Levelsensor | `camper/level` | level | [firmware/level](../firmware/level/README.md) |
 | Heizung (Truma) | `camper/heater` | heater | [firmware/heater](../firmware/heater/README.md) |
+| Heizung (Alde) | `camper/alde` | alde | [firmware/alde](../firmware/alde/README.md) |
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
 | BLE-Node Battery (battery-node: Batterien) | `camper/battery` | ble (Gerätename battery-node) | [firmware/ble](../firmware/ble/README.md#batterien-battery-node) |
@@ -49,51 +50,183 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 
 ## Levelsensor `camper/level`
 
-| Topic | Inhalt |
-| --- | --- |
-| `…/pitch`, `…/roll` | Längs- und Querneigung in ° (vorne höher bzw. links höher = positiv) |
-| `…/wedge_fl`, `wedge_fr`, `wedge_rl`, `wedge_rr` | Keilhöhe in cm je Rad |
-| `…/is_level` | `ON`, wenn innerhalb der Toleranz |
+| Topic | Wert |
+|---|---|
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
+| `…/pitch` | Längsneigung in °, positiv = vorne höher |
+| `…/roll` | Querneigung in °, positiv = links höher |
+| `…/wedge_fl`, `wedge_fr`, `wedge_rl`, `wedge_rr` | Keilhöhe in cm vorne links / vorne rechts / hinten links / hinten rechts |
+| `…/is_level` | `ON`, wenn Längs- und Querneigung innerhalb der Toleranz liegen |
 | `…/sensor` | `OK` / `ERROR` |
-| `…/tolerance`, `track_width`, `wheelbase`, `mount`, `tare_active`, `tare_pitch`, `tare_roll`, `filter_active`, `mqtt_fast` | Einstellungen |
-| `…/cmd/tare/set`, `…/cmd/tare_reset/set`, `…/cmd/sensor_restart/set` | `PRESS` |
-| `…/cmd/tolerance/set`, `track_width/set`, `wheelbase/set`, `mount/set`, `tare_pitch/set`, `tare_roll/set` | Wert |
-| `…/cmd/filter/set`, `…/cmd/mqtt_speed/set` | `ON` / `OFF` / `TOGGLE` |
+| `…/rssi` | WLAN-Signal |
+| `…/tolerance`, `track_width`, `wheelbase`, `mount`, `tare_active`, `tare_pitch`, `tare_roll`, `filter_active`, `mqtt_fast` | Einstellungen (bei Änderung und einmal pro Minute) |
+
+**Befehle** (`PRESS` bzw. Wert, nicht retained):
+
+| Topic | Payload |
+|---|---|
+| `…/cmd/tare/set` | `PRESS` – aktuelle Lage als waagerecht speichern |
+| `…/cmd/tare_reset/set` | `PRESS` |
+| `…/cmd/sensor_restart/set` | `PRESS` – BNO085 neu starten |
+| `…/cmd/tolerance/set` | `0.1` … `5` |
+| `…/cmd/track_width/set`, `wheelbase/set` | cm |
+| `…/cmd/mount/set` | Name der Einbaulage, z. B. `Wand links` |
+| `…/cmd/tare_pitch/set`, `tare_roll/set` | `-10` … `10` |
+| `…/cmd/filter/set`, `mqtt_speed/set` | `ON` / `OFF` / `TOGGLE` |
 
 ## Heizung `camper/heater`
 
-Unterstruktur wie bei inetbox2mqtt. Vollständige Liste der Keys in der [README der Heizung](../firmware/heater/README.md#mqtt).
+Unterstruktur wie bei inetbox2mqtt (bis heater 1.0 lag sie unter `service/truma`). Dazu `…/log`: Logzeilen (nicht retained), Stufe in der Web-Oberfläche einstellbar.
+
+**Status** `…/control_status/<key>` (retained, Änderungen innerhalb einer Sekunde, alles einmal pro Minute)
+
+| Key | Werte | Bedeutung |
+|---|---|---|
+| `alive` | ON / OFF | CP Plus fragt dieses Gerät ab |
+| `current_temp_room` | °C | Raumtemperatur |
+| `target_temp_room` | 0, 5–30 | Raum-Zieltemperatur (0 = aus) |
+| `heating_mode` | off / eco / high | Lüfterstufe |
+| `current_temp_water` | °C | Wassertemperatur |
+| `target_temp_water` | 0 / 40 / 60 / 200 | Warmwasser aus / eco / hot / boost |
+| `water_mode` | off / eco / high | wie oben als Text |
+| `energy_mix` | gas / mix / electricity | Energiequelle (Diesel = gas) |
+| `el_power_level` | 0 / 900 / 1800 | Elektroleistung |
+| `operating_status` | 0–9 | 0/1 aus, 4 Start/Nachlauf, ≥5 läuft |
+| `operating_status_text` | Text | |
+| `error_code` | Zahl | Fehlercode wie am CP Plus, ohne E/W und H (z. B. `212` für E212), 0 = keiner. Berechnung wie in inetbox.py, inetbox2mqtt und ESPHome. Kurz nach dem Start des CP Plus kommt `255` (im WomoLIN-Mitschnitt zu sehen). Bedeutung siehe `error_text` |
+| `error_text` | Text | Kurzer deutscher Text zum Fehlercode passend zum eingestellten Heizungsmodell (Gas-Combi, Combi D, VarioHeat; z. B. 122 = `Kraftstoffmangel (…)` bei der Combi D), leer = kein Fehler oder unbekannter Code. Tabelle: `truma_errors.h` (gemeinsam mit dem Display, Quelle `firmware/_common`) |
+| `error_kind` | `E` / `W` / leer | `E` = Fehler (muss am CP Plus quittiert werden), `W` = Warnung (verschwindet von selbst), leer = unbekannt |
+| `heater_error` | ON / OFF | Fehler oder Warnung aktiv (jeder Code ≠ 0) |
+| `clock` | hh:mm | Uhrzeit des CP Plus |
+| `vent_level` | 0–10 | Lüftungsstufe (0 = kein Lüften). Nur bei Heizungen, die den LIN-Frame 0x20 nutzen, sonst nicht gesendet |
+| `vent_mode` | off / 1–10 / eco / high | Rohwert dazu (eco/high = Lüfter beim Heizen) |
+| `timer`, `timer_active` | hh:mm-hh:mm / off, ON/OFF | Timer des CP Plus |
+| `timer_times`, `timer_temp_room`, `timer_heating_mode`, `timer_water_mode` | hh:mm-hh:mm, °C, eco/high, off/eco/high | Gespeicherte Timer-Einstellungen (auch bei Timer aus) |
+| `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode` | | für den HA-Thermostat; `hvac_action` = `fan`, wenn die Heizung ohne Raum- und Wasserheizung läuft (Lüften am CP Plus oder Nachlauf) |
+| `decoke`, `decoke_remaining`, `decoke_minutes` | ON/OFF, min, min | Freibrennen |
+| `heater_model` | combi / combi_e / combi_d / combi_d_e / vario | gewähltes Heizungsmodell |
+| `energy_select` | gas / mix_900 / mix_1800 / electricity_900 / electricity_1800 | Energie als ein Wert (nur E-Modelle) |
+| `cpplus_version`, `heater_version`, `release`, `rssi`, `lin_traffic` | | Diagnose |
+
+**Befehle** `…/set/<key>`
+
+| Key | Payload | Wirkung |
+|---|---|---|
+| `target_temp_room` | 0, 5–30 | 0 = Raumheizung aus, sonst einschalten mit dieser Temperatur |
+| `heating_mode` | off / eco / high | Lüfterstufe; schaltet bei Bedarf ein (letzte Temperatur) |
+| `target_temp_water` | 0 / 40 / 60 | Warmwasser |
+| `water_mode` | off / eco / high | Warmwasser |
+| `hvac_mode` | heat / off | Raumheizung an/aus mit letzter Temperatur + Lüfterstufe |
+| `room_setpoint` | 5–30 | Solltemperatur; bei ausgeschalteter Heizung nur gemerkt |
+| `fan_mode` | eco / high (Gas-Combi auch boost, VarioHeat night / auto / boost) | Lüfterstufe; bei ausgeschalteter Heizung nur gemerkt |
+| `energy_mix` / `el_power_level` | gas / mix / electricity, 0 / 900 / 1800 | nur bei E-Modellen |
+| `energy_select` | gas / mix_900 / … / electricity_1800 | Energie und Leistung in einem Befehl (nur E-Modelle) |
+| `heater_model` | combi / combi_e / combi_d / combi_d_e / vario | Heizungsmodell umstellen (sofort wirksam) |
+| `decoke` | ON / OFF | Freibrennen starten / beenden |
+| `decoke_minutes` | 5–120 | Dauer des Freibrennens |
+| `sync_clock` | 1 | Uhrzeit sofort ans CP Plus senden |
+| `timer` | `22:00-06:30[,temp[,eco/high[,off/eco/high]]]`, `on`, `off` | Timer setzen. Fehlende Werte: bisherige Timer-Werte, sonst gemerkte Solltemperatur und Lüfterstufe. Warmwasser ohne Angabe bleibt unverändert |
+| `timer_active` | ON/OFF | Timer mit den gespeicherten Zeiten ein- oder ausschalten |
+| `sniffer` | ON / OFF | LIN-Sniffer (Diagnose, siehe unten), nach Neustart aus |
+| `reboot` | 1 | Neustart |
+
+Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam gesendet werden – fehlende Werte werden sinnvoll ergänzt.
+
+## Alde-Heizung `camper/alde`
+
+Werte vom Heizbus (passiv mitgelesen), Spalte *Quelle* = LIN-Frame und Byte. Alle Werte retained.
+
+| Topic | Inhalt | Quelle (Frame @ Byte) |
+|---|---|---|
+| `…/room` | Raumtemperatur °C | `0x47` @0–1 |
+| `…/setpoint` | Sollwert vom Heizbus °C – **nur verlässlich, solange die Klimaanlage ruht** (sonst Ziel- bzw. Raumtemperatur − 3 °C), nicht für Frostschutz verwenden | `0x03` @0–1 |
+| `…/glycol` | Glykol-Temperatur °C | `0x5B` @0–1 |
+| `…/water` | Warmwasser-Temperatur °C | `0xD6` @4–5 |
+| `…/hotwater_target` | Warmwasser-Ziel: `0` = aus, `50` = normal, `65` = voll | `0xC4` @0–1 |
+| `…/pcb` | Platinentemperatur °C | `0xD3` @0–1 |
+| `…/battery` | 12-V-Batterie V | `0xD6` @6–7 |
+| `…/mains_current` | Landstrom des ganzen Fahrzeugs A (nicht nur der Heizung) | `0x5B` @2–3 |
+| `…/el_power` | Heizstab-Leistung W (0/1000/2000) | `0x55` @0–1 |
+| `…/el_allowed` | erlaubte Heizstab-Leistung W – ein Zustand, sinkt bei Lastabwurf von selbst | `0x06` @0–1 |
+| `…/burner_fan` | Brennergebläse U/min (0 = Brenner aus) | `0x5B` @6 |
+| `…/gas` | `1` = Gas an, `0` = aus | `0x85` @0 |
+| `…/ac_active` | `1` = Klimaanlage wach (abgeleitet: `0x08` antwortet in den letzten 20 s) | `0x08` |
+| `…/ac_light` | Licht der Klimaanlage % | `0x97` @6 |
+| `…/bus_ok` | `1` = gültige LIN-Frames in den letzten 5 s | – |
+| `…/status` | `online` / `offline` (Last Will) | |
+| `…/info` | Diagnose (retained): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime`, `reset`, `heap`, `hw` | |
+| `…/cmd/measure` | beliebiger Inhalt: Werte sofort senden | |
+
+**Bedienteil-Bus** (nur mit Modus „Nur lesen“ oder „Lesen und steuern“), Quelle Info-Frame `0x1B`:
 
 | Topic | Inhalt |
-| --- | --- |
-| `…/control_status/<key>` | Zustand, z. B. `current_temp_room`, `target_temp_room`, `heating_mode`, `current_temp_water`, `water_mode`, `operating_status_text`, `error_code`, `error_text`, `error_kind`, `heater_error`, `hvac_mode`, `hvac_action`, `room_setpoint`, `fan_mode`, `timer`, `decoke` |
-| `…/set/<key>` | Befehle, z. B. `target_temp_room`, `heating_mode`, `water_mode`, `hvac_mode`, `room_setpoint`, `fan_mode`, `timer`, `decoke`, `heater_model`, `sniffer`, `reboot` |
-| `…/log` | Logzeilen (nicht retained), Stufe in der Web-Oberfläche einstellbar |
+|---|---|
+| `…/target` | Sollwert °C (der echte Sollwert des Bedienteils) |
+| `…/panel_room` | Raumtemperatur am Bedienteil °C |
+| `…/outdoor` | Außentemperatur °C (fehlt ohne Fühler) |
+| `…/gas_enabled` | `1` = Gasbetrieb an |
+| `…/el_level` | Heizstab-Stufe 0–3 (kW) |
+| `…/water_mode` | Warmwasser `0` = aus, `1` = an, `2` = Boost |
+| `…/pump` | `1` = Umwälzpumpe läuft |
+| `…/panel_on` | `1` = Bedienteil an |
+| `…/error` | `1` = Störung |
+| `…/ac_input` | `1` = 230 V liegen an |
+| `…/ci_ok` | `1` = Bedienteil antwortet (letzte 5 s) |
+
+**Befehle** (nur mit Modus „Lesen und steuern“, nicht retained):
+
+| Topic | Inhalt |
+|---|---|
+| `…/cmd/target` | Sollwert 5–30 (0,5er-Schritte) |
+| `…/cmd/gas` | `1`/`0` bzw. `ON`/`OFF` |
+| `…/cmd/el_level` | `0`–`3` |
+| `…/cmd/water` | `0`/`1`/`2` bzw. `aus`/`an`/`boost` |
+
+Unbekannte Werte werden verworfen (sie werden nie zu „aus“).
 
 ## Dachlüfter `camper/maxxfan`
 
-`p<n>` ist der Anschluss am VanTurtle-Board (`p1`, `p2`).
+`p<n>` ist der Anschluss am VanTurtle-Board (`p1`, `p2`). Zustände sind retained.
 
-| Topic | Inhalt |
+| Topic | Wert |
 | --- | --- |
-| `…/p<n>/auto_hold`, `…/p<n>/led` | `ON` / `OFF` |
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
+| `…/p<n>/auto_hold` | `ON` / `OFF` |
+| `…/p<n>/led` | `ON` / `OFF` |
 | `…/expander` | `ON` / `OFF` (TCA9555 erreichbar) |
-| `…/cmd/p<n>/<taste>` | Taste drücken: `auto`, `direction`, `on_off`, `faster`, `slower`, `beep` |
-| `…/cmd/p<n>/press` | Tastenname im Payload |
-| `…/cmd/p<n>/speed/set` | `0` … `10`, `0` = Haube schließen |
-| `…/cmd/p<n>/close` | Haube schließen |
-| `…/cmd/p<n>/led/set` | `ON` / `OFF` / `TOGGLE` |
-| `…/cmd/sync_off`, `…/cmd/reboot` | beliebig |
+| `…/rssi` | WLAN-Signal (dBm) |
+
+**Befehle**
+
+| Topic | Payload | Wirkung |
+| --- | --- | --- |
+| `…/cmd/p<n>/<taste>` | beliebig (HA: `PRESS`) | Taste drücken: `auto`, `direction`, `on_off`, `faster`, `slower`, `beep` |
+| `…/cmd/p<n>/press` | Tastenname | dasselbe, Taste im Payload |
+| `…/cmd/p<n>/speed/set` | `0` … `10` | Stufe setzen (Lüfter muss laufen), `0` = Haube schließen |
+| `…/cmd/p<n>/close` | beliebig | Haube schließen (11× Langsamer) |
+| `…/cmd/p<n>/led/set` | `ON` / `OFF` / `TOGGLE` | Controller-LED |
+| `…/cmd/sync_off` | beliebig | Lüfter auf AUS synchronisieren |
+| `…/cmd/reboot` | beliebig | Neustart |
+
+Die MaxxFan meldet ihren Zustand (an/aus, Stufe) nicht zurück, es werden nur Tastendrücke gesendet. „Sync auf AUS“ bringt sie in einen bekannten Zustand.
 
 ## Temperaturen `camper/temp`
 
-| Topic | Inhalt |
-| --- | --- |
-| `…/<id>` | Temperatur in °C |
-| `…/<id>/available` | `online` / `offline` (Sensor am Bus) |
-| `…/<id>/alarm`, `…/alarm` | `ON` / `OFF` je Sensor bzw. für alle |
-| `…/alarm_text` | lesbarer Text aller Alarme, leer = keiner |
-| `…/sensors` | alle Sensoren als JSON-Liste für Displays: `[{"id","name","t","alarm"}, …]` |
+| Topic | Wert |
+|---|---|
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
+| `…/rssi` | WLAN-Signal |
+| `…/<id>` | Temperatur in °C (2 Nachkommastellen), retained |
+| `…/<id>/available` | `online` / `offline` – Sensor antwortet am Bus |
+| `…/<id>/alarm` | `ON` / `OFF` – Grenzwert dieses Sensors verletzt |
+| `…/alarm` | `ON`, solange irgendein Sensor im Alarm ist |
+| `…/alarm_text` | Lesbarer Text aller Alarme, z. B. `Kühlschrank zu warm: 9,2 °C (Grenze 8,0 °C)`; leer = kein Alarm |
+| `…/sensors` | Alle Sensoren als eine JSON-Liste für Displays: `[{"id":"fridge","name":"Kühlschrank","t":4.31,"alarm":0}, …]` (`t` = `null` ohne gültigen Wert, `alarm` 0 = keiner, 1 = zu kalt, 2 = zu warm) |
+
+Gesendet wird nach jeder Messung (Intervall in der Web-UI, Standard 10 s), spätestens jede Minute. Liefert ein Sensor keinen gültigen Wert (abgezogen, Kabelbruch, 85-°C-Startwert), wird kein Wert gesendet und die Entität in HA als nicht verfügbar markiert.
 
 ## Batterien `camper/battery`
 
@@ -121,38 +254,129 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/rvtech/cover` | Dachhaube `open` / `closed` / `opening` / `closing` |
 | `…/rvtech/cover_position` | Position 0 … 100 % |
 | `…/rvtech/reported` | gemeldeter Rohwert (0 … 100, `102` = Lüften) |
-| `…/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` |
+| `…/cmd/rvtech/cover/set` | `OPEN` / `CLOSE` / `STOP` (Stopp nur während Auf/Zu: die Haube hält an, wenn derselbe Befehl noch einmal kommt) |
 | `…/cmd/rvtech/cover_position/set` | `0` … `100` |
 | `…/cmd/rvtech/<preset>/set` | Voreinstellung `auf`, `zu`, `regen`, `lueften`, `fav` (Favorit), `fav_set` (Favorit speichern) (Payload beliebig). Die Werte für Regen, Lüften und Favorit stehen in den Einstellungen der Haube |
 | `…/cmd/<plugin>/release/set` | `ON` / `OFF`: Bluetooth für die App freigeben |
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
-| `…/fridge/temp1`, `set1`, `temp2`, `set2`, `voltage`, `battery`, `fan` (`ON`/`OFF`, Umluft), `night` (`ON`/`OFF`, Nachtmodus), `zone1`, `zone2` (`ON`/`OFF`, Zone läuft; nur mit zweiter Zone), `quick1`, `quick2` (Schnellkühlen Zone 1 / 2), `doorheat` (Türheizung), `error` (aktueller Fehler), `error_last` (letzter Fehler mit Zeit), `errors` (letzte 5 Fehler, JSON), `message`. Zone 1 / 2 = Fächer laut *Name Zone 1/2* (Standard Gefrierfach / Kühlfach) | Kühlschrank; Befehle `power` (Power Gesamt), `zone1`, `zone2`, `fan`, `night`, `quick1`, `quick2`, `doorheat`, `target1`, `target2`, `bpd`, `raw` (Diagnose) |
-| `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) |
+| `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) Kontaktnamen im Feld „Kontaktnamen“ der Plugin-Einstellungen |
 | `…/obd/rpm`, `speed`, `coolant`, `oil_temp`, `fuel`, `fuel_rate`, `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count`, `voltage`, `running` (`ON`/`OFF`), `mil` (`ON`/`OFF`), `dtc`, `protocol`, `adapter`, `raw` | OBD2-Adapter (nur lesen): Standardwerte des Motorsteuergeräts (nur die, die das Fahrzeug meldet), Bordspannung am Adapter, Motor läuft, Motorkontrollleuchte, Fehlercodes als Text. Befehle `…/cmd/obd/read_dtc/set` (`PRESS`), `…/cmd/obd/raw/set` (Adapter-Befehl, Antwort in `raw`) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |
 | `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |
 
+**Kühlschrank** (`fridge`). Die Topics heißen nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum).
+
+| Topic | Inhalt |
+| --- | --- |
+| `…/fridge/temp1`, `temp2`, `set1`, `set2` | Ist- und Soll-Temperatur in °C |
+| `…/fridge/voltage`, `battery` | Spannung in V, Batterie in % (laut Kühlschrank) |
+| `…/fridge/fan`, `night` | `ON` / `OFF`: Umluft (im Nachtmodus aus), Nachtmodus |
+| `…/fridge/zone1`, `zone2` | `ON` / `OFF`: Zone läuft (nur mit „Zweite Zone“) |
+| `…/fridge/quick1`, `quick2`, `doorheat` | `ON` / `OFF`: Schnellkühlen Zone 1 / 2, Türheizung |
+| `…/fridge/error` | aktueller Fehler: E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen |
+| `…/fridge/error_last` | letzter Fehler mit Zeit, bleibt nach dem Ende stehen |
+| `…/fridge/errors` | die letzten 5 Fehler als JSON: `code`, `text`, `zone`, `zone_name`, `first`, `last`, `ago_s`, `count` (nur im RAM, nach einem Neustart leer) |
+| `…/fridge/message` | letzte Nachricht des Kühlschranks (Diagnose) |
+| `…/cmd/fridge/power/set` | `ON` / `OFF`: „Power Gesamt“, ganzer Kühlschrank |
+| `…/cmd/fridge/zone1/set`, `zone2/set` | `ON` / `OFF`: Zone einzeln; die andere bleibt, wie sie ist |
+| `…/cmd/fridge/fan/set`, `night/set`, `quick1/set`, `quick2/set`, `doorheat/set` | `ON` / `OFF` |
+| `…/cmd/fridge/target1/set`, `target2/set` | Soll-Temperatur in °C (auch wenn der Kühlschrank auf °F steht) |
+| `…/cmd/fridge/bpd/set` | Batterieschutz Stufe 1–3 |
+| `…/cmd/fridge/raw/set` | Diagnose: beliebiger Befehl an den Kühlschrank, die Antwort steht im Geräte-Log |
+
 ## Display `camper/display`
 
 | Topic | Inhalt |
 | --- | --- |
-| `…/ip`, `…/brightness`, `…/screen` | Zustand |
-| `…/awning` | Markise `ON` / `OFF` / `unknown` |
-| `…/driving` | Abfahrtscheck: `ON` während der Fahrt |
-| `…/depart` | Abfahrtscheck: `OK` oder die offenen Teile |
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
+| `…/ip`, `/rssi`, `/brightness`, `/screen` | Zustand (retained) |
 | `…/cmd/brightness` | `5` … `100` |
 | `…/cmd/screen` | `ON` / `OFF` |
-| `…/cmd/page` | Seitenname oder Nummer |
+| `…/cmd/page` | Seitenname (`Heizung`) oder Nummer (`0` = erste) |
+| `…/awning` | Markise `ON` (ausgefahren) / `OFF` / `unknown` (retained) |
 | `…/cmd/awning` | `ON` / `OFF` / `TOGGLE` (nur ohne Kontakt-Sensor) |
+| `…/driving` | Abfahrtscheck: `ON` während der Fahrt, sonst `OFF` (retained) |
+| `…/depart` | Abfahrtscheck: `OK` oder die offenen Teile, z. B. `Tür offen, Markise ausgefahren` (retained) |
 | `…/cmd/reboot` | beliebig |
 
-Das Display sendet die Befehle der Dachhaube an `camper/tool/cmd/rvtech/…` (Voreinstellungen, Position). Es liest außerdem alle Geräte oben, die Router-Topics, die Gateways und die Topics der eigenen Kacheln und Automationen (frei eingestellt, z. B. `zigbee2mqtt/…`).
+Das Display abonniert `<Basis-Topic>/#` jedes Geräts, die Router-Topics, die Gateways und die Topics der eigenen Kacheln und Automationen (frei eingestellt, z. B. `zigbee2mqtt/…`). Befehle sendet es nicht retained.
+
+**Gelesene Werte**
+
+| Seite | Topics |
+| --- | --- |
+| Tanks | `water/percent`, `water/liters`, `grey/percent`, `grey/liters`, `gas/level`, `gas/content`, `status` |
+| Ausrichtung | `pitch`, `roll`, `is_level`, `tolerance`, `wedge_fl/fr/rl/rr`, `status` |
+| Heizung | `control_status/current_temp_room`, `room_setpoint`, `hvac_mode`, `fan_mode`, `water_mode`, `current_temp_water`, `operating_status_text`, `error_code`, `heater_error`, `decoke`, `decoke_remaining`, `alive`; `status` |
+| MaxxFan | `p<n>/auto_hold`, `p<n>/led`, `status` |
+| Dachhaube (BLE-Node) | `rvtech/cover`, `rvtech/cover_position`, `rvtech/reported` (102 = Lüften), `rvtech/connected`, `status` |
+| Temperaturen | `sensors` (JSON-Liste aller Sensoren mit Name, Wert und Alarm), `alarm_text`, `status` |
+| Batterien | `batteries` (JSON-Liste aller Batterien mit Ladestand, Spannung, Leistung, Restlaufzeit, BM2-Zustand), `status`. Seite *Batterien*: je Batterie eine Karte mit Ladestand-Balken, Leistung (▲ lädt / ▼ entlädt), Restlaufzeit; beim BM2 Spannung und Zustand |
+
+**Gesendete Befehle**
+
+| Bedienung | Topic | Payload |
+| --- | --- | --- |
+| Heizung an/aus | `<heizung>/set/hvac_mode` | `heat` / `off` |
+| Solltemperatur | `<heizung>/set/room_setpoint` | `5` … `30` (1 s nach dem letzten Tippen) |
+| Gebläse | `<heizung>/set/fan_mode` | `eco` / `high` |
+| Warmwasser | `<heizung>/set/water_mode` | `off` / `eco` / `high` |
+| Freibrennen | `<heizung>/set/decoke` | `ON` / `OFF` (am Display lange drücken) |
+| Lüfter-Tasten | `<maxxfan>/cmd/p<n>/<taste>` | `PRESS` (`on_off`, `auto`, `faster`, `slower`, `direction`, `close` = Haube schließen, ab maxxfan-node 1.4.0) |
+| Lüfter-Stufe | `<maxxfan>/cmd/p<n>/speed/set` | `1` … `10` |
+| Sync AUS | `<maxxfan>/cmd/sync_off` | `PRESS` |
+| Tara | `<level>/cmd/tare/set` | `PRESS` (am Display lange drücken) |
+| Dachhaube Auf / Zu / Regen / Lüften | `<ble>/cmd/rvtech/<auf\|zu\|regen\|lueften>/set` | `PRESS` |
+| Dachhaube Position | `<ble>/cmd/rvtech/cover_position/set` | `0` … `100` (beim Loslassen des Reglers) |
 
 ## Road Buddy `camper/roadbuddy`
 
-Sendet nur `status` (Last Will) und `info`. Liest `camper/level/…`, `camper/tanklevel/…`, `camper/temp/sensors`, `camper/battery/batteries`, die `status`-Topics dieser Geräte und das Mobilfunk-Topic des Routers (`ROUTER_TOPIC`).
+Reiner Empfänger, fragt nichts ab. Gelesen:
+
+| Topic | Bedeutung |
+| ----- | --------- |
+| `camper/level/pitch` | Neigung vorne/hinten in Grad |
+| `camper/level/roll` | Neigung links/rechts in Grad |
+| `camper/level/wedge_fl`, `_fr`, `_rl`, `_rr` | Keilhöhe in cm unter jedem Rad (vorne links, vorne rechts, hinten links, hinten rechts) |
+| `camper/level/is_level` | `ON` / `OFF`: steht das Fahrzeug innerhalb der Toleranz |
+| `camper/level/tolerance` | Toleranz in Grad (Größe des Zielrings) |
+| `camper/level/status` | `online` / `offline` von level-node |
+| `camper/tanklevel/water/percent` | Füllstand Frischwasser in % |
+| `camper/tanklevel/water/liters` | Tankinhalt in Litern |
+| `camper/tanklevel/gas/level` | Füllstand Gasflasche in % |
+| `camper/tanklevel/gas/content` | Restmenge der Gasflasche (kg) |
+| `camper/tanklevel/gas/battery` | Akku des Gassensors in % |
+| `camper/tanklevel/gas/ble_state` | `OK`, sonst wird „BLE“ als Warnung gezeigt |
+| `camper/tanklevel/status` | `online` / `offline` (Last Will, gilt für Wasser und Gas) |
+| `camper/temp/sensors` | Alle Temperatursensoren als JSON-Liste: `[{"id":"fridge","name":"Kühlschrank","t":4.31,"alarm":0}, …]` |
+| `camper/temp/status` | `online` / `offline` von temp-node |
+| `camper/battery/batteries` | Alle Batterien als JSON-Liste: `[{"name":"Bordbatterie","ok":true,"soc":78,"v":13.31,"w":-56,"rt":2830}, …]` (ab battery-node 1.2.2 mit Restlaufzeit) |
+| `camper/battery/status` | `online` / `offline` von battery-node |
+| `camper/router/mobile` | Mobilfunkdaten des Routers als JSON (`rsrp`, `rssi`, Netztyp), für die Signalbalken. Einstellbar mit `ROUTER_TOPIC` in `config_local.h`, `""` schaltet es ab |
+
+Eigene Topics (sendet der Road Buddy selbst, Präfix änderbar mit `#define SELF_TOPIC` in `config_local.h`):
+
+| Topic | Bedeutung |
+| ----- | --------- |
+| `camper/roadbuddy/status` | `online` / `offline` (Last Will) |
+| `camper/roadbuddy/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
+
+Weitere Topics unter diesen Präfixen (z. B. `rssi`, `voltage`, `raw_level`, `tare_*`, Grauwasser) werden ignoriert.
+
+## Muster-Gerät `camper/example`
+
+| Topic | Inhalt |
+|---|---|
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
+| `…/rssi` | WLAN-Signal in dBm |
+| `…/<key>` | ein Topic pro Wert, siehe `VALUES[]` in `sensor.cpp` |
+| `…/cmd/measure` | beliebiger Inhalt: sofort messen |
+
+Ein neues Gerät aus der Vorlage ergänzt hier seinen eigenen Abschnitt.
 
 ## Router RUT956
 

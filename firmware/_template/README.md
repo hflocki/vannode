@@ -43,15 +43,9 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 ## MQTT / Home Assistant
 
-| Topic | Inhalt |
-|---|---|
-| `camper/example/status` | `online` / `offline` (Last Will) |
-| `camper/example/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset` (Grund des letzten Neustarts), `heap` |
-| `camper/example/rssi` | WLAN-Signal in dBm |
-| `camper/example/<key>` | ein Topic pro Wert, siehe `VALUES[]` in `sensor.cpp` |
-| `camper/example/cmd/measure` | beliebiger Inhalt: sofort messen |
+Basis-Topic `camper/example`: ein Topic pro Wert (`VALUES[]` in `sensor.cpp`), dazu `status`, `info`, `rssi` und `…/cmd/measure`. Alle Topics: **[docs/TOPICS.md](../../docs/TOPICS.md#muster-gerät-camperexample)**.
 
-TODO: Tabelle der eigenen Werte und Befehle.
+TODO: eigene Werte und Befehle in `docs/TOPICS.md` unter einem eigenen Abschnitt eintragen und hier nur das Basis-Topic nennen.
 
 ## Serieller Monitor (115200 Baud)
 

@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
+// Own settings of the Road Buddy. Copy this file to config_local.h (same folder) and fill in
+// your values. config_local.h is excluded by .gitignore and never ends up on GitHub.
+// Everything defined here replaces the default from config.h; lines you do not need can go.
+#pragma once
+
+// WiFi
+#define DEFAULT_WIFI_SSID      "YOUR_WIFI_SSID"
+#define DEFAULT_WIFI_PASSWORD  "YOUR_WIFI_PASSWORD"
+
+// MQTT broker
+#define DEFAULT_MQTT_SERVER    "192.168.1.10"
+#define DEFAULT_MQTT_PORT      1883
+#define DEFAULT_MQTT_USER      "YOUR_MQTT_USER"
+#define DEFAULT_MQTT_PASSWORD  "YOUR_MQTT_PASSWORD"
+
+// Login for the update page, empty user = no login
+// #define DEFAULT_WEB_USER     "admin"
+// #define DEFAULT_WEB_PASSWORD "secret"
+
+// Topics (defaults in config.h)
+// #define LEVEL_TOPIC  "camper/level/#"
+// #define ROUTER_TOPIC "camper/router/mobile"   // "" = WiFi bars of this device only
+// #define SELF_TOPIC   "camper/roadbuddy"
+
+// Sensors shown (1 = on, 0 = off)
+// #define USE_LEVEL   1
+// #define USE_WATER   1
+// #define USE_GAS     1
+// #define USE_TEMP    1
+// #define USE_BATTERY 1

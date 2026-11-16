@@ -113,15 +113,17 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 
 **Board-Einstellungen**
 
-| Einstellung | Wert |
-| --- | --- |
-| Board | ESP32C3 Dev Module |
-| USB CDC On Boot | **Enabled** |
-| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** – WLAN und Bluetooth brauchen gut 1,4 MB |
+| Einstellung | ESP32-C3 Super Mini | ESP32-S3 (DevKitC-1 o. Ä.) | M5Stack AtomS3 Lite |
+| --- | --- | --- | --- |
+| Board | ESP32C3 Dev Module | ESP32S3 Dev Module | M5AtomS3 |
+| USB CDC On Boot | **Enabled** | **Enabled** | **Enabled** |
+| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **8M with spiffs (3MB APP/1.5MB SPIFFS)** |
+| PSRAM | – | aus | – |
+| Anschluss zum Flashen | USB-C | Buchse „USB“ (nicht „UART“), dort kommt auch das serielle Log | USB-C |
+| Release-Datei für OTA | `ble-node-esp32c3-v<version>.bin` | `ble-node-esp32s3-v<version>.bin` | `ble-node-atoms3-v<version>.bin` |
+| Besonderheit | – | – | Wird er beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken des USB-Kabels ca. 2 s halten (Download-Modus) |
 
-ESP32-S3 (DevKitC-1 o. Ä.): Board **ESP32S3 Dev Module**, USB CDC On Boot **Enabled**, Partition Scheme **Minimal SPIFFS**, PSRAM aus; am Anschluss „USB“ flashen (nicht „UART“), dort kommt auch das serielle Log.
-
-AtomS3 Lite: Board **M5AtomS3**, USB CDC On Boot **Enabled**, Partition Scheme **8M with spiffs (3MB APP/1.5MB SPIFFS)**. Wird der AtomS3 beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken des USB-Kabels ca. 2 s halten (Download-Modus).
+WLAN und Bluetooth brauchen zusammen gut 1,4 MB. Deshalb immer ein Schema **mit OTA** wählen, sonst schlägt das Update über die Web-Oberfläche mit „Partition Could Not be Found“ fehl.
 
 Board-Paket: esp32 von Espressif Systems, 3.3.x (CI: 3.3.2).
 

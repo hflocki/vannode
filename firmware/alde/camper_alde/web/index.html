@@ -317,12 +317,20 @@ nav button .ico{display:inline-flex}
     <!-- SETTINGS TAB (ids cfg-* are read in loadSetup() / saveSettings()) -->
     <div class="tab-content" id="tab-settings">
         <div class="card">
-            <div class="card-title accent">LIN-Bus</div>
+            <div class="card-title accent">Heizbus</div>
+            <div class="enable-row">
+                <div>
+                    <div style="font-size:0.85rem">Heizbus-Transceiver angeschlossen</div>
+                    <div class="form-hint" style="margin-top:2px">Aus = nur der Bedienteil-Bus ist verdrahtet (ein Transceiver). Glykol, Warmwasser-Temperatur, Batterie, Landstrom usw. fehlen dann. Änderung startet das Gerät neu.</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfg-lin-enabled"><span></span></label>
+            </div>
             <div class="form-group">
                 <label>Sendeabstand (Sekunden)</label>
                 <input type="number" id="cfg-interval" min="1" max="600" step="1">
             </div>
-            <div class="form-hint">Der Bus liefert alle 388 ms neue Werte. Geänderte Werte gehen höchstens in diesem Abstand per MQTT raus, unverändert spätestens jede Minute. Das Gerät liest nur mit und sendet nichts auf den Bus.</div>
+            <div class="form-hint">Der Heizbus liefert alle 388 ms neue Werte. Geänderte Werte gehen höchstens in diesem Abstand per MQTT raus, unverändert spätestens jede Minute. Auf dem Heizbus liest das Gerät nur mit und sendet nichts.</div>
+            <div class="form-hint" id="uart-hint" style="display:none">ESP32-C3: Der Chip hat nur einen freien UART – entweder Heizbus oder Bedienteil-Bus. Für die Steuerung den Heizbus ausschalten.</div>
             <div class="btn-row"><button class="btn btn-primary" onclick="saveSettings()">💾 Speichern</button></div>
         </div>
         <div class="card">
@@ -332,8 +340,10 @@ nav button .ico{display:inline-flex}
                     <select id="cfg-ci-mode"><option value="0">Aus</option><option value="1">Nur lesen</option><option value="2">Lesen und steuern</option></select></div>
                 <div class="form-group"><label>Heizung</label>
                     <select id="cfg-ci-function"><option value="1">Compact 3020</option><option value="2">3030</option><option value="3">3030 Plus</option></select></div>
+                <div class="form-group"><label>Heizstab höchstens</label>
+                    <select id="cfg-el-max"><option value="0">Aus (nie einschalten)</option><option value="1">1 kW</option><option value="2">2 kW</option><option value="3">3 kW</option></select></div>
             </div>
-            <div class="form-hint">Zweiter LIN-Transceiver am Anschluss für ein externes Bedienteil (CI-Bus, 19200 Baud). Hier fragt der ESP das Alde-Bedienteil als Master ab und kann – nur bei „Lesen und steuern“ – Sollwert, Gas, Heizstab und Warmwasser setzen. Ungetestet an der 3020. Nur nutzen, wenn du die Heizung dabei im Blick hast.</div>
+            <div class="form-hint">LIN-Transceiver am Anschluss für ein externes Bedienteil (CI-Bus, 19200 Baud, Master-Widerstand auf dieser Seite). Hier fragt der ESP das Alde-Bedienteil als Master ab und kann – nur bei „Lesen und steuern“ – Sollwert, Gas, Heizstab und Warmwasser setzen. Vor jedem Befehl meldet er sich neu an, liest den Stand, sendet nur bei geänderten Werten und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet. „Heizstab höchstens“ schützt den Landstrom-Anschluss: höhere Stufen werden abgelehnt (am Bedienteil selbst bleibt alles möglich). Geprüft bisher nur an der 3030 Plus. Nur nutzen, wenn du die Heizung dabei im Blick hast.</div>
             <div class="form-hint" id="ci-link">--</div>
             <div class="btn-row"><button class="btn btn-primary" onclick="saveCi()">💾 Speichern</button></div>
         </div>
@@ -470,10 +480,13 @@ const BIN_KEYS = ['gas', 'ac_active', 'bus_ok', 'gas_enabled', 'pump', 'panel_on
 const CI_KEYS = ['target', 'panel_room', 'outdoor', 'gas_enabled', 'el_level', 'water_mode', 'pump', 'panel_on', 'error', 'ac_input', 'ci_ok'];
 const WATER_TXT = ['Aus', 'An', 'Boost'];
 let ciMode = 0;
+let linActive = true;
+let elMax = 3;
 
 function updateLiveData(d) {
     // Values of the external panel bus only when it is switched on
-    const list = (d.values || []).filter(v => ciMode > 0 || !CI_KEYS.includes(v.key));
+    // and heater bus values only while that bus runs
+    const list = (d.values || []).filter(v => CI_KEYS.includes(v.key) ? ciMode > 0 : linActive);
     const box = $('live-values');
     const sig = list.map(v => v.key).join('|');
     if (sig !== lastSig) {
@@ -504,8 +517,14 @@ function updateLiveData(d) {
         $('ctl-state').textContent = byKey.ci_ok ? 'Verbunden mit dem Bedienteil. Jeder Befehl liest zuerst den aktuellen Stand und ändert nur den gewählten Wert.'
                                                  : 'Keine Verbindung zum Bedienteil – Befehle werden abgelehnt.';
     }
-    $('live-state').textContent = d.ok ? 'LIN-Bus aktiv · letzter Frame ' + formatAge(d.age) + ' · ' + d.reads + ' Updates · ' + d.errors + ' verworfen'
-                                       : 'Kein LIN-Verkehr – Bedienteil angeschlossen? (' + d.errors + ' verworfene Frames)';
+    if (linActive) {
+        $('live-state').textContent = d.ok ? 'Heizbus aktiv · letzter Frame ' + formatAge(d.age) + ' · ' + d.reads + ' Updates · ' + d.errors + ' verworfen'
+                                           : 'Kein Verkehr auf dem Heizbus – Bedienteil angeschlossen? (' + d.errors + ' verworfene Frames)';
+    } else {
+        $('live-state').textContent = ciMode === 0 ? 'Heizbus aus und Bedienteil-Bus aus – Einstellungen prüfen.'
+            : d.ok ? 'Nur Bedienteil-Bus · letzte Antwort ' + formatAge(d.age) + ' · ' + d.reads + ' Updates'
+                   : 'Bedienteil antwortet nicht (Heizbus ist ausgeschaltet).';
+    }
     $('dot-sensor').className = 'status-dot ' + (d.ok ? 'active' : 'warning');
     $('dot-wifi').className = 'status-dot ' + (d.rssi ? 'active' : '');
     $('dot-mqtt').className = 'status-dot ' + (d.mqtt ? 'active' : '');
@@ -529,6 +548,7 @@ async function postConfig(obj) {
         try { msg = (await resp.json()).error || msg; } catch (e) {}
         throw new Error(msg);
     }
+    return resp.json().catch(() => ({}));
 }
 
 async function loadSetup() {
@@ -553,8 +573,17 @@ async function loadSetup() {
         ciMode = cfg.ci_mode ?? 0;
         $('cfg-ci-mode').value = String(ciMode);
         $('cfg-ci-function').value = String(cfg.ci_function ?? 1);
-        $('ci-link').textContent = ciMode === 0 ? 'Bedienteil-Bus aus.' : (cfg.ci_ok ? 'Bedienteil antwortet.' : 'Bedienteil antwortet nicht.');
-        $('ctl-card').style.display = ciMode === 2 ? '' : 'none';
+        linActive = cfg.lin_active ?? true;
+        $('cfg-lin-enabled').checked = cfg.lin_enabled ?? true;
+        $('uart-hint').style.display = cfg.one_uart ? '' : 'none';
+        elMax = cfg.el_max ?? 1;
+        $('cfg-el-max').value = String(elMax);
+        // Control: only the allowed heating element steps
+        for (const o of $('ctl-el').options) o.disabled = o.hidden = parseInt(o.value) > elMax;
+        const ciPossible = cfg.ci_possible ?? true;
+        $('ci-link').textContent = !ciPossible ? 'Nicht möglich, solange der Heizbus läuft (ESP32-C3).'
+            : ciMode === 0 ? 'Bedienteil-Bus aus.' : (cfg.ci_ok ? 'Bedienteil antwortet.' : 'Bedienteil antwortet nicht.');
+        $('ctl-card').style.display = (ciMode === 2 && ciPossible) ? '' : 'none';
         lastSig = '';   // rebuild the tiles (CI values shown / hidden)
     } catch (e) {
         showToast('Fehler beim Laden der Einstellungen', true);
@@ -564,9 +593,15 @@ async function loadSetup() {
 // Device settings (checked here and again on the device)
 async function saveSettings() {
     const interval = parseInt($('cfg-interval').value);
+    const lin_enabled = $('cfg-lin-enabled').checked;
     if (!(interval >= 1 && interval <= 600)) { showToast('Intervall 1-600 s', true); return; }
     try {
-        await postConfig({interval});
+        const r = await postConfig({interval, lin_enabled});
+        if (r.restart) {
+            showToast('Gespeichert – Neustart …');
+            setTimeout(() => location.reload(), 10000);
+            return;
+        }
         showToast('Gespeichert');
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
@@ -576,10 +611,11 @@ async function saveSettings() {
 async function saveCi() {
     const ci_mode = parseInt($('cfg-ci-mode').value);
     const ci_function = parseInt($('cfg-ci-function').value);
+    const el_max = parseInt($('cfg-el-max').value);
     if (ci_mode === 2 && ciMode !== 2 &&
-        !confirm('Steuerung einschalten? Der ESP sendet dann Befehle an das Alde-Bedienteil (Gas, Heizstab, Warmwasser). Ungetestet an der 3020 – nur, wenn du die Heizung dabei im Blick hast.')) return;
+        !confirm('Steuerung einschalten? Der ESP sendet dann Befehle an das Alde-Bedienteil (Gas, Heizstab, Warmwasser). Bisher nur an der 3030 Plus geprüft – nur, wenn du die Heizung dabei im Blick hast.')) return;
     try {
-        await postConfig({ci_mode, ci_function});
+        await postConfig({ci_mode, ci_function, el_max});
         showToast('Gespeichert');
         loadSetup();
     } catch (e) {

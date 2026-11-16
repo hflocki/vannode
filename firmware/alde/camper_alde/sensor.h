@@ -44,4 +44,10 @@ const char* sensorControl(const AldeCiCommand& cmd);
 // True while the external panel bus answers (ci_mode > 0)
 bool sensorCiOk();
 
+// True if the heater bus was opened at boot (config.lin_enabled)
+bool sensorLinActive();
+
+// False on the ESP32-C3 while the heater bus runs (the chip has only one free UART)
+bool sensorCiPossible();
+
 #endif // SENSOR_H

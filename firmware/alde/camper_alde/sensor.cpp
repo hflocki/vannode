@@ -3,15 +3,17 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
-// Sensor part of the Alde node, two independent buses:
+// Sensor part of the Alde node, two independent buses (each one optional):
 //
-// 1. Heater bus (panel <-> heater, 9600 8N2): listened to passively. That UART is opened
+// 1. Heater bus (panel <-> heater, 9600 8N2, config.lin_enabled): listened to passively. That UART is opened
 //    WITHOUT a TX pin, so the firmware cannot write there even by mistake. The Alde panel
 //    is the master of that bus. Decoding: alde_lin.cpp (based on alde-3020he-lin, MIT).
 // 2. External panel bus ("CI-bus", 19200 8N1, optional, ci_mode > 0): the ESP is the LIN
 //    master and polls the panel's info frame. With ci_mode 2 it also sends control frames,
 //    always built from the panel's current state. Protocol: alde_ci.cpp (based on
 //    alde_3030_plus, MIT).
+//
+// The ESP32-C3 has only one free UART: it runs either the heater bus or the panel bus.
 #include "sensor.h"
 #include "alde_lin.h"
 #include "evlog.h"
@@ -52,15 +54,19 @@ const ValueDef VALUES[] = {
 const uint8_t VALUE_COUNT = sizeof(VALUES) / sizeof(VALUES[0]);
 static_assert(sizeof(VALUES) / sizeof(VALUES[0]) <= MAX_VALUES, "Too many values, raise MAX_VALUES");
 
-// UART2 on the classic ESP32 / S3; the C3 only has UART0 and UART1 (no CI bus there)
+// Classic ESP32 / S3: one UART per bus. ESP32-C3: only UART1 is free, so the panel bus
+// can only run while the heater bus is switched off.
 #if SOC_UART_NUM > 2
 static HardwareSerial& linSerial = Serial2;
 static HardwareSerial& ciSerial = Serial1;
-#define CI_SUPPORTED 1
+#define CI_SHARED_UART 0
 #else
 static HardwareSerial& linSerial = Serial1;
-#define CI_SUPPORTED 0
+static HardwareSerial& ciSerial = Serial1;
+#define CI_SHARED_UART 1
 #endif
+
+static bool linActive = false;            // heater bus opened at boot (config.lin_enabled)
 
 static AldeLin lin;
 static unsigned long lastPublish = 0;
@@ -79,8 +85,11 @@ static uint8_t ciActiveMode = 0;          // mode the UART was set up for
 static bool ciChanged = false;
 static uint32_t ciPollsOk = 0, ciPollsBad = 0, ciCmdsSent = 0;
 static portMUX_TYPE cmdMux = portMUX_INITIALIZER_UNLOCKED;
-static AldeCiCommand pendingCmd;
+static AldeCiCommand pendingCmd;          // written by the web / MQTT task
 static volatile bool cmdPending = false;
+static AldeCiCommand activeCmd;           // command being worked on in ciLoop()
+static uint8_t cmdTries = 0;
+static bool cmdRegistered = false;
 
 static void logSignal(uint8_t pid, const uint8_t* d, int n) {
     if (!sigLog) return;
@@ -95,10 +104,17 @@ bool sensorCiOk() {
     return ciActiveMode > 0 && ciLastOk != 0 && millis() - ciLastOk < CI_TIMEOUT_MS;
 }
 
+bool sensorLinActive() {
+    return linActive;
+}
+
+bool sensorCiPossible() {
+    return !CI_SHARED_UART || !linActive;
+}
+
 // ============================================================
 // External panel bus (LIN master, 19200 8N1)
 // ============================================================
-#if CI_SUPPORTED
 static void ciDrain() {
     while (ciSerial.available()) ciSerial.read();
 }
@@ -188,10 +204,12 @@ static void ciStop() {
     ciState.valid = false;
     ciLastOk = 0;
     ciChanged = true;
+    aldeCiCommandClear(activeCmd);
     evlog::add("Bedienteil-Bus aus");
 }
 
 static void ciLoop(unsigned long now) {
+    if (!sensorCiPossible()) return;      // C3 with heater bus: the only UART is taken
     // Follow changes of the setting at runtime (0 <-> on restarts the UART, 1 <-> 2 does not)
     if ((config.ci_mode > 0) != (ciActiveMode > 0)) {
         if (ciActiveMode > 0) ciStop();
@@ -200,29 +218,66 @@ static void ciLoop(unsigned long now) {
     if (ciActiveMode == 0) return;
     ciActiveMode = config.ci_mode;
 
-    // A queued command: read the current state first, then change only what was asked
+    // A new command from the web / MQTT task: merge it into the one being worked on
     if (cmdPending) {
-        AldeCiCommand cmd;
         portENTER_CRITICAL(&cmdMux);
-        cmd = pendingCmd;
+        if (pendingCmd.hasTarget) { activeCmd.hasTarget = true; activeCmd.target = pendingCmd.target; }
+        if (pendingCmd.gas >= 0) activeCmd.gas = pendingCmd.gas;
+        if (pendingCmd.el_level >= 0) activeCmd.el_level = pendingCmd.el_level;
+        if (pendingCmd.water >= 0) activeCmd.water = pendingCmd.water;
         aldeCiCommandClear(pendingCmd);
         cmdPending = false;
         portEXIT_CRITICAL(&cmdMux);
+        cmdTries = 0;
+        cmdRegistered = false;
+        ciNextPoll = now;
+    }
 
-        if (config.ci_mode == 2 && !aldeCiCommandEmpty(cmd) && ciPoll()) {
-            ciLastOk = millis();
-            uint8_t d[8];
-            aldeCiBuildControl(ciState, cmd, d);
-            ciSendFrame(ALDE_CI_ID_CONTROL, d);
-            ciCmdsSent++;
-            evlog::add("Befehl an Bedienteil: %02X %02X %02X", d[3], d[4], d[5]);
-            Serial.printf("[CI] Control sent: 00 00 00 %02X %02X %02X FF FF\n", d[3], d[4], d[5]);
-            ciFastPolls = 5;                  // confirm quickly
-            ciNextPoll = millis() + 300;
-            lastPublish = 0;                  // publish the confirmation right away
-        } else if (!aldeCiCommandEmpty(cmd)) {
-            evlog::add("Befehl verworfen: Bedienteil antwortet nicht");
+    if (!aldeCiCommandEmpty(activeCmd)) {
+        if (config.ci_mode != 2) {
+            aldeCiCommandClear(activeCmd);
+            evlog::add("Befehl verworfen: Steuerung aus");
+            return;
         }
+        if ((long)(now - ciNextPoll) < 0) return;
+        // Register right before the command, so a panel that restarted knows us again
+        if (!cmdRegistered) {
+            ciRegister();
+            delay(50);
+            cmdRegistered = true;
+        }
+        // Read the current state; never send while the panel is busy or reports an error
+        bool ok = ciPoll();
+        if (ok) { ciLastOk = millis(); ciFails = 0; }
+        if (!ok || aldeCiBlocked(ciState)) {
+            if (++cmdTries >= CI_CMD_TRIES) {
+                aldeCiCommandClear(activeCmd);
+                const char* why = !ok ? "Bedienteil antwortet nicht" : ciState.error ? "Bedienteil meldet Störung" : "Bedienteil beschäftigt";
+                evlog::add("Befehl verworfen: %s", why);
+                Serial.printf("[CI] Command dropped: %s\n", why);
+            } else {
+                ciNextPoll = millis() + 300;
+            }
+            return;
+        }
+        AldeCiCommand cmd = activeCmd;
+        aldeCiCommandClear(activeCmd);
+        // Only send what differs from the panel's state
+        if (!aldeCiCommandReduce(ciState, cmd)) {
+            evlog::add("Befehl: Wert schon eingestellt");
+            Serial.println("[CI] Command skipped: panel already reports the value");
+            ciNextPoll = millis() + CI_POLL_MS;
+            return;
+        }
+        uint8_t d[8];
+        aldeCiBuildControl(ciState, cmd, d);
+        ciSendFrame(ALDE_CI_ID_CONTROL, d);
+        ciCmdsSent++;
+        evlog::add("Befehl an Bedienteil: %02X %02X %02X", d[3], d[4], d[5]);
+        Serial.printf("[CI] Control sent: 00 00 00 %02X %02X %02X FF FF\n", d[3], d[4], d[5]);
+        ciFastPolls = 5;                  // confirm quickly
+        ciNextPoll = millis() + 300;
+        lastPublish = 0;                  // publish the confirmation right away
         return;
     }
 
@@ -242,19 +297,19 @@ static void ciLoop(unsigned long now) {
         ciNextPoll = now + CI_POLL_MS;
     }
 }
-#endif // CI_SUPPORTED
-
 const char* sensorControl(const AldeCiCommand& cmd) {
-#if !CI_SUPPORTED
-    (void)cmd;
-    return "Steuerung auf diesem Chip nicht möglich (zweiter UART fehlt)";
-#else
+    static char msg[48];
+    if (!sensorCiPossible()) return "ESP32-C3: Steuerung nur mit ausgeschaltetem Heizbus";
     if (config.ci_mode != 2) return "Steuerung ist aus (Einstellungen → Bedienteil-Bus)";
     if (!sensorCiOk()) return "Keine Verbindung zum Bedienteil";
     if (aldeCiCommandEmpty(cmd)) return "Kein Befehl";
     if (cmd.hasTarget && !(cmd.target >= 5.0f && cmd.target <= 30.0f)) return "Sollwert 5-30 °C";
     if (cmd.gas > 1) return "Gas: 0 oder 1";
     if (cmd.el_level > 3) return "Heizstab: 0-3 kW";
+    if (cmd.el_level > (int8_t)config.el_max) {
+        snprintf(msg, sizeof(msg), "Heizstab höchstens %u kW (Einstellungen)", (unsigned)config.el_max);
+        return msg;
+    }
     if (cmd.water > 2) return "Warmwasser: 0 = aus, 1 = an, 2 = Boost";
     portENTER_CRITICAL(&cmdMux);
     if (cmd.hasTarget) { pendingCmd.hasTarget = true; pendingCmd.target = cmd.target; }
@@ -264,7 +319,6 @@ const char* sensorControl(const AldeCiCommand& cmd) {
     cmdPending = true;
     portEXIT_CRITICAL(&cmdMux);
     return nullptr;
-#endif
 }
 
 // ============================================================
@@ -273,33 +327,45 @@ const char* sensorControl(const AldeCiCommand& cmd) {
 void sensorInit() {
     for (uint8_t i = 0; i < MAX_VALUES; i++) sensorData.values[i] = NAN;
     aldeCiCommandClear(pendingCmd);
+    aldeCiCommandClear(activeCmd);
 
+    linActive = config.lin_enabled;
+    if (!linActive) {
+        Serial.println("[LIN] Heater bus switched off (only the panel bus transceiver fitted)");
+    } else {
 #if LIN_SLP_PIN >= 0
-    // TJA1020 and similar: SLP/NSLP high = normal mode (receiver on). TX stays unused.
-    pinMode(LIN_SLP_PIN, OUTPUT);
-    digitalWrite(LIN_SLP_PIN, HIGH);
+        // TJA1020 and similar: SLP/NSLP high = normal mode (receiver on). TX stays unused.
+        pinMode(LIN_SLP_PIN, OUTPUT);
+        digitalWrite(LIN_SLP_PIN, HIGH);
 #endif
-    linSerial.setRxBufferSize(1024);
-    // 9600 baud 8N2, RX only (TX pin -1): receive-only by construction
-    linSerial.begin(LIN_BAUD, SERIAL_8N2, LIN_RX_PIN, -1);
-    lin.onSignalChange = logSignal;
-    Serial.printf("[LIN] Alde reader on GPIO%d (RX only, %d baud 8N2)\n", LIN_RX_PIN, LIN_BAUD);
-#if CI_SUPPORTED
-    Serial.printf("[CI] External panel bus on RX GPIO%d / TX GPIO%d, mode %u\n", CI_RX_PIN, CI_TX_PIN, config.ci_mode);
-#endif
+        linSerial.setRxBufferSize(1024);
+        // 9600 baud 8N2, RX only (TX pin -1): receive-only by construction
+        linSerial.begin(LIN_BAUD, SERIAL_8N2, LIN_RX_PIN, -1);
+        lin.onSignalChange = logSignal;
+        Serial.printf("[LIN] Alde reader on GPIO%d (RX only, %d baud 8N2)\n", LIN_RX_PIN, LIN_BAUD);
+    }
+    if (sensorCiPossible()) {
+        Serial.printf("[CI] External panel bus on RX GPIO%d / TX GPIO%d, mode %u\n", CI_RX_PIN, CI_TX_PIN, config.ci_mode);
+    } else {
+        Serial.println("[CI] External panel bus not available: the C3's only UART runs the heater bus");
+    }
 }
 
 static void copyReadings(unsigned long now) {
     const AldeReadings& r = lin.readings();
     bool ci = sensorCiOk() && ciState.valid;
     const float N = NAN;
+    const bool h = linActive;   // heater bus switched off: its values stay unknown
     const AldeCiState& c = ciState;
     const float src[] = {
-        r.room, r.setpoint, r.glycol, r.water, r.hotwater_target, r.pcb, r.battery,
-        r.mains_current, r.el_power, r.el_allowed, r.burner_fan, r.gas, r.ac_active, r.ac_light,
-        lin.busOk(now) ? 1.0f : 0.0f,
+        h ? r.room : N, h ? r.setpoint : N, h ? r.glycol : N, h ? r.water : N,
+        h ? r.hotwater_target : N, h ? r.pcb : N, h ? r.battery : N, h ? r.mains_current : N,
+        h ? r.el_power : N, h ? r.el_allowed : N, h ? r.burner_fan : N, h ? r.gas : N,
+        h ? r.ac_active : N, h ? r.ac_light : N,
+        h ? (lin.busOk(now) ? 1.0f : 0.0f) : N,
         ci ? c.setpoint : N, ci ? c.room : N, ci ? c.outdoor : N,
-        ci ? (float)c.gas : N, ci ? (float)c.el_level : N, ci ? (float)c.water : N,
+        ci ? (float)c.gas : N, ci ? (float)c.el_level : N,
+        (ci && c.water <= 2) ? (float)c.water : N,   // mode 3 is unknown, never published
         ci ? (float)c.pump : N, ci ? (float)c.panel_on : N, ci ? (float)c.error : N,
         ci ? (float)c.ac_input : N,
         ciActiveMode > 0 ? (sensorCiOk() ? 1.0f : 0.0f) : N,
@@ -311,27 +377,28 @@ static void copyReadings(unsigned long now) {
 void sensorLoop() {
     unsigned long now = millis();
 
-    uint8_t chunk[128];
-    int avail;
-    while ((avail = linSerial.available()) > 0) {
-        int n = linSerial.readBytes(chunk, avail < (int)sizeof(chunk) ? avail : (int)sizeof(chunk));
-        if (n <= 0) break;
-        lin.feed(chunk, n, now);
+    if (linActive) {
+        uint8_t chunk[128];
+        int avail;
+        while ((avail = linSerial.available()) > 0) {
+            int n = linSerial.readBytes(chunk, avail < (int)sizeof(chunk) ? avail : (int)sizeof(chunk));
+            if (n <= 0) break;
+            lin.feed(chunk, n, now);
+        }
+        lin.tick(now);
     }
-    lin.tick(now);
 
-#if CI_SUPPORTED
     static bool lastCiOk = false;
     ciLoop(now);
     now = millis();
     bool ciOk = sensorCiOk();
     if (ciOk != lastCiOk) { lastCiOk = ciOk; ciChanged = true; }
-#endif
 
-    bool busOk = lin.busOk(now);
+    // "Sensor OK" = heater bus runs; without heater bus the panel bus counts
+    bool busOk = linActive ? lin.busOk(now) : ciOk;
     bool busChanged = busOk != sensorData.ok;
     sensorData.ok = busOk;
-    if (busOk) sensorData.last_ok = lin.stats().last_frame_ms;
+    if (busOk) sensorData.last_ok = linActive ? lin.stats().last_frame_ms : ciLastOk;
     sensorData.errors = lin.stats().frames_bad;
 
     // Publish on change, but at most every interval_s; bus up/down right away
@@ -353,11 +420,13 @@ void sensorRequestMeasure() {
 
 void sensorPrint() {
     const AldeBusStats& s = lin.stats();
+    if (!linActive) Serial.println("[LIN] heater bus switched off");
     Serial.printf("[LIN] ok=%u bad=%u empty=%u bus=%s ac_seen=%lus ago\n", (unsigned)s.frames_ok,
                   (unsigned)s.frames_bad, (unsigned)s.headers_empty, lin.busOk(millis()) ? "OK" : "---",
                   s.last_ac_ms ? (unsigned long)((millis() - s.last_ac_ms) / 1000) : 0UL);
-    Serial.printf("[CI] mode=%u polls ok=%u bad=%u commands=%u link=%s raw=%02X %02X %02X %02X %02X %02X\n",
-                  config.ci_mode, (unsigned)ciPollsOk, (unsigned)ciPollsBad, (unsigned)ciCmdsSent,
+    if (!sensorCiPossible()) Serial.println("[CI] not available (C3: the only UART runs the heater bus)");
+    Serial.printf("[CI] mode=%u el_max=%u polls ok=%u bad=%u commands=%u link=%s raw=%02X %02X %02X %02X %02X %02X\n",
+                  config.ci_mode, config.el_max, (unsigned)ciPollsOk, (unsigned)ciPollsBad, (unsigned)ciCmdsSent,
                   sensorCiOk() ? "OK" : "---", ciState.raw[0], ciState.raw[1], ciState.raw[2],
                   ciState.raw[3], ciState.raw[4], ciState.raw[5]);
     for (uint8_t i = 0; i < VALUE_COUNT; i++) {

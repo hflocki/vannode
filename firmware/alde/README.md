@@ -2,16 +2,24 @@
 
 > **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
 
-> ⚠️ **IN ENTWICKLUNG** – noch nicht an einer echten Alde-Heizung getestet. Das Mitlesen ist aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) übernommen und dort am Bedienteil geprüft, die Steuerung aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (dort an einer 3030 Plus geprüft). Diese Arduino-Umsetzung ist bisher nur mit künstlichen Bus-Daten getestet (`tests/run.sh`), die Steuerung an einer **Compact 3020 noch von niemandem**.
+> ⚠️ **IN ENTWICKLUNG** – noch nicht an einer echten Alde-Heizung getestet. Das Mitlesen ist aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) übernommen und dort am Bedienteil geprüft, die Steuerung aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (dort an einer 3030 Plus geprüft). Diese Arduino-Umsetzung ist bisher nur mit künstlichen Bus-Daten getestet (`tests/run.sh`), die Steuerung an einer **Compact 3020 oder 3030 noch von niemandem**.
 
-Liest die Werte einer **Alde Compact 3020 HE** (Warmwasser-Heizung) und stellt sie per **MQTT** bereit – für das Display, die Pocket-Node und optional Home Assistant. Optional steuert er die Heizung auch.
+Liest die Werte einer **Alde Compact 3020 HE, 3030 oder 3030 Plus** (Warmwasser-Heizung) und stellt sie per **MQTT** bereit – für das Display, die Pocket-Node und optional Home Assistant. Optional steuert er die Heizung auch.
 
-Der Node arbeitet an **zwei getrennten Bussen**:
+Der Node arbeitet an **zwei getrennten Bussen**, beide sind einzeln abschaltbar. **Zum Steuern reicht ein Transceiver am Bedienteil-Bus**, der Heizbus bringt nur zusätzliche Messwerte:
 
 | Bus | Anschluss | Rolle des ESP | Wozu |
 |---|---|---|---|
 | **Heizbus** (9600 Baud) | Buchse „Control panel“ an der Heizung, per Splitter | hört nur zu, UART **ohne TX-Pin** | Glykol, Warmwasser, Heizstab-Leistung, Gebläse, Batterie, Landstrom … |
 | **Bedienteil-Bus** (CI-Bus, 19200 Baud, optional) | Anschluss für ein externes Bedienteil am Alde-Bedienteil | **LIN-Master**: fragt ab, sendet nur bei „Lesen und steuern“ Befehle | Sollwert, Außentemperatur, Gas, Heizstab-Stufe, Warmwasser, Pumpe, Störung – **und Steuerung** |
+
+| Ausbau | Werte | Steuern |
+|---|---|---|
+| Nur Bedienteil-Bus (1 Transceiver) | Raum, außen, Sollwert, Gas, Heizstab-Stufe, Warmwasser-Modus, Pumpe, 230 V, Störung | ja |
+| Nur Heizbus (1 Transceiver) | Raum, Glykol, Warmwasser-Temperatur, Batterie, Landstrom, Heizstab in W, Gebläse, Klimaanlage | nein |
+| Beide (2 Transceiver) | alles | ja |
+
+Der Heizbus ist bisher nur an der Compact 3020 HE dekodiert; an der 3030 kann er andere oder keine Werte liefern.
 
 Auf dem Heizbus ist das Bedienteil Master, dort lässt sich nichts steuern (ausführlich: [CONTROL-NOT-SOLVED.md](https://github.com/Mellowgroup-dk/alde-3020he-lin/blob/main/docs/CONTROL-NOT-SOLVED.md)). Am externen Anschluss ist das Bedienteil dagegen Slave und nimmt Befehle an – so wie von einem Fremd-Bedienteil. Der Bedienteil-Bus ist ab Werk **aus**.
 
@@ -22,8 +30,11 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 - 13 Werte vom Bus plus „Klimaanlage aktiv“ und „LIN-Bus“ unter `camper/alde/<key>`, Home Assistant legt die Entitäten automatisch an (Gas, Klimaanlage aktiv und LIN-Bus als Binärsensoren)
 - Werte gehen bei Änderung raus, höchstens alle *Sendeabstand* Sekunden (Standard 5 s), unverändert spätestens jede Minute
 - Ungültige Werte (Platzhalter `0xFFFF`/`0x7FFF`, unbekannte Gas-Codes, falsche Prüfsumme) werden verworfen, der letzte gültige Wert bleibt stehen
-- Optional Bedienteil-Bus: 11 weitere Werte und – nur im Modus „Lesen und steuern“ – Sollwert (5–30 °C), Gas, Heizstab (0–3 kW) und Warmwasser (aus/an/Boost) per MQTT, Web-UI und Home Assistant
-- Jeder Befehl liest zuerst den aktuellen Stand des Bedienteils und ändert nur den gewählten Wert; am Bedienteil gemachte Einstellungen werden nicht überschrieben
+- Optional Bedienteil-Bus: 11 weitere Werte und – nur im Modus „Lesen und steuern“ – Sollwert (5–30 °C), Gas, Heizstab (bis zur eingestellten Höchststufe) und Warmwasser (aus/an/Boost) per MQTT, Web-UI und Home Assistant
+- Vor jedem Befehl meldet sich der Node neu am Bedienteil an und liest den aktuellen Stand. Gesendet wird nur, was sich wirklich ändert; am Bedienteil gemachte Einstellungen werden nicht überschrieben
+- Kein Befehl, solange das Bedienteil „beschäftigt“ oder eine Störung meldet: Der Node versucht es bis zu fünfmal im Abstand von 0,3 s und verwirft den Befehl dann (Ereignis-Log)
+- **Heizstab-Höchststufe** (Werkseinstellung 1 kW): Höhere Stufen lehnt der Node ab, damit eine schwache Landstrom-Absicherung nicht auslöst. Am Bedienteil selbst bleibt alles einstellbar
+- Unbekannter Warmwasser-Modus (Bitwert 3) wird nicht gemeldet statt als „an“
 - Web-Oberfläche: Live-Werte, Bus-Zustand, Steuerung, Einstellungen, MQTT, WLAN, optionaler Login
 - Setup-WLAN `Alde-Node-XXXXXX` (192.168.4.1) beim ersten Start und wenn das WLAN 60 s fehlt
 - Firmware (`.bin`) und Web-Oberfläche (`index.html.gz`) im Web-UI hochladbar, dazu Arduino-OTA
@@ -32,14 +43,30 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 
 | Teil | Hinweis |
 |---|---|
-| ESP32 (z. B. ESP32-WROOM-32 DevKit) | braucht drei UARTs für beide Busse. Ein ESP32-C3 kann nur den Heizbus (nutzt dann UART1) |
-| LIN-Transceiver 1, z. B. TJA1020-Modul (Heizbus) | **RXD → GPIO16** (`LIN_RX_PIN`), TXD bleibt frei. SLP/NSLP auf High legen oder an einen GPIO (`LIN_SLP_PIN`), sonst ist der Empfänger aus |
-| RJ12-Splitter | an der Buchse **„Control panel“** der Heizung, das Original-Bedienteil bleibt dran |
-| LIN-Transceiver 2 (Bedienteil-Bus, optional) | **RXD → GPIO26** (`CI_RX_PIN`), **TXD ← GPIO25** (`CI_TX_PIN`), SLP/NSLP auf High (`CI_SLP_PIN`). LIN-Leitung an den Anschluss für ein externes Bedienteil, gemeinsame Masse |
+| ESP32 | siehe Tabelle unten; der Chip bestimmt, ob beide Busse gleichzeitig gehen |
+| LIN-Transceiver, z. B. TJA1020 / TJA1021 | je Bus einer. Logikseite verträgt 3,3 V direkt, **kein Pegelwandler nötig** |
+| RJ12-Splitter (nur Heizbus) | an der Buchse **„Control panel“** der Heizung, das Original-Bedienteil bleibt dran |
+| Step-down 12 V → 5 V | versorgt den ESP aus dem Bordnetz (5V-Pin) |
 
-Heizbus: LIN, Masse und 12 V kommen über das RJ12-Kabel. Das Bedienteil muss angeschlossen bleiben: Es ist der Bus-Master, ohne es ist auf dem Bus komplett Ruhe.
+### Welcher ESP
 
-Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse). Wo der Anschluss an der 3020 sitzt und ob dafür im Service-Menü „third party panel“ eingeschaltet werden muss, ist noch offen – das Bedienteil meldet „third party panel C fail“, solange es dort niemanden findet. **Wer das an einer 3020 ausprobiert, bitte melden.**
+| Chip | Heizbus | Bedienteil-Bus | Standard-Pins |
+|---|---|---|---|
+| **ESP32 DevKit (WROOM-32)** – Empfehlung | ✓ | ✓ gleichzeitig | Heizbus RX 16 · Bedienteil RX 26 / TX 25 |
+| ESP32-S3 | ✓ | ✓ gleichzeitig | Heizbus RX 16 · Bedienteil RX 4 / TX 5 (GPIO 25 fehlt, 26 gehört zum Flash) |
+| ESP32-C3 | entweder … | … oder (nur ein freier UART) | Heizbus RX 3 · Bedienteil RX 4 / TX 5 |
+
+Andere Pins in `config_local.h` (`LIN_RX_PIN`, `CI_RX_PIN`, `CI_TX_PIN`, `LIN_SLP_PIN`, `CI_SLP_PIN`). Am C3 für die Steuerung den Heizbus ausschalten (Web-UI → Einstellungen → Heizbus).
+
+### Verdrahtung
+
+- **12 V** an VBAT des Transceivers, **Masse** gemeinsam mit Heizung/Bedienteil und ESP.
+- **RXD** ist Open-Drain: Pull-up (ca. 10 kΩ) auf **3,3 V**. Manche Module ziehen RXD auf 5 V hoch – dann den Widerstand auf 3,3 V umlöten, sonst bekommt der ESP-Pin 5 V.
+- **TXD** und **SLP/NSLP** schalten ab ca. 2 V, die 3,3 V des ESP reichen. SLP/NSLP auf High legen oder an einen GPIO (`*_SLP_PIN`), sonst ist der Transceiver aus.
+- **Heizbus:** nur RXD anschließen, TXD bleibt frei. **Kein Master-Widerstand** – Master ist das Alde-Bedienteil. Das Bedienteil muss angeschlossen bleiben, ohne es ist auf dem Bus Ruhe. LIN, Masse und 12 V kommen über das RJ12-Kabel.
+- **Bedienteil-Bus:** RXD und TXD anschließen. Hier ist der ESP Master, also **Master-Widerstand 1 kΩ mit Diode von 12 V auf LIN** (bei vielen TJA1020-Modulen eine Lötbrücke oder ein Jumper).
+
+Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse). Wo der Anschluss an der 3020 und der 3030 sitzt und ob dafür im Service-Menü „third party panel“ eingeschaltet werden muss, ist noch offen – das Bedienteil meldet „third party panel C fail“, solange es dort niemanden findet. **Wer das an einer 3020 oder 3030 ausprobiert, bitte melden.**
 
 ## Arduino IDE
 
@@ -47,7 +74,7 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 | Einstellung | Wert |
 |---|---|
-| Board | ESP32 DevKit (Release-Datei `alde-node-esp32`), ESP32-C3 geht auch |
+| Board | ESP32 DevKit (Release-Datei `alde-node-esp32`); ESP32-S3 und ESP32-C3 gehen auch (siehe *Welcher ESP*) |
 | Zusätzliche Bibliotheken | keine |
 | Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`) |
 
@@ -75,7 +102,11 @@ Web-UI → **Einstellungen → Bedienteil-Bus (Steuerung)**:
 | Nur lesen | Der ESP meldet sich einmal an (`0x3C`, Hersteller `0x41DE`, Funktions-ID der Heizung) und fragt jede Sekunde den Info-Frame `0x1B` ab. Er sendet keine Befehle |
 | Lesen und steuern | zusätzlich Befehle per Control-Frame `0x1A`. Vor jedem Befehl wird der Stand neu gelesen, danach fünfmal schnell nachgefragt, damit die Bestätigung gleich da ist. Jeder Befehl steht im Ereignis-Log |
 
-Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3). Erst „Nur lesen“ ausprobieren: Kommen plausible Werte (Sollwert und Raum wie am Bedienteil), dann erst steuern – und dabei an der Heizung bleiben.
+Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3; auch der Modellname in Home Assistant) und die **Heizstab-Höchststufe** (0–3 kW, Werkseinstellung 1 kW; Home Assistant und Web-UI bieten nur die erlaubten Stufen an).
+
+Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten. Das Gerät startet neu, die Heizbus-Werte verschwinden aus Web-UI und Home Assistant, und am C3 wird der UART für den Bedienteil-Bus frei.
+
+Erst „Nur lesen“ ausprobieren: Kommen plausible Werte (Sollwert und Raum wie am Bedienteil), dann erst steuern – und dabei an der Heizung bleiben.
 
 ## Serieller Monitor (115200 Baud)
 
@@ -92,7 +123,7 @@ Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plu
 `tests/run.sh` übersetzt beide Protokoll-Teile für den PC:
 
 - `alde_test`: künstlicher Heizbus-Zyklus mit den Rohwerten aus der Doku von alde-3020he-lin (Byte für Byte, Platzhalter, falsche Prüfsumme, Warmwasser aus, Klimaanlage wach, Bus-Timeout)
-- `ci_test`: Bedienteil-Bus – Anmeldung, Info-Frame mit Echo, das Beispiel-Frame aus der Doku von alde_3030_plus, Befehle ändern nur ihr Feld, Grenzen, Sonderwerte
+- `ci_test`: Bedienteil-Bus – Anmeldung, Info-Frame mit Echo, das Beispiel-Frame aus der Doku von alde_3030_plus, Befehle ändern nur ihr Feld, Grenzen, Sonderwerte, unveränderte Werte werden nicht gesendet, Sperre bei „beschäftigt“/Störung, Warmwasser-Modus 3
 
 Läuft auch in der GitHub Action.
 

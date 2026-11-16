@@ -87,6 +87,8 @@ static void setDefaults() {
     config.interval_s = DEFAULT_INTERVAL_S;
     config.ci_mode = DEFAULT_CI_MODE;
     config.ci_function = DEFAULT_CI_FUNCTION;
+    config.lin_enabled = DEFAULT_LIN_ENABLED;
+    config.el_max = DEFAULT_EL_MAX;
 }
 
 static bool isNumber(JsonVariantConst v) {
@@ -353,6 +355,11 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
     doc["ci_mode"] = config.ci_mode;
     doc["ci_function"] = config.ci_function;
     doc["ci_ok"] = sensorCiOk();
+    doc["lin_enabled"] = config.lin_enabled;
+    doc["lin_active"] = sensorLinActive();      // differs from lin_enabled until the restart
+    doc["el_max"] = config.el_max;
+    doc["ci_possible"] = sensorCiPossible();
+    doc["one_uart"] = SOC_UART_NUM <= 2;        // ESP32-C3: heater bus OR panel bus
 
     String response;
     serializeJson(doc, response);
@@ -409,6 +416,10 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     bool hasCiFn = isNumber(doc["ci_function"]);
     int newCiFn = hasCiFn ? doc["ci_function"].as<int>() : 0;
     if (hasCiFn && (newCiFn < 1 || newCiFn > 3)) { sendError(request, "ci_function must be 1-3"); return; }
+    bool hasElMax = isNumber(doc["el_max"]);
+    int newElMax = hasElMax ? doc["el_max"].as<int>() : 0;
+    if (hasElMax && (newElMax < 0 || newElMax > 3)) { sendError(request, "el_max must be 0-3"); return; }
+    bool hasLin = doc["lin_enabled"].is<bool>();
 
     // ---- Apply ----
     // Empty values clear SSID/server/user; empty passwords are ignored (= keep the stored one)
@@ -445,7 +456,21 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     // Device settings
     if (hasInterval) config.interval_s = (uint16_t)newInterval;
     if (hasInterval) sensorRequestMeasure();   // publish right away
-    if (hasCiFn) config.ci_function = (uint8_t)newCiFn;
+    if (hasCiFn && newCiFn != config.ci_function) {
+        config.ci_function = (uint8_t)newCiFn;
+        mqttRequestDiscovery();                   // model name in HA
+    }
+    if (hasElMax && newElMax != config.el_max) {
+        evlog::add("Heizstab höchstens %d kW", newElMax);
+        config.el_max = (uint8_t)newElMax;
+        mqttRequestDiscovery();                   // options of the HA select
+    }
+    bool linRestart = false;
+    if (hasLin && doc["lin_enabled"].as<bool>() != config.lin_enabled) {
+        config.lin_enabled = doc["lin_enabled"].as<bool>();
+        evlog::add("Heizbus %s", config.lin_enabled ? "an" : "aus");
+        linRestart = true;                        // UARTs are assigned at boot
+    }
     if (hasCiMode && newCiMode != config.ci_mode) {
         evlog::add("Bedienteil-Bus: Modus %d", newCiMode);
         config.ci_mode = (uint8_t)newCiMode;      // picked up by sensorLoop(), no restart needed
@@ -454,6 +479,12 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     }
 
     configDirty = true;   // Flash write in loop(), not in the web task
+    if (linRestart) {
+        request->send(200, "application/json", "{\"status\":\"ok\",\"restart\":true}");
+        restartPending = true;                    // after the flash write in loop()
+        restartAt = millis() + 1500;
+        return;
+    }
     request->send(200, "application/json", "{\"status\":\"ok\"}");
 }
 
@@ -501,6 +532,9 @@ void loadConfig() {
     config.ci_mode = (cm >= 0 && cm <= 2) ? (uint8_t)cm : DEFAULT_CI_MODE;
     int cf = doc["ci_function"] | DEFAULT_CI_FUNCTION;
     config.ci_function = (cf >= 1 && cf <= 3) ? (uint8_t)cf : DEFAULT_CI_FUNCTION;
+    config.lin_enabled = doc["lin_enabled"] | DEFAULT_LIN_ENABLED;
+    int em = doc["el_max"] | DEFAULT_EL_MAX;
+    config.el_max = (em >= 0 && em <= 3) ? (uint8_t)em : DEFAULT_EL_MAX;
 }
 
 void saveConfig() {
@@ -524,6 +558,8 @@ void saveConfig() {
     doc["interval"] = config.interval_s;
     doc["ci_mode"] = config.ci_mode;
     doc["ci_function"] = config.ci_function;
+    doc["lin_enabled"] = config.lin_enabled;
+    doc["el_max"] = config.el_max;
 
     // Write to a temp file first so a power loss cannot leave a half-written config
     const char* tmpPath = "/config.tmp";

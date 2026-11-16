@@ -7,7 +7,7 @@
 #define CONFIG_H
 
 // =====================================================================
-//  Alde Node - LIN reader (and optional control) for the Alde Compact 3020 HE
+//  Alde Node - LIN reader and optional control for Alde Compact 3020 / 3030 / 3030 Plus
 //  Created from firmware/_template.
 // =====================================================================
 
@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.2.0"
+#define FW_VERSION            "0.3.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -98,15 +98,39 @@
 #endif
 
 // ============================================================
-// LIN BUS (Alde Compact 3020 HE, receive only)
-// ESP32 + LIN transceiver (e.g. TJA1020) on the "Control panel" RJ12 socket of
-// the heater via a splitter, so the original Alde panel keeps working.
+// PINS (defaults per chip, override in config_local.h)
+//   ESP32 (classic)  heater bus RX 16, panel bus RX 26 / TX 25
+//   ESP32-S3         heater bus RX 16, panel bus RX 4 / TX 5 (no GPIO 25, GPIO 26 is flash)
+//   ESP32-C3         only ONE bus at a time (two UARTs): heater bus RX 3 or panel bus RX 4 / TX 5
+// ============================================================
+#if CONFIG_IDF_TARGET_ESP32
+#define ALDE_DEF_LIN_RX 16
+#define ALDE_DEF_CI_RX  26
+#define ALDE_DEF_CI_TX  25
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define ALDE_DEF_LIN_RX 3
+#define ALDE_DEF_CI_RX  4
+#define ALDE_DEF_CI_TX  5
+#else
+#define ALDE_DEF_LIN_RX 16
+#define ALDE_DEF_CI_RX  4
+#define ALDE_DEF_CI_TX  5
+#endif
+
+// ============================================================
+// HEATER BUS (passive, receive only, optional)
+// LIN transceiver (e.g. TJA1020) on the "Control panel" RJ12 socket of the heater via
+// a splitter, so the original Alde panel keeps working. NO master resistor on this side.
+// Can be switched off in the web UI if only the panel bus transceiver is fitted.
 // ============================================================
 #ifndef LIN_RX_PIN
-#define LIN_RX_PIN            16     // RXD of the LIN transceiver -> ESP32 GPIO16 (as in alde-3020he-lin)
+#define LIN_RX_PIN            ALDE_DEF_LIN_RX   // RXD of the LIN transceiver
 #endif
 #ifndef LIN_SLP_PIN
 #define LIN_SLP_PIN           -1     // SLP/NSLP of the transceiver if wired to the ESP (driven HIGH), -1 = not wired
+#endif
+#ifndef DEFAULT_LIN_ENABLED
+#define DEFAULT_LIN_ENABLED   true   // false = only the panel bus transceiver is fitted
 #endif
 #ifndef LIN_BAUD
 #define LIN_BAUD              9600   // 8N2
@@ -119,16 +143,17 @@
 #endif
 
 // ============================================================
-// EXTERNAL PANEL BUS ("CI-bus", optional, ESP32 / ESP32-S3 only)
-// Second LIN transceiver on the external panel port of the Alde panel. Here the ESP
-// is the LIN master: it polls the panel for its state and - only if allowed in the
-// web UI - sends control frames. 19200 baud 8N1. Off by default (ci_mode 0).
+// EXTERNAL PANEL BUS ("CI-bus", optional)
+// LIN transceiver on the external panel port of the Alde panel. Here the ESP is the LIN
+// master (1 kOhm + diode master pull-up to 12 V on this transceiver): it polls the panel
+// for its state and - only if allowed in the web UI - sends control frames. 19200 baud
+// 8N1. Off by default (ci_mode 0). On the ESP32-C3 only with the heater bus switched off.
 // ============================================================
 #ifndef CI_RX_PIN
-#define CI_RX_PIN             26     // RXD of the 2nd LIN transceiver
+#define CI_RX_PIN             ALDE_DEF_CI_RX    // RXD of the panel bus transceiver
 #endif
 #ifndef CI_TX_PIN
-#define CI_TX_PIN             25     // TXD of the 2nd LIN transceiver
+#define CI_TX_PIN             ALDE_DEF_CI_TX    // TXD of the panel bus transceiver
 #endif
 #ifndef CI_SLP_PIN
 #define CI_SLP_PIN            -1     // SLP/NSLP of the 2nd transceiver if wired to the ESP (driven HIGH), -1 = not wired
@@ -144,6 +169,12 @@
 #endif
 #ifndef DEFAULT_CI_FUNCTION
 #define DEFAULT_CI_FUNCTION   1      // Function id in the registration: 1 = Compact 3020, 2 = 3030, 3 = 3030 Plus
+#endif
+#ifndef DEFAULT_EL_MAX
+#define DEFAULT_EL_MAX        1      // Highest heating element step (kW) a command may set, 0-3 (web UI)
+#endif
+#ifndef CI_CMD_TRIES
+#define CI_CMD_TRIES          5      // Polls a command waits for a free panel (not busy, no error) before it is dropped
 #endif
 
 // ============================================================
@@ -170,6 +201,8 @@ struct AppConfig {
     uint16_t interval_s;   // Minimum gap between MQTT updates in seconds
     uint8_t ci_mode;       // External panel bus: 0 = off, 1 = read, 2 = read + control
     uint8_t ci_function;   // Function id for the registration (1/2/3)
+    bool lin_enabled;      // Heater bus transceiver fitted (change needs a restart)
+    uint8_t el_max;        // Highest heating element step a command may set (kW)
 };
 
 // ============================================================
@@ -177,7 +210,7 @@ struct AppConfig {
 // ============================================================
 struct SensorData {
     float values[MAX_VALUES];  // Current value per entry of VALUES[] (sensor.cpp), NAN = unknown
-    bool ok;                   // Last reading was valid
+    bool ok;                   // A bus delivers valid data (heater bus, or panel bus without it)
     unsigned long last_ok;     // millis() of the last valid reading
     uint32_t errors;           // Failed readings since boot
     uint32_t readCount;        // Completed measurement cycles (used to detect new data)

@@ -12,8 +12,8 @@
 //
 // Frame layout, encodings and sequence taken from daviddootson/alde_3030_plus (MIT,
 // Copyright (c) 2026 daviddootson), see LICENSE-alde3030-MIT and NOTICE.md.
-// Verified there on an Alde 3030 Plus. For the Compact 3020 (function id 0x0001) the
-// same frames are assumed - NOT verified.
+// Verified there on an Alde 3030 Plus. For the Compact 3020 (function id 0x0001) and the
+// 3030 (0x0002) the same frames are assumed - NOT verified.
 //
 // Plain C++ without Arduino dependencies, so it can be tested on the host.
 #ifndef ALDE_CI_H
@@ -33,7 +33,7 @@ struct AldeCiState {
     uint8_t gas;       // gas heating enabled
     uint8_t valve;     // gas valve open
     uint8_t el_level;  // electric 0..3 kW
-    uint8_t water;     // 0 = off, 1 = on, 2 = boost (3 is reported as on)
+    uint8_t water;     // 0 = off, 1 = on, 2 = boost, 3 = unknown (not published)
     uint8_t panel_on;
     uint8_t busy;
     uint8_t error;
@@ -66,6 +66,13 @@ void aldeCiDiagPayload(uint16_t functionId, uint8_t out[8]);
 // Find "55 5B" (echo of our header) in the received bytes and decode the 8 data bytes +
 // checksum after it. Returns false if nothing valid was found.
 bool aldeCiParseInfo(const uint8_t* buf, int n, AldeCiState* out);
+
+// True if the panel must not get a command right now (busy or error bit set)
+bool aldeCiBlocked(const AldeCiState& s);
+
+// Drop every requested change that the panel already reports (setpoint compared in
+// 0.5 degree steps). Returns true if something is left to send.
+bool aldeCiCommandReduce(const AldeCiState& s, AldeCiCommand& c);
 
 // Control payload from the last info state with the requested changes applied.
 // Everything that is not changed is copied from the panel's own state, so a command

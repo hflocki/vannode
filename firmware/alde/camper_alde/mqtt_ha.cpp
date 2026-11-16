@@ -19,13 +19,13 @@
 //   <prefix>/cmd/measure     any payload: publish the current readings right away
 //   <prefix>/cmd/target      setpoint 5-30 (0.5 steps)          \
 //   <prefix>/cmd/gas         1 / 0 (also ON / OFF)               | only with ci_mode 2,
-//   <prefix>/cmd/el_level    0-3 (kW)                            | sent to the Alde panel
+//   <prefix>/cmd/el_level    0-el_max (kW, setting, max 3)       | sent to the Alde panel
 //   <prefix>/cmd/water       0 = off, 1 = on, 2 = boost          /  over the external bus
 //
 // Home Assistant: one device DEVICE_NAME, one sensor entity per value (keys in
 // BINARY_KEYS become binary sensors), plus WiFi signal, status and a "send now" button.
-// Values of the external panel bus only with ci_mode > 0, control entities (number,
-// switch, selects) only with ci_mode 2.
+// Values of the heater bus only with lin_enabled, values of the external panel bus only
+// with ci_mode > 0, control entities (number, switch, selects) only with ci_mode 2.
 
 #define HA_NODE_ID  "camper_alde"
 
@@ -172,7 +172,8 @@ static void addDevice(JsonDocument& doc) {
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"][0] = HA_NODE_ID;
     device["name"] = DEVICE_NAME;
-    device["model"] = "Alde Compact 3020 HE LIN reader";
+    static const char* const MODELS[] = {"Alde Compact 3020", "Alde 3030", "Alde 3030 Plus"};
+    device["model"] = (config.ci_function >= 1 && config.ci_function <= 3) ? MODELS[config.ci_function - 1] : "Alde";
     device["manufacturer"] = "DIY";
     device["sw_version"] = FW_VERSION;
     device["configuration_url"] = String("http://") + WiFi.localIP().toString() + "/";
@@ -298,8 +299,9 @@ static void publishControls(bool on) {
         d["name"] = "Heizstab Stufe einstellen";
         d["command_topic"] = topic("cmd/el_level");
         d["state_topic"] = topic("el_level");
+        // Only the steps allowed in the settings (el_max), so a too high step cannot be picked
         JsonArray o = d["options"].to<JsonArray>();
-        o.add("0"); o.add("1"); o.add("2"); o.add("3");
+        for (uint8_t i = 0; i <= config.el_max && i <= 3; i++) o.add(String(i));
         d["icon"] = "mdi:flash";
         publishControl("select", "set_el_level", d);
     }
@@ -322,14 +324,15 @@ void mqttPublishDiscovery() {
         const ValueDef& v = VALUES[i];
         bool isBinary;
         const char* binClass = binaryClass(v.key, &isBinary);
-        if (v.ci && config.ci_mode == 0) {
+        bool off = v.ci ? (config.ci_mode == 0 || !sensorCiPossible()) : !sensorLinActive();
+        if (off) {
             removeEntity(isBinary ? "binary_sensor" : "sensor", v.key);
             continue;
         }
         if (isBinary) publishBinary(v.name, v.key, binClass, v.icon);
         else publishSensor(v.name, v.key, topic(v.key), v.unit, v.devClass, v.icon, v.decimals, true);
     }
-    publishControls(config.ci_mode == 2);
+    publishControls(config.ci_mode == 2 && sensorCiPossible());
     publishSensor("WLAN Signal", "rssi", topic("rssi"), "dBm", "signal_strength", "mdi:wifi", 0, true);
     publishSensor("Status", "status", topic("status"), "", nullptr, "mdi:check-circle", -1, false);
     publishButton("Jetzt senden", "measure", "measure", "mdi:refresh");

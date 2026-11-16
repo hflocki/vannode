@@ -92,6 +92,34 @@ int main() {
         CHECK(aldeCiParseInfo(n.data(), (int)n.size(), &t) && std::isnan(t.room) && std::isnan(t.outdoor), "special values");
         CHECK(!aldeCiParseInfo(n.data(), 5, &t), "short buffer accepted");
     }
+    // 8. Only real changes are sent: values the panel already reports are dropped
+    {
+        AldeCiCommand c; aldeCiCommandClear(c);
+        c.hasTarget = true; c.target = 20.2f;   // rounds to 20.0 = current setpoint
+        c.gas = 1; c.el_level = 2; c.water = 1;  // all as reported
+        CHECK(!aldeCiCommandReduce(s, c), "nothing to send expected");
+        CHECK(aldeCiCommandEmpty(c), "reduced command not empty");
+        AldeCiCommand d; aldeCiCommandClear(d);
+        d.hasTarget = true; d.target = 21.0f; d.gas = 1; d.water = 2;
+        CHECK(aldeCiCommandReduce(s, d), "change expected");
+        CHECK(d.hasTarget && d.gas < 0 && d.water == 2 && d.el_level < 0, "reduce kept wrong fields");
+    }
+    // 9. Busy or error bit blocks commands; water mode 3 stays "unknown"
+    {
+        CHECK(!aldeCiBlocked(s), "free panel blocked");
+        AldeCiState t;
+        const uint8_t busy[8] = {126, 0xFE, 94, 0xDE, 0x9E, 0x01 | 0x02, 0, 0};
+        std::vector<uint8_t> b = infoBytes(busy);
+        CHECK(aldeCiParseInfo(b.data(), (int)b.size(), &t) && aldeCiBlocked(t), "busy not blocked");
+        const uint8_t err[8] = {126, 0xFE, 94, 0xDE, 0x9E, 0x01 | 0x04, 0, 0};
+        b = infoBytes(err);
+        CHECK(aldeCiParseInfo(b.data(), (int)b.size(), &t) && aldeCiBlocked(t), "error not blocked");
+        const uint8_t wm3[8] = {126, 0xFE, 94, 0xDE, 0x9E, 0x01 | 0x18, 0, 0};
+        b = infoBytes(wm3);
+        CHECK(aldeCiParseInfo(b.data(), (int)b.size(), &t) && t.water == 3, "water mode 3 = %u", t.water);
+        AldeCiState none = {};
+        CHECK(aldeCiBlocked(none), "invalid state not blocked");
+    }
     if (failures) { printf("%d FAILURE(S)\n", failures); return 1; }
     printf("ALL CI TESTS PASSED\n");
     return 0;

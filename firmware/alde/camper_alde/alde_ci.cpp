@@ -59,8 +59,7 @@ bool aldeCiParseInfo(const uint8_t* buf, int n, AldeCiState* out) {
         s.gas = (d[3] >> 6) & 1;
         s.valve = (d[3] >> 7) & 1;
         s.el_level = (d[4] >> 6) & 3;
-        uint8_t wm = (d[5] >> 3) & 3;
-        s.water = (wm == 3) ? 1 : wm;
+        s.water = (d[5] >> 3) & 3;           // 3 is not a documented mode: kept as "unknown"
         s.panel_on = d[5] & 1;
         s.busy = (d[5] >> 1) & 1;
         s.error = (d[5] >> 2) & 1;
@@ -73,11 +72,26 @@ bool aldeCiParseInfo(const uint8_t* buf, int n, AldeCiState* out) {
     return false;
 }
 
-void aldeCiBuildControl(const AldeCiState& s, const AldeCiCommand& c, uint8_t out[8]) {
-    float sp = c.hasTarget ? c.target : (isnan(s.setpoint) ? 20.0f : s.setpoint);
+bool aldeCiBlocked(const AldeCiState& s) {
+    return !s.valid || s.busy || s.error;
+}
+
+static uint8_t setpointRaw(float sp) {
     if (sp < 5.0f) sp = 5.0f;
     if (sp > 30.0f) sp = 30.0f;
-    uint8_t spRaw = (uint8_t)lroundf((sp - 5.0f) * 2.0f);
+    return (uint8_t)lroundf((sp - 5.0f) * 2.0f);
+}
+
+bool aldeCiCommandReduce(const AldeCiState& s, AldeCiCommand& c) {
+    if (c.hasTarget && !isnan(s.setpoint) && setpointRaw(c.target) == setpointRaw(s.setpoint)) c.hasTarget = false;
+    if (c.gas >= 0 && (uint8_t)(c.gas ? 1 : 0) == s.gas) c.gas = -1;
+    if (c.el_level >= 0 && (uint8_t)c.el_level == s.el_level) c.el_level = -1;
+    if (c.water >= 0 && (uint8_t)c.water == s.water) c.water = -1;
+    return !aldeCiCommandEmpty(c);
+}
+
+void aldeCiBuildControl(const AldeCiState& s, const AldeCiCommand& c, uint8_t out[8]) {
+    uint8_t spRaw = setpointRaw(c.hasTarget ? c.target : (isnan(s.setpoint) ? 20.0f : s.setpoint));
     uint8_t gas = (c.gas >= 0) ? (uint8_t)(c.gas ? 1 : 0) : s.gas;
     uint8_t el = (c.el_level >= 0 && c.el_level <= 3) ? (uint8_t)c.el_level : s.el_level;
 

@@ -13,7 +13,7 @@ Output:
   docs/logo/vannode-logo-dark.svg / .png     the same for dark backgrounds
   docs/logo/vannode-symbol.svg / .png        symbol only (icons, favicon)
   docs/logo/vannode-wordmark(-dark).svg      wordmark only
-  firmware/roadbuddy/roadbuddy/logo_img.h    Road Buddy start page (symbol above wordmark, RGB565)
+  firmware/pocket/pocket/logo_img.h          Pocket-Node start page (symbol above wordmark, RGB565)
   firmware/display/camper_display/logo_img.c Wall panel: symbol in the header and in the QR code, start screen,
                                              info card and idle screen (LVGL images)
   firmware/_common/web/vannode.css           .vn = symbol left of the page title (all web pages)
@@ -42,7 +42,7 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 OUT = ROOT / "docs" / "logo"
-RB_HEADER = ROOT / "firmware" / "roadbuddy" / "roadbuddy" / "logo_img.h"
+RB_HEADER = ROOT / "firmware" / "pocket" / "pocket" / "logo_img.h"
 PANEL_IMG = ROOT / "firmware" / "display" / "camper_display" / "logo_img.c"
 COMMON_WEB = ROOT / "firmware" / "_common" / "web"
 PANEL_HDR = 28                  # wall panel: symbol size in the 40 px header
@@ -51,8 +51,8 @@ PANEL_SPLASH = (300, 240)       # wall panel start screen: symbol above wordmark
 PANEL_WIDE_W = 240              # wall panel info card + idle screen: symbol next to wordmark, width
 
 NAVY, BLUE, LIGHT = "#1E2A36", "#2F8AE0", "#E7ECF0"
-RB_BG = (0x0D, 0x11, 0x15)      # Road Buddy page background (COL_BG)
-RB_MAX = (240, 164)             # Road Buddy: space between header and footer
+RB_BG = (0x0D, 0x11, 0x15)      # Pocket-Node page background (COL_BG)
+RB_MAX = (240, 164)             # Pocket-Node: space between header and footer
 
 font = TTFont(HERE / "poppins-latin-700-normal.woff")
 glyphs, cmap = font.getGlyphSet(), font.getBestCmap()
@@ -128,7 +128,7 @@ def horizontal(dark):
 
 
 def stacked(dark):
-    """Symbol above the wordmark (Road Buddy)."""
+    """Symbol above the wordmark (Pocket-Node)."""
     wm, ww, top = wordmark(dark)
     w = max(200, ww) + 20
     body = (f'<g transform="translate({(w - 200) / 2:.1f},0)">{symbol()}</g>'
@@ -291,7 +291,7 @@ def main():
     rb = png(stacked(True), width=600)
     rb.thumbnail(RB_MAX, Image.LANCZOS)
     write_rgb565(rb, RB_HEADER)
-    print(f"docs/logo: {len(files)} SVG + 3 PNG, Road Buddy {rb.size[0]}x{rb.size[1]}, "
+    print(f"docs/logo: {len(files)} SVG + 3 PNG, Pocket-Node {rb.size[0]}x{rb.size[1]}, "
           f"panel images (start {splash[0]}x{splash[1]}, wide {wide[0]}x{wide[1]}), web blocks (run tools/common/sync_common.py next)")
 
 

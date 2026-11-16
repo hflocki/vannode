@@ -75,7 +75,7 @@ Alle Stellen, an denen du etwas tun musst, sind im Code mit **`TODO`** markiert 
   ```
 - **Haupt-README:** Zeile in der Gerätetabelle und bei den Lizenzen.
 - **Router:** feste IP (Static Lease) für die MAC im RUT956.
-- **Display / Road Buddy:** Werte erscheinen über eine eigene Kachel (Display: *Seiten & Kacheln*, Topic `camper/waste/<key>`) ohne Firmware-Änderung. Eine feste Seite oder Warnungen brauchen eine Anpassung der Display-Firmware.
+- **Display / Pocket-Node:** Werte erscheinen über eine eigene Kachel (Display: *Seiten & Kacheln*, Topic `camper/waste/<key>`) ohne Firmware-Änderung. Eine feste Seite oder Warnungen brauchen eine Anpassung der Display-Firmware.
 
 ## Aufbau der Vorlage
 

@@ -54,7 +54,7 @@ LV_IMAGE_DECLARE(vn_logo_wide);     // info card + idle screen: symbol next to w
 namespace {
 
 // ---- colours ---------------------------------------------------------------
-// VanNode design (same values as firmware/_common/web/camper-theme.css and the Road Buddy):
+// VanNode design (same values as firmware/_common/web/camper-theme.css and the Pocket-Node):
 // colour means state (green OK, yellow needs a look, red error), blue means control
 const lv_color_t C_BG      = lv_color_hex(0x0D1115);
 const lv_color_t C_CARD    = lv_color_hex(0x151B21);
@@ -141,7 +141,7 @@ lv_obj_t *ovHekiVal = nullptr, *ovHekiSub = nullptr, *ovHekiIcon = nullptr;
 uint32_t kPosHold = 0;   // millis() of the last slider command: do not jump back while the hatch moves
 // level page: van seen from above, wedge per wheel, dot in the middle moves to the low side
 lv_obj_t *lvVan, *lvDot, *lvRoll, *lvPitch, *lvState, *lvHint, *lvWheel[4], *lvWedge[4];
-const lv_color_t C_VAN    = lv_color_hex(0x6F8FBF);   // outline of the van (same on Road Buddy and web page)
+const lv_color_t C_VAN    = lv_color_hex(0x6F8FBF);   // outline of the van (same on Pocket-Node and web page)
 const lv_color_t C_VAN_IN = lv_color_hex(0x1A2638);   // inside of the van
 const lv_color_t C_LVL_HI = lv_color_hex(0xE5A23B);   // wheels that need a wedge, dot while not level
 const int LV_VAN_W = 96, LV_VAN_H = 214, LV_DOT = 20;

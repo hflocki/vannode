@@ -51,7 +51,7 @@ flowchart LR
   subgraph ui["Anzeige"]
     direction TB
     display["display<br/>Wandpanel + Webseite"]
-    rb["roadbuddy<br/>M5Stack Core2"]
+    rb["pocket<br/>M5Stack Core2"]
     ha["Home Assistant<br/>(optional)"]
   end
   sens --> broker
@@ -73,7 +73,7 @@ flowchart LR
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (basiert auf dem [Levelsensor von klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth-Thermometer (Govee, Ruuvi, Xiaomi …) über OpenMQTTGateway | `camper/OMG` |
 | [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4"-Wandpanel + gleiche Webseite fürs Handy, zeigt und steuert alles, Wetter, Warnungen, Pushover | `camper/display` |
-| [`firmware/roadbuddy`](firmware/roadbuddy) | M5Stack Core2 | kleines Akku-Display: Ausrichtung, Wasser, Gas | – (nur Empfänger) |
+| [`firmware/pocket`](firmware/pocket) | M5Stack Core2 | kleines mobiles Akku-Display mit Magnet (Cockpit, Küche, beim Wasserfüllen): Ausrichtung, Wasser, Gas, Temperaturen, Batterien; bis 1.5.8 „Road Buddy“ | `camper/pocket` (nur Empfänger) |
 
 Nicht in diesem Repo: **Router-Daten (GPS, Mobilfunk)** sendet der RUT956 selbst per MQTT, siehe [Router-Daten im Display-README](firmware/display/README.md#router-daten-rut956).
 
@@ -104,7 +104,7 @@ Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, 
 | heater | `heater-node-XXXX` | `truma1234` | `http://heater-node.local` | ohne WLAN oder 60 s ohne Verbindung |
 | alde | `Alde-Node-XXXXXX` | `alde1234` | `http://alde-node.local` | ohne WLAN oder 60 s ohne Verbindung |
 | display | `Display-Node-XXXXXX` | `display1234` | `http://display-node.local` | ohne WLAN oder 1 min ohne Verbindung |
-| roadbuddy | – (WLAN steht in `config_local.h`) | – | – | – |
+| pocket | – (WLAN steht in `config_local.h`) | – | `http://pocket-node.local` (nur wach) | – |
 
 **Passwörter ändern:** Die Passwörter oben sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`), spätestens danach im Web-UI. Ein Login für die Web-Oberfläche ist ab Werk aus und lässt sich im Web-UI einschalten. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
 
@@ -147,7 +147,7 @@ Außerdem lässt sich jeder andere Wert aus `config.h` überschreiben (Pins, Pre
 
 Wichtig: WLAN, MQTT und Login ab Werk wirken nur, solange auf dem Gerät noch nichts gespeichert ist. Ein normales Update über bestehende Einstellungen ändert sie nicht. Neu übernommen werden sie nach **Werkseinstellungen** im Web-UI, nach dem Flashen mit **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Menü Werkzeuge) bzw. bei temp, tanklevel und level nach dem Hochladen des LittleFS-Images. Die Passwörter für Access Point und OTA gelten dagegen immer sofort.
 
-Der Road Buddy hat keine Einstellungsseite, nur eine Update-Seite; WLAN und MQTT kommen deshalb nur über `config_local.h` (Namen siehe seine README). Eine Firmware mit eigener `config_local.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
+Die Pocket-Node hat keine Einstellungsseite, nur eine Update-Seite; WLAN und MQTT kommen deshalb nur über `config_local.h` (Namen siehe seine README). Eine Firmware mit eigener `config_local.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
 
 ## Warnungen
 
@@ -164,7 +164,7 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
-Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Road Buddy über seine Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner; sie hängt als `<gerät>-node-web-v<version>.html.gz` mit am Release und wird nach dem Firmware-Update separat hochgeladen.
+Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Pocket-Node über ihre Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner; sie hängt als `<gerät>-node-web-v<version>.html.gz` mit am Release und wird nach dem Firmware-Update separat hochgeladen.
 
 **Namen:** Jedes Gerät heißt `<gerät>-node` – Hostname (`temp-node.local`), Setup-WLAN (`Temp-Node-XXXXXX`) und Release-Datei mit der Firmware-Version (`temp-node-esp32c3-v1.4.2.bin`). Die MQTT-Topics bleiben `camper/<gerät>/…`, die Home-Assistant-IDs bleiben gleich.
 
@@ -205,7 +205,7 @@ Zum Ansehen den Ordner herunterladen und `index.html` im Browser öffnen. Nach �
 python3 tools/mockups/make_mockups.py
 ```
 
-Die Beispieldaten und das simulierte Verhalten stehen je Gerät in `tools/mockups/mock/<gerät>.js`, der gemeinsame Teil (fetch, WebSocket, Upload) in `core.js`. Bei einem neuen Gerät dort eine Datei anlegen und es in `make_mockups.py` eintragen. Der Road Buddy hat nur eine kleine Update-Seite und fehlt deshalb.
+Die Beispieldaten und das simulierte Verhalten stehen je Gerät in `tools/mockups/mock/<gerät>.js`, der gemeinsame Teil (fetch, WebSocket, Upload) in `core.js`. Bei einem neuen Gerät dort eine Datei anlegen und es in `make_mockups.py` eintragen. Die Pocket-Node hat nur eine kleine Update-Seite und fehlt deshalb.
 
 ## Herkunft
 
@@ -282,7 +282,7 @@ VanNode steht unter der **GNU General Public License Version 3** ([`LICENSE`](LI
 zusätzlichen Bedingungen nach Abschnitt 7 ([`NOTICE.md`](NOTICE.md)):
 
 - der Urhebervermerk „Copyright © 2026 hflocki“, der Link zum Projekt und die Lizenzangaben, die die
-  Geräte anzeigen (Karte „Über VanNode“, Display-Info, Wandpanel, Road-Buddy-Update-Seite), bleiben
+  Geräte anzeigen (Karte „Über VanNode“, Display-Info, Wandpanel, Update-Seite der Pocket-Node), bleiben
   in allen Kopien und veränderten Fassungen erhalten;
 - veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk
   ausgegeben werden;

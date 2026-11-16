@@ -28,7 +28,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | BLE-Node Battery (battery-node: Batterien) | `camper/battery` | ble (Gerätename battery-node) | [firmware/ble](../firmware/ble/README.md#batterien-battery-node) |
 | BLE-Node Tool (tool-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/tool2`, `camper/tool3`) | `camper/tool` | ble (Gerätename tool-node) | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
-| Road Buddy (M5Stack Core2) | `camper/roadbuddy` | roadbuddy | [firmware/roadbuddy](../firmware/roadbuddy/README.md) |
+| Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
 | Emulator (Werkzeug am PC) | `camper/emulator` (+ die Topics der nachgebildeten Geräte) | – | [tools/emulator](../tools/emulator/README.md) |
 | Muster-Gerät | `camper/example` | template | [firmware/_template](../firmware/_template/README.md) |
 | Router RUT956 | `camper/rut`, `camper/door` | Teltonika „Data to Server“ | – |
@@ -244,7 +244,7 @@ Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `batte
 
 ## BLE-Node Tool `camper/tool`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Road Buddy nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -332,7 +332,7 @@ Das Display abonniert `<Basis-Topic>/#` jedes Geräts, die Router-Topics, die Ga
 | Dachhaube Auf / Zu / Regen / Lüften | `<ble>/cmd/rvtech/<auf\|zu\|regen\|lueften>/set` | `PRESS` |
 | Dachhaube Position | `<ble>/cmd/rvtech/cover_position/set` | `0` … `100` (beim Loslassen des Reglers) |
 
-## Road Buddy `camper/roadbuddy`
+## Pocket-Node `camper/pocket`
 
 Reiner Empfänger, fragt nichts ab. Gelesen:
 
@@ -357,12 +357,12 @@ Reiner Empfänger, fragt nichts ab. Gelesen:
 | `camper/battery/status` | `online` / `offline` von battery-node |
 | `camper/router/mobile` | Mobilfunkdaten des Routers als JSON (`rsrp`, `rssi`, Netztyp), für die Signalbalken. Einstellbar mit `ROUTER_TOPIC` in `config_local.h`, `""` schaltet es ab |
 
-Eigene Topics (sendet der Road Buddy selbst, Präfix änderbar mit `#define SELF_TOPIC` in `config_local.h`):
+Eigene Topics (sendet die Pocket-Node selbst, Präfix änderbar mit `#define SELF_TOPIC` in `config_local.h`):
 
 | Topic | Bedeutung |
 | ----- | --------- |
-| `camper/roadbuddy/status` | `online` / `offline` (Last Will) |
-| `camper/roadbuddy/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
+| `camper/pocket/status` | `online` / `offline` (Last Will) |
+| `camper/pocket/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
 
 Weitere Topics unter diesen Präfixen (z. B. `rssi`, `voltage`, `raw_level`, `tare_*`, Grauwasser) werden ignoriert.
 
@@ -386,9 +386,9 @@ Kommt vom Router selbst („Data to Server“), nicht aus diesem Repo.
 | --- | --- | --- |
 | `camper/rut` | JSON, retained: `TIME` und `GPS` mit `latitude`, `longitude`, `altitude`, `speed` (km/h), `accuracy`, `satellites`, `fix_status`, `timestamp`; Werte teils als Text | Display: Abfahrtscheck; lässt sich auch als GPS-Topic fürs Wetter eintragen |
 | `camper/door` | `{"Door":{"name":"din2","type":"Digital In","state":"open"\|"close","custom_name":"Door"}}` | Display: Abfahrtscheck |
-| `camper/router/mobile` | Mobilfunk-Signal als JSON (`rsrp`, `rssi`, Netztyp) | Display (Balken in der Kopfzeile), Road Buddy |
+| `camper/router/mobile` | Mobilfunk-Signal als JSON (`rsrp`, `rssi`, Netztyp) | Display (Balken in der Kopfzeile), Pocket-Node |
 
-`camper/router/mobile` ist die Vorgabe in Display und Road Buddy. Ob und unter welchem Topic der Router die Mobilfunkdaten sendet, ist noch nicht bestätigt; bis dahin kommen sie nur vom Simulator.
+`camper/router/mobile` ist die Vorgabe in Display und Pocket-Node. Ob und unter welchem Topic der Router die Mobilfunkdaten sendet, ist noch nicht bestätigt; bis dahin kommen sie nur vom Simulator.
 
 ## Gateways
 
@@ -411,6 +411,7 @@ Retained Nachrichten bleiben am Broker, bis man sie mit einer leeren Nachricht �
 | Topic | Herkunft |
 | --- | --- |
 | `camper/router/gps` | Simulator bis display-v2.9.15 (jetzt `camper/rut`) |
+| `camper/roadbuddy/status`, `camper/roadbuddy/info` | Road Buddy bis 1.5.8 (jetzt Pocket-Node, `camper/pocket`) |
 | `camper/waterlevel/#`, `camper/gaslevel/#` | Einzelprojekte vor `camper/tanklevel` |
 | `camper/truma/#`, `service/truma/#` | frühere Heizungs-Firmware (bis heater 1.0 `service/truma`); nur löschen, wenn kein Gerät mehr darauf eingestellt ist |
 | `homeassistant/sensor/camper_water/#`, `homeassistant/switch/camper_water/#`, `homeassistant/sensor/camper_gaslevel/#` | Discovery der Einzelprojekte |

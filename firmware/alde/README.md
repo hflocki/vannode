@@ -4,7 +4,7 @@
 
 > ⚠️ **IN ENTWICKLUNG** – noch nicht an einer echten Alde-Heizung getestet. Das Mitlesen ist aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) übernommen und dort am Bedienteil geprüft, die Steuerung aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (dort an einer 3030 Plus geprüft). Diese Arduino-Umsetzung ist bisher nur mit künstlichen Bus-Daten getestet (`tests/run.sh`), die Steuerung an einer **Compact 3020 noch von niemandem**.
 
-Liest die Werte einer **Alde Compact 3020 HE** (Warmwasser-Heizung) und stellt sie per **MQTT** bereit – für das Display, die Road Buddy und optional Home Assistant. Optional steuert er die Heizung auch.
+Liest die Werte einer **Alde Compact 3020 HE** (Warmwasser-Heizung) und stellt sie per **MQTT** bereit – für das Display, die Pocket-Node und optional Home Assistant. Optional steuert er die Heizung auch.
 
 Der Node arbeitet an **zwei getrennten Bussen**:
 

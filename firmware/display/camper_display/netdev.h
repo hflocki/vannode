@@ -26,7 +26,7 @@ struct Entry {
 std::vector<String> topics();   // subscriptions
 bool onMessage(const char* topic, const char* payload, unsigned int len);
 std::vector<Entry> list();      // sorted: online first, then by name
-String name(const String& id);  // readable name: "Heizung", "Road Buddy" ... or the id
+String name(const String& id);  // readable name: "Heizung", "Pocket-Node" ... or the id
 bool infoStale(const Entry& e); // no info for 3 intervals (older firmware or device gone)
 String json();                  // for /api/devices
 bool changed();                 // something new since the last call (UI refresh)

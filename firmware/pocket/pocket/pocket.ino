@@ -20,7 +20,7 @@
 
 // Own topics: <prefix>/status (online/offline as last will) and <prefix>/info
 #ifndef SELF_TOPIC
-#define SELF_TOPIC "camper/roadbuddy"
+#define SELF_TOPIC "camper/pocket"
 #endif
 
 
@@ -270,7 +270,7 @@ void putIfChanged(Preferences& p, const char* key, const String& v) {
 void loadCredentials() {
   bool placeholder = strlen(ssid) == 0 || strcmp(ssid, "YOUR_WIFI_SSID") == 0;
   Preferences p;
-  p.begin("roadbuddy", false);
+  p.begin("roadbuddy", false);   // NVS namespace keeps the old name, so stored credentials survive the rename
   if (!placeholder) {
     cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port;
     cfgMqttUser = mqtt_user; cfgMqttPass = mqtt_pass; cfgLevelTopic = mqtt_topic;
@@ -306,7 +306,7 @@ void loadCredentials() {
 }
 
 void startWifi() {
-  WiFi.setHostname("roadbuddy");  // must be set before WiFi.mode()
+  WiFi.setHostname("pocket-node");  // must be set before WiFi.mode()
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.begin(cfgSsid.c_str(), cfgPass.c_str());
@@ -1454,7 +1454,7 @@ void mqttReconnect() {
   if (millis() - lastMqttAttempt < MQTT_RETRY_MS) return;
   lastMqttAttempt = millis();
 
-  String clientId = "roadbuddy-" + String(random(0xffff), HEX);
+  String clientId = "pocket-node-" + String(random(0xffff), HEX);
   if (client.connect(clientId.c_str(), cfgMqttUser.c_str(), cfgMqttPass.c_str(),
                      SELF_TOPIC "/status", 1, true, "offline")) {
     client.publish(SELF_TOPIC "/status", "online", true);
@@ -1494,7 +1494,7 @@ void setup() {
     M5.Power.deepSleep(SLEEP_SAFETY_TIMER_US, true);
   }
 
-  Serial.println("RoadBuddy v" FW_VERSION);
+  Serial.println("Pocket-Node v" FW_VERSION);
   evlog::begin();
   // waking up from deep sleep is the normal way to use it: only real starts are logged
   if (esp_reset_reason() != ESP_RST_DEEPSLEEP) evlog::add("Start v%s, Grund: %s", FW_VERSION, evlog::resetReason());
@@ -1516,7 +1516,7 @@ void setup() {
   client.setServer(cfgBroker.c_str(), cfgPort);
   client.setBufferSize(1280);   // the temperature list with 8 long names is about 1 kB
   client.setCallback(callback);
-  webota::begin("roadbuddy", FW_VERSION, cfgWebUser.c_str(), cfgWebPass.c_str(), statusJson, onOtaProgress);
+  webota::begin("pocket-node", FW_VERSION, cfgWebUser.c_str(), cfgWebPass.c_str(), statusJson, onOtaProgress);
 
   lastActivityMs = millis();
   systemPageSince = millis();

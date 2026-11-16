@@ -1,6 +1,6 @@
 # MQTT-Werkzeuge: Simulator, Recorder und Aufräumen
 
-Zum Testen von Display, Road Buddy und Home Assistant ohne Fahrzeug, z. B. im Testnetz zu Hause.
+Zum Testen von Display, Pocket-Node und Home Assistant ohne Fahrzeug, z. B. im Testnetz zu Hause.
 
 Mit Web-Oberfläche geht das im [Emulator](../emulator/README.md): Er sendet dieselben Topics, und im Browser schaltest du Geräte ein und aus, änderst Werte und startest Szenarien. `sim.py` bleibt für Skripte und `replay`.
 

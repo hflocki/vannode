@@ -47,7 +47,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** eingeschaltet (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere, das Gerät prüft es beim Speichern und beim Start noch einmal.
 - Insgesamt höchstens **12 Geräte** (Arbeitsspeicher, `MAX_PLUGINS`).
 - **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/tool2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_tool2`).
-- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Road Buddy nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/tool/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
+- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Pocket-Node nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/tool/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
 

@@ -71,7 +71,7 @@ def main():
         "| --- | --- | --- | --- |",
         *rows,
         "",
-        "Install the `.bin` through the device's web page (Road Buddy: its update page). "
+        "Install the `.bin` through the device's web page (Pocket-Node: its update page). "
         "Where a web page is listed, upload the `.html.gz` afterwards as well.",
     ]
     (out / "NOTES.md").write_text("\n".join(notes) + "\n", encoding="utf-8")

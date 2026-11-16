@@ -6,10 +6,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Defaults of the Road Buddy. Own values (WiFi, MQTT, login, sensors) go into config_local.h
+// Defaults of the Pocket-Node. Own values (WiFi, MQTT, login, sensors) go into config_local.h
 // next to this file (template config_local.h.example). config_local.h is excluded by .gitignore;
 // everything defined there replaces the default below.
-// Defines variables: include only once (roadbuddy.ino).
+// Defines variables: include only once (pocket.ino).
 #if __has_include("config_local.h")
 #include "config_local.h"
 #endif
@@ -37,7 +37,7 @@
 #define DEFAULT_MQTT_PASSWORD ""
 #endif
 
-// Level sensor topic (pitch, roll, is_level, tolerance, status). Water and gas topics are defined at the top of roadbuddy.ino
+// Level sensor topic (pitch, roll, is_level, tolerance, status). Water and gas topics are defined at the top of pocket.ino
 #ifndef LEVEL_TOPIC
 #define LEVEL_TOPIC "camper/level/#"
 #endif
@@ -47,7 +47,7 @@
 #define ROUTER_TOPIC "camper/router/mobile"
 #endif
 
-// Login for the update page (http://roadbuddy.local). Empty user = no login
+// Login for the update page (http://pocket-node.local). Empty user = no login
 #ifndef DEFAULT_WEB_USER
 #define DEFAULT_WEB_USER ""
 #endif
@@ -62,7 +62,7 @@
 // so it can be installed over the update page. Flash once over USB with your own config_local.h first.
 
 // ---------- Sensors ----------
-// Choose which sensors RoadBuddy shows (1 = enabled, 0 = disabled).
+// Choose which sensors the Pocket-Node shows (1 = enabled, 0 = disabled).
 // A disabled sensor gets no page and no MQTT subscription. The system page is always shown.
 #ifndef USE_LEVEL
 #define USE_LEVEL 1   // pitch / roll level sensor
@@ -80,7 +80,7 @@
 #define USE_BATTERY 1 // batteries from battery-node (up to 3: charge, voltage, power, runtime)
 #endif
 
-// Variables used by roadbuddy.ino
+// Variables used by pocket.ino
 const char* ssid = DEFAULT_WIFI_SSID;
 const char* password = DEFAULT_WIFI_PASSWORD;
 const char* mqtt_server = DEFAULT_MQTT_SERVER;

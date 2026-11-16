@@ -51,7 +51,7 @@ flowchart LR
   subgraph ui["Displays"]
     direction TB
     display["display<br/>wall panel + web page"]
-    rb["roadbuddy<br/>M5Stack Core2"]
+    rb["pocket<br/>M5Stack Core2"]
     ha["Home Assistant<br/>(optional)"]
   end
   sens --> broker
@@ -73,7 +73,7 @@ flowchart LR
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (based on the [level sensor by klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth thermometers (Govee, Ruuvi, Xiaomi …) through OpenMQTTGateway | `camper/OMG` |
 | [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4" wall panel + the same page for the phone: shows and controls everything, weather, warnings, Pushover | `camper/display` |
-| [`firmware/roadbuddy`](firmware/roadbuddy) | M5Stack Core2 | small battery display: levelling, water, gas | – (receive only) |
+| [`firmware/pocket`](firmware/pocket) | M5Stack Core2 | small portable battery display with magnet (cockpit, kitchen, while filling water): levelling, water, gas, temperatures, batteries; called “Road Buddy” up to 1.5.8 | `camper/pocket` (receive only) |
 
 Not in this repo: **router data (GPS, mobile signal)** is sent by the RUT956 itself over MQTT, see [router data in the display README](firmware/display/README.md#router-daten-rut956).
 
@@ -173,7 +173,7 @@ VanNode is licensed under the **GNU General Public License version 3** ([`LICENS
 additional terms under section 7 ([`NOTICE.md`](NOTICE.md)):
 
 - the author attribution "Copyright © 2026 hflocki", the project link and the license information
-  shown by the devices (card "Über VanNode", display info, wall panel, Road Buddy update page) must
+  shown by the devices (card "Über VanNode", display info, wall panel, Pocket-Node update page) must
   stay in all copies and modified versions;
 - modified versions must be marked as such and must not be passed off as one's own work;
 - the name "VanNode" and its logo are not part of the license: forks need their own name and logo

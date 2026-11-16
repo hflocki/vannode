@@ -6,7 +6,7 @@ Firmware für einen ESP32 (ESP32-S3, ESP32-C3 oder klassischer ESP32) mit einem 
 
 - Werte per **MQTT** mit Home-Assistant-Discovery, Topics `camper/level/…` wie bei den anderen Geräten in diesem Repo
 - Web-Oberfläche mit Wasserwaage, Draufsicht mit den vier Keilhöhen, Tara, Fahrzeugmaßen, MQTT- und WLAN-Einstellungen
-- Wird direkt auf dem [Wandpanel](../display) und dem [RoadBuddy](../roadbuddy) angezeigt, dazu eine Kachel für Home Assistant (`ha-card/`)
+- Wird direkt auf dem [Wandpanel](../display) und der [Pocket-Node](../pocket) angezeigt, dazu eine Kachel für Home Assistant (`ha-card/`)
 
 > **Ursprung:** Dieses Projekt basiert auf dem [ESP32 Adafruit BNO085 Caravan-Levelsensor](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) von **klehnst** – vielen Dank für die Vorarbeit (BNO085-Anbindung, Einbaulagen, Wasserwaagen-Oberfläche, HA-Kachel, 3D-Druck-Gehäuse). Wer einen **Wohnwagen** mit Stützrad nivellieren will, ist dort richtig: Der Wohnwagen-Modus ist hier bewusst entfernt.
 

@@ -194,7 +194,7 @@ Lichter und Schalter stehen oben als große Karten zum Bedienen. Kontakte und Kl
 
 ### Farben in der Übersicht
 
-Panel, Webseite und Road Buddy nutzen dieselbe Palette (ab 2.12.0): dunkle Flächen, Grün = OK, Gelb = bitte ansehen, Rot = Fehler, Blau = Bedienung. Die Werte stehen als `C_*` in `ui.cpp`, in `firmware/_common/web/camper-theme.css` und als `COL_*` im Road Buddy.
+Panel, Webseite und Pocket-Node nutzen dieselbe Palette (ab 2.12.0): dunkle Flächen, Grün = OK, Gelb = bitte ansehen, Rot = Fehler, Blau = Bedienung. Die Werte stehen als `C_*` in `ui.cpp`, in `firmware/_common/web/camper-theme.css` und als `COL_*` im Road Buddy.
 
 Alle Kacheln folgen demselben Aufbau: oben ein farbiger Kreis mit Symbol und der Titel, links groß der Wert, unten eine Zeile mit Details, rechts eine Grafik – ein Farbkreis mit Symbol (Heizung, MaxxFan, Status), die Libelle (Level), ein großes Wettersymbol oder die Tank-/Gasflaschen-Zeichnung. Ist ein Gerät offline oder aus (Heizung), wird sein Kreis grau. Temperaturen auf Kacheln stehen kurz als „19,7°“.
 
@@ -204,7 +204,7 @@ Alle Kacheln folgen demselben Aufbau: oben ein farbiger Kreis mit Symbol und der
 
 Gas wird als Gasflasche, Frisch- und Grauwasser als Tank mit Skala (25/50/75 %) gezeichnet, die sich von unten füllen. Die Füllung färbt sich nach Zustand: Frischwasser gelb unter 25 %, rot unter 10 %; Gas rot unter 15 %; Grauwasser gelb ab 70 %, rot ab 85 %. Die Prozentzahl wird nur im kritischen Bereich rot. Die Level-Kachel zeigt neben „Eben“/„Schief“ eine kleine Libelle, deren Punkt mit Nick und Roll wandert (Rand = 5°); darunter stehen P (Pitch/Nick) und R (Roll). Zahlen stehen überall mit Dezimalkomma. Ist ein Gerät offline, erscheinen seine Werte grau.
 
-**Level-Seite** (Display und Webseite gleich, ebenso der Road Buddy): das Fahrzeug von oben, „vorne“ oben. An jedem Rad steht die Keilhöhe in cm vom Levelsensor (`wedge_fl/fr/rl/rr`). Räder, die einen Keil brauchen, und ihre Zahl sind orange. In der Mitte ein Zielring, der Punkt wandert zur tiefen Seite (Rand = 3°) und ist grün, wenn das Fahrzeug eben steht. Rechts „Eben“ / „Nicht eben“, darunter *Quer* („0,9° rechts tief“) und *Längs* („eben“, innerhalb der Toleranz). Unten der Satz zum Unterlegen, z. B. „Rechts vorne 3 cm, links hinten 1 cm, rechts hinten 4 cm unterlegen“. Tara am Display lange drücken.
+**Level-Seite** (Display und Webseite gleich, ebenso die Pocket-Node): das Fahrzeug von oben, „vorne“ oben. An jedem Rad steht die Keilhöhe in cm vom Levelsensor (`wedge_fl/fr/rl/rr`). Räder, die einen Keil brauchen, und ihre Zahl sind orange. In der Mitte ein Zielring, der Punkt wandert zur tiefen Seite (Rand = 3°) und ist grün, wenn das Fahrzeug eben steht. Rechts „Eben“ / „Nicht eben“, darunter *Quer* („0,9° rechts tief“) und *Längs* („eben“, innerhalb der Toleranz). Unten der Satz zum Unterlegen, z. B. „Rechts vorne 3 cm, links hinten 1 cm, rechts hinten 4 cm unterlegen“. Tara am Display lange drücken.
 
 ## MQTT
 

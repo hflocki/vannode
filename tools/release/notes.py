@@ -42,7 +42,7 @@ def main():
               file=sys.stderr)
         sys.exit(1)
     print(f"**{device}-node {ver}**\n\n{text}\n\n"
-          f"Installieren: `.bin` über die Web-Oberfläche des Geräts hochladen (Road Buddy: Update-Seite); "
+          f"Installieren: `.bin` über die Web-Oberfläche des Geräts hochladen (Pocket-Node: Update-Seite); "
           f"wo eine `.html.gz` dabei ist, diese danach ebenfalls. Alle Versionen: "
           f"[CHANGELOG.md](https://github.com/hflocki/vannode/blob/main/firmware/{FOLDER.get(device, device)}/CHANGELOG.md)")
 

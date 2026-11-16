@@ -126,10 +126,10 @@ jobs:
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
             sketch: firmware/_template/camper_example
             libs: ''
-          - device: roadbuddy
+          - device: pocket
             target: core2
             fqbn: esp32:esp32:m5stack_core2
-            sketch: firmware/roadbuddy/roadbuddy
+            sketch: firmware/pocket/pocket
             libs: https://github.com/m5stack/M5GFX.git#0.2.34 https://github.com/m5stack/M5Unified.git#0.2.27
 
     steps:

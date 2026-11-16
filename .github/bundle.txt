@@ -8,4 +8,4 @@ temp      esp32c3
 level     esp32s3
 ble       esp32c3
 ble       atoms3
-roadbuddy core2
+pocket core2

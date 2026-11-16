@@ -13,7 +13,7 @@
 #include "fwcheck.h"
 #include "evlog.h"
 
-// Note: config.h is not included here, it defines variables and may only be included once (roadbuddy.ino).
+// Note: config.h is not included here, it defines variables and may only be included once (pocket.ino).
 
 namespace webota {
 int progress();
@@ -21,7 +21,7 @@ int progress();
 namespace {
 
 WebServer server(80);
-const char* hostName = "roadbuddy";
+const char* hostName = "pocket-node";
 const char* fwVersion = "";
 String webUser, webPass;
 StatusFn statusFn = nullptr;
@@ -38,7 +38,7 @@ unsigned long restartAt = 0;
 const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RoadBuddy</title>
+<title>Pocket-Node</title>
 <style>
 /* same look as all VanNode pages (firmware/_common/web/camper-theme.css) */
 :root{--bg:#0D1115;--card:#151B21;--hi:#1C242C;--line:#222B34;--line2:#2F3A45;--text:#E7ECF0;--text2:#B4BEC8;--muted:#8B98A5;
@@ -76,13 +76,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E">
 <!-- vannode-icon:end -->
 </head><body>
-<header><h1><i class="vn" aria-hidden="true"></i><span>Road Buddy</span></h1></header>
+<header><h1><i class="vn" aria-hidden="true"></i><span>Pocket-Node</span></h1></header>
 <main>
 <div class="card" id="st"><div class="row"><span>Status</span><span>...</span></div></div>
 <div class="card">
 <b>Firmware-Update</b>
 <div class="fwu-cur" id="fwu-cur" style="margin-top:6px">Installiert: …</div>
-<div class="hint">Die .bin aus dem Release (roadbuddy-node-core2-v….bin) oder aus der Arduino IDE (roadbuddy.ino.bin, nicht die .merged.bin). Die Datei wird vor dem Hochladen geprüft.</div>
+<div class="hint">Die .bin aus dem Release (pocket-node-core2-v….bin) oder aus der Arduino IDE (pocket.ino.bin, nicht die .merged.bin). Die Datei wird vor dem Hochladen geprüft.</div>
 <input type="file" id="fwu-file" accept=".bin" onchange="fwChosen(false)">
 <div class="fwu-chk" id="fwu-chk"></div>
 <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()">Ohne Kennung hochladen</label>
@@ -113,7 +113,7 @@ $('fwu-btn').onclick=()=>{
  const fd=new FormData();fd.append('firmware',f,f.name);
  const x=new XMLHttpRequest();x.open('POST','/update'+(force?'?force=1':''));
  x.upload.onprogress=e=>{if(e.lengthComputable)$('p').style.width=(e.loaded*100/e.total)+'%'};
- x.onload=()=>{$('msg').textContent=x.status==200?'Update ok, RoadBuddy startet neu ...':'Fehler: '+x.responseText;
+ x.onload=()=>{$('msg').textContent=x.status==200?'Update ok, Pocket-Node startet neu ...':'Fehler: '+x.responseText;
   if(x.status==200)setTimeout(()=>location.reload(),15000);else{$('fwu-btn').disabled=false;fwLoad()}};
  x.onerror=()=>{$('msg').textContent='Verbindung abgebrochen'};
  $('fwu-btn').disabled=true;$('msg').textContent='Lade hoch ...';x.send(fd);
@@ -191,7 +191,7 @@ fwLoad();
 setInterval(fwLoad, 15000);
 </script>
 <!-- Author and license: must stay (GPL-3.0 additional terms, NOTICE.md) -->
-<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Road Buddy · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz GNU GPL v3, ohne Gew&auml;hr &ndash; Nutzung auf eigene Gefahr<br>Hinweis und Link m&uuml;ssen in Kopien erhalten bleiben<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
+<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Pocket-Node · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz GNU GPL v3, ohne Gew&auml;hr &ndash; Nutzung auf eigene Gefahr<br>Hinweis und Link m&uuml;ssen in Kopien erhalten bleiben<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
 </body></html>)HTML";
 
 bool authOk() {

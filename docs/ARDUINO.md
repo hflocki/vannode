@@ -35,8 +35,8 @@ Fertige `.bin`-Dateien gibt es unter [Releases](https://github.com/hflocki/vanno
 | SparkFun BNO08x Cortex Based IMU | SparkFun | 1.0.6 | `sparkfun/SparkFun_BNO08x_Arduino_Library` | level |
 | GFX Library for Arduino | moononournation | 1.6.0 | `moononournation/Arduino_GFX` | display |
 | lvgl | LVGL | 9.2.2 | `lvgl/lvgl` | display |
-| M5GFX | M5Stack | 0.2.34 | `m5stack/M5GFX` | roadbuddy |
-| M5Unified | M5Stack | 0.2.27 | `m5stack/M5Unified` | roadbuddy |
+| M5GFX | M5Stack | 0.2.34 | `m5stack/M5GFX` | pocket |
+| M5Unified | M5Stack | 0.2.27 | `m5stack/M5Unified` | pocket |
 
 Typische falsche Versionen: AsyncWebServer/AsyncTCP von *me-no-dev* statt *ESP32Async*, NimBLE-Arduino 1.x statt 2.x, ArduinoJson 6.x statt 7.x, Board-Paket esp32 2.x statt 3.x (siehe *Probleme beim Hochladen*).
 
@@ -59,7 +59,7 @@ Die Release-Dateien heißen `<gerät>-node-<board>-v<version>.bin` (z. B. `ble-n
 
 ## Eigene Einstellungen
 
-Passwörter, WLAN und Broker kommen in `config_local.h` im Sketch-Ordner (Vorlage `config_local.h.example` kopieren). Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../README.de.md#eigene-einstellungen-config_localh). Das gilt auch für den Road Buddy (ab 1.5.8).
+Passwörter, WLAN und Broker kommen in `config_local.h` im Sketch-Ordner (Vorlage `config_local.h.example` kopieren). Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../README.de.md#eigene-einstellungen-config_localh). Das gilt auch für die Pocket-Node (ab 1.5.8).
 
 ## Erstes Flashen (USB)
 

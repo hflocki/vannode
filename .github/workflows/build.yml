@@ -5,7 +5,8 @@
 
 # Builds every device on each push / pull request.
 # A tag "<device>-v<version>" (e.g. temp-v1.1.0) builds only that device and
-# creates a GitHub release with its .bin file. The file name carries the firmware version
+# creates a GitHub release with its .bin file; the release text comes from the device's
+# CHANGELOG.md (tools/release/notes.py). The file name carries the firmware version
 # (FW_VERSION), e.g. temp-node-esp32c3-v1.1.0.bin. A tag "bundle-v<version>" builds every
 # device and creates one release with the files listed in .github/bundle.txt.
 name: Build
@@ -212,10 +213,16 @@ jobs:
           name: ${{ matrix.device }}-node-${{ matrix.target }}
           path: ${{ env.BIN }}
 
+      # Release text = the version's row in firmware/<device>/CHANGELOG.md
+      - name: Release notes
+        if: steps.sel.outputs.skip != '1' && startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/bundle-v')
+        run: python3 tools/release/notes.py "${{ matrix.device }}" > release-notes.md
+
       - name: Release
         if: steps.sel.outputs.skip != '1' && startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/bundle-v')
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           files: |
             ${{ env.BIN }}
             ${{ env.WEB }}

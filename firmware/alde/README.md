@@ -168,10 +168,7 @@ Jede Firmware hat eine Kennung (`CAMPER-FW:alde:<version>:<chip>;`) und dieselbe
 
 ## Versionen
 
-| Version | Änderungen |
-|---|---|
-| 0.2.0 | Optionaler Bedienteil-Bus (CI-Bus, zweiter LIN-Transceiver, ESP als Master): Sollwert, Außentemperatur, Gas, Heizstab-Stufe, Warmwasser, Pumpe, Störung lesen und – nur im Modus „Lesen und steuern“ – setzen, per MQTT, Web-UI und Home Assistant. Ab Werk aus |
-| 0.1.0 | Erste Version aus der VanNode-Vorlage: passiver LIN-Leser für die Alde Compact 3020 HE (Dekodierung aus alde-3020he-lin), MQTT, HA-Discovery, Web-UI, Host-Test |
+Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen je Version: [CHANGELOG.md](CHANGELOG.md) (steht auch im jeweiligen GitHub-Release).
 
 ## Lizenz
 

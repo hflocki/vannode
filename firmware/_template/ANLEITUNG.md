@@ -40,6 +40,7 @@ Alle Stellen, an denen du etwas tun musst, sind im Code mit **`TODO`** markiert 
 | `mqtt_ha.cpp` | Eigene Befehle in `onMessage()` (`<prefix>/cmd/...`) und passende HA-Entitäten (Taste, Schalter) in `mqttPublishDiscovery()` |
 | `web/index.html` | Tab **Einstellungen**: Eingabefelder `cfg-…`, dazu `loadSetup()` und `saveSettings()`. Die Live-Kacheln brauchen keine Änderung. |
 | `README.md` | TODO-Stellen: Beschreibung, Hardware, Bibliotheken, Topics |
+| `CHANGELOG.md` | Titel auf das neue Gerät ändern, alte Zeilen löschen, erste Version eintragen. Bei jeder neuen `FW_VERSION` eine Zeile oben ergänzen – sie wird beim Tag zum Text des GitHub-Release. |
 
 **Einstellung hinzufügen, Beispiel „Grenzwert“:**
 1. `config.h`: `float limit;` in `AppConfig`, dazu `#define DEFAULT_LIMIT 50.0f`.
@@ -79,6 +80,7 @@ Alle Stellen, an denen du etwas tun musst, sind im Code mit **`TODO`** markiert 
 firmware/_template/
 ├── ANLEITUNG.md                 diese Anleitung (wird nicht mitkopiert)
 ├── README.md                    README des neuen Geräts (mit TODOs)
+├── CHANGELOG.md                 Änderungen je Version (Text der Releases)
 ├── LICENSE                      MIT
 ├── tools/new_device.py          Kopier-Skript (wird nicht mitkopiert)
 └── camper_example/

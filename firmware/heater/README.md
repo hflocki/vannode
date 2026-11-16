@@ -287,6 +287,10 @@ Seit 1.4.0 hat jede Firmware eine Kennung (`CAMPER-FW:heater:<version>:<chip>;`)
 - Uhrzeit: Die Original-iNet-Box stellt die Uhr nie selbst; das CP Plus meldet Änderungen sofort. Unser NTP-Uhrzeit-Setzen (Frame 0x14) ist nur gegen ESPHome geprüft.
 - **Am echten LIN-Bus noch nicht getestet.**
 
+## Versionen
+
+Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen je Version: [CHANGELOG.md](CHANGELOG.md) (steht auch im jeweiligen GitHub-Release).
+
 ## Fertige Firmware
 
 Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).

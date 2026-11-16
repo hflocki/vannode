@@ -43,6 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 tools/common/sync_common.py --check
       - run: python3 tools/web/pack_web.py --check
+      - run: python3 tools/docs/check_arduino.py
       - run: python3 firmware/heater/tools/embed_web.py --check
       - run: python3 tools/emulator/emulator.py --selftest
       - run: bash firmware/ble/tests/run.sh

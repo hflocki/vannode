@@ -25,28 +25,13 @@ TODO: Anschlussplan / Foto.
 
 ## Arduino IDE
 
-**Board-Paket:** esp32 von Espressif **3.3.x**
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
 | Einstellung | Wert |
 |---|---|
-| Board | ESP32C3 Dev Module (bzw. ESP32S3 Dev Module) |
-| USB CDC On Boot | Enabled |
-| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** |
-
-**Bibliotheken:**
-
-| Bibliothek | Autor | Version |
-|---|---|---|
-| PubSubClient | Nick O'Leary | 2.8 |
-| ArduinoJson | Benoit Blanchon | 7.4.2 |
-| ESPAsyncWebServer | ESP32Async | 3.12.1 |
-| AsyncTCP | ESP32Async | 3.5.0 |
-| TODO: Sensor-Bibliothek | | |
-
-**Erstes Flashen (USB):**
-1. `config_local.h.example` nach `config_local.h` kopieren und WLAN, MQTT und Passwörter eintragen.
-2. Sketch hochladen.
-3. Web-Oberfläche einmalig: im Browser `http://<ip>/` öffnen, dort steht ein Upload-Formular → `data/index.html.gz` hochladen.
+| Board | ESP32-C3 Super Mini (bzw. ESP32-S3), Einstellungen siehe docs/ARDUINO.md |
+| Zusätzliche Bibliotheken | TODO: Sensor-Bibliothek (auch in `docs/ARDUINO.md` und `build.yml` eintragen) |
+| Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`) |
 
 ## Updates ohne USB
 

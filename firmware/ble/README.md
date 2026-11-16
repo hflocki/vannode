@@ -111,42 +111,17 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 
 ## Arduino IDE
 
-**Board-Einstellungen**
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
-| Einstellung | ESP32-C3 Super Mini | ESP32-S3 (DevKitC-1 o. Ä.) | M5Stack AtomS3 Lite |
-| --- | --- | --- | --- |
-| Board | ESP32C3 Dev Module | ESP32S3 Dev Module | M5AtomS3 |
-| USB CDC On Boot | **Enabled** | **Enabled** | **Enabled** |
-| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **8M with spiffs (3MB APP/1.5MB SPIFFS)** |
-| PSRAM | – | aus | – |
-| Anschluss zum Flashen | USB-C | Buchse „USB“ (nicht „UART“), dort kommt auch das serielle Log | USB-C |
-| Release-Datei für OTA | `ble-node-esp32c3-v<version>.bin` | `ble-node-esp32s3-v<version>.bin` | `ble-node-atoms3-v<version>.bin` |
-| Besonderheit | – | – | Wird er beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken des USB-Kabels ca. 2 s halten (Download-Modus) |
-
-WLAN und Bluetooth brauchen zusammen gut 1,4 MB. Deshalb immer ein Schema **mit OTA** wählen, sonst schlägt das Update über die Web-Oberfläche mit „Partition Could Not be Found“ fehl.
-
-Board-Paket: esp32 von Espressif Systems, 3.3.x (CI: 3.3.2).
-
-**Bibliotheken**
-
-| Bibliothek | Autor | Version |
-| --- | --- | --- |
-| PubSubClient | Nick O'Leary | 2.8 |
-| ArduinoJson | Benoit Blanchon | 7.4.2 |
-| ESP Async WebServer | ESP32Async | 3.12.1 |
-| Async TCP | ESP32Async | 3.5.0 |
-| NimBLE-Arduino | h2zero | 2.5.1 |
-
-**Flashen**
-
-1. `config_local.h.example` nach `config_local.h` kopieren und WLAN, MQTT und Passwörter eintragen (die Datei geht nicht nach GitHub).
-2. `ble_node/ble_node.ino` öffnen, Board-Einstellungen prüfen, per USB hochladen.
-3. `http://<ip>/` öffnen. Solange die Web-Oberfläche fehlt, steht dort ein Upload-Formular: `data/index.html.gz` hochladen.
-4. Ab dann Updates nur noch über die Web-UI (Tab **System → Firmware- & Web-Update**).
+| Einstellung | Wert |
+| --- | --- |
+| Boards | ESP32-C3 Super Mini, ESP32-S3 (mehr Speicher für mehrere Bluetooth-Geräte), M5Stack AtomS3 Lite (mit Status-LED) |
+| Release-Dateien | `ble-node-esp32c3-…`, `ble-node-esp32s3-…`, `ble-node-atoms3-…` – passend zum Board nehmen |
+| Zusätzliche Bibliothek | NimBLE-Arduino 2.5.1 |
+| Sketch | `ble_node/ble_node.ino` |
+| Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`), danach Updates unter **System → Firmware- & Web-Update** |
 
 Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Danach unter **MQTT** Gerätename und Topic für die Rolle setzen (z. B. `battery-node` / `camper/battery`).
-
-Nach einer Änderung an `web/index.html` im Repo-Hauptordner `python3 tools/web/pack_web.py` ausführen (packt nach `data/index.html.gz`).
 
 ## Bluetooth-Geräte einrichten
 

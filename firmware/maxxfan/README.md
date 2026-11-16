@@ -59,34 +59,16 @@ Tasten werden als Impuls ausgegeben (Standard 150 ms, im Web-UI einstellbar), mi
 
 ## Arduino IDE
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
 | Einstellung | Wert |
 | --- | --- |
-| Board | ESP32C3 Dev Module |
-| USB CDC On Boot | Enabled |
-| Flash Size | 4MB |
-| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** |
+| Board | ESP32-C3 (VanTurtle-Board), Flash Size 4MB |
+| Zusätzliche Bibliotheken | keine |
+| Sketch | `camper_maxxfan/camper_maxxfan.ino` |
+| Web-Oberfläche | als LittleFS-Image (Plugin siehe docs/ARDUINO.md). Die Einstellungen liegen im NVS, ein LittleFS-Upload löscht sie nicht |
 
-Die Firmware ist ca. 1,18 MB groß und passt knapp in die Standard-Partition; mit Minimal SPIFFS bleibt Luft für künftige Updates.
-
-**Libraries** (Bibliotheksverwalter): PubSubClient (Nick O'Leary), ArduinoJson 7.x (Benoit Blanchon), ESP Async WebServer (ESP32Async), Async TCP (ESP32Async). Board-Paket: esp32 von Espressif, 3.x.
-
-**Flashen**
-
-1. In `config.h` `DEFAULT_AP_PASSWORD` und `DEFAULT_OTA_PASSWORD` ändern.
-2. `camper_maxxfan.ino` öffnen, Partition Scheme prüfen, hochladen.
-3. Serial Monitor schließen, `Cmd+Shift+P` → **Upload LittleFS to Pico/ESP8266/ESP32** (Plugin [arduino-littlefs-upload](https://github.com/earlephilhower/arduino-littlefs-upload)). Das lädt die Web-Oberfläche `data/index.html.gz` hoch.
-
-Ohne LittleFS-Image zeigt das Gerät eine Notseite mit Hinweis und Firmware-Update. Die Einstellungen liegen im NVS, nicht im Dateisystem: Ein LittleFS-Upload löscht sie nicht.
-
-**Web-Oberfläche ändern:** Quelle ist `web/index.html`, hochgeladen wird `data/index.html.gz`:
-
-```
-python3 tools/web/pack_web.py maxxfan      # im Repo-Hauptordner
-```
-
-Ohne das Repo-Werkzeug geht es auch so (im Sketch-Ordner `camper_maxxfan`): `gzip -9 -n -c web/index.html > data/index.html.gz`. Die GitHub Action prüft bei jedem Push, ob die gepackte Seite zur `index.html` passt.
+Vor dem ersten Flashen in `config_local.h` `DEFAULT_AP_PASSWORD` und `DEFAULT_OTA_PASSWORD` setzen. Ohne LittleFS-Image zeigt das Gerät eine Notseite mit Hinweis und Firmware-Update.
 
 **Updates ohne USB** (das Gerät sitzt im Lüftergehäuse): im Web-UI unter **WiFi → Firmware- & Web-Update**. Welche Datei gemeint ist, erkennt die Firmware am Namen:
 
@@ -96,7 +78,7 @@ Ohne das Repo-Werkzeug geht es auch so (im Sketch-Ordner `camper_maxxfan`): `gzi
 | `data/index.html.gz` | nur die Web-Oberfläche wird ersetzt, ohne Neustart |
 | LittleFS-Image (Dateiname enthält `littlefs` oder `spiffs`) | ganzes Dateisystem, danach Neustart |
 
-Alternativ per Arduino-OTA (`maxxfan-node` unter Netzwerk-Ports); auch ein Dateisystem-Upload über `espota -s` wird angenommen. Ändert sich nur die Firmware, muss die Web-Oberfläche nicht neu hochgeladen werden.
+Alternativ per Arduino-OTA (`maxxfan-node` unter Netzwerk-Ports); auch ein Dateisystem-Upload über `espota -s` wird angenommen.
 
 ## Web-Oberfläche
 

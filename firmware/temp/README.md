@@ -51,47 +51,16 @@ Zwischen DATA und 3,3 V gehört **ein 4,7-kΩ-Pull-up** (einmal pro Bus, nicht p
 
 ## Arduino IDE
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
-
-**Board-Einstellungen (ESP8266)**
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
 | Einstellung | Wert |
 |---|---|
-| Board | NodeMCU 1.0 (ESP-12E Module) bzw. LOLIN(WEMOS) D1 R2 & mini |
-| Flash Size | **4MB (FS:1MB OTA:~1019KB)** |
+| Board | ESP8266 (NodeMCU / D1 mini, Flash Size **4MB (FS:1MB OTA:~1019KB)**) oder ESP32-C3 Super Mini |
+| Zusätzliche Bibliotheken | OneWire 2.3.8, DallasTemperature 4.0.6; auf ESP8266 ESP Async TCP 2.0.0 statt Async TCP |
+| Sketch | `camper_temp/camper_temp.ino` |
+| Web-Oberfläche | als LittleFS-Image (Plugin siehe docs/ARDUINO.md). **Überschreibt die gespeicherte Konfiguration** |
 
-Board-Paket: esp8266 von ESP8266 Community, 3.1.x (getestet 3.1.2).
-Für ESP32-C3: Board „ESP32C3 Dev Module“, USB CDC On Boot „Enabled“, Standard-Partition reicht (ca. 1,2 MB Firmware).
-
-**Libraries** (Bibliotheksverwalter)
-
-| Library | Autor | getestet |
-|---|---|---|
-| OneWire | Paul Stoffregen | 2.3.8 |
-| DallasTemperature | Miles Burton | 4.0.6 |
-| PubSubClient | Nick O'Leary | 2.8 |
-| ArduinoJson | Benoit Blanchon | 7.4.2 |
-| ESP Async WebServer | ESP32Async | 3.12.1 |
-| ESP Async TCP (nur ESP8266) | ESP32Async | 2.0.0 |
-| Async TCP (nur ESP32) | ESP32Async | 3.5.0 |
-
-**Flashen**
-
-1. In `config.h` `DEFAULT_OTA_PASSWORD` und `DEFAULT_AP_PASSWORD` ändern.
-2. `camper_temp.ino` öffnen, Flash Size prüfen, hochladen.
-3. Serial Monitor schließen, `Cmd+Shift+P` → **Upload LittleFS to Pico/ESP8266/ESP32** (Plugin [arduino-littlefs-upload](https://github.com/earlephilhower/arduino-littlefs-upload)).
-
-Der LittleFS-Upload überschreibt die gespeicherte Konfiguration.
-
-**Web-Oberfläche ändern:** Quelle ist `web/index.html`, hochgeladen wird `data/index.html.gz`. Nach einer Änderung neu packen, dann LittleFS hochladen:
-
-```
-python3 tools/web/pack_web.py temp      # im Repo-Hauptordner
-```
-
-Ohne das Repo-Werkzeug geht es auch so (im Sketch-Ordner `camper_temp`): `gzip -9 -n -c web/index.html > data/index.html.gz`. Die GitHub Action prüft bei jedem Push, ob die gepackte Seite zur `index.html` passt.
-
-Spätere Firmware-Updates gehen auch per OTA (`temp-node` unter Netzwerk-Ports) oder über die Web-Oberfläche.
+Vor dem ersten Flashen in `config_local.h` `DEFAULT_OTA_PASSWORD` und `DEFAULT_AP_PASSWORD` setzen. Spätere Firmware-Updates gehen per OTA (`temp-node` unter Netzwerk-Ports) oder über die Web-Oberfläche.
 
 ## Erstbenutzung
 

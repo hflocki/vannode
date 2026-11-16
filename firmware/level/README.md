@@ -54,38 +54,14 @@ Den Sensor fest mit dem Fahrzeug verbinden. Die Einbaulage (flach oder an einer 
 
 ## Arduino IDE
 
-> **Eigene Passwörter, Pins, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
-
-Board-Paket: esp32 von Espressif **3.x** (getestet 3.3.2).
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
 | Einstellung | Wert |
 |---|---|
-| Board | ESP32S3 Dev Module / ESP32C3 Dev Module / ESP32 Dev Module |
-| USB CDC On Boot | Enabled (S3 / C3 mit nativem USB) |
-| Partition Scheme | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** |
-
-**Libraries** (Bibliotheksverwalter)
-
-| Library | Autor | Version |
-|---|---|---|
-| SparkFun BNO08x Cortex Based IMU | SparkFun | 1.0.6 |
-| PubSubClient | Nick O'Leary | 2.8 |
-| ArduinoJson | Benoit Blanchon | 7.4.2 |
-| ESP Async WebServer | ESP32Async | 3.12.1 |
-| Async TCP | ESP32Async | 3.5.0 |
-
-**Hochladen**
-
-1. `camper_level/camper_level.ino` öffnen, Board und Partition Scheme einstellen, Sketch hochladen.
-2. Web-Oberfläche hochladen: Das LittleFS-Image aus `data/` (enthält `index.html.gz`) mit dem Plugin [arduino-littlefs-upload](https://github.com/earlephilhower/arduino-littlefs-upload) übertragen (Arduino IDE 2: `Strg/Cmd + Shift + P` → *Upload LittleFS to Pico/ESP8266/ESP32*). Danach startet das Gerät mit leeren Einstellungen bzw. den Werten aus `config_local.h`.
-
-Die lesbare Quelle der Web-Oberfläche liegt in `web/index.html`. Nach Änderungen daran neu packen:
-
-```
-python3 tools/web/pack_web.py level      # im Repo-Hauptordner
-```
-
-Ohne das Repo-Werkzeug geht es auch so (im Sketch-Ordner `camper_level`): `gzip -9 -n -c web/index.html > data/index.html.gz`. Die GitHub Action prüft bei jedem Push, ob die gepackte Seite zur `index.html` passt.
+| Board | ESP32-S3 (Release-Datei `level-node-esp32s3`), ESP32-C3 und ESP32 DevKit gehen auch |
+| Zusätzliche Bibliothek | SparkFun BNO08x Cortex Based IMU 1.0.6 |
+| Sketch | `camper_level/camper_level.ino` |
+| Web-Oberfläche | als LittleFS-Image aus `data/` (Plugin siehe docs/ARDUINO.md). Danach startet das Gerät mit leeren Einstellungen bzw. den Werten aus `config_local.h` |
 
 ## Erstbenutzung
 

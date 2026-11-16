@@ -39,19 +39,16 @@ Pins lassen sich im jeweiligen Block in `config.h` anpassen. Optional: `LIN_CS_P
 
 ## Arduino IDE einrichten
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
-1. Boardverwalter: **esp32 von Espressif, Version 3.x** (kompiliert mit 3.3).
-2. Bibliotheken über den Bibliotheksverwalter installieren:
-   - **PubSubClient** (Nick O'Leary)
-   - **ArduinoJson** (Benoit Blanchon), Version 7.x
-   - **ESP Async WebServer** (ESP32Async)
-   - **Async TCP** (ESP32Async)
-3. Ordner `truma_heater` öffnen (`truma_heater.ino`).
-4. Board wählen (siehe Tabelle), **Partition Scheme: „Minimal SPIFFS (1.9MB APP with OTA)“** – lässt Platz für künftige Updates über die Weboberfläche.
-5. Hochladen. Serieller Monitor: 115200 Baud.
+| Einstellung | Wert |
+|---|---|
+| Board | laut Tabelle *Unterstützte Boards* (ESP32C3 Dev Module bzw. ESP32 Dev Module) |
+| Zusätzliche Bibliotheken | keine |
+| Sketch | `truma_heater/truma_heater.ino` |
+| Web-Oberfläche | ist in die Firmware eingebettet, kein eigener Upload |
 
-Spätere Updates gehen ohne USB: In der Arduino IDE *Sketch → Kompilierte Binärdatei exportieren*, dann die `.bin` in der Weboberfläche unter **System → Firmware-Update** hochladen.
+Spätere Updates gehen ohne USB über die Weboberfläche unter **System → Firmware-Update**.
 
 ## Inbetriebnahme
 

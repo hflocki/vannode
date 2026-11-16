@@ -10,6 +10,8 @@ Optik und Farben entsprechen dem großen Wandpanel [display-node](../display): d
 
 ## Flashen
 
+Allgemeines zur Arduino IDE und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Road Buddy hat aber eigene Bibliotheken und eine eigene `config.h`, deshalb hier vollständig.
+
 Gebaut wird mit der Arduino IDE (1.x und 2.x). Der Quellcode liegt in `roadbuddy/`. Du brauchst eine eigene `roadbuddy/config.h` mit WLAN- und MQTT-Zugangsdaten. Als Vorlage liegt `config.example.h` bei, deine `config.h` ist per `.gitignore` vom Git ausgeschlossen.
 
 ### Voraussetzungen

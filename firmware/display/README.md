@@ -113,9 +113,9 @@ docs/                      Screenshots
 
 ## Arduino IDE
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
-**Board-Paket:** esp32 von Espressif **3.3.x** (getestet mit 3.3.2)
+Das Display weicht von den anderen Geräten ab (16 MB Flash, PSRAM, eigenes Partitionsschema):
 
 | Einstellung | Wert |
 | --- | --- |
@@ -125,17 +125,7 @@ docs/                      Screenshots
 | PSRAM | **OPI PSRAM** |
 | Partition Scheme | 16M Flash (3MB APP/9.9MB FATFS) |
 | Upload Speed | 921600 |
-
-**Bibliotheken** (Bibliotheksverwalter):
-
-| Bibliothek | Version |
-| --- | --- |
-| GFX Library for Arduino (moononournation) | 1.6.x |
-| lvgl | **9.2.x** |
-| ESP Async WebServer (ESP32Async) | 3.8.x |
-| Async TCP (ESP32Async) | 3.4.x |
-| PubSubClient (knolleary) | 2.8 |
-| ArduinoJson (bblanchon) | 7.x |
+| Zusätzliche Bibliotheken | GFX Library for Arduino 1.6.0, lvgl **9.2.2** |
 
 **LVGL-Konfiguration:** `lv_conf.h` in den Arduino-Bibliotheksordner kopieren, **neben** den Ordner `lvgl` (nicht hinein):
 

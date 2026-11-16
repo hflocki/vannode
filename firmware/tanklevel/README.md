@@ -80,77 +80,17 @@ Für Abwasser ist der kapazitive FL die robustere Wahl, weil sich Ablagerungen k
 
 ## Arduino IDE
 
-> **Eigene Passwörter, WLAN und Broker:** `config_local.h.example` im Sketch-Ordner nach `config_local.h` kopieren und anpassen. Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../../README.de.md#eigene-einstellungen-config_localh).
-
-**Board-Einstellungen**
+Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
 
 | Einstellung | Wert |
 | --- | --- |
-| Board | ESP32C3 Dev Module |
-| USB CDC On Boot | Enabled |
-| Flash Size | 4MB |
-| Partition Scheme | ⚠️ **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** |
+| Board | ESP32-C3 Super Mini, Flash Size 4MB. ESP32-S3 geht auch (PSRAM passend zum Board, z. B. N16R8 → „OPI PSRAM“) |
+| Partition Scheme | ⚠️ **Minimal SPIFFS** – WLAN + Bluetooth ergeben ca. 1,43 MB und passen nicht in die Standard-Partition |
+| Zusätzliche Bibliothek | NimBLE-Arduino 2.5.1 |
+| Sketch | `camper_tanklevel/camper_tanklevel.ino` |
+| Web-Oberfläche | als LittleFS-Image (Plugin siehe docs/ARDUINO.md). **Überschreibt die gespeicherte Konfiguration** (WLAN, MQTT, Matrix); nach einem reinen Firmware-Update nicht nötig |
 
-WiFi + Bluetooth ergeben ca. 1,43 MB Firmware und passen nicht in die Standard-Partition (1,2 MB).
-
-**ESP32-S3:** Board „ESP32S3 Dev Module“, Partition Scheme ebenfalls Minimal SPIFFS (oder eine größere Variante mit SPIFFS). **PSRAM** passend zum Board einstellen (z. B. N16R8 → „OPI PSRAM“), eine falsche Einstellung führt zu Abstürzen. „USB CDC On Boot“ nur aktivieren, wenn der Serial Monitor über den nativen USB-Port läuft.
-
-**Libraries** (Bibliotheksverwalter)
-
-| Library | Autor | getestet |
-| --- | --- | --- |
-| PubSubClient | Nick O'Leary | 2.8 |
-| ArduinoJson | Benoit Blanchon | 7.4.2 |
-| ESP Async WebServer | ESP32Async | 3.12.1 |
-| Async TCP | ESP32Async | 3.5.0 |
-| NimBLE-Arduino | h2zero | 2.5.1 |
-
-Board-Paket: esp32 von Espressif, 3.x (getestet 3.3.9).
-
-
-
-**LittleFS-Plugin installieren (einmalig)**
-
-Die Arduino IDE 2.x kann von sich aus kein Dateisystem hochladen. Dafür braucht es das Plugin [arduino-littlefs-upload](https://github.com/earlephilhower/arduino-littlefs-upload) (Arduino IDE **2.2.1 oder neuer**, für die alte IDE 1.8 funktioniert es nicht).
-
-1. Unter [Releases](https://github.com/earlephilhower/arduino-littlefs-upload/releases/tag/1.6.3) die Datei `arduino-littlefs-upload-x.y.z.vsix` herunterladen. **Nicht entpacken**, die `.vsix` bleibt so, wie sie ist.
-2. In den Plugin-Ordner kopieren (Ordner vorher anlegen, falls es ihn nicht gibt):
-
-   | System | Ordner |
-   | --- | --- |
-   | macOS / Linux | `~/.arduinoIDE/plugins/` |
-   | Windows | `C:\Users\<Benutzername>\.arduinoIDE\plugins\` |
-
-   Auf dem Mac im Terminal:
-   ```bash
-   mkdir -p ~/.arduinoIDE/plugins
-   mv ~/Downloads/arduino-littlefs-upload-*.vsix ~/.arduinoIDE/plugins/
-   ```
-   Der Ordner beginnt mit einem Punkt und ist im Finder versteckt (`Cmd+Shift+.` blendet ihn ein).
-3. Arduino IDE **komplett beenden** und neu starten. Danach taucht unter `Cmd+Shift+P` (Windows/Linux `Strg+Shift+P`) der Befehl **Upload LittleFS to Pico/ESP8266/ESP32** auf.
-
-**Flashen**
-
-1. In `config.h` `DEFAULT_OTA_PASSWORD` und `DEFAULT_AP_PASSWORD` ändern.
-2. `camper_tanklevel.ino` öffnen. Der Ordner muss `camper_tanklevel` heißen, sonst will die IDE den Sketch verschieben.
-3. Board-Einstellungen prüfen, vor allem **Partition Scheme: Minimal SPIFFS**. Port wählen.
-4. Sketch hochladen.
-5. **Serial Monitor schließen** (sonst ist der Port belegt).
-6. `Cmd+Shift+P` → **Upload LittleFS to Pico/ESP8266/ESP32**.
-7. ESP neu starten, Access Point `Tanklevel-Node-XXXXXX` erscheint.
-
-Der LittleFS-Upload überschreibt die gespeicherte Konfiguration (WLAN, MQTT, Matrix). Nach einem reinen Firmware-Update ist er nicht nötig, nur wenn sich die Web-Oberfläche geändert hat.
-
-
-**Web-Oberfläche ändern:** Die Quelle ist `web/index.html`. Hochgeladen wird die komprimierte `data/index.html.gz` (ca. ein Viertel der Größe, lädt auf dem Handy deutlich schneller). Nach einer Änderung neu packen, dann LittleFS hochladen:
-
-```
-python3 tools/web/pack_web.py tanklevel      # im Repo-Hauptordner
-```
-
-Ohne das Repo-Werkzeug geht es auch so (im Sketch-Ordner `camper_tanklevel`): `gzip -9 -n -c web/index.html > data/index.html.gz`. Die GitHub Action prüft bei jedem Push, ob die gepackte Seite zur `index.html` passt.
-
-Spätere Firmware-Updates gehen auch per OTA (`tanklevel-node` unter Netzwerk-Ports) oder über die Web-Oberfläche.
+Vor dem ersten Flashen in `config_local.h` `DEFAULT_OTA_PASSWORD` und `DEFAULT_AP_PASSWORD` setzen. Nach dem Hochladen von Sketch und LittleFS den ESP neu starten, der Access Point `Tanklevel-Node-XXXXXX` erscheint.
 
 ## Erstbenutzung
 
@@ -164,46 +104,7 @@ Spätere Firmware-Updates gehen auch per OTA (`tanklevel-node` unter Netzwerk-Po
 
 ## Probleme beim Hochladen
 
-**Firmware-Upload**
-
-| Problem | Lösung |
-| --- | --- |
-| `Failed to connect to ESP32-C3` / `No serial data received` | ESP in den Flash-Modus bringen: **BOOT** gedrückt halten, kurz **RESET** drücken, BOOT loslassen, nochmal hochladen. |
-| Kein Port in der IDE | Anderes USB-Kabel probieren, viele Kabel laden nur und übertragen keine Daten. Der C3 Super Mini braucht keinen Treiber, er meldet sich direkt per USB (Mac: `/dev/cu.usbmodem…`). |
-| Port verschwindet nach dem Upload / anderer Port | Normal beim C3: der ESP startet neu und meldet sich neu am USB an. Port unter *Werkzeuge → Port* neu wählen. |
-| `Sketch too big` / `text section exceeds available space` | Partition Scheme steht noch auf Default. **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** wählen. |
-| Keine Ausgabe im Serial Monitor | *USB CDC On Boot* auf **Enabled**, 115200 Baud. Nach dem Ändern neu hochladen. |
-| Kompilierfehler in `AsyncWebServer`/`AsyncTCP` | Falsche Library. Es muss die Version von **ESP32Async** sein (nicht die alte von me-no-dev). Alte Version im Bibliotheksverwalter entfernen. |
-| Kompilierfehler mit `NimBLE`, z. B. `setScanCallbacks` | NimBLE-Arduino **1.x** installiert, nötig ist **2.x**. |
-| Kompilierfehler mit `JsonDocument` | ArduinoJson **6.x** installiert, nötig ist **7.x**. |
-| Viele Fehler in WiFi/ESP-Funktionen | Board-Paket esp32 **2.x** installiert, nötig ist **3.x**. |
-
-**LittleFS-Upload (Web-Oberfläche)**
-
-| Problem | Lösung |
-| --- | --- |
-| Befehl „Upload LittleFS…“ fehlt | Plugin liegt im falschen Ordner, ist entpackt, oder die IDE wurde nicht komplett neu gestartet. Siehe Installation oben. Arduino IDE 1.8 wird nicht unterstützt. |
-| `Could not open <port>, the port doesn't exist` | Serial Monitor ist noch offen, schließen. Oder der Port hat sich nach dem Sketch-Upload geändert, neu wählen. |
-| Upload läuft, bricht aber ab / falsches Board | Bekannter Fehler der IDE beim zuerst geöffneten Sketch: Board einmal auf irgendetwas anderes umstellen und wieder zurück, dann erneut versuchen. |
-| Web-Seite zeigt nur „Please upload the LittleFS image“ | LittleFS wurde nicht hochgeladen, oder das Partition Scheme wurde nach dem LittleFS-Upload geändert. Mit **Minimal SPIFFS** Sketch und LittleFS beide nochmal hochladen. |
-| Alte Web-Oberfläche nach Änderung | `web/index.html` geändert, aber nicht neu gepackt. `gzip`-Befehl oben ausführen, dann LittleFS hochladen. |
-
-**Ohne Plugin:** Im Plugin gibt es auch **Build LittleFS image in sketch directory**, das erzeugt `mklittlefs.bin`. Die Datei lässt sich mit [esptool](https://github.com/espressif/esptool) direkt schreiben (`pip install esptool`):
-
-```bash
-esptool --chip esp32c3 --port /dev/cu.usbmodemXXXX write-flash 0x3D0000 mklittlefs.bin
-```
-
-`0x3D0000` ist die Startadresse des Dateisystems im Partition Scheme *Minimal SPIFFS*.
-
-**Update per WLAN (OTA)**
-
-| Problem | Lösung |
-| --- | --- |
-| Netzwerk-Port `tanklevel-node` erscheint nicht | Rechner und ESP müssen im selben Netz sein. mDNS wird manchmal von Routern oder Gastnetzen blockiert. Unter macOS beim ersten Mal die Firewall-Abfrage für die Arduino IDE erlauben. |
-| Passwortabfrage schlägt fehl | Es gilt `DEFAULT_OTA_PASSWORD` aus `config.h` in der Firmware, die **gerade auf dem ESP läuft**. |
-| LittleFS per WLAN | Geht mit dem Arduino-Plugin nicht. Die Web-Oberfläche (`data/index.html.gz`) lässt sich aber im Web-UI unter **WiFi → Firmware- & Web-Update** hochladen. |
-
+Siehe **[docs/ARDUINO.md → Probleme beim Hochladen](../../docs/ARDUINO.md#probleme-beim-hochladen)** (Firmware und LittleFS).
 
 ## MQTT / Home Assistant
 

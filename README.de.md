@@ -85,7 +85,7 @@ Die Doku der einzelnen Geräte ist auf Deutsch.
 
 ## Schnellstart
 
-1. **Firmware holen:** Unter [Releases](https://github.com/hflocki/vannode/releases) die `.bin` des Geräts laden – oder selbst bauen (Arduino IDE oder `arduino-cli`, Board und Bibliotheken stehen in der README des Geräts).
+1. **Firmware holen:** Unter [Releases](https://github.com/hflocki/vannode/releases) die `.bin` des Geräts laden – oder selbst bauen (Arduino IDE oder `arduino-cli`, Einrichtung der Arduino IDE in [docs/ARDUINO.md](docs/ARDUINO.md), Besonderheiten in der README des Geräts).
 2. **Einmal per USB flashen.** Danach gehen Updates über die Web-Oberfläche.
 3. **Einrichten:** Ohne WLAN-Daten startet ein Access Point `<Gerät>-Node-XXXXXX`. Verbinden, `http://192.168.4.1` öffnen, WLAN und MQTT-Broker eintragen.
 4. Das Gerät meldet sich unter `camper/<gerät>/…` am Broker, das Display findet es von selbst.
@@ -137,7 +137,7 @@ Der Road Buddy hat keine Einstellungsseite, nur eine Update-Seite; dort ist die 
 
 ## Fertige Firmware
 
-Jeder Push baut alle Geräte per GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)), mit genau den Board-Paket- und Bibliotheksversionen aus den Geräte-READMEs. Die `.bin` liegt beim jeweiligen Lauf im Reiter **Actions** zum Download.
+Jeder Push baut alle Geräte per GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)), mit genau den Board-Paket- und Bibliotheksversionen aus [docs/ARDUINO.md](docs/ARDUINO.md) (geprüft von `tools/docs/check_arduino.py`). Die `.bin` liegt beim jeweiligen Lauf im Reiter **Actions** zum Download.
 
 Ein Release für **ein** Gerät entsteht mit einem Tag `<gerät>-v<version>`:
 
@@ -175,7 +175,7 @@ git sparse-checkout set firmware/temp
 python firmware/_template/tools/new_device.py waste "Abwasser"
 ```
 
-Jeder Ordner ist für sich vollständig: eigene README mit Hardware, Board-Einstellungen, Bibliotheken und Topics, Arduino-Sketch im Unterordner mit dem Namen der `.ino` (z. B. `camper_temp/`, Heizung `truma_heater/`). Gebaut wird nur mit Arduino (IDE oder `arduino-cli`), PlatformIO nur beim Bluetooth-Gateway `firmware/omg`, weil OpenMQTTGateway ein fremdes PlatformIO-Projekt ist.
+Jeder Ordner hat eine eigene README mit Hardware, Besonderheiten beim Bauen und Topics (Gemeinsames zur Arduino IDE in [docs/ARDUINO.md](docs/ARDUINO.md)), Arduino-Sketch im Unterordner mit dem Namen der `.ino` (z. B. `camper_temp/`, Heizung `truma_heater/`). Gebaut wird nur mit Arduino (IDE oder `arduino-cli`), PlatformIO nur beim Bluetooth-Gateway `firmware/omg`, weil OpenMQTTGateway ein fremdes PlatformIO-Projekt ist.
 
 ## Mockups
 

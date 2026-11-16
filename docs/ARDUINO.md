@@ -46,9 +46,9 @@ Das Display (ESP32-S3 mit 16 MB und PSRAM) hat eigene Werte, siehe [Display-READ
 
 | Einstellung | ESP32-C3 Super Mini | ESP32-S3 (DevKitC-1 o. Ä.) | ESP32 DevKit (WROOM-32) | M5Stack AtomS3 Lite | M5Stack Core2 | ESP8266 (NodeMCU, D1 mini) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Board | ESP32C3 Dev Module | ESP32S3 Dev Module | ESP32 Dev Module | M5AtomS3 | M5Core2 | NodeMCU 1.0 (ESP-12E Module) bzw. LOLIN(WEMOS) D1 R2 & mini |
+| Board | ESP32C3 Dev Module | ESP32S3 Dev Module | ESP32 Dev Module | M5AtomS3 | M5Core2 (unter *esp32*, nicht unter „M5Stack“) | NodeMCU 1.0 (ESP-12E Module) bzw. LOLIN(WEMOS) D1 R2 & mini |
 | USB CDC On Boot | **Enabled** | **Enabled** | – | **Enabled** | – | – |
-| Partition Scheme / Flash Size | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **8M with spiffs (3MB APP/1.5MB SPIFFS)** | Standard | **4MB (FS:1MB OTA:~1019KB)** |
+| Partition Scheme / Flash Size | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **8M with spiffs (3MB APP/1.5MB SPIFFS)** | Default (2 x 6.5 MB app, 3.6 MB SPIFFS) – hat OTA, nichts ändern | **4MB (FS:1MB OTA:~1019KB)** |
 | PSRAM | – | aus (falsche Einstellung führt zu Abstürzen) | – | – | – | – |
 | Anschluss | USB-C | Buchse „USB“ (nicht „UART“), dort kommt auch das serielle Log | USB | USB-C | USB-C | USB |
 | Besonderheit | Port wechselt nach dem Upload (Neustart), neu wählen | – | – | Wird er beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken ca. 2 s halten (Download-Modus) | – | – |
@@ -123,6 +123,7 @@ Ohne das Repo-Werkzeug (im Sketch-Ordner): `gzip -9 -n -c web/index.html > data/
 | Kompilierfehler mit `NimBLE`, z. B. `setScanCallbacks` | NimBLE-Arduino 1.x installiert, nötig ist 2.x. |
 | Kompilierfehler mit `JsonDocument` | ArduinoJson 6.x installiert, nötig ist 7.x. |
 | Viele Fehler in WiFi-/ESP-Funktionen | Board-Paket esp32 2.x installiert, nötig ist 3.x. |
+| `'ESP_RST_USB' was not declared in this scope` | Board aus einem anderen Board-Paket gewählt (z. B. „M5Stack“ von M5Stack) oder esp32 älter als 3.x. Board unter *esp32* wählen, esp32 von Espressif 3.3.x installieren. |
 | Fehler rund um `LittleFS` | Eine zusätzlich installierte LittleFS-Bibliothek in `~/Documents/Arduino/libraries` löschen – das Board-Paket bringt LittleFS mit. |
 | „Multiple libraries were found for WiFi.h“ | Nur eine Warnung; eine zusätzliche `WiFi`-Bibliothek in `~/Documents/Arduino/libraries` kann weg. |
 

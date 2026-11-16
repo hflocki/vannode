@@ -26,5 +26,6 @@
 // #define LIN_RX_PIN           16      // heater bus RXD (defaults per chip in config.h)
 // #define CI_RX_PIN            26      // panel bus RXD
 // #define CI_TX_PIN            25      // panel bus TXD
+// #define CI_SLP_PIN           -1      // panel bus SLP/NSLP GPIO, -1 = tied high on the module
 // #define DEFAULT_LIN_ENABLED  false   // only the panel bus transceiver is fitted
 // #define DEFAULT_EL_MAX       2       // highest heating element step a command may set (kW)

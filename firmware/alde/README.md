@@ -44,7 +44,8 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 | Teil | Hinweis |
 |---|---|
 | ESP32 | siehe Tabelle unten; der Chip bestimmt, ob beide Busse gleichzeitig gehen |
-| LIN-Transceiver, z. B. TJA1020 / TJA1021 | je Bus einer. Logikseite verträgt 3,3 V direkt, **kein Pegelwandler nötig** |
+| LIN-Modul, z. B. TJA1020 / TJA1021 | je Bus eins |
+| Pegelwandler 3,3 V ↔ 5 V (z. B. BSS138, 4 Kanäle) | **bei den meisten fertigen LIN-Modulen nötig**, siehe *Verdrahtung* |
 | RJ12-Splitter (nur Heizbus) | an der Buchse **„Control panel“** der Heizung, das Original-Bedienteil bleibt dran |
 | Step-down 12 V → 5 V | versorgt den ESP aus dem Bordnetz (5V-Pin) |
 
@@ -60,11 +61,44 @@ Andere Pins in `config_local.h` (`LIN_RX_PIN`, `CI_RX_PIN`, `CI_TX_PIN`, `LIN_SL
 
 ### Verdrahtung
 
-- **12 V** an VBAT des Transceivers, **Masse** gemeinsam mit Heizung/Bedienteil und ESP.
-- **RXD** ist Open-Drain: Pull-up (ca. 10 kΩ) auf **3,3 V**. Manche Module ziehen RXD auf 5 V hoch – dann den Widerstand auf 3,3 V umlöten, sonst bekommt der ESP-Pin 5 V.
-- **TXD** und **SLP/NSLP** schalten ab ca. 2 V, die 3,3 V des ESP reichen. SLP/NSLP auf High legen oder an einen GPIO (`*_SLP_PIN`), sonst ist der Transceiver aus.
-- **Heizbus:** nur RXD anschließen, TXD bleibt frei. **Kein Master-Widerstand** – Master ist das Alde-Bedienteil. Das Bedienteil muss angeschlossen bleiben, ohne es ist auf dem Bus Ruhe. LIN, Masse und 12 V kommen über das RJ12-Kabel.
-- **Bedienteil-Bus:** RXD und TXD anschließen. Hier ist der ESP Master, also **Master-Widerstand 1 kΩ mit Diode von 12 V auf LIN** (bei vielen TJA1020-Modulen eine Lötbrücke oder ein Jumper).
+**Pegelwandler ja oder nein?** Der TJA1020-Chip selbst kommt mit 3,3 V aus, aber die meisten fertigen LIN-Module haben einen eigenen 5-V-Regler und ziehen **RX auf 5 V** hoch – das verträgt der ESP32 nicht auf Dauer. Prüfen: Modul an 12 V, ESP nicht angeschlossen, RX gegen GND messen.
+
+| Messung an RX | Lösung |
+|---|---|
+| ca. 5 V | Pegelwandler (einfachste Lösung, alle Leitungen darüber) oder nur an RX einen Spannungsteiler (10 kΩ vom Modul, 20 kΩ nach GND) |
+| höchstens 3,3 V | direkt anschließen |
+
+TX und SLP (ESP → Modul) brauchen eigentlich keinen Wandler, der TJA1020 schaltet ab ca. 2 V. Sie über denselben Wandler zu führen, schadet aber nicht; ein BSS138-Wandler schafft 19200 Baud problemlos.
+
+**Beispiel: nur Bedienteil-Bus mit Pegelwandler** (klassischer ESP32, ein LIN-Modul):
+
+| Von | Nach |
+|---|---|
+| ESP32 VIN (5 V) | Pegelwandler HV |
+| ESP32 3V3 | Pegelwandler LV |
+| ESP32 GND | Pegelwandler GND und LIN-Modul GND |
+| ESP32 GPIO16 | Pegelwandler LV1 – HV1 → LIN-Modul RX |
+| ESP32 GPIO17 | Pegelwandler LV2 – HV2 → LIN-Modul TX |
+| ESP32 GPIO25 | Pegelwandler LV3 – HV3 → LIN-Modul SLP |
+| 12 V Bordnetz | LIN-Modul 12 V (über einen Step-down auch ESP32 VIN) |
+| Bedienteil LIN / Masse | LIN-Modul LIN / GND |
+
+VIN führt nur 5 V, wenn der ESP über USB oder einen Step-down versorgt wird. Dazu in `config_local.h`:
+
+```cpp
+#define CI_RX_PIN            16
+#define CI_TX_PIN            17
+#define CI_SLP_PIN           25
+#define LIN_RX_PIN           4       // heater bus is off; keeps it away from GPIO16
+#define DEFAULT_LIN_ENABLED  false
+```
+
+Allgemein:
+
+- **12 V** an das LIN-Modul, **Masse** gemeinsam mit Heizung/Bedienteil und ESP.
+- **SLP/NSLP** auf High legen oder an einen GPIO (`*_SLP_PIN`), sonst ist der Transceiver aus.
+- **Heizbus:** nur RX anschließen, TX bleibt frei. **Kein Master-Widerstand** – Master ist das Alde-Bedienteil. Das Bedienteil muss angeschlossen bleiben, ohne es ist auf dem Bus Ruhe. LIN, Masse und 12 V kommen über das RJ12-Kabel.
+- **Bedienteil-Bus:** RX und TX anschließen. Hier ist der ESP Master, also **Master-Widerstand 1 kΩ mit Diode von 12 V auf LIN** (bei vielen TJA1020-Modulen eine Lötbrücke oder ein Jumper).
 
 Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse). Wo der Anschluss an der 3020 und der 3030 sitzt und ob dafür im Service-Menü „third party panel“ eingeschaltet werden muss, ist noch offen – das Bedienteil meldet „third party panel C fail“, solange es dort niemanden findet. **Wer das an einer 3020 oder 3030 ausprobiert, bitte melden.**
 

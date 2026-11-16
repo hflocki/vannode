@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.3.0"
+#define FW_VERSION            "0.3.1"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 

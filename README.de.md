@@ -164,11 +164,17 @@ git tag temp-v1.1.0
 git push origin temp-v1.1.0
 ```
 
+Vorher `FW_VERSION` erhöhen und oben in `firmware/<gerät>/CHANGELOG.md` eine Zeile für die Version schreiben – sie wird der Text des Releases. Passt der Tag nicht zur `FW_VERSION` oder fehlt die Zeile, bricht die CI vor dem Bauen ab (`tools/release/check.py`). Alles vorab prüfen und die Befehle ausgeben lassen:
+
+```bash
+python3 tools/release/release.py temp
+```
+
 Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Pocket-Node über ihre Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner; sie hängt als `<gerät>-node-web-v<version>.html.gz` mit am Release und wird nach dem Firmware-Update separat hochgeladen.
 
 **Namen:** Jedes Gerät heißt `<gerät>-node` – Hostname (`temp-node.local`), Setup-WLAN (`Temp-Node-XXXXXX`) und Release-Datei mit der Firmware-Version (`temp-node-esp32c3-v1.4.2.bin`). Die MQTT-Topics bleiben `camper/<gerät>/…`, die Home-Assistant-IDs bleiben gleich.
 
-**Alle Geräte in einem Release:** Ein Tag `bundle-v<version>` baut alle Geräte und legt ein Release mit den Dateien an, die in [`.github/bundle.txt`](.github/bundle.txt) stehen (ein Gerät mit Ziel pro Zeile, z. B. `heater esp32`). Dazu kommen die Webseiten als `<gerät>-node-web.html.gz` und eine Tabelle mit allen Versionen.
+**Alle Geräte in einem Release:** Ein Tag `bundle-v<version>` baut alle Geräte und legt ein Release mit den Dateien an, die in [`.github/bundle.txt`](.github/bundle.txt) stehen (ein Gerät mit Ziel pro Zeile, z. B. `heater esp32`). Was gebaut wird, aber bewusst nicht ins Paket soll, steht dort als `# skip: <gerät> <ziel>`; sonst meldet `tools/release/check.py` eine Warnung. Dazu kommen die Webseiten als `<gerät>-node-web.html.gz` und eine Tabelle mit allen Versionen.
 
 ```bash
 git tag bundle-v2026.11.07

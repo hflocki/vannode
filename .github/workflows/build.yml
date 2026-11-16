@@ -44,6 +44,11 @@ jobs:
       - run: python3 tools/common/sync_common.py --check
       - run: python3 tools/web/pack_web.py --check
       - run: python3 tools/docs/check_arduino.py
+      # bundle.txt fits the build matrix; on a tag: tag = FW_VERSION and a CHANGELOG row exists,
+      # so a wrong tag stops before anything is built
+      - run: python3 tools/release/check.py
+      - if: startsWith(github.ref, 'refs/tags/')
+        run: python3 tools/release/check.py --tag "$GITHUB_REF_NAME"
       - run: python3 firmware/heater/tools/embed_web.py --check
       - run: python3 tools/emulator/emulator.py --selftest
       - run: bash firmware/ble/tests/run.sh

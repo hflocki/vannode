@@ -1,5 +1,10 @@
 # Devices for the bundle release (tag bundle-v<version>): one "<device> <target>" per line,
-# as in the build matrix of .github/workflows/build.yml. Lines starting with # are ignored.
+# as in the build matrix of .github/workflows/build.yml. Lines starting with # are ignored,
+# except "# skip: <device> <target>": built on purpose but not part of the bundle
+# (tools/release/check.py warns about every other matrix entry missing here).
+# skip: temp esp8266      in the temp release (tag temp-v...), the bundle carries the ESP32-C3 build
+# skip: heater esp32c3    in the heater release (tag heater-v...), the bundle carries the ESP32 build
+# skip: alde esp32        not tested on a real heater yet
 display   esp32s3
 heater    esp32
 maxxfan   esp32c3
@@ -7,5 +12,6 @@ tanklevel esp32c3
 temp      esp32c3
 level     esp32s3
 ble       esp32c3
+ble       esp32s3
 ble       atoms3
 pocket core2

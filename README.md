@@ -7,50 +7,48 @@
 
 # VanNode
 
-🇬🇧 English · 🇩🇪 [Deutsch](README.de.md)
+Elektronik für den Camper, die über **MQTT** zusammenspielt: Tanks, Temperaturen, Batterien, Heizung, Dachlüfter, Dachhaube, Ausrichtung und zwei Displays. Jedes Gerät ist ein ESP8266/ESP32 mit eigener **Arduino**-Firmware, eigener Web-Oberfläche und Home-Assistant-Discovery. Die Geräte und Displays reden direkt über den Broker miteinander, z. B. den MQTT-Broker des LTE-Routers. Home Assistant kann mitlesen, muss aber nicht laufen.
 
-Electronics for a camper van that work together over **MQTT**: tanks, temperatures, batteries, heater, roof fan, roof hatch, levelling and two displays. Every device is an ESP8266/ESP32 with its own **Arduino** firmware, its own web interface and Home Assistant discovery. Devices and displays talk to each other directly through the broker, e.g. the MQTT broker of the LTE router. Home Assistant can listen in, but it does not have to run.
+> **Nutzung auf eigene Gefahr.** VanNode ist ein unentgeltliches Hobbyprojekt ohne Gewähr und ohne Haftung und keine Sicherheitseinrichtung. Lies den [Haftungsausschluss](#haftungsausschluss--nutzung-auf-eigene-gefahr), bevor du etwas nachbaust oder einbaust.
 
-> **Use at your own risk.** VanNode is a free hobby project without any warranty or liability and it is not a safety device. Read [No warranty, no liability](#no-warranty-no-liability--use-at-your-own-risk) before you build or install anything.
+## Warum?
 
-## Why?
+Angefangen hat alles mit Home Assistant und ESPHome. Für den Camper wurde mir das mit der Zeit zu viel: ein Server, der immer laufen muss, damit irgendetwas angezeigt wird, eine YAML-Konfiguration pro Gerät, Updates, die nebenbei etwas verändern, und viele Teile, die alle zusammenpassen müssen. Ein Fahrzeug ist oft tagelang ohne Netz und nur mit Batterie unterwegs, da wollte ich etwas Einfacheres und Robusteres.
 
-It all started with Home Assistant and ESPHome. For the camper, that became too much over time: a server that has to run before anything shows up, a YAML configuration per device, updates that change things on the side, and many parts that all have to fit together. A vehicle is often off-grid for days and runs on battery, so I wanted something simpler and more robust.
+Deshalb gilt hier:
 
-So the rules here are:
+- **Jedes Gerät funktioniert für sich allein** – mit eigener Web-Oberfläche zum Einstellen und Anschauen, auch ohne Display und ohne Server.
+- **MQTT ist die einzige Verbindung.** Der Broker läuft ohnehin auf dem Router. Displays lesen direkt vom Broker.
+- **Home Assistant ist eine Option, keine Voraussetzung.** Discovery ist eingebaut, wer HA nutzt, bekommt alle Geräte automatisch.
+- **Updates über den Browser**, mit Prüfung der Datei und Rückfall auf die alte Firmware, wenn etwas schiefgeht.
 
-- **Every device works on its own** – with its own web interface for settings and values, even without a display and without a server.
-- **MQTT is the only link.** The broker runs on the router anyway. The displays read straight from the broker.
-- **Home Assistant is an option, not a requirement.** Discovery is built in; if you use HA, all devices show up automatically.
-- **Updates in the browser**, with a check of the file and a fallback to the previous firmware if something goes wrong.
-
-This is not criticism of ESPHome or Home Assistant – both are great. For this one vehicle a leaner setup simply fit better.
+Das ist keine Kritik an ESPHome oder Home Assistant – beide sind großartig. Für dieses eine Fahrzeug passte ein schlankerer Aufbau einfach besser.
 
 ```mermaid
 flowchart LR
-  subgraph sens["Sensors"]
+  subgraph sens["Sensoren"]
     direction TB
-    tank["tanklevel<br/>fresh, grey, gas"]
-    temp["temp<br/>DS18B20, alarms"]
-    level["level<br/>BNO085, wedges"]
-    omg["omg<br/>BLE thermometers"]
+    tank["tanklevel<br/>Wasser, Grau, Gas"]
+    temp["temp<br/>DS18B20, Alarme"]
+    level["level<br/>BNO085, Keile"]
+    omg["omg<br/>BLE-Thermometer"]
   end
-  subgraph clim["Climate"]
+  subgraph clim["Klima"]
     direction TB
     heater["heater<br/>Truma Combi"]
     alde["alde<br/>Alde 3020 HE"]
-    fan["maxxfan<br/>roof fan"]
+    fan["maxxfan<br/>Dachlüfter"]
   end
-  subgraph ble["ble – one firmware"]
+  subgraph ble["ble – eine Firmware"]
     direction TB
     bat["battery-node<br/>Daly · Ective · BM2"]
-    tool["tool-node<br/>roof hatch · pump<br/>fridge · thermometers"]
+    tool["tool-node<br/>Dachhaube · Pumpe<br/>Kühlschrank · Thermometer"]
     more["tool2 / tool3<br/>(optional)"]
   end
-  broker(("MQTT broker<br/>e.g. RUT956"))
-  subgraph ui["Displays"]
+  broker(("MQTT-Broker<br/>z. B. RUT956"))
+  subgraph ui["Anzeige"]
     direction TB
-    display["display<br/>wall panel + web page"]
+    display["display<br/>Wandpanel + Webseite"]
     rb["pocket<br/>M5Stack Core2"]
     ha["Home Assistant<br/>(optional)"]
   end
@@ -60,135 +58,251 @@ flowchart LR
   broker <--> ui
 ```
 
-## Devices
+## Geräte
 
-| Folder | Hardware | Purpose | Base topic |
+| Ordner | Hardware | Aufgabe | Basis-Topic |
 | --- | --- | --- | --- |
-| [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Fresh and grey water (Votronic), gas bottle (BLE) | `camper/tanklevel` |
-| [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | up to 8 DS18B20 (fridge, freezer …) with alarm limits | `camper/temp` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 / AtomS3 | One firmware for all Bluetooth devices as plugins. Runs twice: **battery-node** (Daly BMS, Ective BM X, BM2) and **tool-node** (RV Tech roof hatch (Heki), CaraWater pump, WCS fridge, OBD2 adapter (vehicle values, read only), Govee / BTHome thermometers, optionally gas and own BLE sensors) | `camper/battery`, `camper/tool` |
-| [`firmware/heater`](firmware/heater) | ESP32 + LIN transceiver | Truma Combi / Vario Heat as an iNet Box on the CP Plus | `camper/heater` |
-| [`firmware/alde`](firmware/alde) | ESP32 + LIN transceiver | Alde Compact 3020 HE: reads the heater bus passively (room, glycol, hot water, gas, electric power …) and optionally sets setpoint, gas, electric level and hot water through the external panel bus, in development (based on [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) and [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), MIT) | `camper/alde` |
-| [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan roof fan | `camper/maxxfan` |
-| [`firmware/level`](firmware/level) | ESP32 + BNO085 | Pitch, roll and wedge height for every wheel (based on the [level sensor by klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
-| [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth thermometers (Govee, Ruuvi, Xiaomi …) through OpenMQTTGateway | `camper/OMG` |
-| [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4" wall panel + the same page for the phone: shows and controls everything, weather, warnings, Pushover | `camper/display` |
-| [`firmware/pocket`](firmware/pocket) | M5Stack Core2 | small portable battery display with magnet (cockpit, kitchen, while filling water): levelling, water, gas, temperatures, batteries; called “Road Buddy” up to 1.5.8 | `camper/pocket` (receive only) |
+| [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
+| [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 / AtomS3 | Eine Firmware für alle Bluetooth-Geräte als Plugins. Läuft zweimal: **battery-node** (Daly BMS, Ective BM X, BM2) und **tool-node** (Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, OBD2-Adapter (Fahrzeugwerte, nur lesen), Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren) | `camper/battery`, `camper/tool` |
+| [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
+| [`firmware/alde`](firmware/alde) | ESP32 + LIN-Transceiver | Alde Compact 3020 HE: liest den Heizbus passiv (Raum, Glykol, Warmwasser, Gas, Heizstab …) und setzt optional Sollwert, Gas, Heizstab und Warmwasser über den Bedienteil-Bus, in Entwicklung (basiert auf [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) und [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), MIT) | `camper/alde` |
+| [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
+| [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (basiert auf dem [Levelsensor von klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
+| [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth-Thermometer (Govee, Ruuvi, Xiaomi …) über OpenMQTTGateway | `camper/OMG` |
+| [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4"-Wandpanel + gleiche Webseite fürs Handy, zeigt und steuert alles, Wetter, Warnungen, Pushover | `camper/display` |
+| [`firmware/pocket`](firmware/pocket) | M5Stack Core2 | kleines mobiles Akku-Display mit Magnet (Cockpit, Küche, beim Wasserfüllen): Ausrichtung, Wasser, Gas, Temperaturen, Batterien; bis 1.5.8 „Road Buddy“ | `camper/pocket` (nur Empfänger) |
 
-Not in this repo: **router data (GPS, mobile signal)** is sent by the RUT956 itself over MQTT, see [router data in the display README](firmware/display/README.md#router-daten-rut956).
+Nicht in diesem Repo: **Router-Daten (GPS, Mobilfunk)** sendet der RUT956 selbst per MQTT, siehe [Router-Daten im Display-README](firmware/display/README.md#router-daten-rut956).
 
-The documentation of the individual devices and the web interfaces are in German (see *Documentation* below).
+- **Zu Hause testen:** [`tools/emulator`](tools/emulator) ist ein Python-Werkzeug mit lokaler Webseite. Es sendet die Topics aller Geräte, des Routers und von Zigbee mit änderbaren Werten, dazu Szenarien (Tanks laufen leer, Abfahrt, ein Gerät fällt aus …), so lassen sich die Displays ohne Fahrzeug testen
+- Alle Topics auf einen Blick: [`docs/TOPICS.md`](docs/TOPICS.md)
+- Klickbare Mockups aller Web-Oberflächen: [`docs/mockups/`](docs/mockups/index.html)
 
-## Quick start
+Die Doku der einzelnen Geräte ist auf Deutsch.
 
-1. **Get the firmware:** download the `.bin` for your device and board from [Releases](https://github.com/hflocki/vannode/releases), or build it yourself with the Arduino IDE ([docs/ARDUINO.md](docs/ARDUINO.md)).
-2. **Flash once over USB.** After that, updates go through the device's web interface.
-3. **Set up:** without WiFi credentials the device opens a setup access point, e.g. `Temp-Node-XXXXXX`. Connect, open `http://192.168.4.1`, enter WiFi and MQTT broker. Names and factory passwords of all devices: [setup WiFi table](README.de.md#setup-wlan-und-passwörter-ab-werk). Change the factory passwords – they are public.
-4. The device publishes under `camper/<device>/…` (retained, with `status` online/offline and a JSON `info`); the display and Home Assistant (discovery) find it by themselves.
+## Schnellstart
 
-Your own passwords, WiFi and broker go into `config_local.h` next to the device's `config.h` (template `config_local.h.example`). The file is excluded by `.gitignore` and never ends up on GitHub.
+1. **Firmware holen:** Unter [Releases](https://github.com/hflocki/vannode/releases) die `.bin` des Geräts laden – oder selbst bauen (Arduino IDE oder `arduino-cli`, Einrichtung der Arduino IDE in [docs/ARDUINO.md](docs/ARDUINO.md), Besonderheiten in der README des Geräts).
+2. **Einmal per USB flashen.** Danach gehen Updates über die Web-Oberfläche.
+3. **Einrichten:** Ohne WLAN-Daten startet ein Access Point `<Gerät>-Node-XXXXXX`. Verbinden, `http://192.168.4.1` öffnen, WLAN und MQTT-Broker eintragen.
+4. Das Gerät meldet sich unter `camper/<gerät>/…` am Broker, das Display findet es von selbst.
 
-## Documentation
+## Setup-WLAN und Passwörter ab Werk
 
-The detailed documentation is in German:
+Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, die Seite öffnet sich meist von selbst, sonst `http://192.168.4.1`. Dort WLAN und MQTT eintragen. `XXXXXX` sind die letzten Stellen der MAC-Adresse, so lassen sich mehrere Geräte auseinanderhalten.
 
-| Topic | Where |
+| Gerät | Setup-WLAN | Passwort ab Werk | Danach erreichbar unter | Setup-WLAN aktiv |
+| --- | --- | --- | --- | --- |
+| ble | `BLE-Node-XXXXXX` | `blenode1234` | `http://ble-node.local` (Name im Web-UI änderbar) | immer (abschaltbar) |
+| tanklevel | `Tanklevel-Node-XXXXXX` | `tanklevel1234` | `http://tanklevel-node.local` | immer (abschaltbar) |
+| temp | `Temp-Node-XXXXXX` | `camptemp1234` | `http://temp-node.local` | immer (abschaltbar) |
+| level | `Level-Node-XXXXXX` | `level1234` | `http://level-node.local` | immer (abschaltbar) |
+| maxxfan | `MaxxFan-Node-XXXXXX` | `maxxfan1234` | `http://maxxfan-node.local` | ohne WLAN |
+| heater | `heater-node-XXXX` | `truma1234` | `http://heater-node.local` | ohne WLAN oder 60 s ohne Verbindung |
+| alde | `Alde-Node-XXXXXX` | `alde1234` | `http://alde-node.local` | ohne WLAN oder 60 s ohne Verbindung |
+| display | `Display-Node-XXXXXX` | `display1234` | `http://display-node.local` | ohne WLAN oder 1 min ohne Verbindung |
+| pocket | – (WLAN steht in `config_local.h`) | – | `http://pocket-node.local` (nur wach) | – |
+
+**Passwörter ändern:** Die Passwörter oben sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`), spätestens danach im Web-UI. Ein Login für die Web-Oberfläche ist ab Werk aus und lässt sich im Web-UI einschalten. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
+
+## Gemeinsame Regeln
+
+Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant sie ohne Sonderfälle verstehen:
+
+| Was | Wie |
 | --- | --- |
-| Overview, common rules, own settings, releases, new device | [README.de.md](README.de.md) |
-| One device: hardware, wiring, settings, build specifics | `firmware/<device>/README.md` |
-| Changes per version | `firmware/<device>/CHANGELOG.md` (also the text of each GitHub release) |
-| All MQTT topics and commands | [docs/TOPICS.md](docs/TOPICS.md) |
-| Arduino IDE, boards, libraries, flashing problems | [docs/ARDUINO.md](docs/ARDUINO.md) |
-| New device from the template | [firmware/_template/ANLEITUNG.md](firmware/_template/ANLEITUNG.md) |
-| Clickable mockups of every web interface | [docs/mockups/](docs/mockups/index.html) |
-| Testing without the vehicle (MQTT emulator) | [tools/emulator](tools/emulator) |
+| Topics | `camper/<gerät>/…`, Werte **retained** |
+| Verfügbarkeit | `camper/<gerät>/status` = `online` / `offline` als Last Will (retained, QoS 1) |
+| Diagnose | `camper/<gerät>/info`: JSON mit Version, IP, Signal, Laufzeit |
+| Befehle | `…/cmd/…` bzw. `…/set/…`, nicht retained |
+| Home Assistant | Auto-Discovery unter `homeassistant/…`, ein Gerät pro Firmware |
+| Einrichtung | Access Point `<Gerät>-Node-XXXXXX`, Einstellungen im Browser unter `http://192.168.4.1` |
+| Web-Oberfläche | Gleiche Optik auf allen Geräten, optionaler Login (HTTP Basic Auth); Login vergessen → `noauth` im seriellen Monitor bzw. Werkseinstellungen |
+| Updates | Im Browser, mit Prüfung (falsches Gerät, `.merged.bin`, zu groß), Ereignis-Log und Rückfall auf die vorherige Firmware |
+| Firmware-Version | `FW_VERSION` in der `config.h` des Geräts, sichtbar im Web-UI und in HA |
 
-Releases: a tag `<device>-v<version>` builds one device, `bundle-v<version>` builds all devices into one release (see [README.de.md](README.de.md#fertige-firmware)).
+## Eigene Einstellungen (`config_local.h`)
 
-## Thanks
+Passwörter, WLAN und Broker gehören nicht ins Repo. Jedes Gerät hat dafür neben seiner `config.h` eine Vorlage `config_local.h.example`:
 
-Many thanks to **mot flash** for testing and for the idea to build the BLE plugins for the RV Tech roof hatch, the WCS fridge and the CaraWater water pump.
-
-## Please credit VanNode
-
-VanNode is a hobby project with a lot of work behind it. If you use code, protocols or ideas from
-it in your own project – privately too – please name VanNode with a link to
-<https://github.com/hflocki/vannode>. This is a request, not a license term. If you pass on code
-from VanNode, the license already requires the notices (see [License](#license)).
-
-Ready to copy:
-
-For a README (Markdown):
-
-```markdown
-Based on / inspired by [VanNode](https://github.com/hflocki/vannode) by hflocki.
+```bash
+cd firmware/temp/camper_temp
+cp config_local.h.example config_local.h   # then edit
 ```
 
-For source code:
+Alles, was in `config_local.h` steht, gilt statt des Standardwerts aus `config.h`. Die Datei ist per `.gitignore` ausgeschlossen, landet also nie auf GitHub, und Updates oder Patches überschreiben sie nicht. Typisch:
+
+| Wert | Wirkung |
+| --- | --- |
+| `DEFAULT_AP_PASSWORD` | Passwort des Setup-Access-Points |
+| `DEFAULT_OTA_PASSWORD` | Passwort für Updates über den Netzwerk-Port der Arduino IDE |
+| `DEFAULT_WIFI_SSID` / `DEFAULT_WIFI_PASSWORD` | WLAN, mit dem sich ein frisch geflashtes Gerät sofort verbindet |
+| `DEFAULT_MQTT_SERVER`, `_USER`, `_PASSWORD` | Broker ab Werk |
+| `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASSWORD` | Login für die Web-Oberfläche ab Werk |
+
+Außerdem lässt sich jeder andere Wert aus `config.h` überschreiben (Pins, Prefix, Tankgröße …).
+
+Wichtig: WLAN, MQTT und Login ab Werk wirken nur, solange auf dem Gerät noch nichts gespeichert ist. Ein normales Update über bestehende Einstellungen ändert sie nicht. Neu übernommen werden sie nach **Werkseinstellungen** im Web-UI, nach dem Flashen mit **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Menü Werkzeuge) bzw. bei temp, tanklevel und level nach dem Hochladen des LittleFS-Images. Die Passwörter für Access Point und OTA gelten dagegen immer sofort.
+
+Die Pocket-Node hat keine Einstellungsseite, nur eine Update-Seite; WLAN und MQTT kommen deshalb nur über `config_local.h` (Namen siehe seine README). Eine Firmware mit eigener `config_local.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
+
+## Warnungen
+
+`firmware/temp` meldet überschrittene Grenzwerte (z. B. „Kühlschrank über 8 °C seit 15 min“) unter `camper/temp/alarm_text`. Das Wandpanel zeigt diese, Heizungsfehler, Batterie-, Tank-, Frost- und Wetter-Warnungen in der Status-Kachel und als gelbes Band in der Kopfzeile, auf Wunsch auch per **Pushover** aufs Handy – mit eigener Dringlichkeit je Warnungsart bis hin zum Notfall, der klingelt, bis man ihn bestätigt. In Home Assistant gibt es dieselben Alarme als Binärsensoren.
+
+## Fertige Firmware
+
+Jeder Push baut alle Geräte per GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)), mit genau den Board-Paket- und Bibliotheksversionen aus [docs/ARDUINO.md](docs/ARDUINO.md) (geprüft von `tools/docs/check_arduino.py`). Die `.bin` liegt beim jeweiligen Lauf im Reiter **Actions** zum Download.
+
+Ein Release für **ein** Gerät entsteht mit einem Tag `<gerät>-v<version>`:
+
+```bash
+git tag temp-v1.1.0
+git push origin temp-v1.1.0
+```
+
+Vorher `FW_VERSION` erhöhen und oben in `firmware/<gerät>/CHANGELOG.md` eine Zeile für die Version schreiben – sie wird der Text des Releases. Passt der Tag nicht zur `FW_VERSION` oder fehlt die Zeile, bricht die CI vor dem Bauen ab (`tools/release/check.py`). Alles vorab prüfen und die Befehle ausgeben lassen:
+
+```bash
+python3 tools/release/release.py temp
+```
+
+Dann wird nur dieses Gerät gebaut und die `.bin` ans Release gehängt. Alle Geräte spielen sie über ihre Web-Oberfläche ein (Pocket-Node über ihre Update-Seite). Bei temp, tanklevel, level, maxxfan und ble liegt die Web-Oberfläche außerdem als `data/index.html.gz` im Sketch-Ordner; sie hängt als `<gerät>-node-web-v<version>.html.gz` mit am Release und wird nach dem Firmware-Update separat hochgeladen.
+
+**Namen:** Jedes Gerät heißt `<gerät>-node` – Hostname (`temp-node.local`), Setup-WLAN (`Temp-Node-XXXXXX`) und Release-Datei mit der Firmware-Version (`temp-node-esp32c3-v1.4.2.bin`). Die MQTT-Topics bleiben `camper/<gerät>/…`, die Home-Assistant-IDs bleiben gleich.
+
+**Alle Geräte in einem Release:** Ein Tag `bundle-v<version>` baut alle Geräte und legt ein Release mit den Dateien an, die in [`.github/bundle.txt`](.github/bundle.txt) stehen (ein Gerät mit Ziel pro Zeile, z. B. `heater esp32`). Was gebaut wird, aber bewusst nicht ins Paket soll, steht dort als `# skip: <gerät> <ziel>`; sonst meldet `tools/release/check.py` eine Warnung. Dazu kommen die Webseiten als `<gerät>-node-web.html.gz` und eine Tabelle mit allen Versionen.
+
+```bash
+git tag bundle-v2026.11.07
+git push origin bundle-v2026.11.07
+```
+
+## Nur ein Gerät nachbauen
+
+Einfach den Ordner des Geräts nehmen und dessen README folgen. Wer nicht das ganze Repo laden will:
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/hflocki/vannode.git
+cd vannode
+git sparse-checkout set firmware/temp
+```
+
+## Neues Gerät
+
+[`firmware/_template`](firmware/_template) ist ein lauffähiges Muster-Gerät mit allem Gemeinsamen (WLAN mit Setup-WLAN, Web-Oberfläche, Einstellungen, MQTT mit Home-Assistant-Discovery, Updates ohne USB). Ein Befehl kopiert es als neues Gerät, danach füllst du nur noch den Sensor-Teil (`sensor.cpp`). Anleitung: [`firmware/_template/ANLEITUNG.md`](firmware/_template/ANLEITUNG.md).
+
+```bash
+python firmware/_template/tools/new_device.py waste "Abwasser"
+```
+
+Jeder Ordner hat eine eigene README mit Hardware, Besonderheiten beim Bauen und Topics (Gemeinsames zur Arduino IDE in [docs/ARDUINO.md](docs/ARDUINO.md)), Arduino-Sketch im Unterordner mit dem Namen der `.ino` (z. B. `camper_temp/`, Heizung `truma_heater/`). Gebaut wird nur mit Arduino (IDE oder `arduino-cli`), PlatformIO nur beim Bluetooth-Gateway `firmware/omg`, weil OpenMQTTGateway ein fremdes PlatformIO-Projekt ist.
+
+## Mockups
+
+Unter [`docs/mockups/`](docs/mockups/index.html) liegt von jeder Web-Oberfläche ein klickbares Mockup: die echte Seite aus der Firmware mit simulierten Daten. Knöpfe, Einstellungen, Speichern und Upload reagieren wie am Gerät, es wird aber nichts gesendet. `index.html` zeigt alle Geräte nebeneinander in Handygröße. Der Designentwurf, nach dem sich alle Seiten richten (Farben, Schrift, Symbole, Bausteine und Entwürfe der Display-Webseite), liegt in [`docs/mockups/design/`](docs/mockups/design/system.html) und ist im selben Index verlinkt.
+
+Zum Ansehen den Ordner herunterladen und `index.html` im Browser öffnen. Nach Änderungen an einer Web-Oberfläche neu erzeugen (nur Python-Standardbibliothek, kein venv nötig):
+
+```bash
+python3 tools/mockups/make_mockups.py
+```
+
+Die Beispieldaten und das simulierte Verhalten stehen je Gerät in `tools/mockups/mock/<gerät>.js`, der gemeinsame Teil (fetch, WebSocket, Upload) in `core.js`. Bei einem neuen Gerät dort eine Datei anlegen und es in `make_mockups.py` eintragen. Die Pocket-Node hat nur eine kleine Update-Seite und fehlt deshalb.
+
+## Herkunft
+
+Die Geräte waren vorher einzelne Repos (`camper-tanklevel`, `camper-temp`, `camper-heater`, `camper-maxxfan`, `camper-display`, `m5core2-roadbuddy`, `camper_toolbox`). Sie wurden hierher übernommen (das frühere `firmware/battery` ist jetzt Teil von `firmware/ble`); die alten Repos sind archiviert bzw. werden es.
+
+## Danke
+
+Mein Dank geht an **mot flash** für das Testen und die Anregung, die BLE-Plugins für die Dachhaube RV Tech, den Kühlschrank WCS und die Wasserpumpe CaraWater zu bauen.
+
+## Bitte um Nennung
+
+VanNode ist ein Hobbyprojekt mit viel Arbeit dahinter. Wenn du Code, Protokolle oder Ideen daraus
+für dein eigenes Projekt nutzt – auch privat –, nenne bitte VanNode mit Link auf
+<https://github.com/hflocki/vannode>. Das ist eine Bitte, keine Lizenzbedingung. Wer Code aus
+VanNode weitergibt, muss die Hinweise ohnehin stehen lassen (siehe [Lizenz](#lizenz)).
+
+Zum Kopieren:
+
+Für eine README (Markdown):
+
+```markdown
+Basiert auf / angeregt durch [VanNode](https://github.com/hflocki/vannode) von hflocki.
+```
+
+Für Quellcode:
 
 ```c
 // Based on / inspired by VanNode by hflocki - https://github.com/hflocki/vannode
 ```
 
-For a forum post or a video description:
+Für einen Forenbeitrag oder eine Videobeschreibung:
 
 ```text
-Idea / protocol from VanNode by hflocki: https://github.com/hflocki/vannode
+Idee / Protokoll aus VanNode von hflocki: https://github.com/hflocki/vannode
 ```
 
-Thank you!
+Danke!
 
-## No warranty, no liability – use at your own risk
+## Haftungsausschluss – Nutzung auf eigene Gefahr
 
-VanNode is a private hobby project. It is given away free of charge and without any business
-activity. It monitors and switches real equipment in a vehicle (heater, gas and water tanks, water
-pump, roof hatch and roof fan, batteries). Faults in the software, the settings, the hardware or the
-installation can damage devices, the vehicle or other property and can put people at risk.
+VanNode ist ein privates Hobbyprojekt, unentgeltlich und ohne Geschäftstätigkeit. Es überwacht und
+schaltet echte Technik im Fahrzeug (Heizung, Gas- und Wassertank, Wasserpumpe, Dachhaube und
+Dachlüfter, Batterien). Fehler in Software, Einstellungen, Hardware oder Einbau können Geräte, das
+Fahrzeug oder andere Sachen beschädigen und Menschen gefährden.
 
-- Building, installing and using VanNode is entirely at your own risk and responsibility.
-- VanNode is not a safety device. It does not replace the controls and protective functions of the
-  device manufacturers, gas, CO or smoke detectors, the frost protection valve or regular checks.
-  Values and warnings shown by VanNode can be wrong, late or missing – do not rely on them.
-- Work on gas installations, 230 V and the vehicle's electrical system must only be done by
-  qualified persons, following the applicable regulations and the manufacturers' instructions.
-  Connecting VanNode to third-party devices may void their warranty, guarantee or approval.
-- To the extent permitted by applicable law, the author accepts no liability for damage of any kind
-  resulting from the use of VanNode, its documentation or devices built with it, or from the fact
-  that they cannot be used (see also sections 15 and 16 of the GNU GPL v3). Only liability that
-  cannot be excluded by law remains, in particular for intent and gross negligence, for injury to
-  life, body or health and under mandatory product liability law, where it applies.
+- Nachbau, Einbau und Nutzung erfolgen vollständig auf eigene Gefahr und eigene Verantwortung.
+- VanNode ist keine Sicherheitseinrichtung. Es ersetzt weder die Steuerungen und Schutzfunktionen
+  der Hersteller noch Gas-, CO- oder Rauchmelder, das Frostwächter-Ventil oder regelmäßige
+  Kontrollen. Angezeigte Werte und Warnungen können falsch sein, zu spät kommen oder ausbleiben –
+  verlass dich nicht darauf.
+- Arbeiten an Gasanlage, 230 V und Fahrzeugelektrik nur durch Fachkundige, unter Beachtung der
+  geltenden Vorschriften und der Anleitungen der Hersteller. Der Anschluss an fremde Geräte kann
+  deren Garantie, Gewährleistung oder Zulassung gefährden.
+- Soweit gesetzlich zulässig, haftet der Autor nicht für Schäden jeder Art, die aus der Nutzung von
+  VanNode, seiner Dokumentation oder damit gebauter Geräte entstehen oder daraus, dass sie nicht
+  genutzt werden können (siehe auch Abschnitte 15 und 16 der GNU GPL v3). Unberührt bleibt nur die
+  Haftung, die gesetzlich nicht ausgeschlossen werden kann, insbesondere bei Vorsatz und grober
+  Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit und nach zwingendem
+  Produkthaftungsrecht, soweit es anwendbar ist.
 
-## Trademarks
+## Marken
 
-Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
-Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
-They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
-or certified by any of these owners. Protocols are taken from public open-source projects or were
-determined only to make the devices work together (interoperability).
+Produkt- und Firmennamen in diesem Projekt – zum Beispiel Truma, Combi, CP Plus, CaraWater, Daly,
+Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Teltonika und Home Assistant – sind Marken oder eingetragene Marken ihrer Inhaber. Sie stehen hier
+nur, um passende Geräte zu benennen. VanNode hat keine Verbindung zu diesen Inhabern und wird von
+ihnen weder unterstützt noch geprüft oder empfohlen. Die Protokolle stammen aus öffentlichen
+Open-Source-Projekten oder wurden nur ermittelt, damit die Geräte zusammenarbeiten
+(Interoperabilität).
 
-## License
+## Lizenz
 
-VanNode is licensed under the **GNU General Public License version 3** ([`LICENSE`](LICENSE)) with
-additional terms under section 7 ([`NOTICE.md`](NOTICE.md)):
+VanNode steht unter der **GNU General Public License Version 3** ([`LICENSE`](LICENSE)) mit
+zusätzlichen Bedingungen nach Abschnitt 7 ([`NOTICE.md`](NOTICE.md)):
 
-- the author attribution "Copyright © 2026 hflocki", the project link and the license information
-  shown by the devices (card "Über VanNode", display info, wall panel, Pocket-Node update page) must
-  stay in all copies and modified versions;
-- modified versions must be marked as such and must not be passed off as one's own work;
-- the name "VanNode" and its logo are not part of the license: forks need their own name and logo
-  ([`NAME-UND-LOGO.md`](NAME-UND-LOGO.md), German).
+- der Urhebervermerk „Copyright © 2026 hflocki“, der Link zum Projekt und die Lizenzangaben, die die
+  Geräte anzeigen (Karte „Über VanNode“, Display-Info, Wandpanel, Update-Seite der Pocket-Node), bleiben
+  in allen Kopien und veränderten Fassungen erhalten;
+- veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk
+  ausgegeben werden;
+- Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein
+  eigenes Logo ([`NAME-UND-LOGO.md`](NAME-UND-LOGO.md)).
 
-Selling is allowed under the GPL, as long as the complete source code and these notices go with it.
+Verkaufen erlaubt die GPL, wenn der vollständige Quellcode und diese Hinweise mitgegeben werden.
 
-Third-party parts keep their licenses and are listed in [`NOTICE.md`](NOTICE.md):
+Fremde Teile behalten ihre Lizenz und sind in der [`NOTICE.md`](NOTICE.md) aufgeführt:
 
-| Folder | Third-party parts |
+| Ordner | Fremde Teile |
 | --- | --- |
-| `firmware/heater` | protocol logic from [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) and timer from [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), test captures from [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
-| `firmware/alde` | LIN decoding from [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (code MIT, documentation CC BY 4.0), external panel bus protocol from [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT) |
-| `firmware/ble` | battery protocols from [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), roof hatch protocol from [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), pump protocol after [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) and [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (own implementation, no code copied) |
-| `firmware/level` | based on the level sensor of [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
-| `firmware/display` | fonts Montserrat and Font Awesome Free (OFL), Truma fault texts (own wording) |
-| `firmware/omg` | OpenMQTTGateway (GPL-3.0), downloaded at build time |
+| `firmware/heater` | Protokoll-Logik aus [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) und Timer aus [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), Test-Mitschnitte aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
+| `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0), Protokoll des Bedienteil-Busses aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT) |
+| `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen) |
+| `firmware/level` | basiert auf dem Levelsensor von [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
+| `firmware/display` | Schriften Montserrat und Font Awesome Free (OFL), Truma-Fehlertexte (eigene Formulierung) |
+| `firmware/omg` | OpenMQTTGateway (GPL-3.0), wird beim Bauen heruntergeladen |
 

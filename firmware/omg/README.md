@@ -1,6 +1,6 @@
 # camper-omg – Bluetooth-Sensoren über OpenMQTTGateway
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
 
 > [!WARNING]
 > **Noch nicht auf Hardware getestet.** Die Konfiguration ist geprüft (PlatformIO löst sie korrekt auf), gebaut und geflasht wurde sie hier noch nicht.

@@ -1,6 +1,6 @@
 # Level Node – Ausrichtung mit Keil-Empfehlung per MQTT
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
 
 Firmware für einen ESP32 (ESP32-S3, ESP32-C3 oder klassischer ESP32) mit einem **Adafruit BNO085**, die Längs- und Querneigung des Wohnmobils misst und für **jedes der vier Räder** anzeigt, wie hoch der Keil sein muss, damit das Fahrzeug waagerecht steht.
 
@@ -134,7 +134,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

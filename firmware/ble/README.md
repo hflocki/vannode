@@ -3,7 +3,7 @@
 
 # BLE Node / Battery Node
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Pumpe und Dachhaube werden aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird; Batteriewerte sind kein Schutz für die Batterie.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Pumpe und Dachhaube werden aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird; Batteriewerte sind kein Schutz für die Batterie.
 
 Ein ESP32 als **Bluetooth-Gateway mit Plugins**: Er liest Bluetooth-Geräte im Camper aus bzw. steuert sie und stellt alles über eine Web-Oberfläche und MQTT (mit Home-Assistant-Discovery) bereit. Es wird nichts verdrahtet, nur ein ESP32 mit Strom.
 
@@ -204,7 +204,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

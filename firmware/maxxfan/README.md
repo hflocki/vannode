@@ -1,6 +1,6 @@
 # MaxxFan Node – VanTurtle-Board per MQTT
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Der Lüfter wird aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Der Lüfter wird aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird.
 
 Firmware für einen **ESP32-C3** mit dem **VanTurtle**-Board (TCA9555-Port-Expander), die eine MaxxFan-Dachhaube per **MQTT** steuert – reines **Arduino**, ohne ESPHome. Aufbau wie [tanklevel-node](../tanklevel) und [heater-node](../heater):
 
@@ -149,7 +149,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

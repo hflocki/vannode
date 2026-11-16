@@ -1,6 +1,6 @@
 # Alde Node
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
 
 > ⚠️ **IN ENTWICKLUNG** – noch nicht an einer echten Alde-Heizung getestet. Das Mitlesen ist aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) übernommen und dort am Bedienteil geprüft, die Steuerung aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (dort an einer 3030 Plus geprüft). Diese Arduino-Umsetzung ist bisher nur mit künstlichen Bus-Daten getestet (`tests/run.sh`), die Steuerung an einer **Compact 3020 oder 3030 noch von niemandem**.
 

@@ -4,7 +4,7 @@
 
 # Display Node – Guition 4" Wandpanel + Webseite per MQTT
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Warnungen am Display und per Pushover können falsch sein, zu spät kommen oder ausbleiben.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Warnungen am Display und per Pushover können falsch sein, zu spät kommen oder ausbleiben.
 
 Firmware für das **Guition ESP32-4848S040** (4", 480×480 Touch, ESP32-S3, 16 MB Flash, 8 MB PSRAM). Das Display hängt fest an der Wand und zeigt alle Camper-Werte gesammelt an; dieselben Seiten gibt es zusätzlich als **Webseite** direkt vom Display – z. B. auf Handy oder Tablet im Bett. Beide werden live über **MQTT** versorgt und können steuern. Reines **Arduino**, ohne ESPHome und ohne Home Assistant als Voraussetzung.
 
@@ -453,7 +453,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Hinweise
 

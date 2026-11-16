@@ -1,6 +1,6 @@
 # Tanklevel Node – Frischwasser, Grauwasser + Gas auf einem ESP32
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Die Gasanzeige ersetzt keinen Gaswarner und keine Sichtprüfung von Flasche und Anlage.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Die Gasanzeige ersetzt keinen Gaswarner und keine Sichtprüfung von Flasche und Anlage.
 
 Eine Firmware für **einen** ESP32-C3 (oder klassischen ESP32), die zwei Projekte zusammenfasst und um Grauwasser erweitert:
 
@@ -220,7 +220,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

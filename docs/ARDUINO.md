@@ -59,7 +59,7 @@ Die Release-Dateien heißen `<gerät>-node-<board>-v<version>.bin` (z. B. `ble-n
 
 ## Eigene Einstellungen
 
-Passwörter, WLAN und Broker kommen in `config_local.h` im Sketch-Ordner (Vorlage `config_local.h.example` kopieren). Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../README.de.md#eigene-einstellungen-config_localh). Das gilt auch für die Pocket-Node (ab 1.5.8).
+Passwörter, WLAN und Broker kommen in `config_local.h` im Sketch-Ordner (Vorlage `config_local.h.example` kopieren). Die Datei geht nicht nach GitHub. Details in der [Haupt-README](../README.md#eigene-einstellungen-config_localh). Das gilt auch für die Pocket-Node (ab 1.5.8).
 
 ## Erstes Flashen (USB)
 

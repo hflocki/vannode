@@ -3,7 +3,7 @@
 
 # heater-node
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr). VanNode ersetzt keine Schutzfunktion der Heizung und keinen CO-Melder; Eingriffe an Heizung und Gasanlage nur durch Fachkundige.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). VanNode ersetzt keine Schutzfunktion der Heizung und keinen CO-Melder; Eingriffe an Heizung und Gasanlage nur durch Fachkundige.
 
 Truma-Heizung (Combi / Combi D, Vario Heat) per **MQTT** steuern – mit einem ESP32 am LIN-Bus, reines **Arduino**, ohne ESPHome.
 
@@ -235,7 +235,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 

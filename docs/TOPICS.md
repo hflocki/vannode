@@ -135,7 +135,7 @@ Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam ges
 
 ## Alde-Heizung `camper/alde`
 
-Werte vom Heizbus (passiv mitgelesen), Spalte *Quelle* = LIN-Frame und Byte. Alle Werte retained.
+Werte vom Heizbus (passiv mitgelesen, nur wenn der Heizbus in den Einstellungen an ist), Spalte *Quelle* = LIN-Frame und Byte. Alle Werte retained. Ist der Heizbus aus (nur Bedienteil-Bus verdrahtet), fehlen diese Topics.
 
 | Topic | Inhalt | Quelle (Frame @ Byte) |
 |---|---|---|
@@ -167,7 +167,7 @@ Werte vom Heizbus (passiv mitgelesen), Spalte *Quelle* = LIN-Frame und Byte. All
 | `…/outdoor` | Außentemperatur °C (fehlt ohne Fühler) |
 | `…/gas_enabled` | `1` = Gasbetrieb an |
 | `…/el_level` | Heizstab-Stufe 0–3 (kW) |
-| `…/water_mode` | Warmwasser `0` = aus, `1` = an, `2` = Boost |
+| `…/water_mode` | Warmwasser `0` = aus, `1` = an, `2` = Boost (ein unbekannter Modus wird nicht gesendet) |
 | `…/pump` | `1` = Umwälzpumpe läuft |
 | `…/panel_on` | `1` = Bedienteil an |
 | `…/error` | `1` = Störung |
@@ -180,10 +180,10 @@ Werte vom Heizbus (passiv mitgelesen), Spalte *Quelle* = LIN-Frame und Byte. All
 |---|---|
 | `…/cmd/target` | Sollwert 5–30 (0,5er-Schritte) |
 | `…/cmd/gas` | `1`/`0` bzw. `ON`/`OFF` |
-| `…/cmd/el_level` | `0`–`3` |
+| `…/cmd/el_level` | `0` bis Heizstab-Höchststufe (Einstellung, ab Werk `1`, höchstens `3`); höhere Stufen werden abgelehnt |
 | `…/cmd/water` | `0`/`1`/`2` bzw. `aus`/`an`/`boost` |
 
-Unbekannte Werte werden verworfen (sie werden nie zu „aus“).
+Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Vor jedem Befehl meldet sich der Node am Bedienteil an und liest den Stand; gesendet wird nur, was sich ändert, und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet.
 
 ## Dachlüfter `camper/maxxfan`
 

@@ -2,7 +2,7 @@
 
 > Bis Version 1.5.8 hieß das Gerät **Road Buddy** (`firmware/roadbuddy`, Topic `camper/roadbuddy`), siehe [Umstieg vom Road Buddy](#umstieg-vom-road-buddy).
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.de.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr).
 
 Kleines Touch-Display mit Akku für das Wohnmobil auf Basis des **M5Stack Core2**, zum Mitnehmen: mit Magnet hängt es im Cockpit, am Küchenschrank am Eingang oder beim Wasserfüllen am Einfüllstutzen, damit man sieht, wie viel schon im Tank ist. Gedacht für den schnellen Blick: Stehe ich gerade, reichen Wasser und Gas? Dazu zeigt es per MQTT Neigung (Wasserwaage), Frischwassertank, Gasflasche, Temperaturen und Batterien. Zum Akku-Sparen schaltet sich das Display automatisch aus, danach geht das Gerät in den Deep Sleep, WLAN und MQTT sind dann komplett aus.
 
@@ -200,7 +200,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.de.md#fertige-firmware). Der CI-Build hat keine `config_local.h`, die `.bin` enthält also keine Zugangsdaten. Sie übernimmt die Zugangsdaten, die eine eigene Firmware vorher im Flash gespeichert hat (siehe [Update über WLAN](#update-über-wlan)).
+Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../README.md#fertige-firmware). Der CI-Build hat keine `config_local.h`, die `.bin` enthält also keine Zugangsdaten. Sie übernimmt die Zugangsdaten, die eine eigene Firmware vorher im Flash gespeichert hat (siehe [Update über WLAN](#update-über-wlan)).
 
 ## Lizenz
 

@@ -10,6 +10,8 @@
 //    is the master of that bus. Decoding: alde_lin.cpp (based on alde-3020he-lin, MIT).
 // 2. External panel bus ("CI-bus", 19200 8N1, optional, ci_mode > 0): the ESP is the LIN
 //    master and polls the panel's info frame. With ci_mode 2 it also sends control frames,
+//    with ci_mode 3 it only listens (TX not used) and collects the frames of other devices
+//    (alde_ci_sniff.*), to find out who is LIN master on this bus.
 //    always built from the panel's current state. Protocol: alde_ci.cpp (based on
 //    alde_3030_plus, MIT).
 //
@@ -17,6 +19,7 @@
 #include "sensor.h"
 #include "alde_lin.h"
 #include "evlog.h"
+#include "alde_ci_sniff.h"
 
 // Order = index into sensorData.values[]. Keys listed in BINARY_KEYS (mqtt_ha.cpp)
 // become binary sensors in Home Assistant (payload 1/0).
@@ -88,6 +91,8 @@ static portMUX_TYPE cmdMux = portMUX_INITIALIZER_UNLOCKED;
 static AldeCiCommand pendingCmd;          // written by the web / MQTT task
 static volatile bool cmdPending = false;
 static AldeCiCommand activeCmd;           // command being worked on in ciLoop()
+static AldeSniffer sniffer;               // ci_mode 3: passive listener
+static volatile bool sniffResetReq = false;
 static uint8_t cmdTries = 0;
 static bool cmdRegistered = false;
 
@@ -101,7 +106,33 @@ static void logSignal(uint8_t pid, const uint8_t* d, int n) {
 }
 
 bool sensorCiOk() {
-    return ciActiveMode > 0 && ciLastOk != 0 && millis() - ciLastOk < CI_TIMEOUT_MS;
+    return ciActiveMode > 0 && ciActiveMode != 3 && ciLastOk != 0 && millis() - ciLastOk < CI_TIMEOUT_MS;
+}
+
+const AldeSniffer& sensorSniffer() {
+    return sniffer;
+}
+
+bool sensorSniffActive() {
+    return ciActiveMode == 3;
+}
+
+void sensorSniffReset() {
+    sniffResetReq = true;                 // done in the loop task, which owns the sniffer
+}
+
+static void sniffNewId(uint8_t id) {
+    evlog::add("Mithören: ID %02X zum ersten Mal", id);
+    Serial.printf("[CI-SNIFF] New id 0x%02X (PID 0x%02X)\n", id, aldeLinPid(id));
+}
+
+static void sniffFrame(uint8_t id, const uint8_t* d, int n, bool ok) {
+    if (!sigLog) return;
+    char hex[3 * 12 + 1];
+    int p = 0;
+    for (int k = 0; k < n && k < 12; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", d[k]);
+    if (p > 0) hex[p - 1] = 0; else hex[0] = 0;
+    Serial.printf("[CI-SNIFF] %02X %s: %s\n", id, ok ? "ok" : (n ? "bad" : "no answer"), hex);
 }
 
 bool sensorLinActive() {
@@ -189,13 +220,44 @@ static void ciStart() {
     pinMode(CI_SLP_PIN, OUTPUT);
     digitalWrite(CI_SLP_PIN, HIGH);
 #endif
-    ciSerial.begin(CI_BAUD, SERIAL_8N1, CI_RX_PIN, CI_TX_PIN);
     ciActiveMode = config.ci_mode;
     ciLastOk = 0;
     ciFails = 0;
+    if (ciActiveMode == 3) {
+        // Listen only: TX pin not attached to the UART at all, held high (= recessive) so the
+        // transceiver can never pull the bus dominant
+        ciSerial.setRxBufferSize(1024);
+        ciSerial.begin(CI_BAUD, SERIAL_8N1, CI_RX_PIN, -1);
+        pinMode(CI_TX_PIN, OUTPUT);
+        digitalWrite(CI_TX_PIN, HIGH);
+        sniffer.onNewId = sniffNewId;
+        sniffer.onFrame = sniffFrame;
+        aldeSnifferReset(sniffer);
+        evlog::add("Bedienteil-Bus an (nur mithören)");
+        Serial.printf("[CI] Listening only on RX GPIO%d (TX unused)\n", CI_RX_PIN);
+        return;
+    }
+    ciSerial.begin(CI_BAUD, SERIAL_8N1, CI_RX_PIN, CI_TX_PIN);
     ciNextPoll = millis() + 200;
     ciRegister();
     evlog::add("Bedienteil-Bus an (%s)", config.ci_mode == 2 ? "lesen + steuern" : "nur lesen");
+}
+
+// ci_mode 3: collect what others send
+static void ciSniffLoop(unsigned long now) {
+    if (sniffResetReq) {
+        sniffResetReq = false;
+        aldeSnifferReset(sniffer);
+        while (ciSerial.available()) ciSerial.read();
+    }
+    uint8_t chunk[64];
+    int avail;
+    while ((avail = ciSerial.available()) > 0) {
+        int n = ciSerial.readBytes(chunk, avail < (int)sizeof(chunk) ? avail : (int)sizeof(chunk));
+        if (n <= 0) break;
+        aldeSnifferFeed(sniffer, chunk, n, now);
+    }
+    aldeSnifferTick(sniffer, now);
 }
 
 static void ciStop() {
@@ -210,13 +272,20 @@ static void ciStop() {
 
 static void ciLoop(unsigned long now) {
     if (!sensorCiPossible()) return;      // C3 with heater bus: the only UART is taken
-    // Follow changes of the setting at runtime (0 <-> on restarts the UART, 1 <-> 2 does not)
-    if ((config.ci_mode > 0) != (ciActiveMode > 0)) {
+    // Follow changes of the setting at runtime: 0 <-> on and listen-only <-> master restart
+    // the UART, 1 <-> 2 does not
+    if ((config.ci_mode > 0) != (ciActiveMode > 0) ||
+        (config.ci_mode == 3) != (ciActiveMode == 3)) {
         if (ciActiveMode > 0) ciStop();
-        else ciStart();
+        if (config.ci_mode > 0) ciStart();
     }
     if (ciActiveMode == 0) return;
     ciActiveMode = config.ci_mode;
+    if (ciActiveMode == 3) {
+        aldeCiCommandClear(activeCmd);
+        ciSniffLoop(now);
+        return;
+    }
 
     // A new command from the web / MQTT task: merge it into the one being worked on
     if (cmdPending) {
@@ -368,7 +437,7 @@ static void copyReadings(unsigned long now) {
         (ci && c.water <= 2) ? (float)c.water : N,   // mode 3 is unknown, never published
         ci ? (float)c.pump : N, ci ? (float)c.panel_on : N, ci ? (float)c.error : N,
         ci ? (float)c.ac_input : N,
-        ciActiveMode > 0 ? (sensorCiOk() ? 1.0f : 0.0f) : N,
+        (ciActiveMode > 0 && ciActiveMode != 3) ? (sensorCiOk() ? 1.0f : 0.0f) : N,
     };
     static_assert(sizeof(src) / sizeof(src[0]) == sizeof(VALUES) / sizeof(VALUES[0]), "VALUES[] and src[] differ");
     for (uint8_t i = 0; i < VALUE_COUNT; i++) sensorData.values[i] = src[i];
@@ -429,6 +498,17 @@ void sensorPrint() {
                   config.ci_mode, config.el_max, (unsigned)ciPollsOk, (unsigned)ciPollsBad, (unsigned)ciCmdsSent,
                   sensorCiOk() ? "OK" : "---", ciState.raw[0], ciState.raw[1], ciState.raw[2],
                   ciState.raw[3], ciState.raw[4], ciState.raw[5]);
+    if (ciActiveMode == 3) {
+        Serial.printf("[CI-SNIFF] bytes=%u frames=%u junk=%u\n", (unsigned)sniffer.bytes,
+                      (unsigned)sniffer.frames, (unsigned)sniffer.junk);
+        for (uint8_t id = 0; id < 64; id++) {
+            const AldeSniffId& e = sniffer.ids[id];
+            if (!e.headers) continue;
+            Serial.printf("[CI-SNIFF] id %02X pid %02X headers=%u answers=%u bad=%u len=%u %s\n", id,
+                          aldeLinPid(id), (unsigned)e.headers, (unsigned)e.responses, (unsigned)e.bad,
+                          e.len, e.len ? (e.enhanced ? "LIN2" : "LIN1") : "");
+        }
+    }
     for (uint8_t i = 0; i < VALUE_COUNT; i++) {
         Serial.printf("[READ] %-20s %10.*f %s -> %s/%s\n", VALUES[i].name, VALUES[i].decimals,
                       sensorData.values[i], VALUES[i].unit, config.mqtt_prefix, VALUES[i].key);

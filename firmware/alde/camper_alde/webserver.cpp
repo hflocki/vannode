@@ -10,6 +10,7 @@
 #include "safeguard.h"
 #include "fwcheck.h"
 #include "evlog.h"
+#include "alde_ci_sniff.h"
 
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -24,6 +25,8 @@
 //   POST /api/update     file upload: .bin = firmware (restart), .gz = web page (no restart)
 //   POST /api/measure    publish the current readings right away
 //   POST /api/control    command for the Alde panel (query: target, gas, el_level, water), only with ci_mode 2
+//   GET  /api/sniff      ci_mode 3: frames seen on the external panel bus, per LIN id
+//   POST /api/sniff_reset clear those statistics
 //   POST /api/restart
 //   WS   /ws             live values every WS_UPDATE_MS
 
@@ -254,6 +257,47 @@ void webserverInit() {
     });
 
 
+    // ci_mode 3: frames other devices put on the external panel bus
+    server.on("/api/sniff", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        JsonDocument d;
+        d["active"] = sensorSniffActive();
+        const AldeSniffer& s = sensorSniffer();
+        d["bytes"] = s.bytes;
+        d["frames"] = s.frames;
+        d["junk"] = s.junk;
+        unsigned long now = millis();
+        JsonArray ids = d["ids"].to<JsonArray>();
+        for (uint8_t id = 0; id < 64; id++) {
+            const AldeSniffId& e = s.ids[id];
+            if (!e.headers) continue;
+            JsonObject o = ids.add<JsonObject>();
+            o["id"] = id;
+            o["pid"] = aldeLinPid(id);
+            o["headers"] = e.headers;
+            o["answers"] = e.responses;
+            o["bad"] = e.bad;
+            o["len"] = e.len;
+            if (e.len) {
+                char hex[3 * 8 + 1];
+                int p = 0;
+                for (int k = 0; k < e.len; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", e.data[k]);
+                if (p > 0) hex[p - 1] = 0;
+                o["data"] = hex;
+                o["lin2"] = e.enhanced;
+            }
+            o["age"] = (now - e.last_ms) / 1000;
+        }
+        String out;
+        serializeJson(d, out);
+        request->send(200, "application/json", out);
+    });
+    server.on("/api/sniff_reset", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        sensorSniffReset();
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+
     server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest* request) {
         if (!auth(request)) return;
         evlog::add("Neustart über die Web-Oberfläche");
@@ -412,7 +456,7 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     if (hasInterval && (newInterval < 1 || newInterval > 600)) { sendError(request, "Interval must be 1-600 s"); return; }
     bool hasCiMode = isNumber(doc["ci_mode"]);
     int newCiMode = hasCiMode ? doc["ci_mode"].as<int>() : 0;
-    if (hasCiMode && (newCiMode < 0 || newCiMode > 2)) { sendError(request, "ci_mode must be 0-2"); return; }
+    if (hasCiMode && (newCiMode < 0 || newCiMode > 3)) { sendError(request, "ci_mode must be 0-3"); return; }
     bool hasCiFn = isNumber(doc["ci_function"]);
     int newCiFn = hasCiFn ? doc["ci_function"].as<int>() : 0;
     if (hasCiFn && (newCiFn < 1 || newCiFn > 3)) { sendError(request, "ci_function must be 1-3"); return; }
@@ -529,7 +573,7 @@ void loadConfig() {
     int iv = doc["interval"] | DEFAULT_INTERVAL_S;
     config.interval_s = (iv >= 1 && iv <= 600) ? (uint16_t)iv : DEFAULT_INTERVAL_S;
     int cm = doc["ci_mode"] | DEFAULT_CI_MODE;
-    config.ci_mode = (cm >= 0 && cm <= 2) ? (uint8_t)cm : DEFAULT_CI_MODE;
+    config.ci_mode = (cm >= 0 && cm <= 3) ? (uint8_t)cm : DEFAULT_CI_MODE;
     int cf = doc["ci_function"] | DEFAULT_CI_FUNCTION;
     config.ci_function = (cf >= 1 && cf <= 3) ? (uint8_t)cf : DEFAULT_CI_FUNCTION;
     config.lin_enabled = doc["lin_enabled"] | DEFAULT_LIN_ENABLED;

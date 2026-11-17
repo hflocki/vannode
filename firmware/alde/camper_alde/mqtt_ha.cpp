@@ -25,7 +25,7 @@
 // Home Assistant: one device DEVICE_NAME, one sensor entity per value (keys in
 // BINARY_KEYS become binary sensors), plus WiFi signal, status and a "send now" button.
 // Values of the heater bus only with lin_enabled, values of the external panel bus only
-// with ci_mode > 0, control entities (number, switch, selects) only with ci_mode 2.
+// with ci_mode 1 or 2, control entities (number, switch, selects) only with ci_mode 2.
 
 #define HA_NODE_ID  "camper_alde"
 
@@ -324,7 +324,7 @@ void mqttPublishDiscovery() {
         const ValueDef& v = VALUES[i];
         bool isBinary;
         const char* binClass = binaryClass(v.key, &isBinary);
-        bool off = v.ci ? (config.ci_mode == 0 || !sensorCiPossible()) : !sensorLinActive();
+        bool off = v.ci ? (config.ci_mode == 0 || config.ci_mode == 3 || !sensorCiPossible()) : !sensorLinActive();
         if (off) {
             removeEntity(isBinary ? "binary_sensor" : "sensor", v.key);
             continue;

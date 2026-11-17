@@ -137,10 +137,22 @@ Web-UI → **Einstellungen → Bedienteil-Bus (Steuerung)**:
 | Aus (Werkseinstellung) | Der zweite UART ist aus, auf dem Anschluss passiert nichts |
 | Nur lesen | Der ESP meldet sich einmal an (`0x3C`, Hersteller `0x41DE`, Funktions-ID der Heizung) und fragt jede Sekunde den Info-Frame `0x1B` ab. Er sendet keine Befehle |
 | Lesen und steuern | zusätzlich Befehle per Control-Frame `0x1A`. Vor jedem Befehl wird der Stand neu gelesen, danach fünfmal schnell nachgefragt, damit die Bestätigung gleich da ist. Jeder Befehl steht im Ereignis-Log |
+| Nur mithören (Diagnose) | Der ESP sendet **gar nichts** (TX-Pin vom UART getrennt und auf High), er sammelt nur, welche Frames andere Geräte schicken: je LIN-ID Kopfzeilen, Antworten, Länge, Prüfsumme (LIN 1/2) und die letzten Daten. Anzeige im Reiter **Live**, abrufbar unter `/api/sniff`, neue IDs im Ereignis-Log. Keine Werte per MQTT |
 
 Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3; auch der Modellname in Home Assistant) und die **Heizstab-Höchststufe** (0–3 kW, Werkseinstellung 1 kW; Home Assistant und Web-UI bieten nur die erlaubten Stufen an).
 
 Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten. Das Gerät startet neu, die Heizbus-Werte verschwinden aus Web-UI und Home Assistant, und am C3 wird der UART für den Bedienteil-Bus frei.
+
+### Wer ist Master auf dem Bedienteil-Bus? (Mithören)
+
+Laut alde_3030_plus ist auf der gelben Buchse der ESP der Master, und das Bedienteil antwortet nur. Ob das an jeder Heizung so ist, klärt der Modus **„Nur mithören (Diagnose)“**:
+
+1. **iNet-Box abstecken**, ESP an die gelbe Buchse, Modus „Nur mithören“, ein paar Minuten laufen lassen und das Bedienteil normal bedienen.
+   - Liste bleibt leer, „völlige Ruhe auf dem Bus“ → das Bedienteil wartet auf einen Master: „Nur lesen“ / „Lesen und steuern“ passen.
+   - Es erscheinen Kopfzeilen → das Bedienteil ist auf dieser Buchse selbst Master. Dann bitte melden – der Node bräuchte einen Slave-Modus.
+2. Wer eine **iNet-Box** hat: dasselbe mit angeschlossener iNet-Box (ESP parallel über einen Splitter). Die Liste zeigt dann, welche IDs die beiden austauschen. Den Master-Widerstand am ESP-Modul dafür möglichst abklemmen, die iNet-Box bringt ihren eigenen mit.
+
+Ergebnis bitte als Bildschirmfoto der Tabelle schicken, mit Heizungsmodell sowie Baujahr und Software-Version des Bedienteils.
 
 Erst „Nur lesen“ ausprobieren: Kommen plausible Werte (Sollwert und Raum wie am Bedienteil), dann erst steuern – und dabei an der Heizung bleiben.
 
@@ -160,6 +172,7 @@ Erst „Nur lesen“ ausprobieren: Kommen plausible Werte (Sollwert und Raum wie
 
 - `alde_test`: künstlicher Heizbus-Zyklus mit den Rohwerten aus der Doku von alde-3020he-lin (Byte für Byte, Platzhalter, falsche Prüfsumme, Warmwasser aus, Klimaanlage wach, Bus-Timeout)
 - `ci_test`: Bedienteil-Bus – Anmeldung, Info-Frame mit Echo, das Beispiel-Frame aus der Doku von alde_3030_plus, Befehle ändern nur ihr Feld, Grenzen, Sonderwerte, unveränderte Werte werden nicht gesendet, Sperre bei „beschäftigt“/Störung, Warmwasser-Modus 3
+- `sniff_test`: Mithören – Paritätsbits, gemischter Verkehr (LIN 1 und 2, Kopfzeile ohne Antwort, falsche Prüfsumme), über zwei Lesevorgänge verteilte Frames, Störbytes
 
 Läuft auch in der GitHub Action.
 

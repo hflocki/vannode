@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.3.1"
+#define FW_VERSION            "0.4.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -199,7 +199,7 @@ struct AppConfig {
 
     // ---- Device settings (load/save/validate in webserver.cpp) ----
     uint16_t interval_s;   // Minimum gap between MQTT updates in seconds
-    uint8_t ci_mode;       // External panel bus: 0 = off, 1 = read, 2 = read + control
+    uint8_t ci_mode;       // External panel bus: 0 = off, 1 = read, 2 = read + control, 3 = listen only (diagnosis)
     uint8_t ci_function;   // Function id for the registration (1/2/3)
     bool lin_enabled;      // Heater bus transceiver fitted (change needs a restart)
     uint8_t el_max;        // Highest heating element step a command may set (kW)

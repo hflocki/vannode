@@ -295,6 +295,16 @@ nav button .ico{display:inline-flex}
         <div class="temps" id="live-values"></div>
         <div class="card"><div class="temp-state" id="live-state" style="margin:0">--</div></div>
         <div class="btn-row"><button class="btn btn-secondary" onclick="measureNow()">🔄 Jetzt senden</button></div>
+        <!-- Listen-only diagnosis on the external panel bus, only with ci_mode 3 -->
+        <div class="card" id="sniff-card" style="display:none">
+            <div class="card-title accent">Bedienteil-Bus mithören</div>
+            <div class="form-hint" id="sniff-sum">--</div>
+            <div style="overflow-x:auto"><table id="sniff-table" style="width:100%;border-collapse:collapse;font-size:0.8rem">
+                <thead><tr style="text-align:left"><th>ID</th><th>PID</th><th>Kopfzeilen</th><th>Antworten</th><th>ohne/defekt</th><th>Länge</th><th>Daten (zuletzt)</th><th>vor</th></tr></thead>
+                <tbody></tbody></table></div>
+            <div class="form-hint">Der ESP sendet in diesem Modus nichts. Ohne iNet-Box am Bus heißt jede Kopfzeile hier: Das Alde-Bedienteil ist auf dieser Buchse Master. Bleibt die Liste leer, wartet das Bedienteil auf einen Master (dann passt „Nur lesen“ / „Lesen und steuern“). Mit iNet-Box zeigt die Liste, worüber die beiden reden. Bitte die Tabelle als Bildschirmfoto an die Entwicklung schicken.</div>
+            <div class="btn-row"><button class="btn btn-secondary" onclick="sniffReset()">↺ Zurücksetzen</button></div>
+        </div>
         <!-- Control of the Alde panel over the external bus, only with ci_mode 2 -->
         <div class="card" id="ctl-card" style="display:none">
             <div class="card-title accent">Heizung steuern</div>
@@ -337,13 +347,13 @@ nav button .ico{display:inline-flex}
             <div class="card-title accent">Bedienteil-Bus (Steuerung)</div>
             <div class="form-row">
                 <div class="form-group"><label>Modus</label>
-                    <select id="cfg-ci-mode"><option value="0">Aus</option><option value="1">Nur lesen</option><option value="2">Lesen und steuern</option></select></div>
+                    <select id="cfg-ci-mode"><option value="0">Aus</option><option value="1">Nur lesen</option><option value="2">Lesen und steuern</option><option value="3">Nur mithören (Diagnose)</option></select></div>
                 <div class="form-group"><label>Heizung</label>
                     <select id="cfg-ci-function"><option value="1">Compact 3020</option><option value="2">3030</option><option value="3">3030 Plus</option></select></div>
                 <div class="form-group"><label>Heizstab höchstens</label>
                     <select id="cfg-el-max"><option value="0">Aus (nie einschalten)</option><option value="1">1 kW</option><option value="2">2 kW</option><option value="3">3 kW</option></select></div>
             </div>
-            <div class="form-hint">LIN-Transceiver am Anschluss für ein externes Bedienteil (CI-Bus, 19200 Baud, Master-Widerstand auf dieser Seite). Hier fragt der ESP das Alde-Bedienteil als Master ab und kann – nur bei „Lesen und steuern“ – Sollwert, Gas, Heizstab und Warmwasser setzen. Vor jedem Befehl meldet er sich neu an, liest den Stand, sendet nur bei geänderten Werten und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet. „Heizstab höchstens“ schützt den Landstrom-Anschluss: höhere Stufen werden abgelehnt (am Bedienteil selbst bleibt alles möglich). Geprüft bisher nur an der 3030 Plus. Nur nutzen, wenn du die Heizung dabei im Blick hast.</div>
+            <div class="form-hint">LIN-Transceiver am Anschluss für ein externes Bedienteil (CI-Bus, 19200 Baud, Master-Widerstand auf dieser Seite). Hier fragt der ESP das Alde-Bedienteil als Master ab und kann – nur bei „Lesen und steuern“ – Sollwert, Gas, Heizstab und Warmwasser setzen. Vor jedem Befehl meldet er sich neu an, liest den Stand, sendet nur bei geänderten Werten und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet. „Heizstab höchstens“ schützt den Landstrom-Anschluss: höhere Stufen werden abgelehnt (am Bedienteil selbst bleibt alles möglich). Geprüft bisher nur an der 3030 Plus. Nur nutzen, wenn du die Heizung dabei im Blick hast. „Nur mithören (Diagnose)“: Der ESP sendet nichts und zeigt im Reiter Live, welche Frames andere Geräte (Bedienteil, iNet-Box) auf diesem Bus schicken.</div>
             <div class="form-hint" id="ci-link">--</div>
             <div class="btn-row"><button class="btn btn-primary" onclick="saveCi()">💾 Speichern</button></div>
         </div>
@@ -486,7 +496,7 @@ let elMax = 3;
 function updateLiveData(d) {
     // Values of the external panel bus only when it is switched on
     // and heater bus values only while that bus runs
-    const list = (d.values || []).filter(v => CI_KEYS.includes(v.key) ? ciMode > 0 : linActive);
+    const list = (d.values || []).filter(v => CI_KEYS.includes(v.key) ? (ciMode === 1 || ciMode === 2) : linActive);
     const box = $('live-values');
     const sig = list.map(v => v.key).join('|');
     if (sig !== lastSig) {
@@ -522,6 +532,7 @@ function updateLiveData(d) {
                                            : 'Kein Verkehr auf dem Heizbus – Bedienteil angeschlossen? (' + d.errors + ' verworfene Frames)';
     } else {
         $('live-state').textContent = ciMode === 0 ? 'Heizbus aus und Bedienteil-Bus aus – Einstellungen prüfen.'
+            : ciMode === 3 ? 'Nur mithören am Bedienteil-Bus – Ergebnis unten.'
             : d.ok ? 'Nur Bedienteil-Bus · letzte Antwort ' + formatAge(d.age) + ' · ' + d.reads + ' Updates'
                    : 'Bedienteil antwortet nicht (Heizbus ist ausgeschaltet).';
     }
@@ -582,7 +593,10 @@ async function loadSetup() {
         for (const o of $('ctl-el').options) o.disabled = o.hidden = parseInt(o.value) > elMax;
         const ciPossible = cfg.ci_possible ?? true;
         $('ci-link').textContent = !ciPossible ? 'Nicht möglich, solange der Heizbus läuft (ESP32-C3).'
-            : ciMode === 0 ? 'Bedienteil-Bus aus.' : (cfg.ci_ok ? 'Bedienteil antwortet.' : 'Bedienteil antwortet nicht.');
+            : ciMode === 0 ? 'Bedienteil-Bus aus.' : ciMode === 3 ? 'Nur mithören – Ergebnis im Reiter Live.'
+            : (cfg.ci_ok ? 'Bedienteil antwortet.' : 'Bedienteil antwortet nicht.');
+        $('sniff-card').style.display = (ciMode === 3 && ciPossible) ? '' : 'none';
+        if (ciMode === 3) sniffLoad();
         $('ctl-card').style.display = (ciMode === 2 && ciPossible) ? '' : 'none';
         lastSig = '';   // rebuild the tiles (CI values shown / hidden)
     } catch (e) {
@@ -622,6 +636,40 @@ async function saveCi() {
         showToast('Fehler: ' + e.message, true);
     }
 }
+
+// ci_mode 3: what other devices send on the external panel bus
+const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, '0');
+async function sniffLoad() {
+    if (ciMode !== 3) return;
+    try {
+        const r = await fetch('/api/sniff', {cache: 'no-store'});
+        const d = await r.json();
+        $('sniff-sum').textContent = !d.active ? 'Mithören startet …'
+            : d.bytes + ' Byte empfangen · ' + d.frames + ' Kopfzeilen · ' + d.junk + ' Byte ohne Zuordnung'
+              + (d.bytes === 0 ? ' – bisher völlige Ruhe auf dem Bus.' : '');
+        const tb = $('sniff-table').querySelector('tbody');
+        tb.innerHTML = '';
+        for (const e of d.ids || []) {
+            const tr = document.createElement('tr');
+            const cells = ['0x' + hex2(e.id), '0x' + hex2(e.pid), e.headers, e.answers, e.bad,
+                e.len ? e.len + (e.lin2 ? ' (LIN 2)' : ' (LIN 1)') : '–', e.data || '–', e.age + ' s'];
+            for (const c of cells) {
+                const td = document.createElement('td');
+                td.textContent = c;
+                td.style.padding = '4px 6px';
+                td.style.borderTop = '1px solid var(--border)';
+                if (typeof c === 'string' && c.length > 12) td.style.fontFamily = 'monospace';
+                tr.appendChild(td);
+            }
+            tb.appendChild(tr);
+        }
+    } catch (e) {}
+}
+async function sniffReset() {
+    try { await fetch('/api/sniff_reset', {method: 'POST'}); showToast('Zurückgesetzt'); } catch (e) {}
+    setTimeout(sniffLoad, 500);
+}
+setInterval(() => { if (ciMode === 3 && !document.hidden) sniffLoad(); }, 2000);
 
 // Command for the Alde panel (only with ci_mode 2); the device checks everything again
 async function sendControl(params) {

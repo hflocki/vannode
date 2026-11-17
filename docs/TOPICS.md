@@ -158,7 +158,7 @@ Werte vom Heizbus (passiv mitgelesen, nur wenn der Heizbus in den Einstellungen 
 | `…/info` | Diagnose (retained): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime`, `reset`, `heap`, `hw` | |
 | `…/cmd/measure` | beliebiger Inhalt: Werte sofort senden | |
 
-**Bedienteil-Bus** (nur mit Modus „Nur lesen“ oder „Lesen und steuern“), Quelle Info-Frame `0x1B`:
+**Bedienteil-Bus** (nur mit Modus „Nur lesen“ oder „Lesen und steuern“, nicht beim Mithören), Quelle Info-Frame `0x1B`:
 
 | Topic | Inhalt |
 |---|---|

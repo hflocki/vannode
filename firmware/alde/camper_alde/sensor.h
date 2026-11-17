@@ -50,4 +50,10 @@ bool sensorLinActive();
 // False on the ESP32-C3 while the heater bus runs (the chip has only one free UART)
 bool sensorCiPossible();
 
+// ci_mode 3 (listen only on the panel bus): collected frames, reset of the statistics
+struct AldeSniffer;
+bool sensorSniffActive();
+const AldeSniffer& sensorSniffer();
+void sensorSniffReset();
+
 #endif // SENSOR_H

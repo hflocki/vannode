@@ -32,7 +32,14 @@ enum ObdFormula : uint8_t {
     OBD_F_AB_D1000,     // (256A + B) / 1000 (control module voltage)
     OBD_F_ABCD_D10,     // (A<<24 | B<<16 | C<<8 | D) / 10 (odometer km)
     OBD_F_DTC_COUNT,    // PID 01: A & 0x7F = number of stored codes, bit 7 = warning lamp
+    OBD_F_REAGENT_LVL,  // PID 85: F * 100 / 255 = reagent (AdBlue) tank level, valid if A bit 2 is set
+    OBD_F_DEF_CONC,     // PID 9B: B * 0.25 = reagent concentration %
+    OBD_F_DEF_TEMP,     // PID 9B: C - 40 = reagent temperature °C
+    OBD_F_FUEL_GS,      // PID 9D: (256A + B) * 0.02 = engine fuel rate g/s, shown as diesel l/h
 };
+
+// Density of diesel fuel (kg/l) to turn the fuel mass flow of PID 9D into l/h
+#define OBD_DIESEL_KG_L 0.835f
 
 enum ElmStatus : uint8_t {
     ELM_OK,          // Data or "OK"
@@ -44,8 +51,11 @@ enum ElmStatus : uint8_t {
 
 static inline uint8_t obdFormulaBytes(uint8_t f) {
     switch (f) {
-    case OBD_F_RPM: case OBD_F_AB: case OBD_F_AB_D20: case OBD_F_AB_D100: case OBD_F_AB_D1000: return 2;
+    case OBD_F_RPM: case OBD_F_AB: case OBD_F_AB_D20: case OBD_F_AB_D100: case OBD_F_AB_D1000:
+    case OBD_F_DEF_CONC: case OBD_F_FUEL_GS: return 2;
+    case OBD_F_DEF_TEMP: return 3;
     case OBD_F_ABCD_D10: return 4;
+    case OBD_F_REAGENT_LVL: return 6;
     default: return 1;
     }
 }
@@ -56,7 +66,20 @@ static inline bool obdDecode(uint8_t formula, const uint8_t* d, size_t n, float&
     uint32_t ab = n >= 2 ? ((uint32_t)d[0] << 8 | d[1]) : 0;
     switch (formula) {
     case OBD_F_A:         v = d[0]; break;
-    case OBD_F_A_M40:     v = (float)d[0] - 40.0f; break;
+    case OBD_F_A_M40:
+        if (d[0] == 0xFF) return false;   // 215 °C = "not available" (e.g. oil temperature of a cold engine)
+        v = (float)d[0] - 40.0f;
+        break;
+    case OBD_F_REAGENT_LVL:
+        if (!(d[0] & 0x04)) return false;   // tank level not supported by this control unit
+        v = d[5] * 100.0f / 255.0f;
+        break;
+    case OBD_F_DEF_CONC:  v = d[1] * 0.25f; break;
+    case OBD_F_DEF_TEMP:
+        if (d[2] == 0xFF) return false;
+        v = (float)d[2] - 40.0f;
+        break;
+    case OBD_F_FUEL_GS:   v = ab * 0.02f * 3.6f / OBD_DIESEL_KG_L; break;
     case OBD_F_PCT:       v = d[0] * 100.0f / 255.0f; break;
     case OBD_F_RPM:       v = ab / 4.0f; break;
     case OBD_F_AB:        v = (float)ab; break;
@@ -135,15 +158,36 @@ static inline void elmForEachLine(const char* resp, F f) {
     }
 }
 
-// Data bytes of the first answer "41 <pid> ..." to a mode 01 request
+// Data bytes of the first answer "41 <pid> ..." to a mode 01 request. Answers longer than one
+// CAN frame ("00C", "0:4185...", "1:...") are joined first. If several control units send
+// multi-frame answers at the same time their frames get mixed: ask such PIDs one control unit
+// at a time (physical header, see the vehicle profiles of the plugin).
 static inline bool elmMode01(const char* resp, uint8_t pid, uint8_t* data, size_t max, size_t& n) {
+    uint8_t msg[64];
+    size_t len = 0;
     bool found = false;
-    elmForEachLine(resp, [&](int, const uint8_t* b, size_t len) {
-        if (found || len < 3 || b[0] != 0x41 || b[1] != pid) return;
-        n = len - 2 < max ? len - 2 : max;
-        memcpy(data, b + 2, n);
-        found = true;
+    bool broken = false;   // frames out of order: answers of two control units mixed
+    int expect = 0;        // next frame index of a multi-frame answer (wraps after F)
+    auto flush = [&]() {
+        if (!found && !broken && len >= 3 && msg[0] == 0x41 && msg[1] == pid) {
+            n = len - 2 < max ? len - 2 : max;
+            memcpy(data, msg + 2, n);
+            found = true;
+        }
+        len = 0;
+        broken = false;
+    };
+    elmForEachLine(resp, [&](int frame, const uint8_t* b, size_t cnt) {
+        if (frame <= 0) {
+            flush();   // new message: single frame line or first frame "0:"
+            expect = 1;
+        } else {
+            if (frame != expect) broken = true;
+            expect = (frame + 1) & 0x0F;
+        }
+        for (size_t i = 0; i < cnt && len < sizeof(msg); i++) msg[len++] = b[i];
     });
+    flush();
     return found;
 }
 

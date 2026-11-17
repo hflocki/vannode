@@ -9,15 +9,18 @@
 // Read only: the plugin sends standard requests (SAE J1979 mode 01 "current data" and
 // mode 03 "stored trouble codes") and never clears codes or changes anything in the vehicle.
 //
-//   1. After connecting: ATZ, ATE0, ATL0, ATS0, ATH0, ATAT1, ATSP0 (automatic protocol), STI
+//   1. After connecting: ATZ, ATE0, ATL0, ATS0, ATH0, ATAT1, ATSP0 (automatic protocol; the
+//      vehicle profile may set a fixed one), STI
 //   2. ATRV (adapter measures the board voltage) - works with the ignition off
-//   3. Engine running (voltage >= "Motor läuft ab") or mode "immer": 0100/0120/... = which
-//      PIDs the vehicle supports (kept in NVS, so Home Assistant only gets those), ATDPN, 03
-//   4. Poll the supported PIDs of the table below in turn, every "Abfrage alle" seconds
+//   3. Engine running (voltage >= "Motor läuft ab"), engine detection "Drehzahl" (control unit
+//      asked every OBD_PROBE_MS) or mode "immer": 0100/0120/... = which PIDs the vehicle
+//      supports (kept in NVS, so Home Assistant only gets those), ATDPN, 03
+//   4. Poll the supported PIDs of the table below in turn, every "Abfrage alle" seconds. PIDs
+//      with a route of the vehicle profile are sent with a different header / receive filter
 //   5. Engine off for OBD_STOP_MS: stop polling; after OBD_IDLE_MS the connection is paused
 //      for "Ruhepause" minutes, so the adapter can go to sleep and the battery is spared
-// Manufacturer specific values (diesel level of some vehicles, AdBlue, DPF) need requests per
-// vehicle; they can be tried with the MQTT command "raw" and are added once confirmed.
+// Vehicle profiles hold what was confirmed in real vehicles (protocol, which control unit has
+// to be asked). Further values can be tried with the MQTT command "raw".
 
 #include "../core/plugin.h"
 
@@ -38,7 +41,7 @@ static const ObdGatt OBD_GATT[] = {
     {"ffe0", "ffe1", "ffe1"},    // 2 HM-10 style serial module
     {"18f0", "2af0", "2af1"},    // 3 Vgate / Viecar
     {"e7810a71-73ae-499d-8c15-faa9aef0c3f2", "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f",
-     "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f"},   // 4 vLinker (BLE mode)
+     "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f"},   // 4 Vgate iCar Pro BLE / vLinker (BLE mode)
     {nullptr, nullptr, nullptr}, // 5 own UUIDs from the settings
 };
 #define OBD_GATT_OWN 5
@@ -59,6 +62,10 @@ static const ObdValue OBD_VALUES[] = {
     {0x5C, OBD_F_A_M40,     0, "oil_temp",     "Öltemperatur",          "°C"},
     {0x2F, OBD_F_PCT,       0, "fuel",         "Tankfüllstand",         "%"},
     {0x5E, OBD_F_AB_D20,    1, "fuel_rate",    "Verbrauch",             "l/h"},
+    {0x9D, OBD_F_FUEL_GS,   1, "fuel_rate",    "Verbrauch",             "l/h"},   // alternative to 5E, see valueUsed()
+    {0x85, OBD_F_REAGENT_LVL, 0, "adblue",     "AdBlue",                "%"},
+    {0x9B, OBD_F_DEF_TEMP,  0, "adblue_temp",  "AdBlue-Temperatur",     "°C"},
+    {0x9B, OBD_F_DEF_CONC,  1, "adblue_conc",  "AdBlue-Konzentration",  "%"},     // same answer as the line above
     {0x04, OBD_F_PCT,       0, "load",         "Motorlast",             "%"},
     {0x46, OBD_F_A_M40,     0, "ambient",      "Außentemperatur",       "°C"},
     {0x0F, OBD_F_A_M40,     0, "intake_temp",  "Ansaugluft",            "°C"},
@@ -84,6 +91,9 @@ static const Entity OBD_ENTITIES[] = {
     {E_SENSOR, "oil_temp",    "Öltemperatur",          "°C",   "temperature",   "measurement", "mdi:oil-temperature", 0, nullptr},
     {E_SENSOR, "fuel",        "Tankfüllstand",         "%",    nullptr,         "measurement", "mdi:gas-station", 0, nullptr},
     {E_SENSOR, "fuel_rate",   "Verbrauch",             "L/h",  nullptr,         "measurement", "mdi:fuel", 0, nullptr},
+    {E_SENSOR, "adblue",      "AdBlue",                "%",    nullptr,         "measurement", "mdi:water-outline", 0, nullptr},
+    {E_SENSOR, "adblue_temp", "AdBlue-Temperatur",     "°C",   "temperature",   "measurement", nullptr, EF_HIDDEN, nullptr},
+    {E_SENSOR, "adblue_conc", "AdBlue-Konzentration",  "%",    nullptr,         "measurement", "mdi:test-tube", EF_DIAG | EF_HIDDEN, nullptr},
     {E_SENSOR, "load",        "Motorlast",             "%",    nullptr,         "measurement", "mdi:engine", EF_HIDDEN, nullptr},
     {E_SENSOR, "ambient",     "Außentemperatur",       "°C",   "temperature",   "measurement", nullptr, 0, nullptr},
     {E_SENSOR, "intake_temp", "Ansaugluft",            "°C",   "temperature",   "measurement", nullptr, EF_HIDDEN, nullptr},
@@ -111,6 +121,34 @@ static const Entity OBD_ENTITIES[] = {
     {E_SWITCH, "release",     "Bluetooth für App freigeben", nullptr, nullptr,  nullptr,       "mdi:bluetooth-off", EF_CONFIG | EF_ALWAYS, nullptr},
 };
 
+// ---- Vehicle profiles ----
+// A route sends one PID with another header or receive filter: "pre" before the request,
+// "post" afterwards (back to the functional request to all control units).
+struct ObdRoute { uint8_t pid; const char* pre; const char* post; };
+struct ObdProfile {
+    const char* protocol;        // ATSP command at init
+    uint8_t fuelPid;             // PID used for "fuel_rate" if both 5E and 9D are supported
+    const ObdRoute* routes;
+    uint8_t routeCount;
+};
+
+// Fiat Ducato (Euro 6, ISO 15765-4 CAN 29 bit 500 kbit/s). Answer IDs 18DAF110 (engine),
+// 18DAF101 (AdBlue values, stays awake longest), 18DAF118 (gearbox). PID 85 is a multi-frame
+// answer sent by two control units, so it is asked physically at 01. Findings as documented
+// by github.com/Moormerlander/ESPHome-BLE-OBD (checked in a vehicle with 9-speed automatic);
+// the 0131 filter is not yet confirmed there.
+static const ObdRoute OBD_ROUTES_DUCATO[] = {
+    {0x85, "ATSHDA01F1", "ATSHDB33F1"},
+    {0x9B, "ATSHDA01F1", "ATSHDB33F1"},
+    {0x31, "ATCRA18DAF110", "ATAR"},     // km since codes cleared from the engine, not the gearbox
+};
+static const ObdProfile OBD_PROFILES[] = {
+    {"ATSP0", 0x5E, nullptr, 0},                                    // 0 standard, automatic protocol
+    {"ATSP7", 0x9D, OBD_ROUTES_DUCATO,
+     sizeof(OBD_ROUTES_DUCATO) / sizeof(OBD_ROUTES_DUCATO[0])},     // 1 Fiat Ducato
+};
+#define OBD_PROFILE_COUNT (sizeof(OBD_PROFILES) / sizeof(OBD_PROFILES[0]))
+
 struct ObdCfg {
     char mac[18];
     char pin[8];
@@ -118,7 +156,9 @@ struct ObdCfg {
     char service[40];      // own UUIDs (gatt = OBD_GATT_OWN)
     char notify[40];
     char write[40];
+    uint8_t profile;       // index into OBD_PROFILES
     uint8_t mode;          // 0 = only while the engine runs, 1 = whenever the control unit answers
+    uint8_t detect;        // engine running from: 0 = board voltage, 1 = engine speed (ask the ECU)
     float run_v;           // voltage from which the engine counts as running
     int32_t poll_s;        // seconds between two rounds of requests
     int32_t rest_min;      // engine off: pause the connection this long (0 = keep it)
@@ -128,17 +168,25 @@ static const Field OBD_FIELDS[] = {
     FLD_MAC(ObdCfg, mac, "mac", "Adapter-MAC", "Über \"Suchen\" aus der Liste wählen (Name z. B. vLinker, OBDII, OBDBLE)"),
     FLD_TEXT(ObdCfg, pin, "pin", "Bluetooth-PIN", "Meist leer. Nur ausfüllen, wenn der Adapter beim Verbinden eine PIN verlangt"),
     FLD_SELECT(ObdCfg, gatt, "gatt", "Bluetooth-Kanäle",
-               "Automatisch|FFF0 (FFF1 / FFF2)|FFE0 (FFE1)|18F0 (2AF0 / 2AF1)|vLinker (E7810A71)|Eigene UUIDs",
+               "Automatisch|FFF0 (FFF1 / FFF2)|FFE0 (FFE1)|18F0 (2AF0 / 2AF1)|Vgate / vLinker (E7810A71)|Eigene UUIDs",
                "Automatisch passt für die meisten Adapter. Im Log steht nach dem Verbinden, welche Kanäle es gibt"),
     FLD_TEXT(ObdCfg, service, "service", "Service-UUID", "Nur bei \"Eigene UUIDs\""),
     FLD_TEXT(ObdCfg, notify, "notify", "Notify-UUID", "Nur bei \"Eigene UUIDs\", leer = jede, die senden kann"),
     FLD_TEXT(ObdCfg, write, "write", "Write-UUID", "Nur bei \"Eigene UUIDs\""),
+    FLD_SELECT(ObdCfg, profile, "profile", "Fahrzeug",
+               "Standard (alle Fahrzeuge)|Fiat Ducato (Euro 6)",
+               "Fiat Ducato: festes Protokoll CAN 29 Bit, AdBlue direkt vom zuständigen Steuergerät, "
+               "Verbrauch aus der Kraftstoffmasse"),
     FLD_SELECT(ObdCfg, mode, "mode", "Abfragen",
                "Nur bei laufendem Motor|Immer, wenn das Steuergerät antwortet",
                "\"Nur bei laufendem Motor\" schont die Starterbatterie: ohne laufenden Motor fragt der Node das "
                "Fahrzeug nicht ab und lässt den Adapter schlafen"),
+    FLD_SELECT(ObdCfg, detect, "detect", "Motor erkennen an",
+               "Bordspannung|Drehzahl (Steuergerät jede Minute fragen)",
+               "Bordspannung: der Node fragt das Fahrzeug erst, wenn die Lichtmaschine lädt. Fahrzeuge mit "
+               "intelligenter Lichtmaschine (z. B. Fiat Ducato, Leerlauf nur 12,3-12,6 V) brauchen \"Drehzahl\""),
     FLD_FLOAT(ObdCfg, run_v, "run_v", "Motor läuft ab", "V", 12.0f, 15.0f, 0.1f,
-              "Bordspannung, ab der der Motor als laufend gilt (Lichtmaschine lädt). Typisch 13,2 V"),
+              "Nur bei \"Motor erkennen an: Bordspannung\": Spannung, ab der der Motor als laufend gilt. Typisch 13,2 V"),
     FLD_INT(ObdCfg, poll_s, "poll_s", "Abfrage alle", "s", 1, 60, "Pause zwischen zwei Abfragerunden aller Werte"),
     FLD_INT(ObdCfg, rest_min, "rest_min", "Ruhepause", "min", 0, 60,
             "Motor aus: so lange trennt der Node die Verbindung, damit der Adapter schlafen kann. 0 = verbunden bleiben"),
@@ -158,7 +206,9 @@ public:
     void setDefaults() override {
         memset(&c, 0, sizeof(c));
         c.gatt = 0;
+        c.profile = 0;
         c.mode = 0;
+        c.detect = 0;
         c.run_v = 13.2f;
         c.poll_s = 2;
         c.rest_min = 2;
@@ -169,6 +219,17 @@ public:
             strlcpy(lastMac, c.mac, sizeof(lastMac));
             resetValues();
             updates++;
+        }
+        if (c.profile >= OBD_PROFILE_COUNT) c.profile = 0;
+        if (c.profile != lastProfile) {
+            // Other protocol and routes: start the adapter again with the new init
+            bool first = lastProfile == 0xFF;
+            lastProfile = c.profile;
+            if (!first) {
+                resetValues();
+                updates++;
+                if (link.connected()) link.disconnect();
+            }
         }
         if (begun) {
             applyUuids();
@@ -244,7 +305,7 @@ public:
         liveRowText(o, "Motor", running ? "läuft" : "aus");
         liveRowNum(o, "Bordspannung", voltage, 1, "V");
         for (size_t i = 0; i < OBD_VALUE_COUNT; i++) {
-            if (isnan(vals[i])) continue;
+            if (isnan(vals[i]) || !valueUsed(i)) continue;
             if (OBD_VALUES[i].formula == OBD_F_DTC_COUNT) continue;   // shown with the codes
             liveRowNum(o, OBD_VALUES[i].label, vals[i], OBD_VALUES[i].decimals, OBD_VALUES[i].unit);
         }
@@ -273,10 +334,13 @@ public:
     }
     // Values of the PID table only if the vehicle supports them (known after the first contact)
     bool entityActive(const Entity& e) override {
+        bool inTable = false;
         for (size_t i = 0; i < OBD_VALUE_COUNT; i++) {
-            if (!strcmp(e.key, OBD_VALUES[i].key)) return maskKnown && pidSupported(OBD_VALUES[i].pid);
+            if (strcmp(e.key, OBD_VALUES[i].key)) continue;
+            inTable = true;
+            if (maskKnown && valueUsed(i)) return true;
         }
-        return true;
+        return !inTable;
     }
     uint32_t publishIntervalMs() const override { return MQTT_OBD_MS; }
 
@@ -294,7 +358,9 @@ public:
             out.onoff("mil", mil);
             out.text("dtc", dtcText);
         }
-        for (size_t i = 0; i < OBD_VALUE_COUNT; i++) out.num(OBD_VALUES[i].key, vals[i], OBD_VALUES[i].decimals);
+        for (size_t i = 0; i < OBD_VALUE_COUNT; i++) {
+            if (valueUsed(i)) out.num(OBD_VALUES[i].key, vals[i], OBD_VALUES[i].decimals);
+        }
     }
 
     void command(const char* key, const char* value) override {
@@ -326,12 +392,15 @@ public:
 
 private:
     enum Phase : uint8_t { P_DOWN, P_INIT, P_IDLE, P_PROBE, P_POLL };
-    enum Kind : uint8_t { K_INIT, K_VOLT, K_SUPPORT, K_PROTO, K_PID, K_DTC, K_RAW };
+    enum Kind : uint8_t { K_INIT, K_VOLT, K_SUPPORT, K_PROTO, K_PID, K_DTC, K_RAW, K_ROUTE };
 
     ObdCfg c;
     BleLink link;
     bool begun = false;
     char lastMac[18] = "";
+    uint8_t lastProfile = 0xFF;
+    bool routeSet = false;           // "pre" of the route of OBD_VALUES[pollIdx] was sent
+    const char* routePost = nullptr; // "post" still to send after the routed request
     int32_t pinValue = BLE_NO_PIN;
     uint32_t lastLinkChanges = 0;
     bool lastAvailable = false;
@@ -409,6 +478,33 @@ private:
 
     bool pidSupported(uint8_t pid) const { return obdPidInMask(mask, OBD_MASK_WORDS, pid); }
 
+    const ObdProfile& profile() const { return OBD_PROFILES[c.profile < OBD_PROFILE_COUNT ? c.profile : 0]; }
+
+    const ObdRoute* route(uint8_t pid) const {
+        const ObdProfile& p = profile();
+        for (uint8_t i = 0; i < p.routeCount; i++) if (p.routes[i].pid == pid) return &p.routes[i];
+        return nullptr;
+    }
+
+    // Value i is read from this vehicle: PID supported and, for "fuel_rate" (PID 5E or 9D),
+    // only the source of the profile if the vehicle has both
+    bool valueUsed(size_t i) const {
+        uint8_t pid = OBD_VALUES[i].pid;
+        if (!pidSupported(pid)) return false;
+        if (pid == 0x5E || pid == 0x9D) {
+            uint8_t other = pid == 0x5E ? 0x9D : 0x5E;
+            if (pidSupported(other) && pid != profile().fuelPid) return false;
+        }
+        return true;
+    }
+
+    // Value i needs its own request (not already asked by an earlier line with the same PID)
+    bool pollWanted(size_t i) const {
+        if (!valueUsed(i)) return false;
+        for (size_t k = 0; k < i; k++) if (OBD_VALUES[k].pid == OBD_VALUES[i].pid) return false;
+        return true;
+    }
+
     // Supported PIDs are kept over restarts, so Home Assistant keeps its entities
     void loadMask() {
         Preferences p;
@@ -430,6 +526,8 @@ private:
         ecuOk = false;
         firstRequest = true;
         probeDone = false;
+        routeSet = false;
+        routePost = nullptr;
         if (running) {
             running = false;
             devlogf(id, "Connection lost: engine state unknown, shown as off");
@@ -455,7 +553,7 @@ private:
         case P_POLL: return ecuOk ? "Verbunden" : "Keine Antwort";
         case P_IDLE: break;
         }
-        if (c.mode == 0 && !isnan(voltage) && voltage < c.run_v) return "Motor aus";
+        if (c.mode == 0 && (c.detect == 1 || (!isnan(voltage) && voltage < c.run_v))) return "Motor aus";
         return "Zündung aus";
     }
 
@@ -528,7 +626,8 @@ private:
     void evalRunning(unsigned long now) {
         size_t rpmIdx = valueIndex(0x0C);
         bool rpmFresh = ecuOk && rpmIdx < OBD_VALUE_COUNT && !isnan(vals[rpmIdx]) && pidSupported(0x0C);
-        bool r = rpmFresh ? vals[rpmIdx] > OBD_RUN_RPM : (!isnan(voltage) && voltage >= c.run_v);
+        // With detection by engine speed the voltage never counts (smart alternators stay below 13 V)
+        bool r = rpmFresh ? vals[rpmIdx] > OBD_RUN_RPM : (c.detect == 0 && !isnan(voltage) && voltage >= c.run_v);
         if (r) lastRunning = now;
         if (r != running) {
             running = r;
@@ -543,14 +642,17 @@ private:
     }
 
     bool wantProbe(unsigned long now) const {
-        if (lastProbe && now - lastProbe < (c.mode == 1 ? OBD_PROBE_MS : 10000UL)) return false;
-        if (c.mode == 1) return true;
+        bool byEcu = c.mode == 1 || c.detect == 1;   // ask the control unit itself every OBD_PROBE_MS
+        if (lastProbe && now - lastProbe < (byEcu ? OBD_PROBE_MS : 10000UL)) return false;
+        if (byEcu) return true;
         return !isnan(voltage) && voltage >= c.run_v;
     }
 
     void toIdle(unsigned long now) {
+        // A failed probe of the engine speed detection does not restart the time until the
+        // rest, otherwise the probe every minute would keep the adapter awake for good
+        if (phase != P_PROBE || ecuOk || c.mode == 1) idleSince = now;
         phase = P_IDLE;
-        idleSince = now;
         lastProbe = now;
         if (ecuOk) {
             ecuOk = false;
@@ -579,13 +681,25 @@ private:
         static const char* const INIT[] = {"ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0", "STI"};
         static const uint8_t INIT_COUNT = sizeof(INIT) / sizeof(INIT[0]);
 
+        if (phase != P_POLL) routeSet = false;
+        if (routePost && !routeSet && phase != P_DOWN) {
+            // Back to the request to all control units before anything else is sent,
+            // also if polling stopped right after a routed request
+            const char* post = routePost;
+            routePost = nullptr;
+            send(post, K_ROUTE, 0, OBD_CMD_TIMEOUT_MS);
+            return;
+        }
+
         switch (phase) {
         case P_DOWN:
             return;
 
         case P_INIT:
             if (initStep < INIT_COUNT) {
-                send(INIT[initStep], K_INIT, initStep, initStep == 0 ? OBD_RESET_TIMEOUT_MS : OBD_CMD_TIMEOUT_MS);
+                const char* cmd = INIT[initStep];
+                if (!strcmp(cmd, "ATSP0")) cmd = profile().protocol;
+                send(cmd, K_INIT, initStep, initStep == 0 ? OBD_RESET_TIMEOUT_MS : OBD_CMD_TIMEOUT_MS);
                 initStep++;
             } else {
                 phase = P_IDLE;
@@ -639,14 +753,24 @@ private:
             return;
 
         case P_POLL:
-            if (rawPending) { sendRaw(); return; }
-            if (dtcRequested) {
-                dtcRequested = false;
-                sendRequest("03", K_DTC, 0);
-                return;
+            if (!routeSet) {
+                if (rawPending) { sendRaw(); return; }
+                if (dtcRequested) {
+                    dtcRequested = false;
+                    sendRequest("03", K_DTC, 0);
+                    return;
+                }
+                while (pollIdx < OBD_VALUE_COUNT && !pollWanted(pollIdx)) pollIdx++;
             }
-            while (pollIdx < OBD_VALUE_COUNT && !pidSupported(OBD_VALUES[pollIdx].pid)) pollIdx++;
             if (pollIdx < OBD_VALUE_COUNT) {
+                const ObdRoute* r = route(OBD_VALUES[pollIdx].pid);
+                if (r && !routeSet) {
+                    routeSet = true;
+                    routePost = r->post;   // sent right after the request (see above)
+                    send(r->pre, K_ROUTE, 0, OBD_CMD_TIMEOUT_MS);
+                    return;
+                }
+                routeSet = false;
                 char cmd[8];
                 snprintf(cmd, sizeof(cmd), "01%02X", OBD_VALUES[pollIdx].pid);
                 sendRequest(cmd, K_PID, (uint8_t)pollIdx);
@@ -802,11 +926,19 @@ private:
 
         case K_PID: {
             const ObdValue& v = OBD_VALUES[arg];
-            uint8_t d[8];
+            uint8_t d[16];
             size_t n = 0;
             float f;
             bool lamp = false;
-            if (elmMode01(rx, v.pid, d, sizeof(d), n) && obdDecode(v.formula, d, n, f, &lamp)) {
+            bool got = elmMode01(rx, v.pid, d, sizeof(d), n);
+            if (got) {
+                // Further values from the same answer (PID 9B: AdBlue temperature and concentration)
+                for (size_t k = arg + 1; k < OBD_VALUE_COUNT; k++) {
+                    float g;
+                    if (OBD_VALUES[k].pid == v.pid && obdDecode(OBD_VALUES[k].formula, d, n, g)) vals[k] = g;
+                }
+            }
+            if (got && obdDecode(v.formula, d, n, f, &lamp)) {
                 firstRequest = false;
                 noData = 0;
                 lastEcu = now;
@@ -825,10 +957,21 @@ private:
                 }
                 return;
             }
+            if (got) return;   // answer came, value not valid (e.g. oil temperature FF of a cold engine)
             ElmStatus st = elmStatus(rx);
-            if (st == ELM_NO_DATA || st == ELM_NO_CONNECT) vehicleSilent();
+            // Routed values (other control unit) without answer do not mean "vehicle silent":
+            // that control unit may sleep or lack the value while the engine still answers
+            if ((st == ELM_NO_DATA || st == ELM_NO_CONNECT) && !route(v.pid)) vehicleSilent();
             return;
         }
+
+        case K_ROUTE:
+            if (elmStatus(rx) != ELM_OK) {
+                char t[48];
+                compact(rx, t, sizeof(t));
+                devlogf(id, "%s: %s", cur, t[0] ? t : "(empty)");
+            }
+            return;
 
         case K_RAW:
             compact(rx, rawResp, sizeof(rawResp));

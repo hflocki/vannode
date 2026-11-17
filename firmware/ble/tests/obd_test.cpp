@@ -16,7 +16,7 @@ static void check(bool ok, const char* what) {
 static bool near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
 static bool value(const char* resp, uint8_t pid, uint8_t formula, float& v, bool* mil = nullptr) {
-    uint8_t d[8];
+    uint8_t d[16];
     size_t n = 0;
     return elmMode01(resp, pid, d, sizeof(d), n) && obdDecode(formula, d, n, v, mil);
 }
@@ -40,6 +40,20 @@ int main() {
     check(!value("410D\r>", 0x0D, OBD_F_A, v), "too short");
     check(!value("410C1AF8\r>", 0x0D, OBD_F_A, v), "other PID ignored");
     check(!value("010C\r410C1A\r>", 0x0C, OBD_F_RPM, v), "echo ignored, one byte too short");
+    check(!value("415CFF\r>", 0x5C, OBD_F_A_M40, v), "oil temperature FF (not available) dropped");
+
+    // AdBlue and fuel mass (values as seen in a Fiat Ducato)
+    check(value("00C\r0:418507000000\r1:00E2000000AAAA\r\r>", 0x85, OBD_F_REAGENT_LVL, v) && near(v, 88.63f),
+          "0185 multi frame: AdBlue E2 = 88.6 %");
+    check(!value("00C\r0:418503000000\r1:00E2000000AAAA\r>", 0x85, OBD_F_REAGENT_LVL, v),
+          "0185 without tank level bit");
+    check(!value("00C\r0:418507000000\r0:418507000000\r1:00E2000000AAAA\r1:00E2000000AAAA\r>", 0x85,
+                 OBD_F_REAGENT_LVL, v),
+          "0185 frames of two control units mixed: dropped");
+    check(value("419B0E802BE1\r>", 0x9B, OBD_F_DEF_CONC, v) && near(v, 32.0f), "019B concentration 32 %");
+    check(value("419B0E802BE1\r>", 0x9B, OBD_F_DEF_TEMP, v) && near(v, 3.0f), "019B AdBlue 3 °C");
+    check(value("419D000B0000\r>", 0x9D, OBD_F_FUEL_GS, v) && std::fabs(v - 0.948f) < 0.005f,
+          "019D 0.22 g/s = 0.95 l/h diesel");
 
     // Supported PIDs: two control units are combined
     uint32_t mask[2] = {0, 0};

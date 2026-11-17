@@ -67,6 +67,30 @@ int main() {
               !obdPidInMask(mask, 2, 0x2E) && obdPidInMask(mask, 2, 0x40),
           "0120: fuel level 2F and next range 40 supported");
 
+    // Vehicle scan: answers with headers, one mask per control unit
+    {
+        char ids[4][9] = {};
+        uint32_t m[4] = {};
+        int cnt = 0;
+        auto add = [&](const char* id, uint32_t mk) {
+            if (cnt < 4) { strcpy(ids[cnt], id); m[cnt++] = mk; }
+        };
+        elmSupportedPerEcu("7E8064100BE1FA813\r7E906410098180001\r\r>", false, 0x00, add);
+        check(cnt == 2 && !strcmp(ids[0], "7E8") && m[0] == 0xBE1FA813u && !strcmp(ids[1], "7E9") &&
+                  m[1] == 0x98180001u,
+              "scan 11 bit: two control units 7E8 / 7E9");
+        cnt = 0;
+        elmSupportedPerEcu("SEARCHING...\r18DAF110064100BE1FA813\r18DAF10106410098180001\r>", true, 0x00, add);
+        check(cnt == 2 && !strcmp(ids[0], "18DAF110") && !strcmp(ids[1], "18DAF101") && m[1] == 0x98180001u,
+              "scan 29 bit: 18DAF110 / 18DAF101");
+        cnt = 0;
+        elmSupportedPerEcu("7E8100C41850700\r7E82100E2000000AAAA\r>", false, 0x00, add);
+        check(cnt == 0, "scan: multi frame lines are no support answer");
+        cnt = 0;
+        elmSupportedPerEcu("NO DATA\r>", false, 0x00, add);
+        check(cnt == 0, "scan: NO DATA");
+    }
+
     // Status texts
     check(elmStatus("NO DATA\r\r>") == ELM_NO_DATA, "status NO DATA");
     check(elmStatus("SEARCHING...\rUNABLE TO CONNECT\r\r>") == ELM_NO_CONNECT, "status UNABLE TO CONNECT");

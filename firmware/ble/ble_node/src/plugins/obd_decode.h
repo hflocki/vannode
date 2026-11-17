@@ -191,6 +191,46 @@ static inline bool elmMode01(const char* resp, uint8_t pid, uint8_t* data, size_
     return found;
 }
 
+// ---- Answers with headers (ATH1, ATS0), used by the vehicle scan ----
+// CAN 11 bit: "7E8064100BE1FA813" = sender 7E8, then PCI byte 06 and the data.
+// CAN 29 bit: "18DAF110064100BE1FA813" = sender 18DAF110, then PCI and data.
+// Calls f(id, bytes, n) for every line of a single frame answer (PCI 0x01..0x07); id is the
+// sender as text, bytes start after the PCI byte.
+template <typename F>
+static inline void elmForEachHeaderLine(const char* resp, bool ext, F f) {
+    const size_t idLen = ext ? 8 : 3;
+    const char* p = resp;
+    while (*p) {
+        size_t len = strcspn(p, "\r\n>");
+        if (len > idLen + 2) {
+            char id[9];
+            bool hex = true;
+            for (size_t i = 0; i < idLen; i++) {
+                if (elmHexNibble(p[i]) < 0) hex = false;
+                id[i] = p[i];
+            }
+            id[idLen] = '\0';
+            uint8_t b[16];
+            int n = hex ? elmHexBytes(p + idLen, len - idLen, b, sizeof(b)) : -1;
+            if (n >= 2 && b[0] >= 1 && b[0] <= 7) {
+                size_t dl = (size_t)b[0] < (size_t)n - 1 ? b[0] : (size_t)n - 1;
+                f(id, b + 1, dl);
+            }
+        }
+        p += len;
+        if (*p) p++;
+    }
+}
+
+// Supported PIDs per control unit from an answer to 01 00 / 01 20 ... with headers
+template <typename F>
+static inline void elmSupportedPerEcu(const char* resp, bool ext, uint8_t base, F f) {
+    elmForEachHeaderLine(resp, ext, [&](const char* id, const uint8_t* b, size_t n) {
+        if (n < 6 || b[0] != 0x41 || b[1] != base) return;
+        f(id, ((uint32_t)b[2] << 24) | ((uint32_t)b[3] << 16) | ((uint32_t)b[4] << 8) | b[5]);
+    });
+}
+
 // Supported PIDs from the answer to 01 00 / 01 20 / ... (bit 31 = base + 1). The answers
 // of all control units are combined.
 static inline bool elmSupported(const char* resp, uint8_t base, uint32_t& mask) {

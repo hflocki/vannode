@@ -27,6 +27,7 @@
 #if PLUGIN_OBD
 
 #include <Preferences.h>
+#include <stdarg.h>
 #include "../core/ble_link.h"
 #include "../core/devlog.h"
 #include "../core/mqtt_ha.h"
@@ -83,6 +84,8 @@ static const ObdValue OBD_VALUES[] = {
 #define OBD_MASK_WORDS  6   // PIDs 01..C0 (0x00, 0x20 ... 0xA0)
 #define OBD_DTC_MAX     8
 #define OBD_WRITE_CHUNK 20  // Payload of one BLE packet with the default MTU
+#define OBD_SCAN_ECUS   8   // Control units noted by the vehicle scan
+#define OBD_SCAN_REPORT 1150 // Scan report (topic obd/scan); fits the MQTT buffer of 1280 bytes
 
 static const Entity OBD_ENTITIES[] = {
     {E_SENSOR, "rpm",         "Drehzahl",              "rpm",  nullptr,         "measurement", "mdi:engine", 0, nullptr},
@@ -112,6 +115,7 @@ static const Entity OBD_ENTITIES[] = {
     {E_BINARY, "mil",         "Motorkontrollleuchte",  nullptr, "problem",      nullptr,       "mdi:engine-off", 0, nullptr},
     {E_SENSOR, "dtc",         "Fehlercodes",           nullptr, nullptr,        nullptr,       "mdi:alert-circle", 0, nullptr},
     {E_BUTTON, "read_dtc",    "Fehlercodes lesen",     nullptr, nullptr,        nullptr,       "mdi:magnify", EF_ALWAYS, nullptr},
+    {E_BUTTON, "scan",        "Fahrzeug scannen",      nullptr, nullptr,        nullptr,       "mdi:radar", EF_DIAG | EF_ALWAYS, nullptr},
     {E_SENSOR, "protocol",    "Protokoll",             nullptr, nullptr,        nullptr,       "mdi:car-connected", EF_DIAG, nullptr},
     {E_SENSOR, "adapter",     "Adapter",               nullptr, nullptr,        nullptr,       "mdi:chip", EF_DIAG | EF_ALWAYS, nullptr},
     {E_BINARY, "connected",   "Verbindung",            nullptr, "connectivity", nullptr,       nullptr, EF_DIAG | EF_ALWAYS, nullptr},
@@ -323,7 +327,11 @@ public:
             JsonArray x = arr.add<JsonArray>();
             x.add("read_dtc");
             x.add("Fehlercodes lesen");
+            JsonArray s = arr.add<JsonArray>();
+            s.add("scan");
+            s.add("Fahrzeug scannen");
         }
+        if (scanState[0]) liveRowText(o, "Fahrzeug-Scan", scanState);
         liveCtrl(o, "switch", "release", "Bluetooth für App freigeben")["v"] = link.released();
         if (rawResp[0]) o["raw"] = (const char*)rawResp;
     }
@@ -361,6 +369,11 @@ public:
         for (size_t i = 0; i < OBD_VALUE_COUNT; i++) {
             if (valueUsed(i)) out.num(OBD_VALUES[i].key, vals[i], OBD_VALUES[i].decimals);
         }
+        // Scan report once after a scan (retained, too long for a Home Assistant entity)
+        if (scanPublish && scanReport) {
+            out.text("scan", scanReport);
+            scanPublish = false;
+        }
     }
 
     void command(const char* key, const char* value) override {
@@ -370,6 +383,13 @@ public:
         } else if (!strcmp(key, "read_dtc") || (!strcmp(key, "action") && !strcmp(value, "read_dtc"))) {
             dtcRequested = true;
             devlogf(id, "Reading trouble codes requested");
+        } else if (!strcmp(key, "scan") || (!strcmp(key, "action") && !strcmp(value, "scan"))) {
+            if (phase == P_SCAN) return;
+            scanRequested = true;
+            strlcpy(scanState, "angefordert", sizeof(scanState));
+            if (resting) restUntil = millis();   // end the rest, the scan needs the adapter
+            devlogf(id, "Vehicle scan requested");
+            updates++;
         } else if (!strcmp(key, "raw")) {
             // Diagnosis: any adapter command, e.g. "ATRV" or "0105"; the answer goes to the log
             // and to the topic "raw". Read the codes only - the plugin never sends mode 04.
@@ -391,8 +411,26 @@ public:
     }
 
 private:
-    enum Phase : uint8_t { P_DOWN, P_INIT, P_IDLE, P_PROBE, P_POLL };
-    enum Kind : uint8_t { K_INIT, K_VOLT, K_SUPPORT, K_PROTO, K_PID, K_DTC, K_RAW, K_ROUTE };
+    enum Phase : uint8_t { P_DOWN, P_INIT, P_IDLE, P_PROBE, P_POLL, P_SCAN };
+    enum Kind : uint8_t { K_INIT, K_VOLT, K_SUPPORT, K_PROTO, K_PID, K_DTC, K_RAW, K_ROUTE, K_SCAN };
+
+    // Vehicle scan: which control units answer and what each of them supports, as a report
+    // for new vehicle profiles. Steps: ATH1, 0100 (wake / protocol search), ATDPN, 0100 / 0120
+    // ... per control unit (from the headers), some values with headers, ATH0.
+    enum ScanStep : uint8_t { S_HEADERS, S_WAKE, S_PROTO, S_MASKS, S_VALUES, S_END };
+    struct ScanEcu { char id[9]; uint32_t mask[OBD_MASK_WORDS]; };
+    bool scanRequested = false;
+    bool scanPublish = false;
+    bool scanFailed = false;
+    uint8_t scanStep = S_HEADERS;
+    uint8_t scanBase = 0;
+    uint8_t scanValIdx = 0;
+    char scanProto = '\0';
+    ScanEcu* scanEcus = nullptr;     // only while scanning
+    uint8_t scanEcuCount = 0;
+    char* scanReport = nullptr;      // kept until the next scan
+    size_t scanLen = 0;
+    char scanState[64] = "";
 
     ObdCfg c;
     BleLink link;
@@ -528,6 +566,13 @@ private:
         probeDone = false;
         routeSet = false;
         routePost = nullptr;
+        if (scanEcus) {
+            // Scan cut off: the adapter starts with ATZ again (headers off), ask again later
+            free(scanEcus);
+            scanEcus = nullptr;
+            strlcpy(scanState, "abgebrochen (Verbindung weg)", sizeof(scanState));
+            devlogf(id, "Vehicle scan cut off: connection lost");
+        }
         if (running) {
             running = false;
             devlogf(id, "Connection lost: engine state unknown, shown as off");
@@ -550,6 +595,7 @@ private:
         case P_DOWN:
         case P_INIT: return "Adapter startet";
         case P_PROBE: return "Suche Fahrzeug";
+        case P_SCAN: return "Fahrzeug-Scan läuft";
         case P_POLL: return ecuOk ? "Verbunden" : "Keine Antwort";
         case P_IDLE: break;
         }
@@ -619,6 +665,12 @@ private:
         if (phase == P_PROBE || phase == P_POLL) {
             // Treat like NO DATA: the vehicle side did not answer
             if (kind == K_SUPPORT || kind == K_PID) vehicleSilent();
+        }
+        if (phase == P_SCAN && kind == K_SCAN) {
+            // Scan step without answer: go on as with an empty answer
+            rxLen = 0;
+            rx[0] = '\0';
+            scanHandle(millis());
         }
     }
 
@@ -690,9 +742,17 @@ private:
             send(post, K_ROUTE, 0, OBD_CMD_TIMEOUT_MS);
             return;
         }
+        if (scanRequested && (phase == P_IDLE || (phase == P_POLL && !routeSet))) {
+            scanRequested = false;
+            scanStart();
+        }
 
         switch (phase) {
         case P_DOWN:
+            return;
+
+        case P_SCAN:
+            scanNext();
             return;
 
         case P_INIT:
@@ -973,12 +1033,212 @@ private:
             }
             return;
 
+        case K_SCAN:
+            scanHandle(now);
+            return;
+
         case K_RAW:
             compact(rx, rawResp, sizeof(rawResp));
             devlogf(id, "Test %s -> %s", cur, rawResp[0] ? rawResp : "(empty)");
             updates++;
             return;
         }
+    }
+
+    // ---- Vehicle scan ----
+    // Values asked with headers during the scan: which control unit sends diesel level, fuel
+    // rate, AdBlue, odometer and km since codes cleared (only if a control unit supports them)
+    static constexpr uint8_t SCAN_PIDS[] = {0x2F, 0x5E, 0x9D, 0x85, 0x9B, 0xA6, 0x31};
+    static constexpr uint8_t SCAN_PID_COUNT = sizeof(SCAN_PIDS) / sizeof(SCAN_PIDS[0]);
+
+    __attribute__((format(printf, 2, 3))) void scanAdd(const char* fmt, ...) {
+        if (!scanReport || scanLen >= OBD_SCAN_REPORT - 1) return;
+        va_list ap;
+        va_start(ap, fmt);
+        int n = vsnprintf(scanReport + scanLen, OBD_SCAN_REPORT - scanLen, fmt, ap);
+        va_end(ap);
+        if (n < 0) return;
+        scanLen += (size_t)n;
+        if (scanLen >= OBD_SCAN_REPORT - 1) {
+            // Full: mark the cut, the device log has everything
+            scanLen = OBD_SCAN_REPORT - 1;
+            memcpy(scanReport + scanLen - 4, " ...", 4);
+            scanReport[scanLen] = '\0';
+        }
+    }
+
+    ScanEcu* scanEcu(const char* eid) {
+        for (uint8_t i = 0; i < scanEcuCount; i++) if (!strcmp(scanEcus[i].id, eid)) return &scanEcus[i];
+        if (scanEcuCount >= OBD_SCAN_ECUS) return nullptr;
+        ScanEcu* e = &scanEcus[scanEcuCount++];
+        strlcpy(e->id, eid, sizeof(e->id));
+        return e;
+    }
+
+    bool scanSupported(uint8_t pid) const {
+        if (!scanEcuCount) return pidSupported(pid);   // no headers (not CAN): known mask
+        for (uint8_t i = 0; i < scanEcuCount; i++) {
+            if (obdPidInMask(scanEcus[i].mask, OBD_MASK_WORDS, pid)) return true;
+        }
+        return false;
+    }
+
+    void scanStart() {
+        free(scanEcus);
+        scanEcus = (ScanEcu*)calloc(OBD_SCAN_ECUS, sizeof(ScanEcu));
+        if (!scanReport) scanReport = (char*)malloc(OBD_SCAN_REPORT);
+        if (!scanEcus || !scanReport) {
+            free(scanEcus);
+            scanEcus = nullptr;
+            strlcpy(scanState, "kein Speicher frei", sizeof(scanState));
+            devlogf(id, "Vehicle scan: out of memory");
+            updates++;
+            return;
+        }
+        scanEcuCount = 0;
+        scanLen = 0;
+        scanReport[0] = '\0';
+        scanFailed = false;
+        scanStep = S_HEADERS;
+        scanBase = 0;
+        scanValIdx = 0;
+        scanProto = '\0';
+        phase = P_SCAN;
+        strlcpy(scanState, "läuft", sizeof(scanState));
+        devlogf(id, "Vehicle scan started");
+        scanAdd("VanNode OBD-Scan %s | Adapter %s | %.1f V", FW_VERSION, adapter[0] ? adapter : "?", voltage);
+        updates++;
+    }
+
+    void scanNext() {
+        char cmd[8];
+        switch (scanStep) {
+        case S_HEADERS:
+            send("ATH1", K_SCAN, 0, OBD_CMD_TIMEOUT_MS);
+            return;
+        case S_WAKE:
+            send("0100", K_SCAN, 0, OBD_SEARCH_TIMEOUT_MS);
+            return;
+        case S_PROTO:
+            send("ATDPN", K_SCAN, 0, OBD_CMD_TIMEOUT_MS);
+            return;
+        case S_MASKS:
+            snprintf(cmd, sizeof(cmd), "01%02X", scanBase);
+            send(cmd, K_SCAN, 0, OBD_CMD_TIMEOUT_MS);
+            return;
+        case S_VALUES:
+            while (scanValIdx < SCAN_PID_COUNT && !scanSupported(SCAN_PIDS[scanValIdx])) scanValIdx++;
+            if (scanValIdx < SCAN_PID_COUNT) {
+                snprintf(cmd, sizeof(cmd), "01%02X", SCAN_PIDS[scanValIdx]);
+                send(cmd, K_SCAN, 0, OBD_CMD_TIMEOUT_MS);
+                return;
+            }
+            scanStep = S_END;
+            [[fallthrough]];
+        case S_END:
+            send("ATH0", K_SCAN, 0, OBD_CMD_TIMEOUT_MS);
+            return;
+        }
+    }
+
+    void scanFail(const char* why) {
+        scanFailed = true;
+        strlcpy(scanState, why, sizeof(scanState));
+        scanAdd(" | Abbruch: %s", why);
+        devlogf(id, "Vehicle scan stopped: %s", why);
+        scanStep = S_END;   // headers off again
+    }
+
+    void scanHandle(unsigned long now) {
+        char t[400];
+        compact(rx, t, sizeof(t));
+        switch (scanStep) {
+        case S_HEADERS:
+            scanStep = S_WAKE;
+            return;
+
+        case S_WAKE: {
+            ElmStatus st = elmStatus(rx);
+            devlogf(id, "Scan 0100: %s", t[0] ? t : "(empty)");
+            if (!t[0] || st == ELM_NO_DATA || st == ELM_NO_CONNECT || st == ELM_ERROR) {
+                scanFail("Fahrzeug antwortet nicht (Zündung an?)");
+                return;
+            }
+            firstRequest = false;
+            lastEcu = now;
+            scanStep = S_PROTO;
+            return;
+        }
+
+        case S_PROTO:
+            scanProto = elmProtocol(rx);
+            devlogf(id, "Scan protocol: %s", elmProtocolName(scanProto));
+            scanAdd(" | Protokoll %c %s", scanProto ? scanProto : '?', elmProtocolName(scanProto));
+            scanStep = S_MASKS;
+            scanBase = 0;
+            return;
+
+        case S_MASKS: {
+            devlogf(id, "Scan 01%02X: %s", scanBase, t[0] ? t : "(empty)");
+            bool more = false;
+            if (elmProtocolIsCan(scanProto)) {
+                bool ext = scanProto == '7' || scanProto == '9';
+                elmSupportedPerEcu(rx, ext, scanBase, [&](const char* eid, uint32_t m) {
+                    ScanEcu* e = scanEcu(eid);
+                    if (!e) return;
+                    e->mask[scanBase / 32] = m;
+                    if (m & 1) more = true;
+                });
+            } else if (scanBase == 0) {
+                scanAdd(" | 0100: %.100s", t);
+            }
+            if (more && scanBase < 0xA0) {
+                scanBase += 0x20;
+                return;
+            }
+            // Summary: supported PIDs per control unit
+            for (uint8_t i = 0; i < scanEcuCount; i++) {
+                scanAdd(" | %s:", scanEcus[i].id);
+                for (unsigned pid = 1; pid <= 0xC0; pid++) {
+                    if (obdPidInMask(scanEcus[i].mask, OBD_MASK_WORDS, (uint8_t)pid)) scanAdd(" %02X", pid);
+                }
+            }
+            if (!scanEcuCount && elmProtocolIsCan(scanProto)) scanAdd(" | keine Steuergeräte erkannt");
+            scanStep = S_VALUES;
+            scanValIdx = 0;
+            return;
+        }
+
+        case S_VALUES:
+            devlogf(id, "Scan 01%02X: %s", SCAN_PIDS[scanValIdx], t[0] ? t : "(empty)");
+            scanAdd(" | 01%02X: %.120s", SCAN_PIDS[scanValIdx], t[0] ? t : "-");
+            scanValIdx++;
+            return;
+
+        case S_END:
+            scanFinish(now);
+            return;
+        }
+    }
+
+    void scanFinish(unsigned long now) {
+        uint8_t count = scanEcuCount;
+        free(scanEcus);
+        scanEcus = nullptr;
+        scanEcuCount = 0;
+        phase = P_IDLE;   // normal operation again, starting with a fresh probe
+        idleSince = now;
+        lastProbe = 0;
+        if (!scanFailed) {
+            snprintf(scanState, sizeof(scanState), "fertig, %u Steuergerät(e), Bericht unter obd/scan",
+                     (unsigned)count);
+        }
+        // The report in parts (one log line holds at most 720 characters)
+        for (size_t o = 0, part = 1; o < scanLen; o += 600, part++) {
+            devlogf(id, "Scan report %u: %.600s", (unsigned)part, scanReport + o);
+        }
+        scanPublish = true;
+        updates++;
     }
 
     // Probe done: store the supported PIDs and update Home Assistant if they changed

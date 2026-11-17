@@ -100,7 +100,9 @@ Allgemein:
 - **Heizbus:** nur RX anschließen, TX bleibt frei. **Kein Master-Widerstand** – Master ist das Alde-Bedienteil. Das Bedienteil muss angeschlossen bleiben, ohne es ist auf dem Bus Ruhe. LIN, Masse und 12 V kommen über das RJ12-Kabel.
 - **Bedienteil-Bus:** RX und TX anschließen. Hier ist der ESP Master, also **Master-Widerstand 1 kΩ mit Diode von 12 V auf LIN** (bei vielen TJA1020-Modulen eine Lötbrücke oder ein Jumper).
 
-Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse). Wo der Anschluss an der 3020 und der 3030 sitzt und ob dafür im Service-Menü „third party panel“ eingeschaltet werden muss, ist noch offen – das Bedienteil meldet „third party panel C fail“, solange es dort niemanden findet. **Wer das an einer 3020 oder 3030 ausprobiert, bitte melden.**
+Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse), der Heizbus liegt dort an der roten Buchse (Pin 4 LIN, Pin 5 12 V, Pin 2 Masse). Im Service-Menü muss nichts freigeschaltet werden: Die Option „Remote Control“ unter *System Configuration* kann aus bleiben. Ist sie an, meldet das Bedienteil eventuell „Remote control missing“ – das ist nur kosmetisch.
+
+**Compact 3020 und 3030:** Wo der Anschluss dort sitzt, ist noch offen. Ein anderes Projekt (ESPHome) meldet, dass das Steuern über denselben Bus an einer Compact 3020 mit einer Zone funktioniert – unabhängig bestätigt ist das nicht. Möglicherweise unterstützen ältere 3020-Bedienteile den Bus noch nicht. **Wer das an einer 3020 oder 3030 ausprobiert, bitte melden** – mit Baujahr und Software-Version des Bedienteils und ob die Steuerung angenommen wurde.
 
 ## Arduino IDE
 

@@ -95,7 +95,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.25"
+#define FW_VERSION            "2.1.26"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -170,6 +170,9 @@
 #define AP_FALLBACK_MS        60000  // AP-only-as-fallback: start the AP after 60 s without WiFi
 #endif
 
+#ifndef MQTT_PUB_CACHE
+#define MQTT_PUB_CACHE        256    // Remembered plugin topics (skip unchanged values between periodic publishes)
+#endif
 #ifndef MQTT_CORE_MS
 #define MQTT_CORE_MS          30000  // Device status / WiFi RSSI publish interval
 #endif

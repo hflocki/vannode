@@ -62,11 +62,53 @@ const char* mqttNodeId() {
 // ============================================================
 // Plugin output
 // ============================================================
+// Change-triggered publishes only send topics whose payload differs from the last
+// published one (e.g. "state" = "Verbunden" is not repeated on every new reading).
+// The periodic publish (publishIntervalMs) and the first publish after a (re)connect
+// send everything, so retained values and Home Assistant stay in sync.
+struct PubCacheEntry {
+    uint32_t key;   // Hash of "<plugin id>/<key>", 0 = free
+    uint32_t val;   // Hash of the last published payload
+};
+static PubCacheEntry pubCache[MQTT_PUB_CACHE];
+
+static uint32_t fnv1a(const char* s, uint32_t h = 2166136261u) {
+    while (*s) {
+        h ^= (uint8_t)*s++;
+        h *= 16777619u;
+    }
+    return h;
+}
+
+// Returns true if the payload must be sent (changed, new or forced) and remembers it
+static bool pubCacheUpdate(const Plugin* p, const char* key, const char* value, bool force) {
+    uint32_t k = fnv1a(key, fnv1a("/", fnv1a(p->id)));
+    if (k == 0) k = 1;
+    uint32_t v = fnv1a(value);
+    size_t start = k % MQTT_PUB_CACHE;
+    for (size_t n = 0; n < MQTT_PUB_CACHE; n++) {
+        PubCacheEntry& e = pubCache[(start + n) % MQTT_PUB_CACHE];
+        if (e.key == k) {
+            if (!force && e.val == v) return false;
+            e.val = v;
+            return true;
+        }
+        if (e.key == 0) {
+            e.key = k;
+            e.val = v;
+            return true;
+        }
+    }
+    return true;   // Cache full: always send
+}
+
 class PluginOut : public MqttOut {
 public:
-    explicit PluginOut(Plugin* p) : plugin(p) {}
+    PluginOut(Plugin* p, bool all) : plugin(p), force(all) {}
     void text(const char* key, const char* value) override {
-        mqtt.publish(pluginTopic(plugin, key).c_str(), value ? value : "", true);
+        if (!value) value = "";
+        if (!pubCacheUpdate(plugin, key, value, force)) return;
+        mqtt.publish(pluginTopic(plugin, key).c_str(), value, true);
     }
     void num(const char* key, float value, int decimals) override {
         if (isnan(value)) return;
@@ -81,11 +123,13 @@ public:
     }
 private:
     Plugin* plugin;
+    bool force;
 };
 
-static void publishPlugin(Plugin* p) {
-    mqtt.publish(pluginTopic(p, "available").c_str(), p->available() ? "online" : "offline", true);
-    PluginOut out(p);
+// all = true: periodic / first publish, sends every topic; false: only changed topics
+static void publishPlugin(Plugin* p, bool all) {
+    PluginOut out(p, all);
+    out.text("available", p->available() ? "online" : "offline");
     p->publish(out);
 }
 
@@ -395,11 +439,14 @@ void mqttLoop() {
         Plugin* p = pluginAt(i);
         if (!p->enabled || p->removed) continue;
         bool changed = p->updates != lastUpdates[i];
-        if (changed || lastPublish[i] == 0 || millis() - lastPublish[i] > p->publishIntervalMs()) {
-            lastPublish[i] = millis();
-            if (lastPublish[i] == 0) lastPublish[i] = 1;
+        bool due = lastPublish[i] == 0 || millis() - lastPublish[i] > p->publishIntervalMs();
+        if (changed || due) {
+            if (due) {
+                lastPublish[i] = millis();
+                if (lastPublish[i] == 0) lastPublish[i] = 1;
+            }
             lastUpdates[i] = p->updates;
-            publishPlugin(p);
+            publishPlugin(p, due);
         }
     }
 

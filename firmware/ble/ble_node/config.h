@@ -95,7 +95,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.23"
+#define FW_VERSION            "2.1.24"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -539,6 +539,7 @@ struct AppConfig {
     char ap_pass[32];
     int8_t wifi_tx_power;  // TX power in 0.25 dBm steps (see TX_POWER_OPTIONS)
     bool ap_always;        // true = own AP stays on while connected, false = fallback only
+    bool debug;            // web UI shows the debug tab (node status, device logs)
 
     char mqtt_server[64];
     uint16_t mqtt_port;

@@ -366,6 +366,7 @@ nav button .ico{display:inline-flex}
         radio: "M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12v8", wifi: "M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01",
         sliders: "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4",
         sys: "M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4",
+        bug: "M8 8a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0zM12 12v6M4 10h4M16 10h4M4 16h4M16 16h4M9 4l1.5 2M15 4l-1.5 2",
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
@@ -381,6 +382,9 @@ nav button .ico{display:inline-flex}
           ["mqtt", "MQTT", "sliders"],
           ["sys", "System", "sys"],
         ];
+        // Debug tab only with the setting System -> Debug
+        if (CFG.core && CFG.core.debug) t.push(["dbg", "Debug", "bug"]);
+        else if (tab == "dbg") tab = "sys";
         $("#nav").replaceChildren(
           ...t.map(([k, l, ico]) =>
             el(
@@ -431,6 +435,7 @@ nav button .ico{display:inline-flex}
         else if (tab == "ble") renderBle();
         else if (tab == "wifi") renderWifi();
         else if (tab == "mqtt") renderMqtt();
+        else if (tab == "dbg") renderDebug();
         else renderSys();
       }
 
@@ -1385,6 +1390,138 @@ nav button .ico{display:inline-flex}
           ),
         );
       }
+      // ---------------- Debug ----------------
+      let dbgTimer = null,
+        dbgId = null;
+      function renderDebug() {
+        const L = LIVE || {};
+        const two = (n) => String(n).padStart(2, "0");
+        const stamp = () => {
+          const d = new Date();
+          return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + "_" + two(d.getHours()) + "-" + two(d.getMinutes());
+        };
+        const save = (name, text) => {
+          const a = el("a", { href: URL.createObjectURL(new Blob([text], { type: "text/plain" })), download: name });
+          document.body.append(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        };
+        const fetchLog = async (id) => {
+          const r = await fetch("/api/log?id=" + encodeURIComponent(id), { cache: "no-store" });
+          if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+          return r.text();
+        };
+        const plugins = CFG.plugins.filter((p) => !p.removed && !p.pending);
+        // Node
+        const node = el("table");
+        const fillNode = () => {
+          const l = LIVE || {};
+          node.replaceChildren(
+            ...[
+              ["Firmware", CFG.version],
+              ["Laufzeit", l.uptime != null ? Math.floor(l.uptime / 3600) + " h " + Math.floor((l.uptime % 3600) / 60) + " min" : "–"],
+              ["Freier Speicher", l.heap != null ? Math.round(l.heap / 1024) + " kB" : "–"],
+              ["Speicher minimal / größter Block", l.heap_min != null ? Math.round(l.heap_min / 1024) + " kB / " + Math.round(l.heap_block / 1024) + " kB" : "–"],
+              ["BLE-Advertisements", l.ble ? l.ble.adv : "–"],
+              ["BLE-Suche", l.ble ? (l.ble.scanning ? "läuft" : "aus") : "–"],
+              ["WLAN-Signal", l.rssi ? l.rssi + " dBm" : "–"],
+              ["MQTT", l.mqtt ? "verbunden" : "getrennt"],
+            ].map((r) => el("tr", {}, el("td", {}, r[0]), el("td", {}, String(r[1])))),
+          );
+        };
+        fillNode();
+        // Devices: state as the live data reports it
+        const devs = el("table");
+        const fillDevs = () => {
+          const lp = (LIVE && LIVE.plugins) || [];
+          devs.replaceChildren(
+            ...plugins.map((p) => {
+              const x = lp.find((y) => y.id == p.id) || {};
+              const st = !p.cfg.enabled ? "aus" : x.state || "–";
+              return el("tr", {}, el("td", {}, (p.cfg.name || p.id) + " (" + p.type + ")"), el("td", { style: "color:var(--" + (x.ok ? "success" : "warning") + ")" }, st));
+            }),
+          );
+        };
+        fillDevs();
+        // Log of one device
+        if (!plugins.some((p) => p.id == dbgId)) dbgId = plugins.length ? plugins[0].id : null;
+        const sel = el("select", {}, ...plugins.map((p) => el("option", { value: p.id, textContent: (p.cfg.name || p.id) + " (" + p.type + ")", selected: p.id == dbgId })));
+        const pre = el("pre", { style: "max-height:50vh;overflow:auto;font-size:.72rem;line-height:1.35;white-space:pre-wrap;word-break:break-all;margin:10px 0 0;background:var(--bg);border:1px solid var(--cm-line2);border-radius:8px;padding:8px" }, "Lade …");
+        const auto = el("input", { type: "checkbox", checked: true });
+        const show = async (scroll) => {
+          if (!dbgId) { pre.textContent = "Keine Geräte."; return; }
+          try {
+            const t = await fetchLog(dbgId);
+            const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+            pre.textContent = t;
+            if (scroll || atEnd) pre.scrollTop = pre.scrollHeight;
+          } catch (e) {
+            pre.textContent = e.message;
+          }
+        };
+        sel.addEventListener("change", () => { dbgId = sel.value; show(true); });
+        const one = async () => {
+          try {
+            const p = plugins.find((x) => x.id == dbgId);
+            const live = LIVE && LIVE.plugins ? LIVE.plugins.find((x) => x.id == dbgId) : null;
+            save(CFG.device + "_" + dbgId + "_" + stamp() + ".log",
+                 "# Download " + new Date().toLocaleString("de-DE") + "\n# Live " + JSON.stringify(live || {}) + "\n" + (await fetchLog(p.id)));
+          } catch (e) { toast(e.message, true); }
+        };
+        const all = async () => {
+          try {
+            let text = "# " + CFG.device + " " + CFG.version + " – alle Geräte-Logs\n# Download " + new Date().toLocaleString("de-DE") +
+              "\n# Node " + JSON.stringify({ uptime: (LIVE || {}).uptime, heap: (LIVE || {}).heap, heap_min: (LIVE || {}).heap_min, ble: (LIVE || {}).ble }) + "\n";
+            for (const p of plugins) {
+              const live = LIVE && LIVE.plugins ? LIVE.plugins.find((x) => x.id == p.id) : null;
+              text += "\n\n######## " + (p.cfg.name || p.id) + " (" + p.type + ")\n# Live " + JSON.stringify(live || {}) + "\n";
+              try { text += await fetchLog(p.id); } catch (e) { text += "(" + e.message + ")\n"; }
+            }
+            save(CFG.device + "_alle_" + stamp() + ".log", text);
+          } catch (e) { toast(e.message, true); }
+        };
+        const clear = async () => {
+          try {
+            const r = await fetch("/api/log/clear?id=" + encodeURIComponent(dbgId), { method: "POST" });
+            if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+            toast("Log geleert");
+            show(true);
+          } catch (e) { toast(e.message, true); }
+        };
+        $("#main").append(
+          el("div", { className: "card" }, el("h2", {}, "Node"), node),
+          el("div", { className: "card" }, el("h2", {}, "Geräte"), devs),
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Log"),
+            sel,
+            pre,
+            el("label", { style: "display:flex;gap:8px;align-items:center;margin-top:8px" }, auto, "Automatisch aktualisieren (alle 3 s)"),
+            el("small", { className: "mute", style: "display:block;margin-top:6px" },
+              "Verbindung, Kopplung, Bluetooth-Dienste und empfangene Daten je Gerät. Wird bei einem Neustart gelöscht."),
+            el(
+              "div",
+              { style: "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" },
+              el("button", { className: "b", textContent: "Aktualisieren", on: { click: () => show(true) } }),
+              el("button", { className: "b", textContent: "Herunterladen", on: { click: one } }),
+              el("button", { className: "b", textContent: "Alle herunterladen", on: { click: all } }),
+              el("button", { className: "b s", textContent: "Leeren", on: { click: clear } }),
+            ),
+          ),
+        );
+        show(true);
+        clearInterval(dbgTimer);
+        dbgTimer = setInterval(() => {
+          if (tab != "dbg") { clearInterval(dbgTimer); dbgTimer = null; return; }
+          if (document.hidden) return;
+          fillNode();
+          fillDevs();
+          if (auto.checked) show(false);
+        }, 3000);
+      }
+
       function renderSys() {
         const c = CFG.core,
           L = LIVE || {};
@@ -1410,6 +1547,37 @@ nav button .ico{display:inline-flex}
               textContent: "Speichern",
               on: { click: saveCore(box) },
             }),
+          ),
+        );
+        // Debug tab on / off (web UI only, no restart)
+        const dbg = el("input", { type: "checkbox", checked: !!c.debug });
+        dbg.addEventListener("change", async () => {
+          try {
+            await api("/api/config", { core: { debug: dbg.checked } });
+            toast(dbg.checked ? "Debug an" : "Debug aus");
+            await load();
+          } catch (e) {
+            dbg.checked = !dbg.checked;
+            toast(e.message, true);
+          }
+        });
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Debug"),
+            el(
+              "label",
+              { style: "display:flex;gap:8px;align-items:center" },
+              dbg,
+              "Debug-Reiter anzeigen",
+            ),
+            el(
+              "small",
+              { className: "mute", style: "display:block;margin-top:6px" },
+              "Blendet den Reiter Debug ein: Zustand des Nodes, aller Geräte und die Logs aller Geräte " +
+                "mit Live-Ansicht und Download. Bleibt nach einem Neustart eingeschaltet.",
+            ),
           ),
         );
         // Firmware / web page update with checks (fwInspect) and the event log

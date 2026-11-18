@@ -48,6 +48,7 @@ struct Settings {
 
   uint8_t log_level = 2;       // 0=error .. 3=debug
   uint8_t mqtt_log_level = 1;  // lines up to this level go to <base>/log, 4 = off
+  bool debug_tab = false;      // web UI shows the debug tab (LIN status, sniffer, log)
 };
 
 extern Settings g_settings;

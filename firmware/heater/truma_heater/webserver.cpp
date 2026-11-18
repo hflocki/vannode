@@ -189,7 +189,13 @@ static void handle_command(const WebCommand &c) {
   else if (a == "timer") heater::set_timer(v);
   else if (a == "sniffer") heater::set_sniffer(v == "1");
   else if (a == "rawdump") heater::set_raw_dump(v == "1");
-  else if (a == "log_level") {
+  else if (a == "debug") {
+    g_settings.debug_tab = v == "1";
+    Preferences p;
+    p.begin("truma", false);
+    p.putBool("dbgtab", g_settings.debug_tab);
+    p.end();
+  } else if (a == "log_level") {
     uint8_t lvl = constrain(v.toInt(), 0, 3);
     g_settings.log_level = lvl;
     log_set_level((LogLevel) lvl);
@@ -225,6 +231,7 @@ static void config_json(AsyncWebServerRequest *req) {
   doc["web_user"] = g_settings.web_user;
   doc["log_level"] = (uint8_t) log_get_level();
   doc["mqtt_log_level"] = g_settings.mqtt_log_level;
+  doc["debug"] = g_settings.debug_tab;
   String out;
   serializeJson(doc, out);
   req->send(200, "application/json", out);

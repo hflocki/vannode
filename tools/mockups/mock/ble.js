@@ -21,7 +21,7 @@ const M = {
     version: '2.1.21', device: 'tool-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_tool',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/tool',
-           web_user: '', web_pass_set: false, node_name: 'tool-node'},
+           web_user: '', web_pass_set: false, node_name: 'tool-node', debug: true},
     plugins: [
       // devices with a Bluetooth connection
       P('rvtech', 'rvtech', 'Dachhaube RV Tech', 2, {name: 'Dachhaube', mac: MAC(1), pin: '', pos_rain: 12, pos_vent: 0, pos_fav: 0}),
@@ -198,7 +198,9 @@ const M = {
       return {status: 'ok'};
     }
     if (path === '/api/log') {
-      return '# Beispiel-Log (Mockup)\n0:00:05.120 State: Verbinde\n0:00:05.880 Connected, MTU 247, 1 subscription(s)\n';
+      const t = Math.floor((Date.now() - M.t0) / 1000);
+      return '# Beispiel-Log (Mockup)\n# Time stamps below: uptime h:mm:ss.mmm\n\n0:00:05.120 State: Verbinde\n0:00:05.880 Connected, MTU 247, 1 subscription(s)\n' +
+        '0:00:06.010 Notify 0xFFE1: 5A 01 64 00 00\n0:00:' + String(6 + t % 50).padStart(2, '0') + '.400 Values updated\n';
     }
     if (path === '/api/log/clear') return { ok: true };
     if (path === '/api/scan') {

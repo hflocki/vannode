@@ -185,6 +185,8 @@ Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fie
 
 **Ohne USB-Kabel:** Jedes verbindende Gerät (Dachhaube, Pumpe, Kühlschrank, Batterien per Verbindung) hat auf seiner Seite unter *Geräte* eine Karte **Log** mit „Log herunterladen“ und „Log leeren“. Darin stehen dieselben Zeilen wie im seriellen Monitor (Verbindung, Kopplung, GATT-Tabelle, empfangene Daten), bis 8 kB je Gerät, seit dem letzten Neustart. Bei Problemen: Log leeren, Fehler abwarten, herunterladen und schicken.
 
+**Reiter Debug** (einschalten unter *System → Debug*, ohne Neustart): Zustand des Nodes (Speicher, BLE-Advertisements, WLAN, MQTT), Zustand aller Geräte und das Log jedes Geräts in einem Fenster, das alle 3 s mitläuft. **Herunterladen** speichert das Log des gewählten Geräts, **Alle herunterladen** alle Geräte-Logs in einer Datei – das ist die einfachste Art, einem Entwickler alles auf einmal zu schicken.
+
 Für eine Fehlermeldung den Monitor vom Einschalten an mitschneiden, bis das Problem auftritt (beim Kühlschrank mindestens 3 Minuten). Dort stehen u. a. Verbindungsaufbau und Trennungsgrund (`Reason 0x…`), das Ergebnis der Kopplung (`Security: …`), alle Dienste des Geräts (`GATT table:`) und die ersten empfangenen Pakete (`RX … bytes`). Den Log als Text schicken, MAC-Adressen dürfen geschwärzt werden.
 
 ## Sicheres Update, Ereignisse und Rückfall

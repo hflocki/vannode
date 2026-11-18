@@ -53,6 +53,7 @@ static void coreFromFile(JsonDocument& doc) {
     int tx = doc["wifi_tx_power"] | DEFAULT_TX_POWER;
     config.wifi_tx_power = isValidTxPower(tx) ? (int8_t)tx : DEFAULT_TX_POWER;
     config.ap_always = doc["ap_always"] | DEFAULT_AP_ALWAYS;
+    config.debug = doc["debug"] | false;
     strlcpy(config.mqtt_server, doc["mqtt_server"] | DEFAULT_MQTT_SERVER,   sizeof(config.mqtt_server));
     config.mqtt_port = doc["mqtt_port"] | DEFAULT_MQTT_PORT;
     strlcpy(config.mqtt_user,   doc["mqtt_user"]   | DEFAULT_MQTT_USER,     sizeof(config.mqtt_user));
@@ -79,6 +80,7 @@ static void coreToFile(JsonDocument& doc) {
     doc["ap_pass"] = (const char*)config.ap_pass;
     doc["wifi_tx_power"] = config.wifi_tx_power;
     doc["ap_always"] = config.ap_always;
+    doc["debug"] = config.debug;
     doc["mqtt_server"] = (const char*)config.mqtt_server;
     doc["mqtt_port"] = config.mqtt_port;
     doc["mqtt_user"] = (const char*)config.mqtt_user;
@@ -96,6 +98,7 @@ void coreConfigToJson(JsonObject o) {
     o["ap_ssid"] = (const char*)config.ap_ssid;
     o["wifi_tx_power"] = config.wifi_tx_power;
     o["ap_always"] = config.ap_always;
+    o["debug"] = config.debug;
     o["mqtt_server"] = (const char*)config.mqtt_server;
     o["mqtt_port"] = config.mqtt_port;
     o["mqtt_user"] = (const char*)config.mqtt_user;
@@ -178,6 +181,7 @@ void coreConfigApply(JsonObjectConst in) {
     if (!in["mqtt_port"].isNull()) config.mqtt_port = in["mqtt_port"] | DEFAULT_MQTT_PORT;
     if (!in["wifi_tx_power"].isNull()) config.wifi_tx_power = (int8_t)(in["wifi_tx_power"] | DEFAULT_TX_POWER);
     if (in["ap_always"].is<bool>()) config.ap_always = in["ap_always"].as<bool>();
+    if (in["debug"].is<bool>()) config.debug = in["debug"].as<bool>();   // web UI only, no restart
     // Web login: empty user removes the login; empty password keeps the old one
     if (in["web_user"].is<const char*>()) {
         applyStr(in, "web_user", config.web_user, sizeof(config.web_user), false);

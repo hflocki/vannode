@@ -20,7 +20,7 @@ const S={system:{fw:"1.2.0",ip:"192.168.1.50",rssi:-61,ap:false,wifi:true,mqtt:t
  heater:{valid:true,room:17.4,water:14,target_room:21,water_mode:"off",heating_mode:"eco",energy_mix:"gas",energy:"gas",status:7,status_text:"on",error:0,on:true,action:"heating",vent:0,setpoint:21,fan:"eco"},
  decoke:{active:false,remaining:0,minutes:30},model:null,
  timer:"off",timer_cfg:{active:false,start:"22:00",stop:"06:30",temp:20,fan:"eco",water:"off"},cpplus_clock:"12:00"};
-const CFG={ssid:"MeinWLAN",hostname:"heater-node",static_ip:"",gateway:"",subnet:"",dns:"",mqtt_host:"192.168.1.10",mqtt_port:1883,mqtt_user:"",mqtt_base:"camper/heater",ha_discovery:true,ha_prefix:"homeassistant",ntp_server:"pool.ntp.org",tz:"CET-1CEST,M3.5.0,M10.5.0/3",web_user:"",log_level:2,mqtt_log_level:1,ap_ssid:"heater-node-A1B2",ap_always:false,wifi_tx_power:34};
+const CFG={ssid:"MeinWLAN",hostname:"heater-node",static_ip:"",gateway:"",subnet:"",dns:"",mqtt_host:"192.168.1.10",mqtt_port:1883,mqtt_user:"",mqtt_base:"camper/heater",ha_discovery:true,ha_prefix:"homeassistant",ntp_server:"pool.ntp.org",tz:"CET-1CEST,M3.5.0,M10.5.0/3",web_user:"",log_level:2,debug:true,mqtt_log_level:1,ap_ssid:"heater-node-A1B2",ap_always:false,wifi_tx_power:34};
 let logs=[],logN=0;function log(l,m){const d=new Date();logs.push(d.toTimeString().slice(0,8)+' ['+l+'] '+m)}
 log('I','heater-node 1.2.0 on Heater Node (ESP32-C3 Super Mini)');log('I','CP Plus assigned node address 0x03');log('I','Heater status received');
 function tick(){const h=S.heater,up=(Date.now()-t0)/1000;S.system.uptime=Math.floor(86400+up);S.lin.frames=Math.floor(4200+up*14);
@@ -51,7 +51,8 @@ function cmd(a,v){const h=S.heater;log('I','Command '+a+' = '+v);
  else if(a==='decoke_minutes')S.decoke.minutes=+v;
  else if(a==='timer'){if(v==='off'){S.timer_cfg.active=false;S.timer='off'}else{const m=v.match(/^(\d\d:\d\d)-(\d\d:\d\d),?([\d.]*),?(\w*),?(\w*)/);if(m){Object.assign(S.timer_cfg,{active:true,start:m[1],stop:m[2],temp:+m[3]||20,fan:m[4]||'eco',water:m[5]||S.timer_cfg.water});S.timer=m[1]+'-'+m[2]}}}
  else if(a==='sniffer'){S.lin.sniffer=v==='1';log('I','Sniffer '+(S.lin.sniffer?'on':'off'));if(S.lin.sniffer){['03: 86 0B FF FF FF FF FF FF','04: AA 0A FF FF FF FF FF FF','07: 01 00 FF FF FF FF FF FF','20: 00 00 00 00 00 B0 00 00'].forEach(x=>log('W','SNIFF PID '+x))}}
- else if(a==='log_level')CFG.log_level=+v;}
+ else if(a==='log_level')CFG.log_level=+v;
+ else if(a==='debug')CFG.debug=v==='1';}
 const J=o=>new Response(JSON.stringify(o),{status:200,headers:{'Content-Type':'application/json'}});
 window.fetch=async(url,opt)=>{const u=String(url);
  if(u.startsWith('/api/state'))return J(S);

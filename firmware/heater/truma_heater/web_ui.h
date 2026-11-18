@@ -225,6 +225,7 @@ nav button .ico{display:inline-flex}
   <div class="tab" data-tab="mqtt"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg></span><span>MQTT</span></div>
   <div class="tab" data-tab="wifi"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></svg></span><span>WiFi</span></div>
   <div class="tab" data-tab="sys"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg></span><span>System</span></div>
+  <div class="tab" data-tab="dbg" id="tab-btn-dbg" style="display:none"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0zM12 12v6M4 10h4M16 10h4M4 16h4M16 16h4M9 4l1.5 2M15 4l-1.5 2"/></svg></span><span>Debug</span></div>
 </div>
 
 <div class="page on" id="tab-heat">
@@ -357,6 +358,39 @@ nav button .ico{display:inline-flex}
     <div class="info"><span>Vom CP Plus erkannt</span><span id="s-det">--</span></div>
     <div class="hint" id="s-mism"></div>
   </div>
+  <div class="card" id="f-sys">
+    <div class="ct">Zeit &amp; Zugriff</div>
+    <div class="cols">
+      <div class="fg"><label>NTP-Server</label><input data-cfg="ntp_server"></div>
+      <div class="fg"><label>Zeitzone (POSIX)</label><input data-cfg="tz"></div>
+      <div class="fg"><label>Web-Benutzer (leer = offen)</label><input data-cfg="web_user"></div>
+      <div class="fg"><label>Web-Passwort</label><input data-cfg="web_pass" type="password" placeholder="(unverändert)" autocomplete="new-password"></div>
+    </div>
+    <div class="sw"><span class="t">Web-Login entfernen</span><label class="toggle"><input type="checkbox" data-cfg="clear_web_pass"><span></span></label></div>
+    <div class="btns"><button class="btn save" data-save="f-sys">💾 Speichern</button></div>
+  </div>
+  <div class="card">
+    <div class="ct">Debug</div>
+    <div class="sw"><div><div class="t">Debug-Reiter anzeigen</div><div class="hint">Blendet den Reiter <b>Debug</b> ein: LIN-Bus-Status, Sniffer, Rohdaten und das Log-Fenster mit Download. Bleibt nach einem Neustart eingeschaltet.</div></div>
+      <label class="toggle"><input type="checkbox" id="dbgtab"><span></span></label></div>
+  </div>
+  <div class="card">
+    <div class="ct">Firmware-Update</div>
+    <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
+    <div class="sub" style="margin:0 0 8px">Die <code>.bin</code> aus dem Release (<code>heater-node-esp32c3-v….bin</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>truma_heater.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>). Die Datei wird vor dem Hochladen geprüft.</div>
+    <input type="file" id="fwu-file" accept=".bin" onchange="fwChosen(false)">
+    <div class="fwu-chk" id="fwu-chk"></div>
+    <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()">Ohne Kennung hochladen</label>
+    <progress id="fwu-pr" value="0" max="100" style="width:100%;display:none"></progress>
+    <div class="row"><button class="btn primary" id="fwu-btn" disabled onclick="fwUpload('firmware',(m,e)=>setTxt('up-status',m))">⬆️ Hochladen</button><span class="sub" id="up-status"></span></div>
+  </div>
+  <div class="card">
+    <div class="ct">Ereignisse</div>
+    <div class="fwu-log" id="fwu-log">Lade …</div>
+    <div class="sub" style="margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall. Der ausführliche Verlauf steht im Reiter Debug unter „Log“ (Schalter oben).</div>
+  </div>
+</div>
+<div class="page" id="tab-dbg">
   <div class="card">
     <div class="ct">LIN-Bus</div>
     <div class="info"><span>LIN-Verkehr</span><span id="s-traffic">--</span></div>
@@ -373,41 +407,15 @@ nav button .ico{display:inline-flex}
       <label class="toggle"><input type="checkbox" id="rawd"><span></span></label></div>
     <div class="hint">Anmeldung am CP Plus: Einstellungen → RESET → PR SET. Danach steht im INDEX-Menü ein dritter Eintrag T23.70.0. Eine echte iNet Box darf nicht gleichzeitig am Bus hängen.</div>
   </div>
-  <div class="card" id="f-sys">
-    <div class="ct">Zeit &amp; Zugriff</div>
-    <div class="cols">
-      <div class="fg"><label>NTP-Server</label><input data-cfg="ntp_server"></div>
-      <div class="fg"><label>Zeitzone (POSIX)</label><input data-cfg="tz"></div>
-      <div class="fg"><label>Web-Benutzer (leer = offen)</label><input data-cfg="web_user"></div>
-      <div class="fg"><label>Web-Passwort</label><input data-cfg="web_pass" type="password" placeholder="(unverändert)" autocomplete="new-password"></div>
-    </div>
-    <div class="sw"><span class="t">Web-Login entfernen</span><label class="toggle"><input type="checkbox" data-cfg="clear_web_pass"><span></span></label></div>
-    <div class="btns"><button class="btn save" data-save="f-sys">💾 Speichern</button></div>
-  </div>
-  <div class="card">
-    <div class="ct">Firmware-Update</div>
-    <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
-    <div class="sub" style="margin:0 0 8px">Die <code>.bin</code> aus dem Release (<code>heater-node-esp32c3-v….bin</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>truma_heater.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>). Die Datei wird vor dem Hochladen geprüft.</div>
-    <input type="file" id="fwu-file" accept=".bin" onchange="fwChosen(false)">
-    <div class="fwu-chk" id="fwu-chk"></div>
-    <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()">Ohne Kennung hochladen</label>
-    <progress id="fwu-pr" value="0" max="100" style="width:100%;display:none"></progress>
-    <div class="row"><button class="btn primary" id="fwu-btn" disabled onclick="fwUpload('firmware',(m,e)=>setTxt('up-status',m))">⬆️ Hochladen</button><span class="sub" id="up-status"></span></div>
-  </div>
-  <div class="card">
-    <div class="ct">Ereignisse</div>
-    <div class="fwu-log" id="fwu-log">Lade …</div>
-    <div class="sub" style="margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall. Der ausführliche Verlauf steht unter „Log“.</div>
-  </div>
   <div class="card">
     <div class="ct">Log</div>
     <div class="row" style="margin-top:0">
       <select class="inl" id="loglvl"><option value="0">Fehler</option><option value="1">Warnung</option><option value="2">Info</option><option value="3">Debug</option></select>
       <span class="sub">Live</span><label class="toggle"><input type="checkbox" id="loglive" checked><span></span></label>
-      <button class="btn" id="logclear">Leeren</button><button class="btn" id="logsave">Speichern</button>
+      <button class="btn" id="logclear">Leeren</button><button class="btn" id="logsave">Herunterladen</button>
     </div>
     <pre id="log"></pre>
-    <div class="hint">Läuft mit, solange dieser Reiter offen ist. Ohne USB nutzbar – auch per MQTT unter <code id="logtopic">camper/heater/log</code>.</div>
+    <div class="hint">Läuft mit, solange dieser Reiter offen ist. „Herunterladen“ speichert das Log mit Version, Einstellungen (ohne Zugangsdaten) und LIN-Status als <code>.log</code>-Datei. Ohne USB nutzbar – auch per MQTT unter <code id="logtopic">camper/heater/log</code>.</div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -482,11 +490,13 @@ let logNext=0,logLines=[],logTimer=null;
 async function loadLog(){try{const r=await fetch('/api/log?since='+logNext);const j=await r.json();logNext=j.next;
   if(j.lines){const el=$('log'),atEnd=el.scrollTop+el.clientHeight>=el.scrollHeight-20;
     logLines=logLines.concat(j.lines.replace(/\n$/,'').split('\n')).slice(-400);el.textContent=logLines.join('\n');if(atEnd)el.scrollTop=1e9}}catch(e){}}
-function logLive(){clearInterval(logTimer);logTimer=null;if($('loglive').checked&&$('tab-sys').classList.contains('on'))logTimer=setInterval(loadLog,2000)}
+function logLive(){clearInterval(logTimer);logTimer=null;if($('loglive').checked&&$('tab-dbg').classList.contains('on'))logTimer=setInterval(loadLog,2000)}
+// Debug tab: only with the setting "Debug-Reiter anzeigen" (System)
+function dbgShow(on){const b=$('tab-btn-dbg');b.style.display=on?'':'none';if(!on&&b.classList.contains('on'))document.querySelector('.tab[data-tab=sys]').click()}
 async function loadCfg(){const r=await fetch('/api/config');const c=await r.json();
   document.querySelectorAll('[data-cfg]').forEach(e=>{const v=c[e.dataset.cfg];if(e.type==='password')return;
     if(e.type==='checkbox')e.checked=!!v;else if(v!==undefined)e.value=v});
-  $('loglvl').value=c.log_level;setTxt('logtopic',c.mqtt_base+'/log');setTxt('w-mdns',(c.hostname||'heater-node')+'.local')}
+  $('loglvl').value=c.log_level;$('dbgtab').checked=!!c.debug;dbgShow(!!c.debug);setTxt('logtopic',c.mqtt_base+'/log');setTxt('w-mdns',(c.hostname||'heater-node')+'.local')}
 // Each tab saves only its own fields. Empty password fields keep the stored value. The device restarts.
 async function save(id,btn){const p=new URLSearchParams();
   for(const e of $(id).querySelectorAll('[data-cfg]')){const k=e.dataset.cfg;
@@ -497,7 +507,7 @@ async function save(id,btn){const p=new URLSearchParams();
   catch(e){toast('Fehler beim Speichern');btn.disabled=false}}
 document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>save(b.dataset.save,b));
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
-  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t.dataset.tab));if(t.dataset.tab==='sys')loadLog();logLive()});
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t.dataset.tab));if(t.dataset.tab==='dbg')loadLog();logLive()});
 $('room-on').onchange=e=>cmd('room_on',e.target.checked?'1':'0');
 document.querySelectorAll('#seg-energy button,#seg-energy2 button').forEach(b=>b.onclick=()=>cmd('energy',b.dataset.v));
 $('model').onchange=e=>{cmd('model',e.target.value);fanKey='';toast('Modell übernommen')};
@@ -516,7 +526,16 @@ $('sync').onclick=()=>{cmd('sync_clock');toast('Uhrzeit wird gesendet')};
 $('reboot').onclick=e=>ask(e.target,'Wirklich neu starten? Nochmal tippen',async()=>{await fetch('/api/reboot',{method:'POST'});toast('Neustart …')});
 $('loglive').onchange=logLive;
 $('logclear').onclick=()=>{logLines=[];$('log').textContent=''};
-$('logsave').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([logLines.join('\n')],{type:'text/plain'}));a.download='heater-node-log.txt';a.click()};
+$('logsave').onclick=async()=>{
+  const get=async u=>{try{return await (await fetch(u,{cache:'no-store'})).json()}catch(e){return {}}};
+  const c=await get('/api/config'),sy=await get('/api/system');
+  for(const k of Object.keys(c))if(/pass|ssid|user|host|ip|gateway|subnet|dns|ntp/i.test(k))delete c[k];   // nothing personal in the file
+  const two=n=>String(n).padStart(2,'0'),d=new Date();
+  const head='# Heater Node '+((sy.fw||{}).ver||'')+' – Log\n# Download '+d.toLocaleString('de-DE')+'\n# Einstellungen '+JSON.stringify(c)+'\n# LIN '+JSON.stringify(st&&st.lin||{})+'\n\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([head+logLines.join('\n')+'\n'],{type:'text/plain'}));
+  a.download='heater-node_'+d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())+'_'+two(d.getHours())+'-'+two(d.getMinutes())+'.log';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)};
+$('dbgtab').onchange=e=>{cmd('debug',e.target.checked?'1':'0');dbgShow(e.target.checked)};
 $('loglvl').onchange=e=>cmd('log_level',e.target.value);
 $('sniff').onchange=e=>cmd('sniffer',e.target.checked?'1':'0');
 $('rawd').onchange=e=>cmd('rawdump',e.target.checked?'1':'0');

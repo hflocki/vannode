@@ -49,6 +49,7 @@ void settings_load() {
   g_settings.heater_model = p.getString("model", DEFAULT_HEATER_MODEL);
   g_settings.log_level = p.getUChar("loglvl", 2);
   g_settings.mqtt_log_level = p.getUChar("mloglvl", 1);
+  g_settings.debug_tab = p.getBool("dbgtab", false);
   p.end();
 
   if (g_settings.hostname.isEmpty()) g_settings.hostname = DEFAULT_HOSTNAME;
@@ -91,6 +92,7 @@ void settings_save() {
   p.putString("wwpass", g_settings.web_pass);
   p.putUChar("loglvl", g_settings.log_level);
   p.putUChar("mloglvl", g_settings.mqtt_log_level);
+  p.putBool("dbgtab", g_settings.debug_tab);
   p.end();
   settings_save_heater();
 }

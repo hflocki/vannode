@@ -157,15 +157,15 @@ Problem-Meldungen sind Warnungen und landen ohne Umstellen im Web-Log und im MQT
 
 Zum Erforschen des Busses: Der Sniffer schreibt jeden Frame der übrigen PIDs (alles außer dem iNet-Box-Verkehr 0x18/0x3C/0x3D) ins Log, aber nur, wenn sich sein Inhalt ändert. Nach dem Einschalten kommt jeder PID einmal. Die Zeilen sind Warnungen (`SNIFF PID 07: 01 00 FF FF FF FF FF FF`), damit sie ohne Umstellen im Web-Log und im MQTT-Log landen.
 
-Einschalten: Weboberfläche → **System → LIN-Sniffer** oder MQTT `set/sniffer` = `ON`. Nach einem Neustart ist er aus.
+Einschalten: Weboberfläche → **Debug → LIN-Sniffer** (den Reiter Debug unter **System → Debug** einblenden) oder MQTT `set/sniffer` = `ON`. Nach einem Neustart ist er aus.
 
 Bekannt aus den WomoLIN-Mitschnitten (CP Plus + Combi D6 E): PID 0x03 Soll-Raumtemperatur, 0x04 Soll-Wassertemperatur, 0x07 Lüfter (`01` eco, `02` high), 0x16 Ist-Werte (ändert sich ständig).
 
-**Lüftungsstufe suchen:** Sniffer an, am CP Plus Lüften Stufe 1 → 5 → 10 → aus schalten, jeweils ~20 s warten und die Uhrzeit notieren. Danach das Log speichern (System → Log → Speichern).
+**Lüftungsstufe suchen:** Sniffer an, am CP Plus Lüften Stufe 1 → 5 → 10 → aus schalten, jeweils ~20 s warten und die Uhrzeit notieren. Danach das Log herunterladen (Debug → Log → Herunterladen).
 
 ## Logs ohne USB
 
-- **Weboberfläche → System → Log:** läuft live mit (alle 2 s), solange der Reiter offen ist. Log-Level wählbar, Ausgabe lässt sich leeren und als Textdatei speichern.
+- **Weboberfläche → Debug → Log** (Reiter Debug unter **System → Debug** einblenden): läuft live mit (alle 2 s), solange der Reiter offen ist. Log-Level wählbar, Ausgabe lässt sich leeren und als `.log`-Datei herunterladen – vorne mit Version, Einstellungen (ohne Zugangsdaten) und LIN-Status.
 - **MQTT:** Logzeilen gehen auf `camper/heater/log` (nicht retained). Standard: Warnungen und Fehler. Einstellbar im Reiter **MQTT → Log per MQTT** (Aus / Fehler / Warnungen / Info / Debug). In Home Assistant erscheint die letzte Meldung als Diagnose-Sensor.
 - **Seriell (115200 Baud):** nur am Schreibtisch, siehe Hinweis zu USB in [HARDWARE.md](HARDWARE.md).
 
@@ -216,7 +216,7 @@ Seit 1.4.0 hat jede Firmware eine Kennung (`CAMPER-FW:heater:<version>:<chip>;`)
 - **Ereignisse:** Die letzten Ereignisse (Start mit Grund, WLAN und MQTT verbunden/getrennt, Uploads mit Ergebnis, Rückfall, gespeicherte Einstellungen) stehen in der Web-Oberfläche. Sie bleiben bei Neustart, Absturz und Update erhalten, nach einem Stromausfall ist das Log leer.
 - **Rückfall nach Update:** Hat eine neue Firmware nach 5 Minuten kein WLAN oder startet sie mehr als dreimal neu, startet wieder die vorherige. Kam das Update über den Setup-AP (ohne WLAN), wird nur auf Neustart-Schleifen geachtet.
 - **WLAN-Änderung mit Rückweg:** Werden die WLAN-Daten geändert, während das Gerät verbunden ist, merkt es sich die funktionierenden. Klappt die Verbindung mit den neuen nach dem Neustart etwa 1 Minute lang nicht, kommen die alten zurück.
-- Der ausführliche Laufzeit-Log (LIN-Verkehr usw.) bleibt unter „Log“; die Ereignisse sind die kurze Liste darüber, die einen Neustart übersteht.
+- Der ausführliche Laufzeit-Log (LIN-Verkehr usw.) steht im Reiter **Debug** unter „Log“; die Ereignisse sind die kurze Liste darüber, die einen Neustart übersteht.
 
 ## Status
 

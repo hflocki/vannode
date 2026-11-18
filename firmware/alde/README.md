@@ -102,7 +102,9 @@ Allgemein:
 
 Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse), der Heizbus liegt dort an der roten Buchse (Pin 4 LIN, Pin 5 12 V, Pin 2 Masse). Im Service-Menü muss nichts freigeschaltet werden: Die Option „Remote Control“ unter *System Configuration* kann aus bleiben. Ist sie an, meldet das Bedienteil eventuell „Remote control missing“ – das ist nur kosmetisch.
 
-**Compact 3020 und 3030:** Wo der Anschluss dort sitzt, ist noch offen. Ein anderes Projekt (ESPHome) meldet, dass das Steuern über denselben Bus an einer Compact 3020 mit einer Zone funktioniert – unabhängig bestätigt ist das nicht. Möglicherweise unterstützen ältere 3020-Bedienteile den Bus noch nicht. **Wer das an einer 3020 oder 3030 ausprobiert, bitte melden** – mit Baujahr und Software-Version des Bedienteils und ob die Steuerung angenommen wurde.
+**3030:** Von einem Nutzer bestätigt: ESP mit **einem** LIN-Modul an der gelben Buchse, ESP als Master, läuft seit Tagen stabil. Das Alde-Bedienteil bleibt angeschlossen und lässt sich weiter ganz normal bedienen.
+
+**Compact 3020:** Ein anderes Projekt (ESPHome) meldet, dass das Steuern über denselben Bus an einer Compact 3020 mit einer Zone funktioniert – unabhängig bestätigt ist das nicht. Möglicherweise unterstützen ältere 3020-Bedienteile den Bus noch nicht. **Wer das an einer 3020 ausprobiert, bitte melden** – mit Baujahr und Software-Version des Bedienteils und ob die Steuerung angenommen wurde.
 
 ## Arduino IDE
 
@@ -157,7 +159,7 @@ Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten
 
 ### Wer ist Master auf dem Bedienteil-Bus? (Mithören)
 
-Laut alde_3030_plus ist auf der gelben Buchse der ESP der Master, und das Bedienteil antwortet nur. Ob das an jeder Heizung so ist, klärt der Modus **„Nur mithören (Diagnose)“**:
+Auf der gelben Buchse ist der ESP der Master, das Bedienteil antwortet nur – so beschreibt es alde_3030_plus, und an einer 3030 ist es in der Praxis bestätigt (Bedienteil bleibt bedienbar). Bei einer Heizung, an der das nicht klappt, klärt der Modus **„Nur mithören (Diagnose)“**:
 
 1. **iNet-Box abstecken**, ESP an die gelbe Buchse, Modus „Nur mithören“, ein paar Minuten laufen lassen und das Bedienteil normal bedienen.
    - Liste bleibt leer, „völlige Ruhe auf dem Bus“ → das Bedienteil wartet auf einen Master: „Nur lesen“ / „Lesen und steuern“ passen.

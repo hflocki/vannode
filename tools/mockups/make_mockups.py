@@ -27,6 +27,8 @@ DEVICES = [
      "firmware/display/camper_display/web/index.html"),
     ("heater", "Truma Heizung", "iNet-Box-Emulation am CP Plus: Heizung, Warmwasser, Timer, Modellauswahl, LIN-Log",
      None),
+    ("alde", "Alde-Heizung", "Compact 3020 / 3030: Heizbus mitlesen, Bedienteil-Bus lesen, steuern oder mithören",
+     "firmware/alde/camper_alde/web/index.html"),
     ("tanklevel", "Tanks", "Frischwasser, Grauwasser und Gasflasche (BLE) mit Kalibrierung",
      "firmware/tanklevel/camper_tanklevel/web/index.html"),
     ("temp", "Temperatur", "DS18B20-Sensoren mit Min/Max und Alarmgrenzen",

@@ -797,6 +797,7 @@ nav button .ico{display:inline-flex}
         // Controls lose focus after a change, so the view never freezes afterwards.
         if (a && g.contains(a) && (a.type == "range" || a.tagName == "SELECT") && Date.now() - ctlTouch < 15000)
           return;
+        if (a && g.contains(a) && a.type == "text") return; // Text being typed: no redraw
         g.replaceChildren(...LIVE.plugins.filter((p) => p.enabled).map(card));
       }
       function card(p) {
@@ -878,6 +879,16 @@ nav button .ico{display:inline-flex}
               ),
             ),
           );
+        // Short history, e.g. the last errors of the fridge
+        if (p.list && p.list.items && p.list.items.length)
+          c.append(
+            el(
+              "details",
+              {},
+              el("summary", {}, p.list.l + " (" + p.list.items.length + ")"),
+              ...p.list.items.map((t) => el("div", { className: "raw" }, t)),
+            ),
+          );
         if (p.ctrl) {
           const box = el("div", { className: "ctl" });
           for (const x of p.ctrl) if (!x.top) box.append(ctrl(p.id, x));
@@ -917,7 +928,28 @@ nav button .ico{display:inline-flex}
           el("button", { className: "b s", textContent: "+", title: "1 °C wärmer", on: { click: () => go(1) } }),
         );
       }
+      const textVal = {}; // last text of text controls, kept over live redraws
       function ctrl(id, x) {
+        if (x.t == "text") {
+          // Free text with a send button (diagnosis)
+          const key = id + "/" + x.k;
+          const i = el("input", { type: "text", value: textVal[key] || "", placeholder: x.ph || "" });
+          i.style.flex = "1";
+          i.style.minWidth = "8em";
+          const send = () => {
+            const v = i.value.trim();
+            if (!v) return;
+            textVal[key] = v;
+            cmd(id, x.k, v);
+            i.blur();
+          };
+          i.addEventListener("keydown", (e) => {
+            if (e.key == "Enter") send();
+          });
+          const d = el("label", {}, x.l + " ", i, el("button", { className: "b s", textContent: "Senden", on: { click: send } }));
+          d.style.flex = "1 1 100%";
+          return d;
+        }
         if (x.t == "switch") {
           const i = el("input", {
             type: "checkbox",

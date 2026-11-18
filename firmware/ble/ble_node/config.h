@@ -95,7 +95,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.24"
+#define FW_VERSION            "2.1.25"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -417,7 +417,16 @@
 #define RVTECH_SEND_WAIT_MS   10000  // A command waits this long for a (re)connection
 #endif
 #ifndef MQTT_RVTECH_MS
-#define MQTT_RVTECH_MS        30000
+#define MQTT_RVTECH_MS        60000  // Periodic publish (changes go out right away)
+#endif
+#ifndef RVTECH_POS_MIN_MS
+#define RVTECH_POS_MIN_MS     2000   // While moving: position published at most every 2 s
+#endif
+#ifndef RVTECH_RSSI_DELTA
+#define RVTECH_RSSI_DELTA     10     // RSSI jump (dB) that triggers an extra publish
+#endif
+#ifndef RVTECH_RSSI_MIN_MS
+#define RVTECH_RSSI_MIN_MS    60000  // ... at most once per minute
 #endif
 
 // ============================================================

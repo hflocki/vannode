@@ -181,9 +181,14 @@ public:
             }
         }
 
-        // Periodic RSSI publish rate limiter
+        // Position changed while moving: publish at most every RVTECH_POS_MIN_MS
+        if (posPending && millis() - lastPosPublish >= RVTECH_POS_MIN_MS) publishPosition();
+
+        // RSSI only triggers an extra publish on a big jump; small changes go out
+        // with the periodic publish (MQTT_RVTECH_MS)
         int rssi = link.connected() ? link.rssi() : advRssi;
-        if (rssi != lastRssi && millis() - lastRssiPublish > 10000) {
+        if (rssi && abs(rssi - lastRssi) >= RVTECH_RSSI_DELTA &&
+            millis() - lastRssiPublish > RVTECH_RSSI_MIN_MS) {
             lastRssi = rssi;
             lastRssiPublish = millis();
             updates++;
@@ -246,6 +251,10 @@ public:
     uint32_t publishIntervalMs() const override { return MQTT_RVTECH_MS; }
 
     void publish(MqttOut& out) override {
+        posPending = false;
+        lastPosPublish = millis();
+        int r = link.connected() ? link.rssi() : advRssi;
+        if (r) lastRssi = r;
         out.text("state", link.state());
         out.onoff("connected", link.connected());
         out.onoff("release", link.released());
@@ -310,6 +319,8 @@ private:
     volatile int advRssi = 0;
     int lastRssi = 0;
     unsigned long lastRssiPublish = 0;
+    bool posPending = false;         // Position changed, publish still due (rate limit)
+    unsigned long lastPosPublish = 0;
 
     int sendValue = -1;
     int lastCmd = -1;                // Last code sent (for stop)
@@ -354,10 +365,25 @@ private:
         return ok;
     }
 
-    void onPosition(int pos) {
-        position = pos;
-        if (target >= 0 && pos == target) target = -1;
+    void publishPosition() {
+        posPending = false;
+        lastPosPublish = millis();
         updates++;
+    }
+
+    // The hatch repeats its position telegram: only changes count. While moving,
+    // intermediate positions are rate limited; reaching the target goes out at once.
+    void onPosition(int pos) {
+        if (pos == position) return;
+        position = pos;
+        if (target >= 0 && pos == target) {
+            target = -1;
+            publishPosition();
+        } else if (millis() - lastPosPublish >= RVTECH_POS_MIN_MS) {
+            publishPosition();
+        } else {
+            posPending = true;
+        }
     }
 
     // Reassemble incoming BLE byte stream and parse "P_a=NNN\r\n" status telegrams

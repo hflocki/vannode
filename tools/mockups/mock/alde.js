@@ -2,15 +2,24 @@
 const M = {
   id: 'alde',
   config: {
-    version: '0.4.1', name: 'Alde Node', hostname: 'alde-node', reset_reason: 'Einschalten',
+    version: '0.5.0', name: 'Alde Node', hostname: 'alde-node', reset_reason: 'Einschalten',
     wifi_ssid: 'Camper-WLAN', wifi_tx_power: 70, ap_ssid: 'Alde-Node-A1B2C3', ap_always: false,
     mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/alde', web_user: '',
-    interval: 10, ci_mode: 2, ci_function: 1, el_max: 1, lin_enabled: true, lin_active: true,
+    interval: 10, ci_mode: 2, ci_function: 1, el_max: 1, lin_enabled: true, lin_active: true, debug: true,
     ci_ok: true, ci_possible: true, one_uart: false
   },
   // panel state, changed by /api/control
   panel: {target: 21.0, gas: 1, el: 1, water: 1},
   reads: 0,
+  stamp() { const ms = Date.now() - M.t0 + 5000; const p = (n, w) => String(n).padStart(w, '0');
+            return Math.floor(ms / 3600000) + ':' + p(Math.floor(ms / 60000) % 60, 2) + ':' + p(Math.floor(ms / 1000) % 60, 2) + '.' + p(ms % 1000, 3); },
+  log: ['0:00:00.412 [LIN] Alde reader on GPIO16 (RX only, 9600 baud 8N2)',
+        '0:00:00.415 [CI] External panel bus on RX GPIO26 / TX GPIO25, mode 2',
+        '0:00:00.640 [CI] TX 55 3C 10 06 B2 00 DE 41 01 00 2E',
+        '0:00:00.641 [CI] Registration sent (function id 0x0001)',
+        '0:00:01.702 [CI] Info 0x1B changed: 7E FE 5E DE 9E 29 00 00',
+        '0:00:02.118 [SIG] 16 (len=8): 7D 2A 00 64 00 00 00 00',
+        '0:00:07.390 [SIG] 18 (len=8): 01 00 F4 01 00 00 00 00'],
   route(path, method, b, q) {
     if (path === '/api/config' && method === 'POST') {
       // the device answers lin_enabled changes with a restart, the mockup applies them at once
@@ -25,6 +34,21 @@ const M = {
       return {status: 'ok'};
     }
     if (path === '/api/measure') return {status: 'ok'};
+    // debug tab
+    if (path === '/api/log') return M.log.join('\n') + '\n';
+    if (path === '/api/log_clear') { M.log = []; return {status: 'ok'}; }
+    if (path === '/api/debug_dump') {
+      M.log.push(M.stamp() + ' [LIN] ok=' + M.reads + ' bad=2 empty=0 bus=OK ac_seen=0s ago',
+                 M.stamp() + ' [CI] mode=' + M.cfg.ci_mode + ' el_max=' + M.cfg.el_max + ' polls ok=' + M.up() + ' bad=3 commands=2 link=OK raw=7E FE 5E DE 9E 29');
+      return {status: 'ok'};
+    }
+    if (path === '/api/debug') {
+      const ci = +M.cfg.ci_mode;
+      return {lin: {active: true, ok: true, frames_ok: M.reads, frames_bad: 2, empty: 0, age: 0},
+              ci: {mode: ci, possible: true, ok: ci === 1 || ci === 2, polls_ok: M.up(), polls_bad: 3, commands: 2, registered: 812,
+                   raw: '7E FE 5E DE 9E 29 00 00', busy: false, error: false},
+              detail: !!M.cfg.debug, uptime: M.up(), heap: 182000};
+    }
     if (path === '/api/sniff_reset') { M.sniff0 = Date.now(); return {status: 'ok'}; }
     if (path === '/api/sniff') {
       // example: the panel answers info headers, nobody answers the diagnostic header

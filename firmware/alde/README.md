@@ -137,11 +137,23 @@ Web-UI → **Einstellungen → Bedienteil-Bus (Steuerung)**:
 | Aus (Werkseinstellung) | Der zweite UART ist aus, auf dem Anschluss passiert nichts |
 | Nur lesen | Der ESP meldet sich einmal an (`0x3C`, Hersteller `0x41DE`, Funktions-ID der Heizung) und fragt jede Sekunde den Info-Frame `0x1B` ab. Er sendet keine Befehle |
 | Lesen und steuern | zusätzlich Befehle per Control-Frame `0x1A`. Vor jedem Befehl wird der Stand neu gelesen, danach fünfmal schnell nachgefragt, damit die Bestätigung gleich da ist. Jeder Befehl steht im Ereignis-Log |
-| Nur mithören (Diagnose) | Der ESP sendet **gar nichts** (TX-Pin vom UART getrennt und auf High), er sammelt nur, welche Frames andere Geräte schicken: je LIN-ID Kopfzeilen, Antworten, Länge, Prüfsumme (LIN 1/2) und die letzten Daten. Anzeige im Reiter **Live**, abrufbar unter `/api/sniff`, neue IDs im Ereignis-Log. Keine Werte per MQTT |
+| Nur mithören (Diagnose) | Der ESP sendet **gar nichts** (TX-Pin vom UART getrennt und auf High), er sammelt nur, welche Frames andere Geräte schicken: je LIN-ID Kopfzeilen, Antworten, Länge, Prüfsumme (LIN 1/2) und die letzten Daten. Anzeige im Reiter **Debug**, abrufbar unter `/api/sniff`, neue IDs im Ereignis-Log. Keine Werte per MQTT |
 
 Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3; auch der Modellname in Home Assistant) und die **Heizstab-Höchststufe** (0–3 kW, Werkseinstellung 1 kW; Home Assistant und Web-UI bieten nur die erlaubten Stufen an).
 
 Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten. Das Gerät startet neu, die Heizbus-Werte verschwinden aus Web-UI und Home Assistant, und am C3 wird der UART für den Bedienteil-Bus frei.
+
+### Web-Seite: Reiter
+
+| Reiter | Inhalt |
+|---|---|
+| Live | Werte, Heizung steuern (bei „Lesen und steuern“) |
+| Alde | Heizbus und Bedienteil-Bus: Modus, Heizung, Heizstab-Höchststufe |
+| MQTT, WiFi | Verbindungen |
+| Einstellungen | Firmware-Update, Über VanNode, Ereignisse, Schalter **Debug**, Neustart |
+| Debug | nur mit Debug oder im Modus „Nur mithören“: Bus-Statistik, Mithör-Tabelle, Log-Fenster |
+
+**Debug** (Reiter Einstellungen) schreibt zusätzlich jede Signaländerung am Heizbus und die Frames am Bedienteil-Bus ins Log (dasselbe wie der serielle Befehl `sig`). Das Log liegt im RAM (16 kB, älteste Zeilen fallen raus) und ist nach einem Neustart leer. **Herunterladen** speichert es als `.log`-Datei, vorne mit Firmware-Version, Einstellungen (ohne WLAN-, MQTT- und Zugangsdaten) und Bus-Statistik – so bitte an die Entwicklung schicken. **Zustand ins Log** schreibt alle aktuellen Werte dazu (wie der serielle Befehl `read`).
 
 ### Wer ist Master auf dem Bedienteil-Bus? (Mithören)
 

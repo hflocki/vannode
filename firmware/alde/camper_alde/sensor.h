@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include "alde_ci.h"
+#include <ArduinoJson.h>
 
 // One published value. The list VALUES[] in sensor.cpp drives everything else:
 // MQTT topics, Home Assistant entities and the tiles of the web UI.
@@ -36,6 +37,10 @@ void sensorToggleSigLog();
 
 // Serial command "read"
 void sensorPrint();
+
+// Debug tab: sensorPrint() into the debug log (run by the loop task), bus statistics
+void sensorRequestDump();
+void sensorDebugJson(JsonObject o);
 
 // Queue a command for the external panel bus. Safe to call from the web / MQTT task.
 // Returns nullptr if accepted, otherwise a German error text for the user.

@@ -20,6 +20,8 @@
 #include "alde_lin.h"
 #include "evlog.h"
 #include "alde_ci_sniff.h"
+#include "dbglog.h"
+#include <ArduinoJson.h>
 
 // Order = index into sensorData.values[]. Keys listed in BINARY_KEYS (mqtt_ha.cpp)
 // become binary sensors in Home Assistant (payload 1/0).
@@ -93,16 +95,29 @@ static volatile bool cmdPending = false;
 static AldeCiCommand activeCmd;           // command being worked on in ciLoop()
 static AldeSniffer sniffer;               // ci_mode 3: passive listener
 static volatile bool sniffResetReq = false;
+static volatile bool dumpReq = false;
 static uint8_t cmdTries = 0;
 static bool cmdRegistered = false;
 
+// Detailed log (signal changes, frames): serial command "sig" or the debug setting
+static bool detail() {
+    return sigLog || config.debug;
+}
+
+static void hexLine(char* out, size_t size, const uint8_t* d, int n) {
+    int p = 0;
+    out[0] = 0;
+    for (int k = 0; k < n && p + 4 < (int)size; k++) p += snprintf(out + p, size - p, "%02X ", d[k]);
+    if (p > 0) out[p - 1] = 0;
+}
+
 static void logSignal(uint8_t pid, const uint8_t* d, int n) {
-    if (!sigLog) return;
+    if (!detail()) return;
     char hex[3 * 8 + 1];
     int p = 0;
     for (int k = 0; k < n && k < 8; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", d[k]);
     if (p > 0) hex[p - 1] = 0; else hex[0] = 0;
-    Serial.printf("[SIG] %02X (len=%d): %s\n", pid, n, hex);
+    dbglogf("[SIG] %02X (len=%d): %s\n", pid, n, hex);
 }
 
 bool sensorCiOk() {
@@ -123,16 +138,16 @@ void sensorSniffReset() {
 
 static void sniffNewId(uint8_t id) {
     evlog::add("Mithören: ID %02X zum ersten Mal", id);
-    Serial.printf("[CI-SNIFF] New id 0x%02X (PID 0x%02X)\n", id, aldeLinPid(id));
+    dbglogf("[CI-SNIFF] New id 0x%02X (PID 0x%02X)\n", id, aldeLinPid(id));
 }
 
 static void sniffFrame(uint8_t id, const uint8_t* d, int n, bool ok) {
-    if (!sigLog) return;
+    if (!detail()) return;
     char hex[3 * 12 + 1];
     int p = 0;
     for (int k = 0; k < n && k < 12; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", d[k]);
     if (p > 0) hex[p - 1] = 0; else hex[0] = 0;
-    Serial.printf("[CI-SNIFF] %02X %s: %s\n", id, ok ? "ok" : (n ? "bad" : "no answer"), hex);
+    dbglogf("[CI-SNIFF] %02X %s: %s\n", id, ok ? "ok" : (n ? "bad" : "no answer"), hex);
 }
 
 bool sensorLinActive() {
@@ -183,6 +198,11 @@ static void ciSendFrame(uint8_t id, const uint8_t* d) {
     frame[10] = aldeCiChecksum(id, d, 8);
     ciSerial.write(frame, sizeof(frame));
     ciSerial.flush();
+    if (detail()) {
+        char hex[3 * 11 + 1];
+        hexLine(hex, sizeof(hex), frame, sizeof(frame));
+        dbglogf("[CI] TX %s", hex);
+    }
     uint8_t echo[16];
     ciRead(echo, sizeof(echo), 10);   // single-wire bus: we hear ourselves, throw it away
 }
@@ -192,7 +212,7 @@ static void ciRegister() {
     aldeCiDiagPayload(config.ci_function, d);
     ciSendFrame(ALDE_CI_ID_DIAG, d);
     ciLastRegister = millis();
-    Serial.printf("[CI] Registration sent (function id 0x%04X)\n", config.ci_function);
+    dbglogf("[CI] Registration sent (function id 0x%04X)\n", config.ci_function);
 }
 
 // One info poll. Returns true and updates ciState on a valid answer.
@@ -207,9 +227,20 @@ static bool ciPoll() {
     AldeCiState s;
     if (!aldeCiParseInfo(buf, n, &s)) {
         ciPollsBad++;
+        if (detail()) {
+            char hex[3 * 24 + 1];
+            hexLine(hex, sizeof(hex), buf, n);
+            dbglogf("[CI] Poll 0x1B: no valid answer (%d bytes) %s", n, hex);
+        }
         return false;
     }
     ciPollsOk++;
+    // Only changes, otherwise one line per second would flood the log
+    if (detail() && (!ciState.valid || memcmp(ciState.raw, s.raw, 8) != 0)) {
+        char hex[3 * 8 + 1];
+        hexLine(hex, sizeof(hex), s.raw, 8);
+        dbglogf("[CI] Info 0x1B changed: %s", hex);
+    }
     if (!ciState.valid || memcmp(ciState.raw, s.raw, 8) != 0) ciChanged = true;
     ciState = s;
     return true;
@@ -234,7 +265,7 @@ static void ciStart() {
         sniffer.onFrame = sniffFrame;
         aldeSnifferReset(sniffer);
         evlog::add("Bedienteil-Bus an (nur mithören)");
-        Serial.printf("[CI] Listening only on RX GPIO%d (TX unused)\n", CI_RX_PIN);
+        dbglogf("[CI] Listening only on RX GPIO%d (TX unused)\n", CI_RX_PIN);
         return;
     }
     ciSerial.begin(CI_BAUD, SERIAL_8N1, CI_RX_PIN, CI_TX_PIN);
@@ -323,7 +354,7 @@ static void ciLoop(unsigned long now) {
                 aldeCiCommandClear(activeCmd);
                 const char* why = !ok ? "Bedienteil antwortet nicht" : ciState.error ? "Bedienteil meldet Störung" : "Bedienteil beschäftigt";
                 evlog::add("Befehl verworfen: %s", why);
-                Serial.printf("[CI] Command dropped: %s\n", why);
+                dbglogf("[CI] Command dropped: %s\n", why);
             } else {
                 ciNextPoll = millis() + 300;
             }
@@ -334,7 +365,7 @@ static void ciLoop(unsigned long now) {
         // Only send what differs from the panel's state
         if (!aldeCiCommandReduce(ciState, cmd)) {
             evlog::add("Befehl: Wert schon eingestellt");
-            Serial.println("[CI] Command skipped: panel already reports the value");
+            dbglogf("[CI] Command skipped: panel already reports the value");
             ciNextPoll = millis() + CI_POLL_MS;
             return;
         }
@@ -343,7 +374,7 @@ static void ciLoop(unsigned long now) {
         ciSendFrame(ALDE_CI_ID_CONTROL, d);
         ciCmdsSent++;
         evlog::add("Befehl an Bedienteil: %02X %02X %02X", d[3], d[4], d[5]);
-        Serial.printf("[CI] Control sent: 00 00 00 %02X %02X %02X FF FF\n", d[3], d[4], d[5]);
+        dbglogf("[CI] Control sent: 00 00 00 %02X %02X %02X FF FF\n", d[3], d[4], d[5]);
         ciFastPolls = 5;                  // confirm quickly
         ciNextPoll = millis() + 300;
         lastPublish = 0;                  // publish the confirmation right away
@@ -400,7 +431,7 @@ void sensorInit() {
 
     linActive = config.lin_enabled;
     if (!linActive) {
-        Serial.println("[LIN] Heater bus switched off (only the panel bus transceiver fitted)");
+        dbglogf("[LIN] Heater bus switched off (only the panel bus transceiver fitted)");
     } else {
 #if LIN_SLP_PIN >= 0
         // TJA1020 and similar: SLP/NSLP high = normal mode (receiver on). TX stays unused.
@@ -411,12 +442,12 @@ void sensorInit() {
         // 9600 baud 8N2, RX only (TX pin -1): receive-only by construction
         linSerial.begin(LIN_BAUD, SERIAL_8N2, LIN_RX_PIN, -1);
         lin.onSignalChange = logSignal;
-        Serial.printf("[LIN] Alde reader on GPIO%d (RX only, %d baud 8N2)\n", LIN_RX_PIN, LIN_BAUD);
+        dbglogf("[LIN] Alde reader on GPIO%d (RX only, %d baud 8N2)\n", LIN_RX_PIN, LIN_BAUD);
     }
     if (sensorCiPossible()) {
-        Serial.printf("[CI] External panel bus on RX GPIO%d / TX GPIO%d, mode %u\n", CI_RX_PIN, CI_TX_PIN, config.ci_mode);
+        dbglogf("[CI] External panel bus on RX GPIO%d / TX GPIO%d, mode %u\n", CI_RX_PIN, CI_TX_PIN, config.ci_mode);
     } else {
-        Serial.println("[CI] External panel bus not available: the C3's only UART runs the heater bus");
+        dbglogf("[CI] External panel bus not available: the C3's only UART runs the heater bus");
     }
 }
 
@@ -457,6 +488,11 @@ void sensorLoop() {
         lin.tick(now);
     }
 
+    if (dumpReq) {
+        dumpReq = false;
+        sensorPrint();
+    }
+
     static bool lastCiOk = false;
     ciLoop(now);
     now = millis();
@@ -489,33 +525,65 @@ void sensorRequestMeasure() {
 
 void sensorPrint() {
     const AldeBusStats& s = lin.stats();
-    if (!linActive) Serial.println("[LIN] heater bus switched off");
-    Serial.printf("[LIN] ok=%u bad=%u empty=%u bus=%s ac_seen=%lus ago\n", (unsigned)s.frames_ok,
+    if (!linActive) dbglogf("[LIN] heater bus switched off");
+    dbglogf("[LIN] ok=%u bad=%u empty=%u bus=%s ac_seen=%lus ago\n", (unsigned)s.frames_ok,
                   (unsigned)s.frames_bad, (unsigned)s.headers_empty, lin.busOk(millis()) ? "OK" : "---",
                   s.last_ac_ms ? (unsigned long)((millis() - s.last_ac_ms) / 1000) : 0UL);
-    if (!sensorCiPossible()) Serial.println("[CI] not available (C3: the only UART runs the heater bus)");
-    Serial.printf("[CI] mode=%u el_max=%u polls ok=%u bad=%u commands=%u link=%s raw=%02X %02X %02X %02X %02X %02X\n",
+    if (!sensorCiPossible()) dbglogf("[CI] not available (C3: the only UART runs the heater bus)");
+    dbglogf("[CI] mode=%u el_max=%u polls ok=%u bad=%u commands=%u link=%s raw=%02X %02X %02X %02X %02X %02X\n",
                   config.ci_mode, config.el_max, (unsigned)ciPollsOk, (unsigned)ciPollsBad, (unsigned)ciCmdsSent,
                   sensorCiOk() ? "OK" : "---", ciState.raw[0], ciState.raw[1], ciState.raw[2],
                   ciState.raw[3], ciState.raw[4], ciState.raw[5]);
     if (ciActiveMode == 3) {
-        Serial.printf("[CI-SNIFF] bytes=%u frames=%u junk=%u\n", (unsigned)sniffer.bytes,
+        dbglogf("[CI-SNIFF] bytes=%u frames=%u junk=%u\n", (unsigned)sniffer.bytes,
                       (unsigned)sniffer.frames, (unsigned)sniffer.junk);
         for (uint8_t id = 0; id < 64; id++) {
             const AldeSniffId& e = sniffer.ids[id];
             if (!e.headers) continue;
-            Serial.printf("[CI-SNIFF] id %02X pid %02X headers=%u answers=%u bad=%u len=%u %s\n", id,
+            dbglogf("[CI-SNIFF] id %02X pid %02X headers=%u answers=%u bad=%u len=%u %s\n", id,
                           aldeLinPid(id), (unsigned)e.headers, (unsigned)e.responses, (unsigned)e.bad,
                           e.len, e.len ? (e.enhanced ? "LIN2" : "LIN1") : "");
         }
     }
     for (uint8_t i = 0; i < VALUE_COUNT; i++) {
-        Serial.printf("[READ] %-20s %10.*f %s -> %s/%s\n", VALUES[i].name, VALUES[i].decimals,
+        dbglogf("[READ] %-20s %10.*f %s -> %s/%s\n", VALUES[i].name, VALUES[i].decimals,
                       sensorData.values[i], VALUES[i].unit, config.mqtt_prefix, VALUES[i].key);
     }
 }
 
+void sensorRequestDump() {
+    dumpReq = true;
+}
+
+void sensorDebugJson(JsonObject o) {
+    unsigned long now = millis();
+    const AldeBusStats& s = lin.stats();
+    JsonObject h = o["lin"].to<JsonObject>();
+    h["active"] = linActive;
+    h["ok"] = linActive && lin.busOk(now);
+    h["frames_ok"] = s.frames_ok;
+    h["frames_bad"] = s.frames_bad;
+    h["empty"] = s.headers_empty;
+    h["age"] = (linActive && s.last_frame_ms) ? (long)((now - s.last_frame_ms) / 1000) : -1;
+    JsonObject c = o["ci"].to<JsonObject>();
+    c["mode"] = config.ci_mode;
+    c["possible"] = sensorCiPossible();
+    c["ok"] = sensorCiOk();
+    c["polls_ok"] = ciPollsOk;
+    c["polls_bad"] = ciPollsBad;
+    c["commands"] = ciCmdsSent;
+    c["registered"] = ciLastRegister ? (long)((now - ciLastRegister) / 1000) : -1;
+    if (ciState.valid) {
+        char hex[3 * 8 + 1];
+        hexLine(hex, sizeof(hex), ciState.raw, 8);
+        c["raw"] = hex;
+        c["busy"] = ciState.busy;
+        c["error"] = ciState.error;
+    }
+    o["detail"] = detail();
+}
+
 void sensorToggleSigLog() {
     sigLog = !sigLog;
-    Serial.printf("[SIG] Change log %s\n", sigLog ? "on" : "off");
+    dbglogf("[SIG] Change log %s\n", sigLog ? "on" : "off");
 }

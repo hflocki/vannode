@@ -11,6 +11,7 @@
 #include "fwcheck.h"
 #include "evlog.h"
 #include "alde_ci_sniff.h"
+#include "dbglog.h"
 
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -27,6 +28,9 @@
 //   POST /api/control    command for the Alde panel (query: target, gas, el_level, water), only with ci_mode 2
 //   GET  /api/sniff      ci_mode 3: frames seen on the external panel bus, per LIN id
 //   POST /api/sniff_reset clear those statistics
+//   GET  /api/log        debug log as text, POST /api/log_clear empties it
+//   GET  /api/debug      bus statistics for the debug tab, POST /api/debug_dump writes the
+//                        state of all values into the debug log
 //   POST /api/restart
 //   WS   /ws             live values every WS_UPDATE_MS
 
@@ -92,6 +96,7 @@ static void setDefaults() {
     config.ci_function = DEFAULT_CI_FUNCTION;
     config.lin_enabled = DEFAULT_LIN_ENABLED;
     config.el_max = DEFAULT_EL_MAX;
+    config.debug = false;
 }
 
 static bool isNumber(JsonVariantConst v) {
@@ -298,6 +303,34 @@ void webserverInit() {
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
 
+    // Debug tab
+    server.on("/api/log", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        String out;
+        if (!dbglogGet(out)) out = "";
+        request->send(200, "text/plain; charset=utf-8", out);
+    });
+    server.on("/api/log_clear", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        dbglogClear();
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+    server.on("/api/debug", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        JsonDocument d;
+        sensorDebugJson(d.to<JsonObject>());
+        d["uptime"] = millis() / 1000;
+        d["heap"] = ESP.getFreeHeap();
+        String out;
+        serializeJson(d, out);
+        request->send(200, "application/json", out);
+    });
+    server.on("/api/debug_dump", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        sensorRequestDump();
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+
     server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest* request) {
         if (!auth(request)) return;
         evlog::add("Neustart über die Web-Oberfläche");
@@ -402,6 +435,7 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
     doc["lin_enabled"] = config.lin_enabled;
     doc["lin_active"] = sensorLinActive();      // differs from lin_enabled until the restart
     doc["el_max"] = config.el_max;
+    doc["debug"] = config.debug;
     doc["ci_possible"] = sensorCiPossible();
     doc["one_uart"] = SOC_UART_NUM <= 2;        // ESP32-C3: heater bus OR panel bus
 
@@ -464,6 +498,7 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     int newElMax = hasElMax ? doc["el_max"].as<int>() : 0;
     if (hasElMax && (newElMax < 0 || newElMax > 3)) { sendError(request, "el_max must be 0-3"); return; }
     bool hasLin = doc["lin_enabled"].is<bool>();
+    bool hasDebug = doc["debug"].is<bool>();
 
     // ---- Apply ----
     // Empty values clear SSID/server/user; empty passwords are ignored (= keep the stored one)
@@ -508,6 +543,11 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
         evlog::add("Heizstab höchstens %d kW", newElMax);
         config.el_max = (uint8_t)newElMax;
         mqttRequestDiscovery();                   // options of the HA select
+    }
+    if (hasDebug && doc["debug"].as<bool>() != config.debug) {
+        config.debug = doc["debug"].as<bool>();
+        evlog::add("Debug %s", config.debug ? "an" : "aus");
+        dbglogf("[DBG] Detailed log %s", config.debug ? "on" : "off");
     }
     bool linRestart = false;
     if (hasLin && doc["lin_enabled"].as<bool>() != config.lin_enabled) {
@@ -579,6 +619,7 @@ void loadConfig() {
     config.lin_enabled = doc["lin_enabled"] | DEFAULT_LIN_ENABLED;
     int em = doc["el_max"] | DEFAULT_EL_MAX;
     config.el_max = (em >= 0 && em <= 3) ? (uint8_t)em : DEFAULT_EL_MAX;
+    config.debug = doc["debug"] | false;
 }
 
 void saveConfig() {
@@ -604,6 +645,7 @@ void saveConfig() {
     doc["ci_function"] = config.ci_function;
     doc["lin_enabled"] = config.lin_enabled;
     doc["el_max"] = config.el_max;
+    doc["debug"] = config.debug;
 
     // Write to a temp file first so a power loss cannot leave a half-written config
     const char* tmpPath = "/config.tmp";

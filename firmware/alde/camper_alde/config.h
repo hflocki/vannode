@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.4.1"
+#define FW_VERSION            "0.5.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -203,6 +203,7 @@ struct AppConfig {
     uint8_t ci_function;   // Function id for the registration (1/2/3)
     bool lin_enabled;      // Heater bus transceiver fitted (change needs a restart)
     uint8_t el_max;        // Highest heating element step a command may set (kW)
+    bool debug;            // Debug tab and detailed log (frames, signal changes)
 };
 
 // ============================================================

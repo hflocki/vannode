@@ -100,7 +100,7 @@ static uint8_t cmdTries = 0;
 static bool cmdRegistered = false;
 
 // Detailed log (signal changes, frames): serial command "sig" or the debug setting
-static bool detail() {
+static bool logDetail() {
     return sigLog || config.debug;
 }
 
@@ -112,7 +112,7 @@ static void hexLine(char* out, size_t size, const uint8_t* d, int n) {
 }
 
 static void logSignal(uint8_t pid, const uint8_t* d, int n) {
-    if (!detail()) return;
+    if (!logDetail()) return;
     char hex[3 * 8 + 1];
     int p = 0;
     for (int k = 0; k < n && k < 8; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", d[k]);
@@ -142,7 +142,7 @@ static void sniffNewId(uint8_t id) {
 }
 
 static void sniffFrame(uint8_t id, const uint8_t* d, int n, bool ok) {
-    if (!detail()) return;
+    if (!logDetail()) return;
     char hex[3 * 12 + 1];
     int p = 0;
     for (int k = 0; k < n && k < 12; k++) p += snprintf(hex + p, sizeof(hex) - p, "%02X ", d[k]);
@@ -198,7 +198,7 @@ static void ciSendFrame(uint8_t id, const uint8_t* d) {
     frame[10] = aldeCiChecksum(id, d, 8);
     ciSerial.write(frame, sizeof(frame));
     ciSerial.flush();
-    if (detail()) {
+    if (logDetail()) {
         char hex[3 * 11 + 1];
         hexLine(hex, sizeof(hex), frame, sizeof(frame));
         dbglogf("[CI] TX %s", hex);
@@ -227,7 +227,7 @@ static bool ciPoll() {
     AldeCiState s;
     if (!aldeCiParseInfo(buf, n, &s)) {
         ciPollsBad++;
-        if (detail()) {
+        if (logDetail()) {
             char hex[3 * 24 + 1];
             hexLine(hex, sizeof(hex), buf, n);
             dbglogf("[CI] Poll 0x1B: no valid answer (%d bytes) %s", n, hex);
@@ -236,7 +236,7 @@ static bool ciPoll() {
     }
     ciPollsOk++;
     // Only changes, otherwise one line per second would flood the log
-    if (detail() && (!ciState.valid || memcmp(ciState.raw, s.raw, 8) != 0)) {
+    if (logDetail() && (!ciState.valid || memcmp(ciState.raw, s.raw, 8) != 0)) {
         char hex[3 * 8 + 1];
         hexLine(hex, sizeof(hex), s.raw, 8);
         dbglogf("[CI] Info 0x1B changed: %s", hex);
@@ -580,7 +580,7 @@ void sensorDebugJson(JsonObject o) {
         c["busy"] = ciState.busy;
         c["error"] = ciState.error;
     }
-    o["detail"] = detail();
+    o["detail"] = logDetail();
 }
 
 void sensorToggleSigLog() {

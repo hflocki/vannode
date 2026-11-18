@@ -1,6 +1,7 @@
 // alde-node: heater bus (passive) and external panel bus of an Alde Compact 3020 / 3030
 const M = {
   id: 'alde',
+  chip: 'esp32',
   config: {
     version: '0.5.0', name: 'Alde Node', hostname: 'alde-node', reset_reason: 'Einschalten',
     wifi_ssid: 'Camper-WLAN', wifi_tx_power: 70, ap_ssid: 'Alde-Node-A1B2C3', ap_always: false,

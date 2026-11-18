@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="de"><head>
+<script>
+// pocket-node: M5Stack Core2. In the browser it only has the update page (webota.cpp);
+// the screens on the device itself are drawn by the firmware.
+const M = {
+  id: 'pocket',
+  chip: 'esp32',
+  config: {version: '1.6.0'},
+  route(path) {
+    if (path === '/status') {
+      const s = M.up();
+      return {version: M.cfg.version, wifi: true, rssi: -64, mqtt: true, broker: '192.168.1.1:1883', battery: 81,
+              charging: false, uptime: Math.floor(s / 3600) + ' h ' + Math.floor(s / 60) % 60 + ' min', awake: '4 min 30 s'};
+    }
+  }
+};
+
+// Mockup runtime: replaces the device API (fetch, WebSocket, upload) with a simulation.
+// The device script before this one defines M = {config, state(), route(), wsCmd(), wsOpen()}.
+(function () {
+  const KEY = 'mock:' + (M.id || location.pathname);
+  // Settings survive the "restart" reload of the page (per browser tab only).
+  let saved = {};
+  try { saved = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) {}
+  M.cfg = Object.assign({}, M.config, saved);
+  M.save = function (patch) {
+    Object.assign(M.cfg, patch);
+    Object.assign(saved, patch);
+    try { sessionStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+  };
+  M.t0 = Date.now();
+  M.up = () => (M.uptime0 || 93780) + Math.floor((Date.now() - M.t0) / 1000);
+
+  const json = (o, status) => Promise.resolve(new Response(typeof o === 'string' ? o : JSON.stringify(o),
+    { status: status || 200, headers: { 'Content-Type': typeof o === 'string' ? 'text/plain' : 'application/json' } }));
+  function bodyOf(opt) {
+    const b = opt && opt.body;
+    if (!b) return {};
+    if (typeof b === 'string') {
+      try { return JSON.parse(b); } catch (e) { return Object.fromEntries(new URLSearchParams(b)); }
+    }
+    if (b instanceof URLSearchParams || b instanceof FormData) return Object.fromEntries(b);
+    return {};
+  }
+  window.fetch = function (url, opt) {
+    opt = opt || {};
+    const u = new URL(url, location.href);
+    const method = (opt.method || 'GET').toUpperCase();
+    const body = bodyOf(opt);
+    const r = M.route ? M.route(u.pathname, method, body, u.searchParams) : undefined;
+    if (r !== undefined) return json(r);
+    // firmware info and event log (fwcheck / evlog), the same example for every device
+    if (u.pathname === '/api/system' && method === 'GET') {
+      const S3 = M.id === 'level' || M.id === 'display';
+      const chip = M.chip || (S3 ? 'esp32s3' : 'esp32c3');   // M.chip: device script may set its chip
+      const chipId = {esp32: 0, esp32s3: 9, esp32c3: 5}[chip] ?? 5;
+      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: chip, max: 1966080},
+                   up: 5400, log: [
+        {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
+        {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},
+        {b: 0, t: 3598, m: 'Firmware-Upload gestartet (1340 kB)'}, {b: 0, t: 3, m: 'MQTT verbunden'},
+        {b: 0, t: 2, m: 'WLAN verbunden (192.168.8.31, -63 dBm)'}, {b: 0, t: 0, m: 'Start v' + ((M.cfg && M.cfg.version) || '1.7.0') + ', Grund: Neustart (Software)'},
+        {b: 1, t: 812, m: 'Update auf v' + ((M.cfg && M.cfg.version) || '1.7.0') + ' ok (1187 kB), Neustart'}, {b: 1, t: 0, m: 'Start v1.6.0, Grund: Einschalten'}]});
+    }
+    if (u.pathname === '/api/config' && method === 'GET') return json(M.cfg);
+    if (u.pathname === '/api/config' && method === 'POST') {
+      const p = Object.assign({}, body);
+      for (const k of Object.keys(p)) if (/pass|token/i.test(k)) delete p[k];  // never echo secrets
+      M.save(p);
+      return json({ ok: true });
+    }
+    return json({ ok: true });
+  };
+
+  // WebSocket: pushes M.state() every M.wsInterval ms, M.wsCmd() gets what the page sends
+  class FakeWS {
+    constructor() {
+      this.readyState = 0;
+      setTimeout(() => {
+        this.readyState = 1;
+        if (this.onopen) this.onopen({});
+        if (M.wsOpen) M.wsOpen((o) => this._emit(o));
+        this._tick();
+      }, 120);
+      this._timer = setInterval(() => this._tick(), M.wsInterval || 1000);
+    }
+    _emit(o) { if (this.onmessage) this.onmessage({ data: JSON.stringify(o) }); }
+    _tick() { if (M.state) this._emit(M.state()); }
+    send(d) {
+      let o = d;
+      try { o = JSON.parse(d); } catch (e) {}
+      const reply = M.wsCmd ? M.wsCmd(o) : null;
+      if (reply) this._emit(reply);
+      setTimeout(() => this._tick(), 150);
+    }
+    close() { clearInterval(this._timer); this.readyState = 3; }
+    addEventListener(ev, fn) { this['on' + ev] = fn; }
+  }
+  FakeWS.CONNECTING = 0; FakeWS.OPEN = 1; FakeWS.CLOSING = 2; FakeWS.CLOSED = 3;
+  window.WebSocket = FakeWS;
+
+  // File upload: simulated progress, answers like the firmware ("OK" or "OK web" for a .gz page)
+  class FakeXHR {
+    constructor() { this.upload = {}; this.status = 0; this.responseText = ''; }
+    open(m, u) { this._u = u; }
+    setRequestHeader() {}
+    send(fd) {
+      let name = '';
+      try { for (const v of fd.values()) if (v && v.name) name = v.name; } catch (e) {}
+      let p = 0;
+      const iv = setInterval(() => {
+        p += 25;
+        if (this.upload.onprogress) this.upload.onprogress({ lengthComputable: true, loaded: p, total: 100 });
+        if (p >= 100) {
+          clearInterval(iv);
+          this.status = 200;
+          this.responseText = /\.gz$/i.test(name) ? 'OK web' : 'OK';
+          if (this.onload) this.onload();
+        }
+      }, 250);
+    }
+  }
+  window.XMLHttpRequest = FakeXHR;
+
+  // Dialogs are blocked in some embedded viewers; the mockup always answers "yes"
+  window.confirm = () => true;
+  window.alert = (m) => console.log('[alert]', m);
+
+  // Banner
+  document.addEventListener('DOMContentLoaded', () => {
+    const b = document.createElement('div');
+    b.textContent = 'Mockup mit Beispieldaten – keine Verbindung zu einem Gerät';
+    b.style.cssText = 'position:sticky;top:0;z-index:9999;background:#d4a017;color:#000;text-align:center;font:600 12px system-ui;padding:4px';
+    document.body.prepend(b);
+    // body as a flex row (e.g. BLE node on wide screens): the bar would become a column,
+    // so it is fixed on top and the body moves down by its height
+    const cs = getComputedStyle(document.body);
+    if (cs.display.includes('flex') && !cs.flexDirection.startsWith('column')) {
+      b.style.position = 'fixed'; b.style.left = '0'; b.style.right = '0';
+      document.body.style.paddingTop = ((parseFloat(cs.paddingTop) || 0) + b.offsetHeight) + 'px';
+    }
+  });
+})();
+
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pocket-Node</title>
+<style>
+/* same look as all VanNode pages (firmware/_common/web/camper-theme.css) */
+:root{--bg:#0D1115;--card:#151B21;--hi:#1C242C;--line:#222B34;--line2:#2F3A45;--text:#E7ECF0;--text2:#B4BEC8;--muted:#8B98A5;
+ --ok:#46B97C;--warn:#E5A23B;--bad:#E5534B;--accent:#4DA3F0;--acx:#06131F;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+svg.i{width:20px;height:20px;flex:none;vertical-align:-4px}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+header h1{flex:1;display:flex;align-items:center;gap:10px;font-size:1.15rem;font-weight:600;margin:0}header h1 svg.i{color:var(--accent)}
+main{max-width:520px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.card>b{display:block;font-size:.85rem;font-weight:600;color:var(--text2);margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}
+.row span:first-child{color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--line2)}
+input[type=file]{width:100%;color:var(--muted);margin:10px 0;padding:10px;border:1px dashed var(--line2);border-radius:10px;background:var(--bg)}
+button{min-height:44px;background:var(--accent);color:var(--acx);border:1px solid var(--accent);border-radius:10px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer;width:100%}
+.bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:12px}
+.bar div{height:100%;width:0;background:var(--accent);transition:width .2s}
+#msg{margin-top:8px;color:var(--muted)}
+.hint{color:var(--muted);font-size:.85rem}
+:root{--fwu-ok:var(--ok);--fwu-warn:var(--warn);--fwu-bad:var(--bad);--fwu-mute:var(--muted);--fwu-line:var(--line)}
+.fwu-cur{font-size:.8rem;margin:0 0 10px}
+.fwu-chk{font-size:.8rem;margin:8px 0;line-height:1.4}
+.fwu-chk.ok{color:var(--fwu-ok)}.fwu-chk.warn{color:var(--fwu-warn)}.fwu-chk.bad{color:var(--fwu-bad)}
+.fwu-force{display:flex;gap:8px;align-items:center;font-size:.8rem;margin:0 0 8px}
+.fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
+.fwu-ev{padding:4px 0;border-bottom:1px solid var(--fwu-line)}.fwu-ev:last-child{border-bottom:0}
+.fwu-ev span{color:var(--fwu-mute);margin-right:8px;white-space:nowrap}.fwu-ev.bad{color:var(--fwu-bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+/* vannode-symbol:begin */
+/* VanNode symbol left of the page title, generated by tools/logo/make_logo.py */
+.vn{display:inline-block;width:26px;height:26px;flex:none;vertical-align:-6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E") center/contain no-repeat}
+/* vannode-symbol:end */
+</style><!-- vannode-icon:begin -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E">
+<!-- vannode-icon:end -->
+</head><body>
+<header><h1><i class="vn" aria-hidden="true"></i><span>Pocket-Node</span></h1></header>
+<main>
+<div class="card" id="st"><div class="row"><span>Status</span><span>...</span></div></div>
+<div class="card">
+<b>Firmware-Update</b>
+<div class="fwu-cur" id="fwu-cur" style="margin-top:6px">Installiert: …</div>
+<div class="hint">Die .bin aus dem Release (pocket-node-core2-v….bin) oder aus der Arduino IDE (pocket.ino.bin, nicht die .merged.bin). Die Datei wird vor dem Hochladen geprüft.</div>
+<input type="file" id="fwu-file" accept=".bin" onchange="fwChosen(false)">
+<div class="fwu-chk" id="fwu-chk"></div>
+<label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force" onchange="fwForce()">Ohne Kennung hochladen</label>
+<button id="fwu-btn" disabled>Hochladen</button>
+<div class="bar"><div id="p"></div></div>
+<div id="msg"></div>
+</div>
+<div class="card"><b>Ereignisse</b><div class="fwu-log" id="fwu-log" style="margin-top:6px">Lade …</div>
+<div class="hint" style="font-size:12px;margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall. Aufwachen aus dem Schlaf wird nicht eingetragen.</div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function dot(ok){return '<span class="dot" style="background:var(--'+(ok?'ok':'bad')+')"></span>'}
+function row(k,v){return '<div class="row"><span>'+k+'</span><span>'+v+'</span></div>'}
+async function load(){
+ try{const s=await (await fetch('/status')).json();
+  $('st').innerHTML=row('Version',s.version)+row('WLAN',dot(s.wifi)+s.rssi+' dBm')+
+   row('MQTT',dot(s.mqtt)+(s.mqtt?'verbunden':'getrennt'))+row('Broker',s.broker)+
+   row('Akku',s.battery+' %'+(s.charging?' (lädt)':''))+row('Laufzeit',s.uptime)+
+   row('Wach bleibt er noch',s.awake);
+ }catch(e){}
+}
+load();setInterval(load,5000);
+$('fwu-btn').onclick=()=>{
+ const f=$('fwu-file').files[0];if(!f||!fwPick){$('msg').textContent='Bitte zuerst eine .bin auswählen.';return}
+ const force=!fwPick.ok&&fwPick.force&&$('fwu-force').checked;
+ if(fwPick.warn&&!confirm(fwPick.msg+'\nTrotzdem installieren?'))return;
+ const fd=new FormData();fd.append('firmware',f,f.name);
+ const x=new XMLHttpRequest();x.open('POST','/update'+(force?'?force=1':''));
+ x.upload.onprogress=e=>{if(e.lengthComputable)$('p').style.width=(e.loaded*100/e.total)+'%'};
+ x.onload=()=>{$('msg').textContent=x.status==200?'Update ok, Pocket-Node startet neu ...':'Fehler: '+x.responseText;
+  if(x.status==200)setTimeout(()=>location.reload(),15000);else{$('fwu-btn').disabled=false;fwLoad()}};
+ x.onerror=()=>{$('msg').textContent='Verbindung abgebrochen'};
+ $('fwu-btn').disabled=true;$('msg').textContent='Lade hoch ...';x.send(fd);
+};
+// ---- Firmware update with checks, event log (same checks as fwcheck.cpp on the device) ----
+// Elements: fwu-cur, fwu-file, fwu-chk, fwu-force-row, fwu-force, fwu-btn, fwu-pr, fwu-log
+let FWI = null;   // running firmware: {dev, ver, chip, chip_id, max}
+const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
+const fwEl = id => document.getElementById(id);
+const fwEsc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+function fwVerCmp(a, b) {
+    const x = String(a).split('.').map(n => parseInt(n) || 0), y = String(b).split('.').map(n => parseInt(n) || 0);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+}
+function fwAgo(s) { return s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; }
+async function fwLoad() {
+    try {
+        const r = await fetch('/api/system', {cache: 'no-store'});
+        if (!r.ok) return;
+        const d = await r.json();
+        FWI = d.fw || null;
+        if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB` +
+            (FWI.hw ? `<br>Passende Datei aus dem Release: <b>…-node-${fwEsc(FWI.hw)}-v….bin</b>` : '');
+        const box = fwEl('fwu-log');
+        if (box) box.innerHTML = (d.log || []).length ? d.log.map(e => {
+            const when = e.b === 0 ? 'vor ' + fwAgo(Math.max(0, (d.up || 0) - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + fwAgo(e.t);
+            const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
+            return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${fwEsc(when)}</span>${fwEsc(e.m)}</div>`;
+        }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
+    } catch (e) {}
+}
+// Which release file fits this device (FW_HW of the running firmware), added to "wrong chip" errors
+function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : ''; }
+// Checks the chosen file in the browser: {ok, kind, msg, warn, force}
+async function fwInspect(file, fsImages) {
+    const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
+    if (n.endsWith('.gz')) return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
+    if (fsImages && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
+    if (!n.endsWith('.bin')) return {ok: false, msg: 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)'};
+    const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
+    if (n.includes('merged')) return {ok: false, msg: merged};
+    const u = new Uint8Array(await file.arrayBuffer());
+    if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
+    const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
+    if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
+    const chip = u[12] | (u[13] << 8);
+    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${fwHwHint()}`};
+    if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
+    const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
+    if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
+    if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
+    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${fwHwHint()}`};
+    const c = FWI ? fwVerCmp(m[2], FWI.ver) : 1;
+    return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
+        (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
+}
+let fwPick = null;
+async function fwChosen(fsImages) {
+    const f = fwEl('fwu-file').files[0], chk = fwEl('fwu-chk');
+    fwPick = null;
+    fwEl('fwu-force-row').style.display = 'none';
+    fwEl('fwu-force').checked = false;
+    if (!f) { chk.textContent = ''; fwEl('fwu-btn').disabled = true; return; }
+    chk.className = 'fwu-chk'; chk.textContent = 'Prüfe …';
+    const r = await fwInspect(f, fsImages);
+    fwPick = r;
+    chk.textContent = (r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg;
+    chk.className = 'fwu-chk ' + (r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+    if (r.force) fwEl('fwu-force-row').style.display = '';
+    fwEl('fwu-btn').disabled = !r.ok;
+}
+function fwForce() { fwEl('fwu-btn').disabled = !(fwPick && (fwPick.ok || (fwPick.force && fwEl('fwu-force').checked))); }
+fwLoad();
+setInterval(fwLoad, 15000);
+</script>
+<!-- Author and license: must stay (GPL-3.0 additional terms, NOTICE.md) -->
+<p style="margin:18px 0 0;font-size:.8rem;opacity:.7;text-align:center">Pocket-Node · Teil von VanNode<br>Copyright &copy; 2026 hflocki · Lizenz GNU GPL v3, ohne Gew&auml;hr &ndash; Nutzung auf eigene Gefahr<br>Hinweis und Link m&uuml;ssen in Kopien erhalten bleiben<br><a href="https://github.com/hflocki/vannode" target="_blank" rel="noopener" style="color:inherit">github.com/hflocki/vannode</a></p>
+</body></html>

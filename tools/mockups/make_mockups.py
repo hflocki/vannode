@@ -37,11 +37,23 @@ DEVICES = [
      "firmware/level/camper_level/web/index.html"),
     ("maxxfan", "MaxxFan", "Dachlüfter: Öffnen, Schließen, Stufe, Auto-Hold",
      "firmware/maxxfan/camper_maxxfan/web/index.html"),
-    ("ble", "BLE Node / Battery Node", "Bluetooth-Geräte als Plugins: Batterien, Dachhaube RV Tech, Pumpe, Kühlschrank, Thermometer, Gas",
+    ("ble", "BLE Node / Battery Node", "Alle Plugins auf einmal: Dachhaube RV Tech, Pumpe CaraWater, Kühlschrank WCS, Alarm WiPro, "
+     "OBD2, Batterien (Daly, Ective, BM2), Gas (DIMES, Mopeka), Govee, BTHome, eigener Sensor",
      "firmware/ble/ble_node/web/index.html"),
+    ("pocket", "Pocket-Node", "M5Stack Core2: Update-Seite im Browser (die Anzeige am Gerät zeichnet die Firmware)",
+     "firmware/pocket/pocket/webota.cpp"),
     ("template", "Vorlage", "Muster für ein neues Gerät (firmware/_template)",
      "firmware/_template/camper_example/web/index.html"),
 ]
+
+
+def page_of(src: str) -> str:
+    """Web page of a device: an HTML file, or the raw string R"HTML(...)HTML" in a .cpp file."""
+    text = (ROOT / src).read_text(encoding="utf-8")
+    if not src.endswith(".cpp"):
+        return text
+    start = text.index('R"HTML(') + len('R"HTML(')
+    return text[start:text.index(')HTML"', start)]
 
 
 def inject(html: str, script: str) -> str:
@@ -77,7 +89,7 @@ def main():
         if src is None:
             html = build_heater()
         else:
-            page = (ROOT / src).read_text(encoding="utf-8")
+            page = page_of(src)
             sim = (MOCK / f"{dev_id}.js").read_text(encoding="utf-8")
             html = inject(page, sim + "\n" + core)
         (OUT / f"{dev_id}.html").write_text(html, encoding="utf-8")

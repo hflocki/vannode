@@ -114,17 +114,20 @@ jobs:
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
           # Same firmware on a plain ESP32-S3 board (e.g. DevKitC-1): more RAM for several BLE devices.
           # No PSRAM setting, so it runs on every S3 variant (N8, N16, N16R8 ...)
+          # noweb: the web page is the same for all targets, only the esp32c3 job uploads it
           - device: ble
             target: esp32s3
             fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+            noweb: 1
           # Same firmware on the M5Stack AtomS3 Lite (formerly the battery-node, status LED)
           - device: ble
             target: atoms3
             fqbn: esp32:esp32:m5stack_atoms3:CDCOnBoot=cdc,PartitionScheme=default_8MB
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
+            noweb: 1
           # Template for new devices (firmware/_template/ANLEITUNG.md), built so it always compiles
           - device: template
             target: esp32c3
@@ -201,9 +204,11 @@ jobs:
           bin="${{ matrix.device }}-node-${{ matrix.target }}-v$ver.bin"
           cp "$out"/*.ino.bin "$bin"
           echo "BIN=$bin" >> "$GITHUB_ENV"
-          # Devices with a web page in LittleFS: put it into the device release as well
+          # Devices with a web page in LittleFS: put it into the device release as well.
+          # Only one job per device uploads it (noweb on the others): parallel jobs replacing
+          # the same release asset race each other and fail with "Not Found"
           web=""
-          if [[ -f "${{ matrix.sketch }}/data/index.html.gz" ]]; then
+          if [[ -f "${{ matrix.sketch }}/data/index.html.gz" && "${{ matrix.noweb }}" != 1 ]]; then
             web="${{ matrix.device }}-node-web-v$ver.html.gz"
             cp "${{ matrix.sketch }}/data/index.html.gz" "$web"
           fi

@@ -102,7 +102,7 @@ Allgemein:
 
 Bedienteil-Bus: An der 3030 Plus ist das die **gelbe RJ12-Buchse** (Pin 4 LIN, Pin 2 Masse), der Heizbus liegt dort an der roten Buchse (Pin 4 LIN, Pin 5 12 V, Pin 2 Masse). Im Service-Menü muss nichts freigeschaltet werden: Die Option „Remote Control“ unter *System Configuration* kann aus bleiben. Ist sie an, meldet das Bedienteil eventuell „Remote control missing“ – das ist nur kosmetisch.
 
-**3030:** Von einem Nutzer bestätigt: ESP mit **einem** LIN-Modul an der gelben Buchse, ESP als Master, läuft seit Tagen stabil. Das Alde-Bedienteil bleibt angeschlossen und lässt sich weiter ganz normal bedienen.
+**3030:** Von einem Nutzer bestätigt: ESP mit **einem** LIN-Modul an der gelben Buchse, ESP als Master, läuft seit Tagen stabil. Das Alde-Bedienteil bleibt angeschlossen und lässt sich weiter ganz normal bedienen. Angemeldet wird dort mit Funktions-ID **3** (also Heizung „3030 Plus“) – ob ID 2 an der 3030 auch geht, ist nicht geprüft.
 
 **Compact 3020:** Ein anderes Projekt (ESPHome) meldet, dass das Steuern über denselben Bus an einer Compact 3020 mit einer Zone funktioniert – unabhängig bestätigt ist das nicht. Möglicherweise unterstützen ältere 3020-Bedienteile den Bus noch nicht. **Wer das an einer 3020 ausprobiert, bitte melden** – mit Baujahr und Software-Version des Bedienteils und ob die Steuerung angenommen wurde.
 
@@ -141,7 +141,7 @@ Web-UI → **Einstellungen → Bedienteil-Bus (Steuerung)**:
 | Lesen und steuern | zusätzlich Befehle per Control-Frame `0x1A`. Vor jedem Befehl wird der Stand neu gelesen, danach fünfmal schnell nachgefragt, damit die Bestätigung gleich da ist. Jeder Befehl steht im Ereignis-Log |
 | Nur mithören (Diagnose) | Der ESP sendet **gar nichts** (TX-Pin vom UART getrennt und auf High), er sammelt nur, welche Frames andere Geräte schicken: je LIN-ID Kopfzeilen, Antworten, Länge, Prüfsumme (LIN 1/2) und die letzten Daten. Anzeige im Reiter **Debug**, abrufbar unter `/api/sniff`, neue IDs im Ereignis-Log. Keine Werte per MQTT |
 
-Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3; auch der Modellname in Home Assistant) und die **Heizstab-Höchststufe** (0–3 kW, Werkseinstellung 1 kW; Home Assistant und Web-UI bieten nur die erlaubten Stufen an).
+Dazu die **Heizung** wählen (Funktions-ID: Compact 3020 = 1, 3030 = 2, 3030 Plus = 3; auch der Modellname in Home Assistant). An einer 3030 funktioniert nachweislich „3030 Plus“ (ID 3) – bei einer 3030 also am besten damit anfangen und die **Heizstab-Höchststufe** (0–3 kW, Werkseinstellung 1 kW; Home Assistant und Web-UI bieten nur die erlaubten Stufen an).
 
 Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten. Das Gerät startet neu, die Heizbus-Werte verschwinden aus Web-UI und Home Assistant, und am C3 wird der UART für den Bedienteil-Bus frei.
 

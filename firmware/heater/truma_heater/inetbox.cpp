@@ -295,24 +295,28 @@ void InetBox::finish_frame_() {
 
 // ---- Sniffer ------------------------------------------------------------------------------------
 
-void InetBox::set_sniffer(bool on) {
-  if (on && sniff_queue_ == nullptr) sniff_queue_ = xQueueCreate(32, sizeof(SniffFrame));
+void InetBox::set_sniffer(bool on, bool all) {
+  // 64 entries: in full-capture mode the bus delivers about 20 frames/s, the main loop drains the queue.
+  if (on && sniff_queue_ == nullptr) sniff_queue_ = xQueueCreate(64, sizeof(SniffFrame));
   sniffer_reset_ = true;  // report every PID once after (re)enabling
+  sniff_all_ = on && all;
   sniffer_ = on && sniff_queue_ != nullptr;
-  LOGI(TAG, "Sniffer %s", sniffer_ ? "on" : "off");
+  LOGI(TAG, "Sniffer %s", sniffer_ ? (sniff_all_ ? "on (all frames)" : "on (changes)") : "off");
 }
 
 void InetBox::sniff_frame_(uint8_t len) {
-  if (pid_ == PID_TRUMA_INET_BOX || pid_ == PID_DIAG_MASTER || pid_ == PID_DIAG_SLAVE) return;
-  if (sniffer_reset_) {
-    memset(sniff_last_, 0, sizeof(sniff_last_));
-    sniffer_reset_ = false;
-  }
   if (len > 8) len = 8;
-  uint8_t *last = sniff_last_[pid_ & 0x3F];
-  if (last[0] == len + 1 && memcmp(&last[1], data_, len) == 0) return;  // unchanged
-  last[0] = len + 1;
-  memcpy(&last[1], data_, len);
+  if (!sniff_all_) {
+    if (pid_ == PID_TRUMA_INET_BOX || pid_ == PID_DIAG_MASTER || pid_ == PID_DIAG_SLAVE) return;
+    if (sniffer_reset_) {
+      memset(sniff_last_, 0, sizeof(sniff_last_));
+      sniffer_reset_ = false;
+    }
+    uint8_t *last = sniff_last_[pid_ & 0x3F];
+    if (last[0] == len + 1 && memcmp(&last[1], data_, len) == 0) return;  // unchanged
+    last[0] = len + 1;
+    memcpy(&last[1], data_, len);
+  }
 
   SniffFrame f;
   f.ms = millis();

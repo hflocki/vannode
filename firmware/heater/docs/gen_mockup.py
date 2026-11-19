@@ -16,7 +16,7 @@ SHIM = r'''<script>
 (function(){
 const t0=Date.now();
 const S={system:{fw:"1.2.0",ip:"192.168.1.50",rssi:-61,ap:false,wifi:true,mqtt:true,uptime:0,heap:182000,wifi_state:"Verbunden",ssid:"MeinWLAN",wifi_drops:0,wifi_reason:"-",reset_reason:"Einschalten"},
- lin:{traffic:true,cpplus:true,init:true,fault:false,frames:0,crc_errors:0,sniffer:false,ack_errors:0,pending:false,cpplus_version:"23.70.0",heater_version:"06.00.00"},
+ lin:{traffic:true,cpplus:true,init:true,fault:false,frames:0,crc_errors:0,sniffer:false,sniff_all:false,ack_errors:0,pending:false,cpplus_version:"23.70.0",heater_version:"06.00.00"},
  heater:{valid:true,room:17.4,water:14,target_room:21,water_mode:"off",heating_mode:"eco",energy_mix:"gas",energy:"gas",status:7,status_text:"on",error:0,on:true,action:"heating",vent:0,setpoint:21,fan:"eco"},
  decoke:{active:false,remaining:0,minutes:30},model:null,
  timer:"off",timer_cfg:{active:false,start:"22:00",stop:"06:30",temp:20,fan:"eco",water:"off"},cpplus_clock:"12:00"};
@@ -29,7 +29,8 @@ function tick(){const h=S.heater,up=(Date.now()-t0)/1000;S.system.uptime=Math.fl
  else if(h.vent>0){h.action='fan';h.status=5}else{h.action='off';h.status=0;h.room=Math.max(15,h.room-0.02)}
  h.status_text=h.status===0?'off':h.status===4?'start/cool down':'on';
  if(S.decoke.active){S.decoke.remaining=Math.max(0,S.decoke.remaining-2);if(!S.decoke.remaining){S.decoke.active=false;h.target_room=S._prev||21}}
- if(S.lin.sniffer&&Math.random()<0.5)log('W','SNIFF PID 16: 00 0F '+(0x60+Math.floor(Math.random()*8)).toString(16).toUpperCase()+' 0B 87 0C 77 85')}
+ if(S.lin.sniff_all){['03: AA 0A FF FF FF FF FF FF','04: AA 0A FF FF FF FF FF FF','07: 01 00 FF FF FF FF FF FF','16: 00 0F 64 0B 87 0C 77 85'].forEach(x=>log('W','SNIFF PID '+x+' t='+Date.now()%100000000))}
+ else if(S.lin.sniffer&&Math.random()<0.5)log('W','SNIFF PID 16: 00 0F '+(0x60+Math.floor(Math.random()*8)).toString(16).toUpperCase()+' 0B 87 0C 77 85')}
 setInterval(tick,2000);tick();
 // Same table as heater_model.h
 const MODELS={combi:["Truma Combi 4/6 (Gas)",1,0,1,1,0,0],combi_e:["Truma Combi 4/6 E (Gas + 230 V)",1,0,1,1,1,0],
@@ -50,7 +51,7 @@ function cmd(a,v){const h=S.heater;log('I','Command '+a+' = '+v);
  else if(a==='decoke'){S.decoke.active=v==='1';if(S.decoke.active){S._prev=h.target_room;h.on=true;h.target_room=30;S.decoke.remaining=S.decoke.minutes*60}else h.target_room=S._prev||21}
  else if(a==='decoke_minutes')S.decoke.minutes=+v;
  else if(a==='timer'){if(v==='off'){S.timer_cfg.active=false;S.timer='off'}else{const m=v.match(/^(\d\d:\d\d)-(\d\d:\d\d),?([\d.]*),?(\w*),?(\w*)/);if(m){Object.assign(S.timer_cfg,{active:true,start:m[1],stop:m[2],temp:+m[3]||20,fan:m[4]||'eco',water:m[5]||S.timer_cfg.water});S.timer=m[1]+'-'+m[2]}}}
- else if(a==='sniffer'){S.lin.sniffer=v==='1';log('I','Sniffer '+(S.lin.sniffer?'on':'off'));if(S.lin.sniffer){['03: 86 0B FF FF FF FF FF FF','04: AA 0A FF FF FF FF FF FF','07: 01 00 FF FF FF FF FF FF','20: 00 00 00 00 00 B0 00 00'].forEach(x=>log('W','SNIFF PID '+x))}}
+ else if(a==='sniffer'){S.lin.sniffer=v==='1'||v==='all';S.lin.sniff_all=v==='all';log('I','Sniffer '+(S.lin.sniffer?(S.lin.sniff_all?'on (all frames)':'on (changes)'):'off'));if(S.lin.sniffer){['03: 86 0B FF FF FF FF FF FF','04: AA 0A FF FF FF FF FF FF','07: 01 00 FF FF FF FF FF FF','20: 00 00 00 00 00 B0 00 00'].forEach(x=>log('W','SNIFF PID '+x))}}
  else if(a==='log_level')CFG.log_level=+v;
  else if(a==='debug')CFG.debug=v==='1';}
 const J=o=>new Response(JSON.stringify(o),{status:200,headers:{'Content-Type':'application/json'}});

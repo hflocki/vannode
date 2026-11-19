@@ -91,6 +91,18 @@ s=$("$OUT/replay" sniff "$OUT/cp_plus-set_fan_high.txt" | grep "^SNIFF PID 07")
 echo "$s" | sed 's/^/  /'
 [ "$(echo "$s" | wc -l)" = 2 ] || exit 1
 
+echo "== sniffer all frames: firmware-style log -> log2replay.py -> same master frames as the capture"
+"$OUT/replay" sniffall "$OUT/cp_plus-combi_6d_e-inet_box.txt" | grep "^SNIFF PID" \
+  | sed 's/^/12:00:00 [W][sniff] /; s/$/ t=1/' > "$OUT/sniff_all.log"
+python3 log2replay.py "$OUT/sniff_all.log" "$OUT/sniff_all.txt" > /dev/null
+a=$(grep -c "^M " "$OUT/cp_plus-combi_6d_e-inet_box.txt"); b=$(grep -c "^M " "$OUT/sniff_all.txt" || true)
+echo "  master frames: capture $a, from sniffer log $b"
+diff <(grep "^M " "$OUT/cp_plus-combi_6d_e-inet_box.txt") <(grep "^M " "$OUT/sniff_all.txt") > /dev/null \
+  || fail "sniffer log does not reproduce the capture"
+r=$("$OUT/replay" "$OUT/sniff_all.txt" | grep -oE "frames=[0-9]+ crc_err=[0-9]+")
+echo "  replay of the sniffer log: $r"
+[[ "$r" == *"crc_err=0" ]] || fail "sniffer log replay"
+
 echo "== ventilation level from PID 0x20 (synthetic frames, byte 5 high nibble as in inetbox2mqtt)"
 printf 'M 20 00 00 00 00 00 30 00 00\n' > "$OUT/vent.txt"
 r=$("$OUT/replay" "$OUT/vent.txt" | grep "^vent:")

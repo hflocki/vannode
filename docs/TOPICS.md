@@ -128,7 +128,7 @@ Unterstruktur wie bei inetbox2mqtt (bis heater 1.0 lag sie unter `service/truma`
 | `sync_clock` | 1 | Uhrzeit sofort ans CP Plus senden |
 | `timer` | `22:00-06:30[,temp[,eco/high[,off/eco/high]]]`, `on`, `off` | Timer setzen. Fehlende Werte: bisherige Timer-Werte, sonst gemerkte Solltemperatur und Lüfterstufe. Warmwasser ohne Angabe bleibt unverändert |
 | `timer_active` | ON/OFF | Timer mit den gespeicherten Zeiten ein- oder ausschalten |
-| `sniffer` | ON / OFF | LIN-Sniffer (Diagnose, siehe unten), nach Neustart aus |
+| `sniffer` | ON / ALL / OFF | LIN-Sniffer (Diagnose): `ON` geänderte Frames, `ALL` jeder Frame aller PIDs mit Zeitstempel (Mitschnitt); nach Neustart aus |
 | `reboot` | 1 | Neustart |
 
 Anders als bei inetbox2mqtt muss Temperatur und Lüfterstufe nicht gemeinsam gesendet werden – fehlende Werte werden sinnvoll ergänzt.

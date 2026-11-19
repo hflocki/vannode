@@ -155,9 +155,20 @@ Problem-Meldungen sind Warnungen und landen ohne Umstellen im Web-Log und im MQT
 
 ## LIN-Sniffer
 
-Zum Erforschen des Busses: Der Sniffer schreibt jeden Frame der übrigen PIDs (alles außer dem iNet-Box-Verkehr 0x18/0x3C/0x3D) ins Log, aber nur, wenn sich sein Inhalt ändert. Nach dem Einschalten kommt jeder PID einmal. Die Zeilen sind Warnungen (`SNIFF PID 07: 01 00 FF FF FF FF FF FF`), damit sie ohne Umstellen im Web-Log und im MQTT-Log landen.
+Zum Erforschen des Busses: Der Sniffer schreibt standardmäßig jeden Frame der übrigen PIDs (alles außer dem iNet-Box-Verkehr 0x18/0x3C/0x3D) ins Log, aber nur, wenn sich sein Inhalt ändert. Nach dem Einschalten kommt jeder PID einmal. Die Zeilen sind Warnungen (`SNIFF PID 07: 01 00 FF FF FF FF FF FF`), damit sie ohne Umstellen im Web-Log und im MQTT-Log landen.
 
 Einschalten: Weboberfläche → **Debug → LIN-Sniffer** (den Reiter Debug unter **System → Debug** einblenden) oder MQTT `set/sniffer` = `ON`. Nach einem Neustart ist er aus.
+
+**Alle Frames (Mitschnitt):** Mit dem Schalter **Alle Frames** im Debug-Reiter oder MQTT `set/sniffer` = `ALL` schreibt der Sniffer jeden gültigen Frame aller PIDs ins Log, ungefiltert und einschließlich des iNet-Box-Verkehrs, mit Zeitstempel in Millisekunden (`SNIFF PID 3C: … t=123456`). Das sind etwa 20 Zeilen pro Sekunde; das Log-Fenster hält dann bis zu 5000 Zeilen (gut 4 Minuten). Für längere Mitschnitte `camper/heater/log` per MQTT aufzeichnen (z. B. `tools/mqtt/record.py`). Gehen Frames verloren, steht das als Warnung im Log (`Sniffer: … frames dropped`).
+
+Aus dem heruntergeladenen Log wird eine Replay-Datei für die Tests:
+
+```bash
+python3 tests/log2replay.py heater-node_….log tests/build/mitschnitt.txt
+tests/build/replay tests/build/mitschnitt.txt
+```
+
+Logs aus dem normalen Sniffer-Modus (nur Änderungen) lassen sich genauso umwandeln, sind aber kein vollständiger Ablauf.
 
 Bekannt aus den WomoLIN-Mitschnitten (CP Plus + Combi D6 E): PID 0x03 Soll-Raumtemperatur, 0x04 Soll-Wassertemperatur, 0x07 Lüfter (`01` eco, `02` high), 0x16 Ist-Werte (ändert sich ständig).
 

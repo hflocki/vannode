@@ -454,11 +454,12 @@ void set_decoke_minutes(uint16_t minutes) {
 
 // ---- loop ---------------------------------------------------------------------------------------
 
-void set_sniffer(bool on) {
-  if (g_box != nullptr) g_box->set_sniffer(on);
+void set_sniffer(bool on, bool all) {
+  if (g_box != nullptr) g_box->set_sniffer(on, all);
 }
 
 bool sniffer() { return g_box != nullptr && g_box->sniffer(); }
+bool sniff_all() { return g_box != nullptr && g_box->sniff_all(); }
 
 String lin_diag() {
   if (g_box == nullptr) return "LIN nicht gestartet";
@@ -471,12 +472,22 @@ bool raw_dump() { return g_box != nullptr && g_box->raw_dump(); }
 
 static void sniffer_loop() {
   SniffFrame f;
-  for (int i = 0; i < 8 && g_box->sniff_pop(f); i++) {
+  const bool all = g_box->sniff_all();
+  for (int i = 0; i < 16 && g_box->sniff_pop(f); i++) {
     char hex[3 * 8 + 1];
     char *p = hex;
     for (uint8_t j = 0; j < f.len; j++) p += snprintf(p, 4, j ? " %02X" : "%02X", f.data[j]);
     *p = 0;
-    LOGW("sniff", "SNIFF PID %02X: %s", f.pid, hex);
+    // Full capture: add the LIN task timestamp so gaps and timing are visible in the log.
+    if (all) LOGW("sniff", "SNIFF PID %02X: %s t=%lu", f.pid, hex, (unsigned long) f.ms);
+    else LOGW("sniff", "SNIFF PID %02X: %s", f.pid, hex);
+  }
+  // Report lost frames (queue full) once per change, so a capture is known to be incomplete.
+  static uint32_t reported = 0;
+  const uint32_t dropped = g_box->sniff_dropped();
+  if (dropped != reported) {
+    LOGW("sniff", "Sniffer: %lu frames dropped so far (queue full)", (unsigned long) dropped);
+    reported = dropped;
   }
 }
 

@@ -103,8 +103,12 @@ class InetBox {
   // Sniffer: report every LIN frame whose content changed (all PIDs except the iNet Box
   // diagnostic traffic 0x18/0x3C/0x3D). Used to find out where the heater ventilation level
   // or other values are transported between CP Plus and heater. Thread safe.
-  void set_sniffer(bool on);
+  // all = true: full capture instead - every valid frame of every PID (iNet Box traffic included),
+  // unfiltered, so a log can be turned into a replay file with tests/log2replay.py.
+  void set_sniffer(bool on, bool all = false);
   bool sniffer() const { return sniffer_; }
+  bool sniff_all() const { return sniffer_ && sniff_all_; }
+  uint32_t sniff_dropped() const { return sniff_dropped_; }
   bool sniff_pop(SniffFrame &out);
 
   // Bus diagnosis: every 10 s the LIN task counts what arrived on RX and writes a plain-text verdict
@@ -125,9 +129,10 @@ class InetBox {
   uint32_t last_vent_ms_ = 0;
   volatile bool sniffer_ = false;
   volatile bool sniffer_reset_ = false;
+  volatile bool sniff_all_ = false;
   QueueHandle_t sniff_queue_ = nullptr;
   uint8_t sniff_last_[64][9] = {};  // [pid][0] = length + 1 (0 = not seen yet), then data
-  uint32_t sniff_dropped_ = 0;
+  volatile uint32_t sniff_dropped_ = 0;
   void sniff_frame_(uint8_t len);
   QueueHandle_t uart_queue_ = nullptr;
   QueueHandle_t cmd_queue_ = nullptr;

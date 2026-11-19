@@ -79,6 +79,7 @@ static void render_state() {
   lin["frames"] = s.frames_ok;
   lin["crc_errors"] = s.crc_errors;
   lin["sniffer"] = heater::sniffer();
+  lin["sniff_all"] = heater::sniff_all();
   lin["diag"] = heater::lin_diag();
   lin["raw"] = heater::raw_dump();
   lin["ack_errors"] = s.ack_errors;
@@ -187,7 +188,7 @@ static void handle_command(const WebCommand &c) {
   else if (a == "decoke_minutes") heater::set_decoke_minutes(v.toInt());
   else if (a == "sync_clock") heater::sync_clock();
   else if (a == "timer") heater::set_timer(v);
-  else if (a == "sniffer") heater::set_sniffer(v == "1");
+  else if (a == "sniffer") heater::set_sniffer(v == "1" || v == "all", v == "all");
   else if (a == "rawdump") heater::set_raw_dump(v == "1");
   else if (a == "debug") {
     g_settings.debug_tab = v == "1";

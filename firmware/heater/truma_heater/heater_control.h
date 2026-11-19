@@ -53,8 +53,10 @@ int error_code();
 
 // LIN sniffer (diagnostics): logs every changed frame of all other PIDs as warning "SNIFF ..."
 // so it shows up in the web log and the MQTT log with default settings. Not persisted.
-void set_sniffer(bool on);
+// all = true: full capture, every frame of every PID with a millisecond timestamp ("t=...").
+void set_sniffer(bool on, bool all = false);
 bool sniffer();
+bool sniff_all();
 // LIN bus diagnosis: plain-text verdict of the last 10 s, raw hex dump for 60 s
 String lin_diag();
 void set_raw_dump(bool on);

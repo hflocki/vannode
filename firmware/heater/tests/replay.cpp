@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
   }
   if (arg.rfind("dev:", 0) == 0) { box.heater_device_ = (Device) std::stoul(arg.substr(4), nullptr, 16); continue; }
   if (arg == "sniff") { box.set_sniffer(true); continue; }
+  if (arg == "sniffall") { box.set_sniffer(true, true); continue; }
   if (arg == "timeroff") { Command c; c.type = CommandType::TIMER_OFF; box.process_command_(c); printf(">> command timer off queued\n"); continue; }
   if (arg == "-v") continue;
   if (arg.rfind("nad:", 0) == 0) { box.node_address_ = std::stoul(arg.substr(4), nullptr, 16); box.init_received_us_ = 1; continue; }  // mid-session capture: already registered

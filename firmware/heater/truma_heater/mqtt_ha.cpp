@@ -465,7 +465,8 @@ static void on_message(char *t, byte *payload, unsigned int length) {
   } else if (key == "timer_active") {
     heater::set_timer_active(value.equalsIgnoreCase("ON") || value == "1");
   } else if (key == "sniffer") {
-    heater::set_sniffer(value.equalsIgnoreCase("ON") || value == "1");
+    const bool all = value.equalsIgnoreCase("ALL");
+    heater::set_sniffer(all || value.equalsIgnoreCase("ON") || value == "1", all);
   } else if (key == "heater_model") {
     heater::set_model(value);
   } else if (key == "reboot") {

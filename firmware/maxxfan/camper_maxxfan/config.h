@@ -14,7 +14,7 @@
 //  MaxxFan Node - VanTurtle board (TCA9555) -> MQTT / Home Assistant
 // =====================================================================
 
-#define FW_VERSION              "1.8.6"
+#define FW_VERSION              "1.9.0"
 #define FW_DEVICE               "maxxfan"   // device id in the firmware marker (fwcheck.h)
 
 // ---- Device / access point ------------------------------------------
@@ -70,6 +70,17 @@
 #endif
 #ifndef DEFAULT_SYNC_PORT
 #define DEFAULT_SYNC_PORT       1       // port used by "sync to OFF"
+#endif
+
+// ---- Optional reed contact on the lid (editable in the web UI) --------
+#ifndef DEFAULT_LID_PIN
+#define DEFAULT_LID_PIN         -1      // -1 = no contact; free C3 pins: 0, 1, 3, 4, 7, 10, 20, 21
+#endif
+#ifndef LID_DEBOUNCE_MS
+#define LID_DEBOUNCE_MS         50
+#endif
+#ifndef LID_CLOSE_TIMEOUT_MS
+#define LID_CLOSE_TIMEOUT_MS    90000   // warn in the event log if the lid is still open after a close
 #endif
 
 // ---- MQTT ------------------------------------------------------------

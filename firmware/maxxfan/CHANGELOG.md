@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `maxxfan-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 1.9.0 | Optionaler Haubenkontakt: Reedkontakt an einem freien GPIO (in der Web-UI wählbar, Standard aus) meldet `…/lid` = `open`/`closed`, Anzeige im Reiter Live, HA-Fenster-Sensor „Lid“; Eintrag im Ereignis-Log, wenn die Haube 90 s nach „Schließen“ noch offen ist |
 | 1.8.6 | Haftungsausschluss: Über-Karte zeigt „Ohne Gewähr – Nutzung auf eigene Gefahr“ und den Markenhinweis; Lizenzköpfe (SPDX) in allen Quelldateien |
 | 1.8.5 | Lizenz jetzt GNU GPL v3 mit Zusatzbedingungen (Urhebervermerk bleibt, Forks kennzeichnen, Name/Logo nicht lizenziert); Über-Karte nennt Lizenz und fremde Teile |
 | 1.8.4 | Webseite: Karte **Über VanNode** unter dem Update (Logo, Version, Copyright, Lizenz, Link zum Projekt) |

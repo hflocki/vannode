@@ -7,22 +7,24 @@ const M = {
   id: 'maxxfan',
   config: {hostname: 'maxxfan-node', ssid: 'Camper-WLAN', static_ip: false, ip: '', gw: '', sn: '255.255.255.0', dns: '',
            mhost: '192.168.1.1', mport: 1883, muser: '', prefix: 'camper/maxxfan', disc: true, wuser: '',
-           p0: false, p1: true, pulse: 150, syncport: 1, apssid: 'MaxxFan-Node-A1B2C3'},
+           p0: false, p1: true, pulse: 150, syncport: 1, lidpin: 4, lidinv: false, apssid: 'MaxxFan-Node-A1B2C3'},
   ports: [{label: 'RJ11', hold: false, led: false}, {label: 'RJ45', hold: false, led: true}],
   sync: false,
+  lid: 1,   // reed contact on the lid: 1 open, 0 closed
   route(path, method, b) {
     const pt = M.ports[+b.port || 0];
     if (path === '/api/state') {
       const on = v => v === true || v === '1' || v === 1;
-      return {fw: '1.5.0', expander: true, sync: M.sync, syncPort: +M.cfg.syncport,
+      return {fw: '1.5.0', expander: true, sync: M.sync, syncPort: +M.cfg.syncport, lid: +M.cfg.lidpin < 0 ? -1 : M.lid,
               ports: M.ports.map((p, i) => Object.assign({enabled: on(M.cfg['p' + i])}, p)),
               sta: true, ap: false, ip: '192.168.1.50', rssi: -58, mqtt: true, uptime: M.up()};
     }
     if (path === '/api/press' && b.btn === 'auto') pt.hold = !pt.hold;
+    if (path === '/api/press' && b.btn === 'on_off') M.lid = 1;
     if (path === '/api/led') pt.led = b.on === '1';
     if (path === '/api/close' || path === '/api/speed') {
       M.sync = true;
-      setTimeout(() => { M.sync = false; }, 3000);
+      setTimeout(() => { M.sync = false; if (path === '/api/close' || b.level === '0') M.lid = 0; }, 3000);
     }
     if (path === '/api/state' || path === '/api/press' || path === '/api/led' || path === '/api/close' || path === '/api/speed') return {ok: true};
   }
@@ -340,6 +342,7 @@ nav button .ico{display:inline-flex}
 
 <div class="tc on" id="t-live">
   <div class="card"><div class="ct acc">Status <span class="badge" id="st">…</span></div>
+    <div class="er hide" id="lidrow"><span>Haube (Kontakt)</span><span class="badge" id="lid">–</span></div>
     <button class="btn btn-s" type="button" onclick="post('/api/sync').then(()=>toast('Synchronisation gestartet'))">↺ Lüfter auf AUS synchronisieren</button>
     <div class="hint">Drückt Auto, wartet auf „Auto Hold“, dann Ein/Aus.</div></div>
   <div id="ports"></div>
@@ -359,6 +362,15 @@ nav button .ico{display:inline-flex}
       <div class="fg"><label>Port für Synchronisation</label><select name="syncport"><option value="0">Port 0 (RJ11)</option><option value="1">Port 1 (RJ45)</option></select></div>
     </div>
     <div class="hint">Stufe setzen = 10× Schneller, dann (10−Stufe)× Langsamer, damit die Haube offen bleibt. Schließen = 11× Langsamer (auf der kleinsten Stufe schließt „Langsamer“ die Haube).</div>
+  </div>
+  <div class="card"><div class="ct acc">Haubenkontakt (optional)</div>
+    <div class="fr">
+      <div class="fg"><label>Reedkontakt an</label><select name="lidpin"><option value="-1">nicht verbaut</option>
+        <option value="0">GPIO 0</option><option value="1">GPIO 1</option><option value="3">GPIO 3</option><option value="4">GPIO 4</option>
+        <option value="7">GPIO 7</option><option value="10">GPIO 10</option><option value="20">GPIO 20</option><option value="21">GPIO 21</option></select></div>
+    </div>
+    <div class="er"><span>Umkehren (Öffner statt Schließer)</span><label class="tg"><input type="checkbox" name="lidinv"><span></span></label></div>
+    <div class="hint">Reedkontakt zwischen GPIO und GND, Magnet an der Haube. Normal: Magnet am Kontakt = Haube zu. Meldet <code>&lt;prefix&gt;/lid</code> = <code>open</code>/<code>closed</code>.</div>
   </div>
   <div class="btn-row"><button class="btn btn-p" type="submit">💾 Speichern &amp; Neustart</button></div>
 </div>
@@ -449,6 +461,8 @@ function poll(){fetch("/api/state").then(r=>r.json()).then(s=>{
   s.ports.forEach((p,i)=>{if(!p.enabled)return;
     const h=$("#h"+i);h.className="badge"+(p.hold?" ok":"");h.textContent="Auto Hold "+(p.hold?"an":"aus");
     const l=$("#l"+i);if(l){l.dataset.on=p.led?"1":"0";l.textContent=p.led?"An":"Aus"}});
+  const lr=$("#lidrow"),lb=$("#lid");lr.classList.toggle("hide",s.lid<0);
+  if(s.lid>=0){lb.className="badge "+(s.lid?"new":"ok");lb.textContent=s.lid?"offen":"zu"}
   const st=$("#st");
   if(!s.expander){st.className="badge bad";st.textContent="Port-Expander fehlt"}
   else if(s.sync){st.className="badge";st.textContent="Synchronisiere…"}

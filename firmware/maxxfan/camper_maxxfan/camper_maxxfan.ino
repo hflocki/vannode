@@ -11,6 +11,7 @@
 #include "safeguard.h"
 #include "evlog.h"
 #include "fan_control.h"
+#include "lid.h"
 #include "wifi_manager.h"
 #include "mqtt_ha.h"
 #include "webserver.h"
@@ -55,6 +56,7 @@ void setup() {
   if (guard::status().length()) evlog::add("%s", guard::status().c_str());
   settingsLoad();
   fan::begin();
+  lid::begin();
   wifimgr::begin();
   web::begin();
   mqttha::begin();
@@ -68,6 +70,7 @@ void loop() {
   if (otaStarted) ArduinoOTA.handle();
 
   fan::loop();
+  lid::loop();
   mqttha::loop();
   web::loop();
 

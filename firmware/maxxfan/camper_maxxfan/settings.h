@@ -28,6 +28,9 @@ struct Settings {
   bool     portEnabled[2] = {false, true};
   uint16_t pulseMs = 150;
   uint8_t  syncPort = 1;
+
+  int8_t   lidPin = -1;      // reed contact GPIO, -1 = none
+  bool     lidInvert = false; // false: pin LOW = closed (normally open reed + magnet)
 };
 
 extern Settings settings;

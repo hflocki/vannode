@@ -5,6 +5,7 @@
 
 #include "settings.h"
 #include "config.h"
+#include "lid.h"
 #include <Preferences.h>
 
 Settings settings;
@@ -35,6 +36,8 @@ void settingsLoad() {
   settings.portEnabled[1] = prefs.getBool("p1", DEFAULT_PORT1_ENABLED);
   settings.pulseMs    = prefs.getUShort("pulse",  DEFAULT_PULSE_MS);
   settings.syncPort   = prefs.getUChar ("sport",  DEFAULT_SYNC_PORT);
+  settings.lidPin     = prefs.getChar  ("lidpin", DEFAULT_LID_PIN);
+  settings.lidInvert  = prefs.getBool  ("lidinv", false);
   prefs.end();
 
   // Sanity checks
@@ -44,6 +47,7 @@ void settingsLoad() {
   if (settings.apPass.length() < 8)  settings.apPass = DEFAULT_AP_PASSWORD;
   if (settings.pulseMs < 50 || settings.pulseMs > 2000) settings.pulseMs = DEFAULT_PULSE_MS;
   if (settings.syncPort > 1) settings.syncPort = DEFAULT_SYNC_PORT;
+  if (!lid::validPin(settings.lidPin)) settings.lidPin = -1;
 }
 
 void settingsSave() {
@@ -69,6 +73,8 @@ void settingsSave() {
   prefs.putBool  ("p1",     settings.portEnabled[1]);
   prefs.putUShort("pulse",  settings.pulseMs);
   prefs.putUChar ("sport",  settings.syncPort);
+  prefs.putChar  ("lidpin", settings.lidPin);
+  prefs.putBool  ("lidinv", settings.lidInvert);
   prefs.end();
 }
 

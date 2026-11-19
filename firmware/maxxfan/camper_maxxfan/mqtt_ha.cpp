@@ -8,6 +8,7 @@
 #include "config.h"
 #include "settings.h"
 #include "fan_control.h"
+#include "lid.h"
 #include "wifi_manager.h"
 #include "system.h"
 #include <WiFi.h>
@@ -125,6 +126,15 @@ void sendDiscovery() {
     } else removeConfig("binary_sensor", holdObj);
   }
 
+  if (lid::enabled()) {
+    JsonDocument d;
+    d["name"]         = "Lid";
+    d["state_topic"]  = topic("lid");
+    d["payload_on"]   = "open";
+    d["payload_off"]  = "closed";
+    d["device_class"] = "window";
+    sendConfig("binary_sensor", "lid", d);
+  } else removeConfig("binary_sensor", "lid");
   {
     JsonDocument d;
     d["name"]          = "Sync to OFF";
@@ -171,6 +181,7 @@ void publishState() {
     pub(topic(portKey(p) + "/auto_hold"), fan::autoHold(p) ? "ON" : "OFF");
     pub(topic(portKey(p) + "/led"),       fan::led(p)      ? "ON" : "OFF");
   }
+  if (lid::state() >= 0) pub(topic("lid"), lid::text());
   pub(topic("expander"), fan::expanderOk() ? "ON" : "OFF");
   pub(topic("rssi"), String(wifimgr::rssi()));
 }
@@ -237,6 +248,7 @@ void connect() {
   Serial.printf("[mqtt] connected to %s\n", settings.mqttHost.c_str());
   pub(availTopic, "online");
   mqtt.subscribe(topic("cmd/#").c_str());
+  if (!lid::enabled()) mqtt.publish(topic("lid").c_str(), "", true);   // drop a retained value of a removed contact
   if (settings.discovery) sendDiscovery();
   dirty = true;
 }

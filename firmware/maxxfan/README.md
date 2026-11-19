@@ -24,6 +24,7 @@ camper_maxxfan/data/   LittleFS-Inhalt: index.html.gz (komprimiert, wird hochgel
 | `config.h` | Pins, I2C-Adresse, Polarität, Standardwerte, `FW_VERSION` |
 | `tca9555.*` | Treiber für den Port-Expander (keine Library nötig) |
 | `fan_control.*` | Tastendrücke (nicht blockierend), Auto-Hold-Eingang, LED, Sync-Ablauf |
+| `lid.*` | optionaler Reedkontakt an der Haube (entprellt, Warnung, wenn sie nach „Schließen“ offen bleibt) |
 | `mqtt_ha.*` | MQTT, Home-Assistant-Discovery |
 | `webserver.*` | Web-Oberfläche aus LittleFS, REST-API, Firmware-Update |
 | `wifi_manager.*` | WLAN, feste IP, Setup-AP |
@@ -57,6 +58,17 @@ Belegung des TCA9555 (wie in der VanTurtle-Vorlage), je Port `n` = 0 oder 1, Pin
 
 Tasten werden als Impuls ausgegeben (Standard 150 ms, im Web-UI einstellbar), mit gleich langer Pause bis zum nächsten Druck am selben Port. Ausgänge sind wie bei ESPHome aktiv HIGH (`OUTPUT_ACTIVE_HIGH`), der Auto-Hold-Eingang aktiv HIGH (`HOLD_ACTIVE_HIGH`).
 
+### Haubenkontakt (optional)
+
+Die MaxxFan meldet nicht, ob die Haube offen ist. Ein Reedkontakt (Fenster-/Türkontakt mit Kabel) liefert diese Rückmeldung: Kontakt an den Rahmen, Magnet an die Haube, am besten auf der Seite, die beim Öffnen zuerst abhebt. Die zwei Adern kommen zwischen einen freien GPIO des ESP32-C3 und GND, einen Widerstand braucht es nicht (interner Pull-up).
+
+| Einstellung | Wert |
+| --- | --- |
+| Reedkontakt an | Web-UI *MaxxFan → Haubenkontakt*: GPIO 0, 1, 3, 4, 7, 10, 20 oder 21, Standard „nicht verbaut“ (`DEFAULT_LID_PIN` = -1) |
+| Umkehren | aus = Schließer (Magnet am Kontakt = Haube zu, Pin LOW); an = Öffner |
+
+Ohne Kontakt ändert sich nichts. Mit Kontakt meldet der Node `…/lid` = `open`/`closed`, zeigt den Zustand im Reiter *Live* und legt in Home Assistant einen Fenster-Sensor „Lid“ an. Bleibt die Haube 90 s nach „Schließen“ (oder Stufe 0) offen, steht das im Ereignis-Log.
+
 ## Arduino IDE
 
 Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
@@ -84,8 +96,8 @@ Alternativ per Arduino-OTA (`maxxfan-node` unter Netzwerk-Ports); auch ein Datei
 
 Gleicher Aufbau und gleiche Optik wie bei tanklevel-node, temp-node und heater-node: Kopfzeile mit Statuspunkten (Board, WiFi, MQTT), Reiter mit Symbolen.
 
-- **Live:** Ein/Öffnen, Schließen, Auto, Richtung, Langsamer, Schneller, Stufe 1–10 setzen, Auto-Hold-Anzeige, Sync auf AUS
-- **MaxxFan:** Bedienteil je Port (Controller-LED, Piep als Verbindungstest), Ports ein/aus, Tastendruck-Dauer, Sync-Port
+- **Live:** Ein/Öffnen, Schließen, Auto, Richtung, Langsamer, Schneller, Stufe 1–10 setzen, Auto-Hold-Anzeige, Sync auf AUS, Haube offen/zu (mit Haubenkontakt)
+- **MaxxFan:** Bedienteil je Port (Controller-LED, Piep als Verbindungstest), Ports ein/aus, Tastendruck-Dauer, Sync-Port, Haubenkontakt
 - **MQTT:** Broker, Topic-Prefix, Home-Assistant-Discovery, Web-Login
 - **WiFi:** Verbindungsstatus, WLAN, feste IP, Access Point, Firmware-Update, Neustart, Werkseinstellungen
 
@@ -137,11 +149,11 @@ mosquitto_sub -h <broker> -t 'camper/maxxfan/#' -v
 
 ### Home Assistant
 
-Mit Discovery erscheint ein Gerät **„MaxxFan Node“** mit Tasten-Entitäten je aktivem Port (Piep und LED unter *Konfiguration*), Stufen-Regler (0–10, 0 = zu), Taste „Close Lid“, LED-Schalter, Auto-Hold-Sensor, „Sync to OFF“, Neustart und Diagnose (WLAN, Port-Expander). Deaktivierte Ports werden aus HA entfernt.
+Mit Discovery erscheint ein Gerät **„MaxxFan Node“** mit Tasten-Entitäten je aktivem Port (Piep und LED unter *Konfiguration*), Stufen-Regler (0–10, 0 = zu), Taste „Close Lid“, LED-Schalter, Auto-Hold-Sensor, Fenster-Sensor „Lid“ (nur mit Haubenkontakt), „Sync to OFF“, Neustart und Diagnose (WLAN, Port-Expander). Deaktivierte Ports werden aus HA entfernt.
 
 **Umstieg von ESPHome:** Das alte ESPHome-Gerät in HA unter *Einstellungen → Geräte & Dienste → ESPHome* löschen. Die Entity-IDs ändern sich, Automationen und Dashboards (z. B. Display-Panels) müssen auf die neuen Entitäten oder direkt auf die MQTT-Topics umgestellt werden.
 
-**Hinweis:** Die MaxxFan meldet ihren Zustand (an/aus, Stufe) nicht zurück – wie bei ESPHome werden nur Tastendrücke gesendet. „Sync auf AUS“ bringt sie in einen bekannten Zustand.
+**Hinweis:** Die MaxxFan meldet ihren Zustand (an/aus, Stufe) nicht zurück – wie bei ESPHome werden nur Tastendrücke gesendet. „Sync auf AUS“ bringt sie in einen bekannten Zustand. Ob die Haube offen ist, liefert nur der optionale [Haubenkontakt](#haubenkontakt-optional).
 
 ## Versionen
 

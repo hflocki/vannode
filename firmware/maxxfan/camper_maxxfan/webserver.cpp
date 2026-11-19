@@ -7,6 +7,7 @@
 #include "config.h"
 #include "settings.h"
 #include "fan_control.h"
+#include "lid.h"
 #include "wifi_manager.h"
 #include "mqtt_ha.h"
 #include "system.h"
@@ -79,6 +80,7 @@ void handleState(AsyncWebServerRequest* r) {
   d["expander"] = fan::expanderOk();
   d["sync"]     = fan::syncRunning();
   d["syncPort"] = settings.syncPort;
+  d["lid"]      = lid::state();
   JsonArray ports = d["ports"].to<JsonArray>();
   for (uint8_t p = 0; p < 2; p++) {
     JsonObject o = ports.add<JsonObject>();
@@ -117,6 +119,8 @@ void handleGetConfig(AsyncWebServerRequest* r) {
   d["p1"]       = settings.portEnabled[1];
   d["pulse"]    = settings.pulseMs;
   d["syncport"] = settings.syncPort;
+  d["lidpin"]   = settings.lidPin;
+  d["lidinv"]   = settings.lidInvert;
   d["apssid"]   = wifimgr::apSsid();
   // Passwords are never sent back; empty field in the form = keep
   sendJson(r, d);
@@ -167,6 +171,9 @@ void handleSetConfig(AsyncWebServerRequest* r) {
   int pulse = param(r, "pulse", String(DEFAULT_PULSE_MS)).toInt();
   settings.pulseMs = constrain(pulse, 50, 2000);
   settings.syncPort = param(r, "syncport", "1").toInt() == 0 ? 0 : 1;
+  int lp = param(r, "lidpin", "-1").toInt();
+  settings.lidPin = lid::validPin(lp) ? lp : -1;
+  settings.lidInvert = b("lidinv");
 
   settingsSave();
   evlog::add("Einstellungen gespeichert, Neustart");

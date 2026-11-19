@@ -178,6 +178,7 @@ FIELDS = [
     # ---- roof fan (maxxfan-node) ----
     TXT("mf_pre", D_FAN, "", FL_SET | FL_TOPIC | FL_ADV, "Basis-Topic", "camper/maxxfan"),
     BOOL("mf_exp", D_FAN, "", FL_ADV, "Port-Expander erreichbar", "ON"),
+    ENUM("mf_lid", D_FAN, "", 0, "Haubenkontakt", "none", "none=nicht verbaut,closed=zu,open=offen"),
     BOOL("p1_on", D_FAN, "Anschluss p1", FL_SET, "Lüfter angeschlossen", "ON"),
     NUM("p1_speed", D_FAN, "Anschluss p1", 0, "Stufe (nur hier, 0 = Haube zu)", "", 0, 10, 1, 0, 0, "0"),
     BOOL("p1_hold", D_FAN, "Anschluss p1", 0, "Auto-Halten", "OFF"),
@@ -1039,6 +1040,8 @@ class Emu:
 
     def _b_fan(self, p, emit):
         emit(p + "/expander", self.V("mf_exp"))
+        if self.V("mf_lid") != "none":
+            emit(p + "/lid", self.V("mf_lid"))
         for k in ("p1", "p2"):
             if not self.B(k + "_on"):
                 continue
@@ -1330,6 +1333,8 @@ class Emu:
             self.set_num(sp, 0 if s > 0 else 3, True)
         elif btn == "auto":
             self.set_bool(hold, not self.B(hold), True)
+        if self.V("mf_lid") != "none":   # reed contact follows the lid like on the real fan
+            self.set_str("mf_lid", "closed" if self.N(sp) <= 0 else "open", True)
 
     def _c_ble(self, sub, msg):
         # cmd/rvtech/<key>/set, keys and preset values as in plugin_rvtech

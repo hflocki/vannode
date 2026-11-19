@@ -196,6 +196,7 @@ Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Vor jedem Befeh
 | `…/p<n>/auto_hold` | `ON` / `OFF` |
 | `…/p<n>/led` | `ON` / `OFF` |
 | `…/expander` | `ON` / `OFF` (TCA9555 erreichbar) |
+| `…/lid` | `open` / `closed` – nur mit Haubenkontakt (Reedkontakt, ab maxxfan-node 1.9.0) |
 | `…/rssi` | WLAN-Signal (dBm) |
 
 **Befehle**
@@ -210,7 +211,7 @@ Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Vor jedem Befeh
 | `…/cmd/sync_off` | beliebig | Lüfter auf AUS synchronisieren |
 | `…/cmd/reboot` | beliebig | Neustart |
 
-Die MaxxFan meldet ihren Zustand (an/aus, Stufe) nicht zurück, es werden nur Tastendrücke gesendet. „Sync auf AUS“ bringt sie in einen bekannten Zustand.
+Die MaxxFan meldet ihren Zustand (an/aus, Stufe) nicht zurück, es werden nur Tastendrücke gesendet. „Sync auf AUS“ bringt sie in einen bekannten Zustand. Ob die Haube offen ist, meldet `…/lid`, wenn ein Haubenkontakt verbaut ist.
 
 ## Temperaturen `camper/temp`
 

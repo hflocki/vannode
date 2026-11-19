@@ -7,6 +7,7 @@
 #include "config.h"
 #include "settings.h"
 #include "tca9555.h"
+#include "lid.h"
 #include <Wire.h>
 
 const char* const BUTTON_KEYS[BTN_COUNT]  = {"auto", "direction", "on_off", "faster", "slower", "beep"};
@@ -240,6 +241,7 @@ bool requestClose(uint8_t port) {
   if (port > 1) return false;
   if (uxQueueSpacesAvailable(queue) < CLOSE_PRESSES) return false;
   for (uint8_t i = 0; i < CLOSE_PRESSES; i++) enqueue({CMD_PRESS, port, (uint8_t)BTN_SLOWER});
+  lid::expectClosed();
   Serial.printf("[fan] %s: close lid\n", PORT_LABELS[port]);
   return true;
 }

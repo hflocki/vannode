@@ -49,6 +49,7 @@ struct AldeCiCommand {
     int8_t gas;        // 0/1
     int8_t el_level;   // 0..3
     int8_t water;      // 0..2
+    int8_t power;      // 0/1: heater off / on (bit 0 of byte 5)
 };
 
 void aldeCiCommandClear(AldeCiCommand& c);

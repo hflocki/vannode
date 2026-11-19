@@ -80,7 +80,7 @@ const M = {
       ['target', 'Sollwert', '°C', 1, p.target], ['panel_room', 'Raum (Bedienteil)', '°C', 1, +room.toFixed(1)],
       ['outdoor', 'Außentemperatur', '°C', 1, w(4.5, 1, 200)], ['gas_enabled', 'Gasbetrieb', '', 0, p.gas],
       ['el_level', 'Heizstab Stufe', 'kW', 0, p.el], ['water_mode', 'Warmwasser Modus', '', 0, p.water],
-      ['pump', 'Umwälzpumpe', '', 0, 1], ['panel_on', 'Bedienteil an', '', 0, 1], ['error', 'Störung', '', 0, 0],
+      ['pump', 'Umwälzpumpe', '', 0, 1], ['panel_on', 'Heizung an', '', 0, 1], ['error', 'Störung', '', 0, 0],
       ['ac_input', '230 V', '', 0, 1], ['ci_ok', 'Bedienteil-Bus', '', 0, +M.cfg.ci_mode === 3 ? null : 1]];
     const lin = M.cfg.lin_active !== false && M.cfg.lin_active !== 'false';
     return {values: vals.map(([key, name, unit, dec, v]) => ({key, name, unit, dec, v})),

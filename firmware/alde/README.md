@@ -30,7 +30,7 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 - 13 Werte vom Bus plus „Klimaanlage aktiv“ und „LIN-Bus“ unter `camper/alde/<key>`, Home Assistant legt die Entitäten automatisch an (Gas, Klimaanlage aktiv und LIN-Bus als Binärsensoren)
 - Werte gehen bei Änderung raus, höchstens alle *Sendeabstand* Sekunden (Standard 5 s), unverändert spätestens jede Minute
 - Ungültige Werte (Platzhalter `0xFFFF`/`0x7FFF`, unbekannte Gas-Codes, falsche Prüfsumme) werden verworfen, der letzte gültige Wert bleibt stehen
-- Optional Bedienteil-Bus: 11 weitere Werte und – nur im Modus „Lesen und steuern“ – Sollwert (5–30 °C), Gas, Heizstab (bis zur eingestellten Höchststufe) und Warmwasser (aus/an/Boost) per MQTT, Web-UI und Home Assistant
+- Optional Bedienteil-Bus: 11 weitere Werte und – nur im Modus „Lesen und steuern“ – Heizung an/aus, Sollwert (5–30 °C), Gas, Heizstab (bis zur eingestellten Höchststufe) und Warmwasser (aus/an/Boost) per MQTT, Web-UI und Home Assistant
 - Vor jedem Befehl meldet sich der Node neu am Bedienteil an und liest den aktuellen Stand. Gesendet wird nur, was sich wirklich ändert; am Bedienteil gemachte Einstellungen werden nicht überschrieben
 - Kein Befehl, solange das Bedienteil „beschäftigt“ oder eine Störung meldet: Der Node versucht es bis zu fünfmal im Abstand von 0,3 s und verwirft den Befehl dann (Ereignis-Log)
 - **Heizstab-Höchststufe** (Werkseinstellung 1 kW): Höhere Stufen lehnt der Node ab, damit eine schwache Landstrom-Absicherung nicht auslöst. Am Bedienteil selbst bleibt alles einstellbar
@@ -128,7 +128,7 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 Basis-Topic `camper/alde`: Werte vom Heizbus (Raum, Glykol, Warmwasser, Gas, Heizstab …), mit Bedienteil-Bus zusätzlich Sollwert, Außentemperatur und Status, Befehle unter `…/cmd/…` (nur im Modus „Lesen und steuern“). Alle Topics mit Quelle (LIN-Frame und Byte): **[docs/TOPICS.md](../../docs/TOPICS.md#alde-heizung-camperalde)**.
 
-Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Home Assistant bekommt für die Steuerung eine Zahl (Sollwert), einen Schalter (Gas) und zwei Auswahlen (Heizstab, Warmwasser); sie verschwinden wieder, wenn die Steuerung ausgeschaltet wird. Alle Werte retained.
+Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Home Assistant bekommt für die Steuerung eine Zahl (Sollwert), zwei Schalter (Heizung an/aus, Gas) und zwei Auswahlen (Heizstab, Warmwasser); sie verschwinden wieder, wenn die Steuerung ausgeschaltet wird. Alle Werte retained.
 
 ## Bedienteil-Bus einschalten
 

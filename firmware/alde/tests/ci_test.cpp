@@ -72,6 +72,18 @@ int main() {
         CHECK(d[4] == 0x1E, "el off b4=%02X", d[4]);
         CHECK(d[5] == ((0xA9 & 0xE7) | (2 << 3)), "boost b5=%02X", d[5]);
     }
+    // 5b. Heater off / on: only bit 0 of byte 5 changes; reduce drops a state already reported
+    {
+        AldeCiCommand c; aldeCiCommandClear(c);
+        c.power = 0;
+        uint8_t d[8];
+        aldeCiBuildControl(s, c, d);
+        CHECK(d[5] == (0xA9 & 0xFE), "power off b5=%02X", d[5]);
+        CHECK(aldeCiCommandReduce(s, c) && c.power == 0, "power off dropped");
+        AldeCiCommand e; aldeCiCommandClear(e);
+        e.power = 1;
+        CHECK(!aldeCiCommandReduce(s, e), "power on kept although reported on");
+    }
     // 6. Setpoint is clamped to 5..30
     {
         AldeCiCommand c; aldeCiCommandClear(c);

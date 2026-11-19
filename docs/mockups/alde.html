@@ -85,7 +85,7 @@ const M = {
       ['target', 'Sollwert', '°C', 1, p.target], ['panel_room', 'Raum (Bedienteil)', '°C', 1, +room.toFixed(1)],
       ['outdoor', 'Außentemperatur', '°C', 1, w(4.5, 1, 200)], ['gas_enabled', 'Gasbetrieb', '', 0, p.gas],
       ['el_level', 'Heizstab Stufe', 'kW', 0, p.el], ['water_mode', 'Warmwasser Modus', '', 0, p.water],
-      ['pump', 'Umwälzpumpe', '', 0, 1], ['panel_on', 'Bedienteil an', '', 0, 1], ['error', 'Störung', '', 0, 0],
+      ['pump', 'Umwälzpumpe', '', 0, 1], ['panel_on', 'Heizung an', '', 0, 1], ['error', 'Störung', '', 0, 0],
       ['ac_input', '230 V', '', 0, 1], ['ci_ok', 'Bedienteil-Bus', '', 0, +M.cfg.ci_mode === 3 ? null : 1]];
     const lin = M.cfg.lin_active !== false && M.cfg.lin_active !== 'false';
     return {values: vals.map(([key, name, unit, dec, v]) => ({key, name, unit, dec, v})),
@@ -526,6 +526,8 @@ nav button .ico{display:inline-flex}
                 <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="sendControl({target: $('ctl-target').value})">Setzen</button></div>
             </div>
             <div class="form-row">
+                <div class="form-group"><label>Heizung</label>
+                    <select id="ctl-power" onchange="sendControl({power: this.value})"><option value="0">Aus</option><option value="1">An</option></select></div>
                 <div class="form-group"><label>Gasbetrieb</label>
                     <select id="ctl-gas" onchange="sendControl({gas: this.value})"><option value="0">Aus</option><option value="1">An</option></select></div>
                 <div class="form-group"><label>Heizstab</label>
@@ -783,6 +785,7 @@ function updateLiveData(d) {
         const byKey = Object.fromEntries(list.map(v => [v.key, v.v]));
         const setIf = (id, val) => { const e = $(id); if (e && document.activeElement !== e && val !== null && val !== undefined) e.value = String(val); };
         setIf('ctl-target', byKey.target);
+        setIf('ctl-power', byKey.panel_on);
         setIf('ctl-gas', byKey.gas_enabled);
         setIf('ctl-el', byKey.el_level);
         setIf('ctl-water', byKey.water_mode);

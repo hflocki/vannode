@@ -169,7 +169,7 @@ Werte vom Heizbus (passiv mitgelesen, nur wenn der Heizbus in den Einstellungen 
 | `…/el_level` | Heizstab-Stufe 0–3 (kW) |
 | `…/water_mode` | Warmwasser `0` = aus, `1` = an, `2` = Boost (ein unbekannter Modus wird nicht gesendet) |
 | `…/pump` | `1` = Umwälzpumpe läuft |
-| `…/panel_on` | `1` = Bedienteil an |
+| `…/panel_on` | `1` = Heizung an |
 | `…/error` | `1` = Störung |
 | `…/ac_input` | `1` = 230 V liegen an |
 | `…/ci_ok` | `1` = Bedienteil antwortet (letzte 5 s) |
@@ -182,6 +182,7 @@ Werte vom Heizbus (passiv mitgelesen, nur wenn der Heizbus in den Einstellungen 
 | `…/cmd/gas` | `1`/`0` bzw. `ON`/`OFF` |
 | `…/cmd/el_level` | `0` bis Heizstab-Höchststufe (Einstellung, ab Werk `1`, höchstens `3`); höhere Stufen werden abgelehnt |
 | `…/cmd/water` | `0`/`1`/`2` bzw. `aus`/`an`/`boost` |
+| `…/cmd/power` | Heizung `1`/`0` bzw. `ON`/`OFF` (`an`/`aus`) |
 
 Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Vor jedem Befehl meldet sich der Node am Bedienteil an und liest den Stand; gesendet wird nur, was sich ändert, und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet.
 

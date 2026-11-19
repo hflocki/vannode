@@ -51,7 +51,7 @@ const ValueDef VALUES[] = {
     {"el_level",        "Heizstab Stufe",       "kW",  nullptr,       "mdi:flash",                  0, true},
     {"water_mode",      "Warmwasser Modus",     "",    nullptr,       "mdi:water-boiler",           0, true},
     {"pump",            "Umwälzpumpe",          "",    nullptr,       "mdi:pump",                   0, true},
-    {"panel_on",        "Bedienteil an",        "",    nullptr,       "mdi:power",                  0, true},
+    {"panel_on",        "Heizung an",           "",    nullptr,       "mdi:power",                  0, true},
     {"error",           "Störung",              "",    nullptr,       "mdi:alert-circle",           0, true},
     {"ac_input",        "230 V",                "",    nullptr,       "mdi:power-plug-outline",     0, true},
     {"ci_ok",           "Bedienteil-Bus",       "",    nullptr,       "mdi:lan-connect",            0, true},
@@ -325,6 +325,7 @@ static void ciLoop(unsigned long now) {
         if (pendingCmd.gas >= 0) activeCmd.gas = pendingCmd.gas;
         if (pendingCmd.el_level >= 0) activeCmd.el_level = pendingCmd.el_level;
         if (pendingCmd.water >= 0) activeCmd.water = pendingCmd.water;
+        if (pendingCmd.power >= 0) activeCmd.power = pendingCmd.power;
         aldeCiCommandClear(pendingCmd);
         cmdPending = false;
         portEXIT_CRITICAL(&cmdMux);
@@ -411,11 +412,13 @@ const char* sensorControl(const AldeCiCommand& cmd) {
         return msg;
     }
     if (cmd.water > 2) return "Warmwasser: 0 = aus, 1 = an, 2 = Boost";
+    if (cmd.power > 1) return "Heizung: 0 = aus, 1 = an";
     portENTER_CRITICAL(&cmdMux);
     if (cmd.hasTarget) { pendingCmd.hasTarget = true; pendingCmd.target = cmd.target; }
     if (cmd.gas >= 0) pendingCmd.gas = cmd.gas;
     if (cmd.el_level >= 0) pendingCmd.el_level = cmd.el_level;
     if (cmd.water >= 0) pendingCmd.water = cmd.water;
+    if (cmd.power >= 0) pendingCmd.power = cmd.power;
     cmdPending = true;
     portEXIT_CRITICAL(&cmdMux);
     return nullptr;

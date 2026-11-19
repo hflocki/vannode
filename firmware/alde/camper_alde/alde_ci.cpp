@@ -15,10 +15,11 @@ void aldeCiCommandClear(AldeCiCommand& c) {
     c.gas = -1;
     c.el_level = -1;
     c.water = -1;
+    c.power = -1;
 }
 
 bool aldeCiCommandEmpty(const AldeCiCommand& c) {
-    return !c.hasTarget && c.gas < 0 && c.el_level < 0 && c.water < 0;
+    return !c.hasTarget && c.gas < 0 && c.el_level < 0 && c.water < 0 && c.power < 0;
 }
 
 uint8_t aldeCiChecksum(uint8_t id, const uint8_t* d, int n) {
@@ -87,6 +88,7 @@ bool aldeCiCommandReduce(const AldeCiState& s, AldeCiCommand& c) {
     if (c.gas >= 0 && (uint8_t)(c.gas ? 1 : 0) == s.gas) c.gas = -1;
     if (c.el_level >= 0 && (uint8_t)c.el_level == s.el_level) c.el_level = -1;
     if (c.water >= 0 && (uint8_t)c.water == s.water) c.water = -1;
+    if (c.power >= 0 && (uint8_t)(c.power ? 1 : 0) == s.panel_on) c.power = -1;
     return !aldeCiCommandEmpty(c);
 }
 
@@ -102,6 +104,7 @@ void aldeCiBuildControl(const AldeCiState& s, const AldeCiCommand& c, uint8_t ou
     out[4] = (uint8_t)((s.raw[4] & 0x3F) | (el << 6));          // zone 2 unchanged
     uint8_t b5 = s.raw[5];
     if (c.water >= 0 && c.water <= 2) b5 = (uint8_t)((b5 & 0xE7) | (c.water << 3));
+    if (c.power >= 0) b5 = (uint8_t)((b5 & 0xFE) | (c.power ? 1 : 0));   // heater on / off
     out[5] = b5;
     out[6] = 0xFF;
     out[7] = 0xFF;

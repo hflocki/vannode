@@ -20,7 +20,8 @@
 //   <prefix>/cmd/target      setpoint 5-30 (0.5 steps)          \
 //   <prefix>/cmd/gas         1 / 0 (also ON / OFF)               | only with ci_mode 2,
 //   <prefix>/cmd/el_level    0-el_max (kW, setting, max 3)       | sent to the Alde panel
-//   <prefix>/cmd/water       0 = off, 1 = on, 2 = boost          /  over the external bus
+//   <prefix>/cmd/water       0 = off, 1 = on, 2 = boost          |  over the external bus
+//   <prefix>/cmd/power       1 / 0 (also ON / OFF): heater on / off /
 //
 // Home Assistant: one device DEVICE_NAME, one sensor entity per value (keys in
 // BINARY_KEYS become binary sensors), plus WiFi signal, status and a "send now" button.
@@ -75,6 +76,8 @@ static void onMessage(char* t, byte* payload, unsigned int len) {
     } else if (cmd == "water") {
         c.water = (up == "OFF" || up == "AUS" || up == "0") ? 0 : (up == "ON" || up == "AN" || up == "1") ? 1
                 : (up == "BOOST" || up == "2") ? 2 : 9;
+    } else if (cmd == "power") {
+        c.power = (up == "ON" || up == "AN" || up == "1") ? 1 : (up == "OFF" || up == "AUS" || up == "0") ? 0 : 9;
     } else {
         return;
     }
@@ -272,7 +275,17 @@ static void publishControls(bool on) {
         removeEntity("switch", "set_gas");
         removeEntity("select", "set_el_level");
         removeEntity("select", "set_water");
+        removeEntity("switch", "set_power");
         return;
+    }
+    {
+        JsonDocument d;
+        d["name"] = "Heizung schalten";
+        d["command_topic"] = topic("cmd/power");
+        d["state_topic"] = topic("panel_on");
+        d["payload_on"] = "1"; d["payload_off"] = "0";
+        d["icon"] = "mdi:power";
+        publishControl("switch", "set_power", d);
     }
     {
         JsonDocument d;

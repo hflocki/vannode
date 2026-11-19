@@ -25,7 +25,7 @@
 //   POST /api/config     partial settings as JSON, validated first, saved in loop()
 //   POST /api/update     file upload: .bin = firmware (restart), .gz = web page (no restart)
 //   POST /api/measure    publish the current readings right away
-//   POST /api/control    command for the Alde panel (query: target, gas, el_level, water), only with ci_mode 2
+//   POST /api/control    command for the Alde panel (query: target, gas, el_level, water, power), only with ci_mode 2
 //   GET  /api/sniff      ci_mode 3: frames seen on the external panel bus, per LIN id
 //   POST /api/sniff_reset clear those statistics
 //   GET  /api/log        debug log as text, POST /api/log_clear empties it
@@ -234,6 +234,7 @@ void webserverInit() {
         if (request->hasParam("gas")) cmd.gas = digit("gas");
         if (request->hasParam("el_level")) cmd.el_level = digit("el_level");
         if (request->hasParam("water")) cmd.water = digit("water");
+        if (request->hasParam("power")) cmd.power = digit("power");
         const char* err = sensorControl(cmd);
         if (err) { sendError(request, err); return; }
         request->send(200, "application/json", "{\"status\":\"ok\"}");

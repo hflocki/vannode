@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `alde-v<ver
 
 | Version | Änderungen |
 |---|---|
+| 0.6.0 | Heizung **ein- und ausschalten** über den Bedienteil-Bus: MQTT `…/cmd/power`, Schalter „Heizung schalten“ in Home Assistant, Auswahl „Heizung“ in der Web-Seite (nur im Modus „Lesen und steuern“). Gesetzt wird Bit 0 im 6. Byte des Steuer-Frames, wie es die Heizung im Info-Frame meldet. Der Wert `panel_on` heißt jetzt „Heizung an“ |
 | 0.5.1 | Build-Fehler aus 0.5.0 behoben (Namenskonflikt mit ArduinoJson), sonst wie 0.5.0 – 0.5.0 gab es nie als fertige Firmware |
 | 0.5.0 | Web-Seite neu gegliedert: Reiter **Alde** (bisher „Einstellungen“: Heizbus, Bedienteil-Bus), neuer Reiter **Einstellungen** mit Firmware-Update, „Über VanNode“, Ereignissen und dem Schalter **Debug**. Debug blendet den Reiter **Debug** ein (Bus-Statistik, Mithören, Log-Fenster mit Download, „Zustand ins Log“) und schreibt Signaländerungen und Frames ausführlich ins Log. Neue API `/api/log`, `/api/log_clear`, `/api/debug`, `/api/debug_dump` |
 | 0.4.1 | Web-Seite: Titel und Kopfzeile „Alde Node“ statt „Example“ aus der Vorlage, Mithör-Tabelle mit lesbaren Spaltenköpfen. Klickbares Mockup unter `docs/mockups/alde.html` |

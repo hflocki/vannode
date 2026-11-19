@@ -1,0 +1,59 @@
+name: Fehler melden
+description: Ein Gerät tut nicht, was es soll.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Melden. Bitte ein Problem pro Issue. Wenn du dasselbe Problem hast, gib dem vorhandenen Issue ein 👍 statt eines Kommentars.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Gerät
+      options: [tanklevel, temp, level, heater, alde, maxxfan, display, roadbuddy, toolbox, ble, battery, pocket, emulator, anderes]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Firmware-Version
+      description: Steht in der Web-Oberfläche des Geräts.
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Board
+      placeholder: "ESP32-C3 Super Mini"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Was passiert
+      description: Was du siehst und was du stattdessen erwartest.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Wie es dazu kommt
+      description: Einstellungen, Verdrahtung, Broker – was nötig ist, um es nachzustellen.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log oder MQTT-Nachrichten
+      description: Serielles Log oder die Topics des Geräts rund um das Problem. Passwörter und Tokens bitte entfernen.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Bevor du es abschickst
+      options:
+        - label: Ich nutze die neueste Firmware des Geräts.
+          required: true
+        - label: Ich habe in offenen und geschlossenen Issues nach demselben Problem gesucht.
+          required: true

@@ -1,0 +1,35 @@
+name: Idee oder Wunsch
+description: Etwas Neues oder eine Änderung vorschlagen.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bitte eine Idee pro Issue. Um eine vorhandene Idee zu unterstützen, gib ihr ein 👍 statt eines Kommentars.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Gerät
+      options: [tanklevel, temp, level, heater, alde, maxxfan, display, roadbuddy, toolbox, ble, battery, pocket, neues Gerät, anderes]
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Was du dir wünschst
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Wofür
+      description: In welcher Situation es dir fehlt.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Bevor du es abschickst
+      options:
+        - label: Ich habe in offenen und geschlossenen Issues nach derselben Idee gesucht.
+          required: true

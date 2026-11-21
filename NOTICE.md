@@ -10,8 +10,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public 
 details.
 
 This applies to every file in this repository unless a file or the table below says otherwise.
-Third-party parts keep their own license and copyright; their notices are kept below and in the
-license files of the folders.
+Third-party parts keep their own license and copyright; they are listed below, sorted by node, and
+their license texts are kept in the license files of the folders.
 
 ## Additional terms (GNU GPL v3, section 7)
 
@@ -67,6 +67,13 @@ determined only to make the devices work together (interoperability).
 
 ## Third-party components
 
+This is the only list of third-party parts in VanNode; the devices link to it from their
+"Über VanNode" card. It is sorted by node. Temp-, MaxxFan- and Pocket-Node and the template
+contain no third-party parts besides the libraries listed at the end. New third-party code is
+added here, under its node, and nowhere else.
+
+### Heater-Node (`firmware/heater`)
+
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
 | `firmware/heater` – LIN/iNet Box protocol logic | ported | [skrebber/esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox), fork of [Fabian-Schmidt/esphome-truma_inetbox](https://github.com/Fabian-Schmidt/esphome-truma_inetbox) | GPL-3.0 |
@@ -75,6 +82,18 @@ determined only to make the devices work together (interoperability).
 | `firmware/heater/tests/captures` – CP Plus / Combi D6 E recordings | test data | [muccc/WomoLIN](https://github.com/muccc/WomoLIN) | GPL-3.0 |
 | `firmware/heater` – MQTT topic layout `control_status/…`, `set/…` | naming only | [mc0110/inetbox2mqtt](https://github.com/mc0110/inetbox2mqtt) | MIT |
 | `firmware/_common/truma_errors.h` – Truma fault codes | facts, texts rephrased in German | Truma "Diagnostics catalogue Truma Combi" (04.02.2019); CP Plus code lists as published on [womo-teile.de/truma-fehlercodes](https://www.womo-teile.de/truma-fehlercodes) | – |
+
+### Alde-Node (`firmware/alde`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
+| `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
+| `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
+
+### BLE-Node (`firmware/ble`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
 | `firmware/ble` – battery protocols `bms_proto.*` (Daly, Ective, BM2) | ported | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/ble/LICENSE-Apache-2.0`](firmware/ble/LICENSE-Apache-2.0)) |
 | `firmware/ble` – roof hatch protocol (RV Tech / Heki) | ported | [C64Axel/rvtech-hacs](https://github.com/C64Axel/rvtech-hacs), Copyright (c) 2026 C64Axel | MIT ([`firmware/ble/LICENSE-rvtech-MIT`](firmware/ble/LICENSE-rvtech-MIT)) |
 | `firmware/ble` – CaraWater pump: command `AA 39`, status frame `AA 45` | protocol knowledge, own C++ implementation (no code copied) | [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper), folder `carawater-isp-ble`, Copyright (c) 2026 Blackforest Vanlife (toms2k84) | MIT |
@@ -83,13 +102,36 @@ determined only to make the devices work together (interoperability).
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
 | `firmware/ble` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
+
+### Tanklevel-Node (`firmware/tanklevel`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
 | `firmware/tanklevel` – Mopeka Pro gas sensor decoding | decoding as in this library, own implementation | [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/tanklevel` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
-| `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
-| `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
+
+### Level-Node (`firmware/level`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
 | `firmware/level` – BNO085 level sensor (sensor logic, mounting positions, spirit level page, HA card, images, 3D print files) | based on | [klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), Copyright (c) 2026 klehnst | MIT ([`firmware/level/LICENSE-klehnst-MIT`](firmware/level/LICENSE-klehnst-MIT)) |
-| `firmware/omg` – OpenMQTTGateway | downloaded at build time, not included | [1technophile/OpenMQTTGateway](https://github.com/1technophile/OpenMQTTGateway) | GPL-3.0 |
+
+### Display-Node (`firmware/display`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
 | `firmware/display` – fonts Montserrat, Font Awesome 5 Free (converted LVGL fonts) | included | [LVGL](https://github.com/lvgl/lvgl), [Montserrat](https://github.com/JulietaUla/Montserrat), [Font Awesome Free](https://fontawesome.com) | SIL OFL 1.1 (Font Awesome icons: CC BY 4.0) |
+
+### Bluetooth-Gateway (`firmware/omg`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
+| `firmware/omg` – OpenMQTTGateway | downloaded at build time, not included | [1technophile/OpenMQTTGateway](https://github.com/1technophile/OpenMQTTGateway) | GPL-3.0 |
+
+### Whole project
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
 | logo wordmark – Poppins glyphs as outlines | drawn | [Poppins](https://github.com/itfoundry/Poppins) | SIL OFL 1.1 |
 
 Libraries that the Arduino IDE (or the CI) downloads when building, not part of this repository,

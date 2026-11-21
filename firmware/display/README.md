@@ -462,5 +462,5 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 - Der MaxxFan meldet keine Drehzahl zurück. Die Lüfterseite zeigt deshalb nur Online-Status und Auto-Hold; die Stufe wird gesetzt, nicht gelesen.
 - PubSubClient verwirft Nachrichten über 4 KB (`MQTT_BUFFER_SIZE`). Große Zigbee-Geräte-JSONs bitte in Zigbee2MQTT nicht unnötig aufblähen.
 - Bubble-Richtung: Neigt sich der Punkt falsch herum, im Levelsensor die Montagerichtung prüfen.
-- Lizenz: GNU GPL Version 3 mit zusätzlichen Bedingungen, siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md); Name und Logo: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Schriften: Montserrat (OFL) und Font Awesome 5 Free (OFL), wie in LVGL enthalten.
-- Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
+- Lizenz: GNU GPL Version 3 mit zusätzlichen Bedingungen, siehe [LICENSE](LICENSE) und [NOTICE.md](../../NOTICE.md); Name und Logo: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Schriften: Montserrat (OFL) und Font Awesome 5 Free (OFL), wie in LVGL enthalten.
+- Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](../../NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.

@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `heater-v<v
 
 | Version | Änderungen |
 | --- | --- |
+| 1.8.2 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |
 | 1.8.1 | LIN-Sniffer mit Modus **Alle Frames (Mitschnitt)**: jeder Frame aller PIDs mit Zeitstempel, ungefiltert (Debug-Reiter oder MQTT `set/sniffer` = `ALL`). Verlorene Frames werden gemeldet, das Log-Fenster hält im Mitschnitt bis zu 5000 Zeilen. `tests/log2replay.py` wandelt solche Logs in Replay-Dateien um |
 | 1.8.0 | Neuer Reiter **Debug**, einschaltbar unter System → Debug: LIN-Bus-Status, Sniffer, Rohdaten und das Log-Fenster sind dorthin umgezogen. „Herunterladen“ speichert das Log als `.log`-Datei mit Version, Einstellungen (ohne Zugangsdaten) und LIN-Status |
 

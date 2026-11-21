@@ -209,7 +209,7 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Lizenz
 
-GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md).
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](../../NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md).
 
-Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Fremde Teile: Die Heizbus-Dekodierung stammt aus [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, siehe [LICENSE-alde-MIT](LICENSE-alde-MIT), Dokumentation CC BY 4.0), das Protokoll des Bedienteil-Busses aus [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT, siehe [LICENSE-alde3030-MIT](LICENSE-alde3030-MIT)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
+Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](../../NOTICE.md)). Fremde Teile: Die Heizbus-Dekodierung stammt aus [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, siehe [LICENSE-alde-MIT](LICENSE-alde-MIT), Dokumentation CC BY 4.0), das Protokoll des Bedienteil-Busses aus [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT, siehe [LICENSE-alde3030-MIT](LICENSE-alde3030-MIT)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

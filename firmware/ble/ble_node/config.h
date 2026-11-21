@@ -38,6 +38,9 @@
 #ifndef PLUGIN_BLESENSOR
 #define PLUGIN_BLESENSOR      1      // Own BLE sensor: values at freely set positions of the advertisement
 #endif
+#ifndef PLUGIN_TPMS
+#define PLUGIN_TPMS           1      // Tires: SuperSense TireCheck pressure sensors, up to 8 wheels (passive BLE)
+#endif
 #ifndef PLUGIN_GOVEE
 #define PLUGIN_GOVEE          1      // Thermometer: Govee H5072/H5074/H5075/H5101/H5102/H5104/H5174/H5177/H5179 (passive BLE)
 #endif
@@ -84,7 +87,7 @@
 #endif
 
 // Derived switches (do not edit): which code parts are compiled
-#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME)
+#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME + PLUGIN_TPMS)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
 #define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + CT_BMS)
@@ -98,7 +101,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.2.0"
+#define FW_VERSION            "2.3.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -262,6 +265,12 @@
 // ============================================================
 // PLUGIN: GOVEE THERMOMETER
 // ============================================================
+#ifndef TPMS_TIMEOUT_MS
+#define TPMS_TIMEOUT_MS       (30UL * 60UL * 1000UL) // Wheel counts as current for this long (sensors send rarely when parked)
+#endif
+#ifndef MQTT_TPMS_MS
+#define MQTT_TPMS_MS          60000  // Periodic publish (new readings are published within seconds)
+#endif
 #ifndef GOVEE_TIMEOUT_MS
 #define GOVEE_TIMEOUT_MS      (10UL * 60UL * 1000UL) // No advertisement for this long: "offline"
 #endif

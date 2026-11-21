@@ -694,7 +694,7 @@ function fwUpload(field, toast) {
 fwLoad();
 setInterval(fwLoad, 15000);
 // vannode-about:begin
-// VanNode "Über" card: logo, author, license, third-party parts and project link, placed right
+// VanNode "Über" card: logo, author, license, link to the third-party list and project link, placed right
 // below the firmware update card of every device page. Shared copy from firmware/_common/web
 // (tools/common/sync_common.py) - edit it there.
 // This card is part of the Appropriate Legal Notices of VanNode. Under the additional terms of
@@ -707,24 +707,17 @@ setInterval(fwLoad, 15000);
   const GPL = 'Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
   const TERMS = 'Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
   const RISK = 'Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
-  // firmware id (FW_DEVICE) -> name, repo folder, third-party parts in this firmware
+  // firmware id (FW_DEVICE) -> name and repo folder. Third-party parts are not listed on the
+  // devices: the card links to the one central NOTICE.md of the repository (sorted by node).
   const DEV = {
-    tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel', x: [
-      'Mopeka-Dekodierung nach ' + A('https://github.com/Bluetooth-Devices/mopeka-iot-ble', 'mopeka-iot-ble') + ' (MIT, eigene Umsetzung)']},
+    tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel'},
     temp:      {n: 'Temp-Node', d: 'temp'},
     maxxfan:   {n: 'MaxxFan-Node', d: 'maxxfan'},
     example:   {n: 'Vorlage', d: '_template'},
-    toolbox:   {n: 'BLE-Node', d: 'ble', x: [
-      'Batterie-Protokolle (Daly, Ective, BM2) portiert aus ' + A('https://github.com/patman15/aiobmsble', 'aiobmsble') + ' (Apache-2.0)',
-      'Dachhauben-Protokoll portiert aus ' + A('https://github.com/C64Axel/rvtech-hacs', 'rvtech-hacs') + ', © 2026 C64Axel (MIT)',
-      'Pumpen-Protokoll nach ' + A('https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper', 'Blackforest-Vanlife-SmartCamper') + ' (MIT) und ' + A('https://github.com/geierwally1978/carawater-isp15-ble', 'carawater-isp15-ble') + ' (eigene Umsetzung, kein Code übernommen)',
-      'BM2-Format nach bm2-esphome und ha_bm2monitor, Govee und Mopeka nach govee-ble und mopeka-iot-ble (alle MIT, eigene Umsetzung)']},
-    heater:    {n: 'Heater-Node', d: 'heater', x: [
-      'Protokoll-Logik portiert aus ' + A('https://github.com/skrebber/esphome-truma_inetbox', 'skrebber/esphome-truma_inetbox') + ' (Fork von Fabian-Schmidt, GPL-3.0)',
-      'Timer aus ' + A('https://github.com/havanti/esphome-truma', 'havanti/esphome-truma') + ' (GPL-3.0); Vorarbeit ' + A('https://github.com/danielfett/inetbox.py', 'inetbox.py') + ' und ' + A('https://github.com/muccc/WomoLIN', 'WomoLIN') + ' (GPL-3.0)',
-      'Fehlercodes nach dem Truma-Diagnosekatalog und den CP-Plus-Codelisten, Texte eigenständig formuliert']},
-    level:     {n: 'Level-Node', d: 'level', x: [
-      'Basiert auf dem ' + A('https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT', 'BNO085-Levelsensor von klehnst') + ', © 2026 klehnst (MIT)']},
+    toolbox:   {n: 'BLE-Node', d: 'ble'},
+    heater:    {n: 'Heater-Node', d: 'heater'},
+    level:     {n: 'Level-Node', d: 'level'},
+    alde:      {n: 'Alde-Node', d: 'alde'},
   };
   DEV.ble = DEV.toolbox;   // mockups use the folder name
   DEV.template = DEV.example;
@@ -751,8 +744,7 @@ setInterval(fwLoad, 15000);
       '<p style="margin:6px 0">Lizenz: <b>GNU GPL Version 3</b>. ' + GPL + '</p>' +
       '<p style="' + small + '">' + TERMS + '</p>' +
       '<p style="margin:6px 0;font-size:.85em"><b>Ohne Gewähr.</b> ' + RISK + '</p>' +
-      (info.x ? '<p style="' + small + '">Enthält fremde Teile:<br>' + info.x.join('<br>') + '</p>' : '') +
-      '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(base + 'NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
+      '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(REPO + '/blob/main/NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
     upd.insertAdjacentElement('afterend', c);
   }
 

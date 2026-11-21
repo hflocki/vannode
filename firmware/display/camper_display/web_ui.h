@@ -931,14 +931,8 @@ function pgAbout(){
    <p>Lizenz: <b>GNU GPL Version 3</b>. ${VN_GPL}</p>
    <p class="mu">${VN_TERMS}</p>
    <p><b>Ohne Gewähr.</b> ${VN_RISK}</p>
-   <p>${a(VN_REPO+'/blob/main/firmware/display/LICENSE','Lizenztext (GPL-3.0)')} · ${a(VN_REPO+'/blob/main/firmware/display/NOTICE.md','Hinweise und fremde Teile')}</p>
-   <details><summary>Fremde Teile und verwendete Software</summary><table>
-    <tr><td>Truma-Fehlercodes</td><td>nach Truma-Diagnosekatalog und CP-Plus-Codelisten, Texte eigenständig</td></tr>
-    <tr><td>Schriften Montserrat, Poppins (Logo)</td><td>SIL OFL 1.1</td></tr><tr><td>Symbole Font Awesome Free</td><td>SIL OFL 1.1 / CC BY 4.0</td></tr>
-    <tr><td>Arduino-ESP32</td><td>LGPL-2.1</td></tr><tr><td>LVGL</td><td>MIT</td></tr>
-    <tr><td>GFX Library for Arduino</td><td>BSD</td></tr><tr><td>ESP Async WebServer, Async TCP</td><td>LGPL-3.0</td></tr>
-    <tr><td>PubSubClient</td><td>MIT</td></tr><tr><td>ArduinoJson</td><td>MIT</td></tr>
-   </table></details></details>`;
+   <p>${a(VN_REPO+'/blob/main/firmware/display/LICENSE','Lizenztext (GPL-3.0)')} · ${a(VN_REPO+'/blob/main/NOTICE.md','Hinweise und fremde Teile')}</p>
+   </details>`;
 }
 function pgSettings(){
   const g=SET_GROUPS.some(x=>x[0]===setGroup)?setGroup:'view';

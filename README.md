@@ -306,13 +306,14 @@ zusätzlichen Bedingungen nach Abschnitt 7 ([`NOTICE.md`](NOTICE.md)):
 
 Verkaufen erlaubt die GPL, wenn der vollständige Quellcode und diese Hinweise mitgegeben werden.
 
-Fremde Teile behalten ihre Lizenz und sind in der [`NOTICE.md`](NOTICE.md) aufgeführt:
+Fremde Teile behalten ihre Lizenz. Die vollständige Liste, nach Node sortiert, steht nur zentral in der [`NOTICE.md`](NOTICE.md); die Geräte verlinken in der Karte „Über VanNode“ dorthin. Kurzüberblick:
 
 | Ordner | Fremde Teile |
 | --- | --- |
 | `firmware/heater` | Protokoll-Logik aus [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) und Timer aus [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), Test-Mitschnitte aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
 | `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0), Protokoll des Bedienteil-Busses aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT) |
-| `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen) |
+| `firmware/ble` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen), SuperSense-Tanksensor nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT, eigene Umsetzung) |
+| `firmware/tanklevel` | Mopeka-Dekodierung nach [mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble), SuperSense-Tanksensor nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (beide MIT, eigene Umsetzung) |
 | `firmware/level` | basiert auf dem Levelsensor von [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
 | `firmware/display` | Schriften Montserrat und Font Awesome Free (OFL), Truma-Fehlertexte (eigene Formulierung) |
 | `firmware/omg` | OpenMQTTGateway (GPL-3.0), wird beim Bauen heruntergeladen |

@@ -41,6 +41,8 @@ const M = {
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
       P('mopeka_std', 'mopeka_std', 'Gas: Mopeka Standard', 1, Object.assign({name: 'Gasflasche 3', mac: MAC(11), empty_mm: 38, full_mm: 336, lpg_propane: 100}, GAS_CFG, {capacity: 14.6})),
       P('govee', 'govee', 'Thermometer Govee', 1, {name: 'Thermometer außen', mac: MAC(12), temp_offset: 0, hum_offset: 0}),
+      P('tpms', 'tpms', 'Reifendruck SuperSense TireCheck', 1, {name: 'Reifendruck', mac1: MAC(21), pos1: 0, mac2: MAC(22), pos2: 1, mac3: MAC(23), pos3: 4, mac4: MAC(24), pos4: 5,
+        mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 3.0, p_max: 5.5}),
       P('bthome', 'bthome', 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', 1, {name: 'Thermometer Bad', mac: MAC(13), objs: '01,02,03,0C'}),
       // own BLE sensor: a thermometer with custom firmware (service data 181A)
       P('blesensor', 'blesensor', 'Eigener BLE-Sensor', 1, {name: 'Eigener Sensor', mac: MAC(14), source: 1, company: '', uuid: '181A',
@@ -98,6 +100,24 @@ const M = {
       dimes: GAS_FIELDS,
       mopeka: MOPEKA_FIELDS,
       mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
+      tpms: [{k: 'mac1', l: 'Rad 1: Sensor-MAC', t: 'mac', h: 'Nicht zugeordnete Sensoren stehen in der Live-Ansicht, MAC von dort übernehmen. Leer = Rad nicht belegt'},
+             {k: 'pos1', l: 'Rad 1: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac2', l: 'Rad 2: Sensor-MAC', t: 'mac'},
+             {k: 'pos2', l: 'Rad 2: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac3', l: 'Rad 3: Sensor-MAC', t: 'mac'},
+             {k: 'pos3', l: 'Rad 3: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac4', l: 'Rad 4: Sensor-MAC', t: 'mac'},
+             {k: 'pos4', l: 'Rad 4: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac5', l: 'Rad 5: Sensor-MAC', t: 'mac'},
+             {k: 'pos5', l: 'Rad 5: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac6', l: 'Rad 6: Sensor-MAC', t: 'mac'},
+             {k: 'pos6', l: 'Rad 6: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac7', l: 'Rad 7: Sensor-MAC', t: 'mac'},
+             {k: 'pos7', l: 'Rad 7: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac8', l: 'Rad 8: Sensor-MAC', t: 'mac'},
+             {k: 'pos8', l: 'Rad 8: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'p_min', l: 'Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'},
+             {k: 'p_max', l: 'Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'}],
       govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
               {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
               {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
@@ -125,7 +145,7 @@ const M = {
             {type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2}, {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2},
             {type: 'supersense', name: 'Tank: SuperSense Füllstandssensor', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
-            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
+            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
     max_devices: 16,
     max_links: 8
@@ -317,6 +337,13 @@ const M = {
           rows: [['Inhalt', Math.round(l * 10) / 10, 'L'], ['Rohwert', raw, ''], ['Temperatur', 9.5, '°C'],
                  ['Rohdruck', 412, ''], ['Sensorstatus', 1, ''], ['Bluetooth', -76, 'dBm']],
           ctrl: [sw], raw: '37 20 00 95 04 12 00 01'};
+      }
+      case 'tpms': {
+        const p = [3.62, 3.58, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];
+        const pos = ['Vorne links', 'Vorne rechts', 'Hinten links', 'Hinten rechts'];
+        return {state: '4 von 4 Rädern aktuell', ok: true,
+          rows: pos.map((n, i) => [n, p[i].toFixed(2) + ' bar · ' + (9 + i) + ' °C · ' + [100, 100, 62, 100][i] + ' % · ' + (20 + 7 * i) + ' s', '']).concat(
+                [[MAC(31), '2.10 bar · -88 dBm · nicht zugeordnet', '']])};
       }
       case 'govee':
         return {state: 'OK', ok: true,

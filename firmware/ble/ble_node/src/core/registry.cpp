@@ -51,6 +51,9 @@ Plugin* createWcsFridge(uint8_t index);
 #if PLUGIN_WIPRO
 Plugin* createWipro(uint8_t index);
 #endif
+#if PLUGIN_SUPERSENSE
+Plugin* createSuperSense(uint8_t index);
+#endif
 #if PLUGIN_OBD
 Plugin* createObd(uint8_t index);
 #endif
@@ -71,6 +74,9 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_OBD
     {"obd", "Fahrzeug: OBD2-Adapter (ELM327 / vLinker)", BLE_LINK, createObd},
+#endif
+#if PLUGIN_SUPERSENSE
+    {"supersense", "Tank: SuperSense Füllstandssensor", BLE_LINK, createSuperSense},
 #endif
 #if PLUGIN_DALY
     {"daly", "Batterie: Daly BMS", BLE_LINK, createDaly},

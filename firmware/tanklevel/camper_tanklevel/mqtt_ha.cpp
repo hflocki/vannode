@@ -35,7 +35,8 @@ static bool discoveryPublished = false;
 static uint32_t lastPublishedGasUpdate = 0;
 
 static void mqttCallback(char* topic, byte* payload, unsigned int length);
-static void publishTankState(const char* sub, const WaterData& w, const TankConfig& t);
+static void publishTankState(const char* sub, const WaterData& w, const TankConfig& t, bool ss);
+static void tankDiscovery(const char* sub, const char* label, bool on, bool ss, const char* icon);
 static void publishGasState();
 static void publishSensor(const char* name, const char* id, const char* topic, const char* unit,
                           const char* devClass, const char* icon, bool measurement, bool keepLastValue);
@@ -114,8 +115,10 @@ void mqttLoop() {
     // Fresh water: periodically (also carries WiFi RSSI and status)
     if (lastWaterPublish == 0 || millis() - lastWaterPublish > MQTT_WATER_MS) {
         lastWaterPublish = millis();
-        if (config.water_enabled) publishTankState("water", sensorData.water, config.fresh);
-        if (config.grey_enabled)  publishTankState("grey", sensorData.grey, config.grey);
+        if (config.water_enabled) publishTankState("water", sensorData.water, config.fresh,
+                                                   config.fresh_type == TANK_TYPE_SUPERSENSE);
+        if (config.grey_enabled)  publishTankState("grey", sensorData.grey, config.grey,
+                                                   config.grey_type == TANK_TYPE_SUPERSENSE);
 
         char buf[8];
         itoa(sensorData.rssi, buf, 10);
@@ -167,12 +170,28 @@ static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
     }
 }
 
-static void publishTankState(const char* sub, const WaterData& w, const TankConfig& t) {
+static void publishTankState(const char* sub, const WaterData& w, const TankConfig& t, bool ss) {
     String base = String(sub) + "/";
     char buf[16];
 
-    dtostrf(w.avg_voltage, 1, 3, buf);
-    mqtt.publish(topic((base + "voltage").c_str()).c_str(), buf, true);
+    if (ss) {
+        // SuperSense: raw value and connection instead of the voltage; level only after a reading
+        mqtt.publish(topic((base + "ble_state").c_str()).c_str(), w.ss_state, true);
+        if (w.ss_rssi) {
+            itoa(w.ss_rssi, buf, 10);
+            mqtt.publish(topic((base + "ble_rssi").c_str()).c_str(), buf, true);
+        }
+        if (!w.ss_has_data) return;
+        ltoa((long)w.ss_raw, buf, 10);
+        mqtt.publish(topic((base + "ss_raw").c_str()).c_str(), buf, true);
+        if (!isnan(w.ss_temp)) {
+            dtostrf(w.ss_temp, 1, 1, buf);
+            mqtt.publish(topic((base + "temperature").c_str()).c_str(), buf, true);
+        }
+    } else {
+        dtostrf(w.avg_voltage, 1, 3, buf);
+        mqtt.publish(topic((base + "voltage").c_str()).c_str(), buf, true);
+    }
 
     dtostrf(w.liters, 1, 1, buf);
     mqtt.publish(topic((base + "liters").c_str()).c_str(), buf, true);
@@ -222,37 +241,42 @@ static void publishGasState() {
     mqtt.publish(topic("gas/ble_state").c_str(), g.ble_state, true);
 }
 
+// Entities of one water tank. No device_class for percent values: "battery" would show a
+// battery icon in HA. SuperSense tanks get raw value, temperature and connection instead of the voltage.
+static void tankDiscovery(const char* sub, const char* label, bool on, bool ss, const char* icon) {
+    String p(sub), l(label);
+    auto id = [&](const char* k) { return p + "_" + k; };
+    auto tp = [&](const char* k) { return p + "/" + k; };
+    auto nm = [&](const char* k) { return l + " " + k; };
+    if (!on) {
+        const char* sensors[] = {"liters", "percent", "voltage", "ss_raw", "temperature", "ble_state", "ble_rssi"};
+        for (const char* k : sensors) removeEntity("sensor", id(k).c_str());
+        removeEntity("switch", id("filter").c_str());
+        return;
+    }
+    publishSensor(nm("Inhalt").c_str(),  id("liters").c_str(),  tp("liters").c_str(),  "L", "volume_storage", icon, true, true);
+    publishSensor(nm("Prozent").c_str(), id("percent").c_str(), tp("percent").c_str(), "%", "None", "mdi:water-percent", true, true);
+    if (ss) {
+        removeEntity("sensor", id("voltage").c_str());
+        publishSensor(nm("Rohwert Sensor").c_str(), id("ss_raw").c_str(), tp("ss_raw").c_str(), "", "None", "mdi:numeric", true, true);
+        publishSensor(nm("Temperatur Sensor").c_str(), id("temperature").c_str(), tp("temperature").c_str(), "\u00b0C", "temperature", "mdi:thermometer", true, true);
+        publishSensor(nm("Sensor Signal").c_str(), id("ble_rssi").c_str(), tp("ble_rssi").c_str(), "dBm", "signal_strength", "mdi:bluetooth", true, false);
+        publishSensor(nm("Sensor Status").c_str(), id("ble_state").c_str(), tp("ble_state").c_str(), "", "None", "mdi:bluetooth-connect", false, false);
+    } else {
+        const char* ssKeys[] = {"ss_raw", "temperature", "ble_state", "ble_rssi"};
+        for (const char* k : ssKeys) removeEntity("sensor", id(k).c_str());
+        publishSensor(nm("Spannung").c_str(), id("voltage").c_str(), tp("voltage").c_str(), "V", "voltage", "mdi:current-dc", true, true);
+    }
+    publishSwitch(nm("Glättungsfilter").c_str(), id("filter").c_str(), tp("filter_active").c_str(), "mdi:blur",
+                  topic(("cmd/" + p + "/filter/set").c_str()).c_str());
+}
+
 void mqttPublishDiscovery() {
     Serial.println("[MQTT] Publishing HA Discovery...");
 
-    // Fresh water. No device_class for percent values: "battery" would show a battery icon in HA
-    if (config.water_enabled) {
-        publishSensor("Frischwasser Inhalt",  "water_liters",  "water/liters",  "L", "volume_storage", "mdi:water",         true, true);
-        publishSensor("Frischwasser Prozent", "water_percent", "water/percent", "%", "None",           "mdi:water-percent", true, true);
-        publishSensor("Frischwasser Spannung","water_voltage", "water/voltage", "V", "voltage",        "mdi:current-dc",    true, true);
-        publishSwitch("Frischwasser Glättungsfilter", "water_filter", "water/filter_active", "mdi:blur",
-                      topic("cmd/water/filter/set").c_str());
-    } else {
-        // Disabled: remove the entities from Home Assistant
-        removeEntity("sensor", "water_liters");
-        removeEntity("sensor", "water_percent");
-        removeEntity("sensor", "water_voltage");
-        removeEntity("switch", "water_filter");
-    }
-
-    // Grey water (optional)
-    if (config.grey_enabled) {
-        publishSensor("Grauwasser Inhalt",   "grey_liters",  "grey/liters",  "L", "volume_storage", "mdi:water-opacity",  true, true);
-        publishSensor("Grauwasser Prozent",  "grey_percent", "grey/percent", "%", "None",           "mdi:water-percent",  true, true);
-        publishSensor("Grauwasser Spannung", "grey_voltage", "grey/voltage", "V", "voltage",        "mdi:current-dc",     true, true);
-        publishSwitch("Grauwasser Glättungsfilter", "grey_filter", "grey/filter_active", "mdi:blur",
-                      topic("cmd/grey/filter/set").c_str());
-    } else {
-        removeEntity("sensor", "grey_liters");
-        removeEntity("sensor", "grey_percent");
-        removeEntity("sensor", "grey_voltage");
-        removeEntity("switch", "grey_filter");
-    }
+    // Fresh and grey water. Disabled tanks are removed from Home Assistant.
+    tankDiscovery("water", "Frischwasser", config.water_enabled, config.fresh_type == TANK_TYPE_SUPERSENSE, "mdi:water");
+    tankDiscovery("grey", "Grauwasser", config.grey_enabled, config.grey_type == TANK_TYPE_SUPERSENSE, "mdi:water-opacity");
 
     // Gas
     if (config.gas_enabled) {

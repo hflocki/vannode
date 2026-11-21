@@ -53,7 +53,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Daly, Ective, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -64,3 +64,4 @@ determined only to make the devices work together (interoperability).
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
 | `firmware/tanklevel` – Mopeka Pro gas sensor decoding | decoding as in this library, own implementation | [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
+| `firmware/tanklevel` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |

@@ -53,7 +53,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Daly, Ective, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -70,3 +70,4 @@ determined only to make the devices work together (interoperability).
 | `firmware/ble` – CaraWater pump, first version | protocol knowledge, own C++ implementation | Home Assistant integration "carawater_isp15" by a community member, shared in a user group; he did not answer whether and how he wants to be named and will be credited on request | – (no license stated) |
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
+| `firmware/ble` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |

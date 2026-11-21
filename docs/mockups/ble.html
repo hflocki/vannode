@@ -40,6 +40,7 @@ const M = {
       P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),
       P('ective', 'ective', 'Batterie: Ective BM X', 2, {name: 'Zweitbatterie', mac: MAC(7), interval: 10}),
       P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)}),
+      P('supersense', 'supersense', 'Tank: SuperSense Füllstandssensor', 2, {name: 'Abwassertank', mac: MAC(15), medium: 1, tank_size: 90, factor: 0.01}),
       // passive sensors (advertisements only)
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
@@ -94,6 +95,11 @@ const M = {
       daly: BMS_FIELDS('Batterie-MAC'),
       ective: BMS_FIELDS('Batterie-MAC'),
       bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
+      supersense: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                   {k: 'medium', l: 'Tank', t: 'select', o: 'Frischwasser|Grauwasser|Schwarzwasser|Sonstiges'},
+                   {k: 'tank_size', l: 'Tankgröße', t: 'float', min: 1, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'factor', l: 'Liter je Rohwert-Einheit', t: 'float', min: 0.00001, max: 10, step: 0.00001, u: 'L',
+                    h: 'Laut Quelle ist der Rohwert in ml (0,001). Noch nicht am echten Sensor bestätigt: Rohwert bei bekanntem Inhalt ablesen und Faktor = Liter / Rohwert eintragen.'}],
       dimes: GAS_FIELDS,
       mopeka: MOPEKA_FIELDS,
       mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
@@ -122,6 +128,7 @@ const M = {
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'wipro', name: 'Alarm WiPro III (nur lesen)', ble: 2},
             {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
             {type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2}, {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2},
+            {type: 'supersense', name: 'Tank: SuperSense Füllstandssensor', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
@@ -306,6 +313,15 @@ const M = {
         rows.push(['Batterie', p.type === 'dimes' ? 90 : 75, '%'], ['Bluetooth', -79, 'dBm'], ['Alter', 8, 's']);
         return {state: 'OK', ok: true, gauge: {v: lvl, unit: '%', label: 'Füllstand'}, rows,
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
+      }
+      case 'supersense': {
+        const raw = Math.round(wave(3720, 15, 11)), size = +p.cfg.tank_size || 90, l = raw * (+p.cfg.factor || 0.01);
+        const label = ['Frischwasser', 'Grauwasser', 'Schwarzwasser', 'Tank'][p.cfg.medium || 0];
+        return {state: rel ? 'Für App freigegeben' : 'Verbunden', ok: !rel,
+          gauge: {v: Math.round(Math.min(100, l / size * 100)), unit: '%', label, max: 100},
+          rows: [['Inhalt', Math.round(l * 10) / 10, 'L'], ['Rohwert', raw, ''], ['Temperatur', 9.5, '°C'],
+                 ['Rohdruck', 412, ''], ['Sensorstatus', 1, ''], ['Bluetooth', -76, 'dBm']],
+          ctrl: [sw], raw: '37 20 00 95 04 12 00 01'};
       }
       case 'govee':
         return {state: 'OK', ok: true,

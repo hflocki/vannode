@@ -4,20 +4,22 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "water_sensor.h"
+#include "supersense_decode.h"
 
 // State of one analog tank input (moving-average buffer)
 struct TankChannel {
     const char* name;
     int pin;
     const TankConfig* cfg;
+    const uint8_t* type;   // Sender type (TANK_TYPE_SUPERSENSE = Bluetooth instead of the ADC)
     WaterData* out;
     float readings[FILTER_WINDOW_SIZE];
     int readIndex;
     bool primed;
 };
 
-static TankChannel fresh = {"Fresh", ADC_PIN, &config.fresh, &sensorData.water, {0}, 0, false};
-static TankChannel grey  = {"Grey",  GREY_ADC_PIN, &config.grey, &sensorData.grey, {0}, 0, false};
+static TankChannel fresh = {"Fresh", ADC_PIN, &config.fresh, &config.fresh_type, &sensorData.water, {0}, 0, false};
+static TankChannel grey  = {"Grey",  GREY_ADC_PIN, &config.grey, &config.grey_type, &sensorData.grey, {0}, 0, false};
 
 static unsigned long lastSensorRead = 0;
 
@@ -52,7 +54,18 @@ static float readVoltage(int pin) {
     return (sumMv / (float)ADC_SAMPLES) / 1000.0f;
 }
 
+static bool isSuperSense(const TankChannel& ch) {
+    return *ch.type == TANK_TYPE_SUPERSENSE;
+}
+
 static void initChannel(TankChannel& ch) {
+    for (int i = 0; i < FILTER_WINDOW_SIZE; i++) ch.readings[i] = 0.0f;
+    ch.readIndex = 0;
+    ch.primed = false;
+    if (isSuperSense(ch)) {
+        Serial.printf("[Water] %s tank: SuperSense (Bluetooth)\n", ch.name);
+        return;
+    }
     Serial.printf("[Water] %s tank on GPIO%d\n", ch.name, ch.pin);
     analogSetPinAttenuation(ch.pin, ADC_11db);   // Widest input range (approx. 0-2.5 V on the ESP32-C3)
     for (int i = 0; i < FILTER_WINDOW_SIZE; i++) ch.readings[i] = 0.0f;
@@ -63,8 +76,12 @@ static void initChannel(TankChannel& ch) {
 static void readChannel(TankChannel& ch) {
     WaterData& w = *ch.out;
     const TankConfig& cfg = *ch.cfg;
+    const bool ss = isSuperSense(ch);
 
-    float voltage = readVoltage(ch.pin);
+    // SuperSense: the raw level value takes the place of the voltage (filter as usual).
+    // Without a fresh reading the last level stays.
+    if (ss && (!w.ss_has_data || millis() - w.ss_last > SS_SILENCE_MS)) return;
+    float voltage = ss ? (float)w.ss_raw : readVoltage(ch.pin);
     w.raw_voltage = voltage;
 
     // Prefill the filter with the first reading so the average does not start at 0 V
@@ -82,8 +99,15 @@ static void readChannel(TankChannel& ch) {
 
     w.avg_voltage = cfg.filter_active ? (sum / FILTER_WINDOW_SIZE) : voltage;
 
-    // Convert voltage to fill level in % using the table, then to liters using the tank size
-    float percent = constrain(interpolatePercent(cfg, w.avg_voltage), 0.0f, 100.0f);
+    // Convert voltage to fill level in % using the table, then to liters using the tank size.
+    // SuperSense: liters = raw value * factor, percent from the tank size.
+    float percent;
+    if (ss) {
+        percent = cfg.tank_size > 0 ? ssLiters(lroundf(w.avg_voltage), cfg.ss_factor) / cfg.tank_size * 100.0f : 0.0f;
+        percent = constrain(percent, 0.0f, 100.0f);
+    } else {
+        percent = constrain(interpolatePercent(cfg, w.avg_voltage), 0.0f, 100.0f);
+    }
     w.percent = percent;
     w.liters = percent / 100.0f * cfg.tank_size;
 }

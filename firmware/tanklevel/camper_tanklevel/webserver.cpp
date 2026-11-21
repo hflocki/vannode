@@ -6,6 +6,8 @@
 #include "webserver.h"
 #include "wifi_manager.h"
 #include "gas_sensor.h"
+#include "supersense_link.h"
+#include "supersense_decode.h"
 #include "mqtt_ha.h"
 #include "safeguard.h"
 #include "fwcheck.h"
@@ -89,6 +91,8 @@ static void setTypeCalib(TankConfig& t, uint8_t type) {
 static void setDefaultTank(TankConfig& t, float size) {
     t.tank_size = size;
     t.filter_active = true;
+    t.ss_mac[0] = '\0';
+    t.ss_factor = SS_DEFAULT_FACTOR;
     setElectrodeCalib(t);
 }
 
@@ -114,6 +118,7 @@ static void setDefaults() {
     // Water tanks
     setDefaultTank(config.fresh, DEFAULT_TANK_SIZE);
     setDefaultTank(config.grey, DEFAULT_GREY_SIZE);
+    config.fresh_type = GREY_TYPE_ELECTRODE;
     config.grey_type = GREY_SENSOR_TYPE;
     setTypeCalib(config.grey, config.grey_type);
 
@@ -173,6 +178,8 @@ static String tankKey(const char* prefix, const char* key) {
 static void tankToJson(JsonDocument& doc, const char* prefix, const TankConfig& t) {
     doc[tankKey(prefix, "tank_size")] = t.tank_size;
     doc[tankKey(prefix, "filter_active")] = t.filter_active;
+    doc[tankKey(prefix, "ss_mac")] = (const char*)t.ss_mac;
+    doc[tankKey(prefix, "ss_factor")] = t.ss_factor;
     JsonArray arr = doc[tankKey(prefix, "calib")].to<JsonArray>();
     for (int i = 0; i < t.calibCount; i++) {
         JsonObject item = arr.add<JsonObject>();
@@ -181,8 +188,18 @@ static void tankToJson(JsonDocument& doc, const char* prefix, const TankConfig& 
     }
 }
 
+static bool normalizeMac(const char* in, char* out, size_t size);
+
+static bool validFactor(float f) {
+    return f >= 0.00001f && f <= 10.0f;
+}
+
 // Reads a stored tank; invalid or missing values keep the defaults
 static void tankFromJson(JsonDocument& doc, const char* prefix, TankConfig& t) {
+    char mac[18];
+    if (normalizeMac(doc[tankKey(prefix, "ss_mac")] | "", mac, sizeof(mac))) strlcpy(t.ss_mac, mac, sizeof(t.ss_mac));
+    JsonVariant ssf = doc[tankKey(prefix, "ss_factor")];
+    if ((ssf.is<float>() || ssf.is<int>()) && validFactor(ssf.as<float>())) t.ss_factor = ssf.as<float>();
     JsonVariant f = doc[tankKey(prefix, "filter_active")];
     if (f.is<bool>()) t.filter_active = f.as<bool>();
     JsonVariant s = doc[tankKey(prefix, "tank_size")];
@@ -206,6 +223,10 @@ struct TankUpdate {
     float size = 0.0f;
     bool hasFilter = false;
     bool filter = false;
+    bool hasMac = false;
+    char mac[18] = "";
+    bool hasFactor = false;
+    float factor = 0.0f;
 };
 
 // Returns an error message or nullptr if the values are valid
@@ -222,12 +243,21 @@ static const char* validateTank(JsonDocument& doc, const char* prefix, TankUpdat
     JsonVariant f = doc[tankKey(prefix, "filter_active")];
     u.hasFilter = f.is<bool>();
     u.filter = u.hasFilter ? f.as<bool>() : false;
+    JsonVariant m = doc[tankKey(prefix, "ss_mac")];
+    u.hasMac = m.is<const char*>();
+    if (u.hasMac && !normalizeMac(m.as<const char*>(), u.mac, sizeof(u.mac))) return "Invalid SuperSense MAC address";
+    JsonVariant k = doc[tankKey(prefix, "ss_factor")];
+    u.hasFactor = isNumber(k);
+    u.factor = u.hasFactor ? k.as<float>() : 0.0f;
+    if (u.hasFactor && !validFactor(u.factor)) return "SuperSense factor must be 0.00001-10";
     return nullptr;
 }
 
 static void applyTank(TankConfig& t, const TankUpdate& u) {
     if (u.hasSize) t.tank_size = u.size;
     if (u.hasFilter) t.filter_active = u.filter;
+    if (u.hasMac) strlcpy(t.ss_mac, u.mac, sizeof(t.ss_mac));
+    if (u.hasFactor) t.ss_factor = u.factor;
     if (u.hasCalib) applyCalib(t, u.calib, u.calibCount);
 }
 
@@ -387,12 +417,21 @@ void webserverInit() {
             String("{\"filter\":\"") + (t.filter_active ? "ON" : "OFF") + "\"}");
     });
 
+    // SuperSense: let the phone app connect (POST, ?tank=grey for the grey water tank, &on=0 to take it back)
+    server.on("/api/ss_release", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        uint8_t tank = (request->hasParam("tank") && request->getParam("tank")->value() == "grey") ? 1 : 0;
+        bool on = !(request->hasParam("on") && request->getParam("on")->value() == "0");
+        ssRelease(tank, on);
+        request->send(200, "application/json", String("{\"released\":") + (ssReleased(tank) ? "true" : "false") + "}");
+    });
+
     // Nearby BLE devices (for picking the gas sensor MAC in the web UI)
     server.on("/api/scan", HTTP_GET, [](AsyncWebServerRequest* request) {
         if (!auth(request)) return;
         JsonDocument doc;
         JsonArray arr = doc["devices"].to<JsonArray>();
-        if (config.gas_enabled) gasFillSeenList(arr);
+        if (gasBleStarted()) gasFillSeenList(arr);
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
@@ -437,6 +476,19 @@ void webserverLoop() {
     }
 }
 
+// SuperSense values of a tank for the live view
+static void addSuperSense(JsonObject o, const WaterData& w, uint8_t tank) {
+    JsonObject s = o["ss"].to<JsonObject>();
+    s["state"] = (const char*)w.ss_state;
+    s["has_data"] = w.ss_has_data;
+    if (w.ss_has_data) s["raw"] = w.ss_raw;
+    if (!isnan(w.ss_temp)) s["temp"] = round(w.ss_temp * 10.0f) / 10.0f;
+    if (w.ss_rssi) s["rssi"] = w.ss_rssi;
+    s["age"] = w.ss_has_data ? (long)((millis() - w.ss_last) / 1000) : -1;
+    s["hex"] = (const char*)w.ss_hex;
+    s["released"] = ssReleased(tank);
+}
+
 void wsSendSensorData() {
     JsonDocument doc;
     const WaterData& w = sensorData.water;
@@ -447,6 +499,7 @@ void wsSendSensorData() {
     wo["liters"] = round(w.liters * 10.0f) / 10.0f;
     wo["percent"] = round(w.percent);
     wo["filter"] = config.fresh.filter_active;
+    if (config.fresh_type == TANK_TYPE_SUPERSENSE) addSuperSense(wo, w, 0);
 
     const WaterData& gr = sensorData.grey;
     JsonObject gro = doc["grey"].to<JsonObject>();
@@ -454,6 +507,7 @@ void wsSendSensorData() {
     gro["liters"] = round(gr.liters * 10.0f) / 10.0f;
     gro["percent"] = round(gr.percent);
     gro["filter"] = config.grey.filter_active;
+    if (config.grey_type == TANK_TYPE_SUPERSENSE) addSuperSense(gro, gr, 1);
 
     JsonObject go = doc["gas"].to<JsonObject>();
     go["has_data"] = g.has_data;
@@ -480,7 +534,7 @@ void wsSendSensorData() {
     doc["wifi"] = getWiFiStateString();
     doc["mqtt"] = mqttIsConnected();
 
-    static char buffer[1280];   // static: keeps it off the stack
+    static char buffer[1792];   // static: keeps it off the stack
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     if (len == 0 || len >= sizeof(buffer)) return;
     ws.textAll(buffer, len);
@@ -524,6 +578,7 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
     // Water tanks
     tankToJson(doc, "", config.fresh);
     tankToJson(doc, "grey_", config.grey);
+    doc["fresh_type"] = config.fresh_type;
     doc["grey_type"] = config.grey_type;
 
     // Gas
@@ -611,8 +666,14 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
 
     bool hasGreyType = doc["grey_type"].is<int>();
     int newGreyType = hasGreyType ? doc["grey_type"].as<int>() : 0;
-    if (hasGreyType && newGreyType != GREY_TYPE_ELECTRODE && newGreyType != GREY_TYPE_FL) {
+    if (hasGreyType && newGreyType != GREY_TYPE_ELECTRODE && newGreyType != GREY_TYPE_FL &&
+        newGreyType != TANK_TYPE_SUPERSENSE) {
         sendError(request, "Unknown grey water sender type"); return;
+    }
+    bool hasFreshType = doc["fresh_type"].is<int>();
+    int newFreshType = hasFreshType ? doc["fresh_type"].as<int>() : 0;
+    if (hasFreshType && newFreshType != GREY_TYPE_ELECTRODE && newFreshType != TANK_TYPE_SUPERSENSE) {
+        sendError(request, "Unknown fresh water sender type"); return;
     }
 
     // Gas
@@ -688,6 +749,8 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     if (doc["gas_enabled"].is<bool>())   config.gas_enabled = doc["gas_enabled"].as<bool>();
 
     applyTank(config.fresh, freshUpd);
+    // Takes effect after the restart triggered by the web UI (Bluetooth starts at boot)
+    if (hasFreshType) config.fresh_type = (uint8_t)newFreshType;
     // Another sender type: load its default table (unless a table was sent along)
     if (hasGreyType && newGreyType != config.grey_type) {
         config.grey_type = (uint8_t)newGreyType;
@@ -777,8 +840,10 @@ void loadConfig() {
 
     // Water tanks (factory values are kept for anything missing or invalid)
     tankFromJson(doc, "", config.fresh);
+    int freshType = doc["fresh_type"] | (int)GREY_TYPE_ELECTRODE;
+    config.fresh_type = (freshType == TANK_TYPE_SUPERSENSE) ? TANK_TYPE_SUPERSENSE : GREY_TYPE_ELECTRODE;
     int greyType = doc["grey_type"] | GREY_SENSOR_TYPE;
-    config.grey_type = (greyType == GREY_TYPE_FL) ? GREY_TYPE_FL : GREY_TYPE_ELECTRODE;
+    config.grey_type = (greyType == GREY_TYPE_FL || greyType == TANK_TYPE_SUPERSENSE) ? (uint8_t)greyType : GREY_TYPE_ELECTRODE;
     setTypeCalib(config.grey, config.grey_type);   // Default table of this type, replaced by a stored one
     tankFromJson(doc, "grey_", config.grey);
 
@@ -829,6 +894,7 @@ void saveConfig() {
     // Water tanks
     tankToJson(doc, "", config.fresh);
     tankToJson(doc, "grey_", config.grey);
+    doc["fresh_type"] = config.fresh_type;
     doc["grey_type"] = config.grey_type;
 
     // Gas

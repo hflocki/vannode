@@ -36,6 +36,7 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
 | Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
+| Tank: SuperSense Füllstandssensor (Pro, Solid, Laser; **nur lesen**) | Verbinden | MAC, Tank (Frisch-/Grau-/Schwarzwasser), Tankgröße, Liter je Rohwert-Einheit (siehe unten) |
 | Gas: Rotarex DIMES / SRG WAVE | Mithören | MAC, Flaschengröße, Füllstopp |
 | Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
 | Gas: Mopeka Standard / Std Check | Mithören | MAC, Leer-/Voll-Höhe, Propan-Anteil |
@@ -154,6 +155,8 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 
 **Alarm WiPro III** (nur lesen): Die Namen der Kontakte stellst du im Feld **„Kontaktnamen“** ein (mit Komma getrennt); leer bleibt es bei „Kontakt 0“ usw. Das Plugin schaltet die Anlage nie scharf oder unscharf. Es hält die Bluetooth-Verbindung zum Alarm-Modul; mit „Bluetooth für App freigeben“ lässt es die Thitronik-App ran. Dein iPhone und die Apple Watch sind davon nicht betroffen, deren Bluetooth läuft unabhängig.
 
+**SuperSense** (nur lesen): Der Node verbindet sich, schickt einmal den Startbefehl und bekommt dann laufend Füllstand, Temperatur, Rohdruck und Status. Keine Kopplung nötig. Die Einheit des Füllstands ist noch nicht an einem echten Sensor bestätigt (laut Quelle ml, dann reicht der Wert aber nur bis knapp 10 L). Deshalb rechnet das Plugin mit **Liter je Rohwert-Einheit** (Standard 0,001) und zeigt den **Rohwert** mit an: bei bekanntem Inhalt Rohwert ablesen und Faktor = Liter ÷ Rohwert eintragen. Mit „Bluetooth für App freigeben“ kommt die Hersteller-App wieder an den Sensor. Dieselbe Dekodierung (`supersense_decode.h` aus `firmware/_common`) nutzt auch der [Tanklevel-Node](../tanklevel), dort ersetzt der Sensor den Votronic-Geber.
+
 **OBD2-Adapter** (nur lesen): Es kommen nur die Werte, die das Fahrzeug meldet. Fehlercodes neu lesen mit `…/cmd/obd/read_dtc/set`.
 
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
@@ -212,7 +215,7 @@ Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble
 
 ## Lizenz
 
-GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll (eigene Umsetzung, kein Code übernommen) nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (Ordner `carawater-isp-ble`, MIT: Schaltbefehl `AA 39`, Statusrahmen `AA 45`), [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (keine Lizenzangabe: Telemetrie `AA 93`, Status-Bits, Prüfsumme, Umrechnung) und der ersten HA-Integration carawater_isp15 eines Community-Mitglieds.
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll (eigene Umsetzung, kein Code übernommen) nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (Ordner `carawater-isp-ble`, MIT: Schaltbefehl `AA 39`, Statusrahmen `AA 45`), [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (keine Lizenzangabe: Telemetrie `AA 93`, Status-Bits, Prüfsumme, Umrechnung) und der ersten HA-Integration carawater_isp15 eines Community-Mitglieds. SuperSense-Protokoll (eigene Umsetzung, kein Code übernommen) nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT).
 
 Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

@@ -7,7 +7,8 @@ const M = {
     mqtt_prefix: 'camper/tanklevel', web_user: '',
     water_enabled: true, grey_enabled: true, gas_enabled: true,
     tank_size: 100, calib: [{v: 0.12, l: 0}, {v: 0.9, l: 30}, {v: 1.7, l: 65}, {v: 2.45, l: 100}],
-    grey_tank_size: 80, grey_calib: [{v: 0.1, l: 0}, {v: 2.4, l: 100}], grey_type: 1,
+    grey_tank_size: 80, grey_calib: [{v: 0.1, l: 0}, {v: 2.4, l: 100}], grey_type: 1, fresh_type: 0,
+    ss_mac: '', ss_factor: 0.001, grey_ss_mac: 'D0:5A:00:12:34:56', grey_ss_factor: 0.01,
     sensor_mac: 'AA:BB:CC:11:22:33', capacity: 11, fill_stop_on: true, fill_stop: 80,
     gas_type: 0, lpg_propane: 100, mopeka_empty_mm: 38, mopeka_full_mm: 366,
     sensor_def: {model: 'Beispiel-Gassensor', source: 0, company: 'FFFF', uuid: '', level_offset: 2, level_len: 1,
@@ -23,7 +24,9 @@ const M = {
     if (path === '/api/scan') return {devices: [
       {mac: 'AA:BB:CC:11:22:33', name: 'Gassensor', mfg: 'FFFF', rssi: -71},
       {mac: 'C4:7C:8D:6A:12:34', name: '', mfg: '0059', rssi: -80},
+      {mac: 'D0:5A:00:12:34:56', name: 'SuperSense', mfg: '', rssi: -74, ss: true},
       {mac: '5A:01:23:45:67:89', name: 'Kühlbox', svc: '0000fe95', rssi: -88}]};
+    if (path === '/api/ss_release') return {released: false};
   },
   tank(pct, size, calib) {
     const l = pct / 100 * size;
@@ -44,6 +47,14 @@ const M = {
     const gp = Math.min(95, 31 + t / 120);          // grey water slowly fills
     const w = Object.assign(M.tank(wp, c.tank_size, c.calib), {filter: M.filter.water});
     const g = Object.assign(M.tank(gp, c.grey_tank_size, c.grey_calib), {filter: M.filter.grey});
+    // SuperSense as sender: raw value instead of the voltage (liters = raw * factor)
+    const ss = (o, size, factor) => {
+      const raw = Math.round(o.liters / (factor || 0.001));
+      Object.assign(o, {voltage: raw, ss: {state: 'OK', has_data: true, raw, temp: 8.5, rssi: -74, age: Math.floor(t % 20),
+        hex: '00 00 00 85 04 12 00 01', released: false}});
+    };
+    if (c.fresh_type === 2) ss(w, c.tank_size, c.ss_factor);
+    if (c.grey_type === 2) ss(g, c.grey_tank_size, c.grey_ss_factor);
     const level = 57;
     return {
       water: w, grey: g,

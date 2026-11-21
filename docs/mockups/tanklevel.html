@@ -12,7 +12,8 @@ const M = {
     mqtt_prefix: 'camper/tanklevel', web_user: '',
     water_enabled: true, grey_enabled: true, gas_enabled: true,
     tank_size: 100, calib: [{v: 0.12, l: 0}, {v: 0.9, l: 30}, {v: 1.7, l: 65}, {v: 2.45, l: 100}],
-    grey_tank_size: 80, grey_calib: [{v: 0.1, l: 0}, {v: 2.4, l: 100}], grey_type: 1,
+    grey_tank_size: 80, grey_calib: [{v: 0.1, l: 0}, {v: 2.4, l: 100}], grey_type: 1, fresh_type: 0,
+    ss_mac: '', ss_factor: 0.001, grey_ss_mac: 'D0:5A:00:12:34:56', grey_ss_factor: 0.01,
     sensor_mac: 'AA:BB:CC:11:22:33', capacity: 11, fill_stop_on: true, fill_stop: 80,
     gas_type: 0, lpg_propane: 100, mopeka_empty_mm: 38, mopeka_full_mm: 366,
     sensor_def: {model: 'Beispiel-Gassensor', source: 0, company: 'FFFF', uuid: '', level_offset: 2, level_len: 1,
@@ -28,7 +29,9 @@ const M = {
     if (path === '/api/scan') return {devices: [
       {mac: 'AA:BB:CC:11:22:33', name: 'Gassensor', mfg: 'FFFF', rssi: -71},
       {mac: 'C4:7C:8D:6A:12:34', name: '', mfg: '0059', rssi: -80},
+      {mac: 'D0:5A:00:12:34:56', name: 'SuperSense', mfg: '', rssi: -74, ss: true},
       {mac: '5A:01:23:45:67:89', name: 'Kühlbox', svc: '0000fe95', rssi: -88}]};
+    if (path === '/api/ss_release') return {released: false};
   },
   tank(pct, size, calib) {
     const l = pct / 100 * size;
@@ -49,6 +52,14 @@ const M = {
     const gp = Math.min(95, 31 + t / 120);          // grey water slowly fills
     const w = Object.assign(M.tank(wp, c.tank_size, c.calib), {filter: M.filter.water});
     const g = Object.assign(M.tank(gp, c.grey_tank_size, c.grey_calib), {filter: M.filter.grey});
+    // SuperSense as sender: raw value instead of the voltage (liters = raw * factor)
+    const ss = (o, size, factor) => {
+      const raw = Math.round(o.liters / (factor || 0.001));
+      Object.assign(o, {voltage: raw, ss: {state: 'OK', has_data: true, raw, temp: 8.5, rssi: -74, age: Math.floor(t % 20),
+        hex: '00 00 00 85 04 12 00 01', released: false}});
+    };
+    if (c.fresh_type === 2) ss(w, c.tank_size, c.ss_factor);
+    if (c.grey_type === 2) ss(g, c.grey_tank_size, c.grey_ss_factor);
     const level = 57;
     return {
       water: w, grey: g,
@@ -318,6 +329,7 @@ body {
 .dev.match { border-left: 3px solid var(--gas); }
 .dev-main { flex: 1; min-width: 0; }
 .dev-mac { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
 .dev-name { font-size: 0.7rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dev-rssi { font-size: 0.75rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .badge { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; background: rgba(255,159,67,0.15); color: var(--gas); vertical-align: middle; }
@@ -542,12 +554,14 @@ nav button .ico{display:inline-flex}
 
         <div class="card" id="live-water">
             <div class="card-title water">Frischwasser</div>
-            <div class="info-row"><span class="info-label">Spannung</span><span id="w-voltage">--</span></div>
+            <div class="info-row volt-only-water"><span class="info-label">Spannung</span><span id="w-voltage">--</span></div>
+            <div class="info-row ss-only-water"><span class="info-label">SuperSense</span><span id="ss-water-state2">--</span></div>
         </div>
 
         <div class="card" id="live-grey">
             <div class="card-title grey">Grauwasser</div>
-            <div class="info-row"><span class="info-label">Spannung</span><span id="gr-voltage">--</span></div>
+            <div class="info-row volt-only-grey"><span class="info-label">Spannung</span><span id="gr-voltage">--</span></div>
+            <div class="info-row ss-only-grey"><span class="info-label">SuperSense</span><span id="ss-grey-state2">--</span></div>
         </div>
 
         <div class="card" id="live-gas">
@@ -568,13 +582,42 @@ nav button .ico{display:inline-flex}
             <div class="enable-row">
                 <div>
                     <div class="card-title water" style="margin-bottom:4px">Frischwasser-Sensor</div>
-                    <div class="form-hint" style="margin-top:0">Votronic-Tankgeber am analogen Eingang</div>
+                    <div class="form-hint" style="margin-top:0" id="water-src-hint">Votronic-Tankgeber am analogen Eingang</div>
                 </div>
                 <label class="toggle"><input type="checkbox" id="cfg-water-enabled" onchange="setEnabled('water', this)"><span></span></label>
             </div>
         </div>
 
         <div id="water-settings">
+        <div class="card">
+            <div class="card-title water">Gebertyp</div>
+            <div class="form-group">
+                <select id="cfg-fresh-type" onchange="setTankType('water', this)">
+                    <option value="0">Votronic Tankelektrode (analog)</option>
+                    <option value="2">SuperSense (Bluetooth)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card ss-only-water">
+            <div class="card-title water">SuperSense-Sensor</div>
+            <div class="info-row"><span class="info-label">Status</span><span id="ss-water-state">--</span></div>
+            <div class="info-row"><span class="info-label">Rohwert</span><span id="ss-water-raw">--</span></div>
+            <div class="info-row"><span class="info-label">Temperatur</span><span id="ss-water-temp">--</span></div>
+            <div class="info-row"><span class="info-label">Bluetooth Signal</span><span id="ss-water-rssi">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Wert</span><span id="ss-water-age">--</span></div>
+            <div class="info-row"><span class="info-label">Rohdaten</span><span id="ss-water-hex" class="mono">--</span></div>
+            <div class="form-group"><label>Sensor-MAC</label><input type="text" id="ss-water-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
+            <div class="form-group"><label>Liter je Rohwert-Einheit</label><input type="number" id="ss-water-factor" min="0.00001" max="10" step="0.00001">
+                <div class="form-hint">Laut Quelle liefert der Sensor ml (0,001). Noch nicht am echten Sensor bestätigt: bei bekanntem Inhalt den Rohwert ablesen und Liter ÷ Rohwert eintragen.</div></div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveSs('water')">💾 Sensor speichern</button>
+                <button class="btn btn-secondary" onclick="ssScan('water')">Suchen</button>
+                <button class="btn btn-secondary" id="ss-water-rel" onclick="ssRelease('water')">Für App freigeben</button>
+            </div>
+            <div class="dev-list" id="ss-water-list" style="margin-top:8px"></div>
+        </div>
+
         <div class="card">
             <div class="card-title water">Tankgröße</div>
             <div class="form-group"><label>Fassungsvermögen (Liter)</label><input type="number" id="cfg-tank-size" min="1" max="5000" step="0.1"></div>
@@ -588,7 +631,7 @@ nav button .ico{display:inline-flex}
             <div class="btn-row"><button class="btn btn-primary" onclick="toggleFilter('water')">🔀 Filter ein/aus</button></div>
         </div>
 
-        <div class="card">
+        <div class="card volt-only-water">
             <div class="card-title water">Volt-zu-Füllstand Matrix</div>
             <div class="info-row"><span class="info-label">Aktuelle Spannung</span><span id="w-voltage2">--</span></div>
             <table class="calib-table">
@@ -607,7 +650,7 @@ nav button .ico{display:inline-flex}
             <div class="enable-row">
                 <div>
                     <div class="card-title grey" style="margin-bottom:4px">Grauwasser-Sensor</div>
-                    <div class="form-hint" style="margin-top:0">Zweiter Votronic-Tankgeber (GPIO1), optional</div>
+                    <div class="form-hint" style="margin-top:0" id="grey-src-hint">Zweiter Votronic-Tankgeber (GPIO1), optional</div>
                 </div>
                 <label class="toggle grey"><input type="checkbox" id="cfg-grey-enabled" onchange="setEnabled('grey', this)"><span></span></label>
             </div>
@@ -620,9 +663,30 @@ nav button .ico{display:inline-flex}
                 <select id="cfg-grey-type" onchange="setGreyType(this)">
                     <option value="0">Votronic Tankelektrode (wie Frischwasser)</option>
                     <option value="1">Votronic Tank-Sensor FL (kapazitiv)</option>
+                    <option value="2">SuperSense (Bluetooth)</option>
                 </select>
                 <div class="form-hint" id="grey-type-hint"></div>
             </div>
+        </div>
+
+
+        <div class="card ss-only-grey">
+            <div class="card-title grey">SuperSense-Sensor</div>
+            <div class="info-row"><span class="info-label">Status</span><span id="ss-grey-state">--</span></div>
+            <div class="info-row"><span class="info-label">Rohwert</span><span id="ss-grey-raw">--</span></div>
+            <div class="info-row"><span class="info-label">Temperatur</span><span id="ss-grey-temp">--</span></div>
+            <div class="info-row"><span class="info-label">Bluetooth Signal</span><span id="ss-grey-rssi">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Wert</span><span id="ss-grey-age">--</span></div>
+            <div class="info-row"><span class="info-label">Rohdaten</span><span id="ss-grey-hex" class="mono">--</span></div>
+            <div class="form-group"><label>Sensor-MAC</label><input type="text" id="ss-grey-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
+            <div class="form-group"><label>Liter je Rohwert-Einheit</label><input type="number" id="ss-grey-factor" min="0.00001" max="10" step="0.00001">
+                <div class="form-hint">Laut Quelle liefert der Sensor ml (0,001). Noch nicht am echten Sensor bestätigt: bei bekanntem Inhalt den Rohwert ablesen und Liter ÷ Rohwert eintragen.</div></div>
+            <div class="btn-row">
+                <button class="btn btn-grey" onclick="saveSs('grey')">💾 Sensor speichern</button>
+                <button class="btn btn-secondary" onclick="ssScan('grey')">Suchen</button>
+                <button class="btn btn-secondary" id="ss-grey-rel" onclick="ssRelease('grey')">Für App freigeben</button>
+            </div>
+            <div class="dev-list" id="ss-grey-list" style="margin-top:8px"></div>
         </div>
 
         <div class="card" id="grey-teach">
@@ -651,7 +715,7 @@ nav button .ico{display:inline-flex}
             <div class="btn-row"><button class="btn btn-grey" onclick="toggleFilter('grey')">🔀 Filter ein/aus</button></div>
         </div>
 
-        <div class="card">
+        <div class="card volt-only-grey">
             <div class="card-title grey">Volt-zu-Füllstand Matrix</div>
             <div class="form-hint" style="margin:-6px 0 8px">Wird beim Einlernen automatisch gesetzt (FL) oder hier von Hand angepasst.</div>
             <div class="info-row"><span class="info-label">Aktuelle Spannung</span><span id="gr-voltage2">--</span></div>
@@ -876,6 +940,8 @@ let def = null;          // Compile-time gas sensor definition from the device
 let scanTimer = null;
 let lastRawHex = null;
 const enabled = { water: true, grey: false, gas: true };
+const tankType = { water: 0, grey: 0 };   // 0 / 1 = analog sender, 2 = SuperSense (Bluetooth)
+const SS = 2;
 
 const $ = (id) => document.getElementById(id);
 
@@ -925,10 +991,27 @@ function updateTank(w, fillId, p) {
     $(p + '-filter').textContent = w.filter ? 'AN' : 'AUS';
 }
 
+// SuperSense values of a tank (only sent for tanks of that type)
+function updateSs(kind, s) {
+    if (!s) return;
+    const st = s.state || '--';
+    $('ss-' + kind + '-state').textContent = st;
+    $('ss-' + kind + '-state2').textContent = st + (s.raw !== undefined ? ' · Rohwert ' + s.raw : '');
+    $('ss-' + kind + '-raw').textContent = s.raw !== undefined ? s.raw : '--';
+    $('ss-' + kind + '-temp').textContent = s.temp !== undefined ? s.temp.toFixed(1) + ' °C' : '--';
+    $('ss-' + kind + '-rssi').textContent = s.rssi ? s.rssi + ' dBm' : '--';
+    $('ss-' + kind + '-age').textContent = formatAge(s.age);
+    $('ss-' + kind + '-hex').textContent = s.hex || '--';
+    $('ss-' + kind + '-rel').textContent = s.released ? 'App-Freigabe beenden' : 'Für App freigeben';
+    $('ss-' + kind + '-rel').dataset.on = s.released ? '1' : '0';
+}
+
 function updateLiveData(d) {
     // Fresh and grey water
     updateTank(d.water || {}, 'tank-fill', 'w');
     updateTank(d.grey || {}, 'grey-tank-fill', 'gr');
+    updateSs('water', (d.water || {}).ss);
+    updateSs('grey', (d.grey || {}).ss);
     if (d.grey) {
         greyVoltage = d.grey.voltage;
         $('gr-voltage3').textContent = (greyVoltage || 0).toFixed(3) + ' V';
@@ -1023,8 +1106,17 @@ async function loadSetup() {
             t.calib = cfg[t.key + 'calib'] || [];
             renderMatrix(kind);
         }
-        greyType = cfg.grey_type === 1 ? 1 : 0;
+        greyType = [1, SS].includes(cfg.grey_type) ? cfg.grey_type : 0;
+        tankType.water = cfg.fresh_type === SS ? SS : 0;
+        tankType.grey = greyType;
+        $('cfg-fresh-type').value = String(tankType.water);
+        for (const kind of ['water', 'grey']) {
+            const t = TANKS[kind];
+            $('ss-' + kind + '-mac').value = cfg[t.key + 'ss_mac'] || '';
+            $('ss-' + kind + '-factor').value = cfg[t.key + 'ss_factor'] ?? 0.001;
+        }
         applyGreyType();
+        applyTankTypes();
 
         // Gas
         $('cfg-mac').value = cfg.sensor_mac || '';
@@ -1150,13 +1242,16 @@ let greyType = 0;   // 0 = tank electrode, 1 = Tank-Sensor FL
 
 const GREY_TYPE_HINTS = [
     'Kennlinie über die Matrix mit mehreren Punkten, Startwerte wie beim Frischwasser.',
-    'Lineares Signal: unten Leer und Voll einlernen, die Matrix besteht dann aus zwei Punkten.'
+    'Lineares Signal: unten Leer und Voll einlernen, die Matrix besteht dann aus zwei Punkten.',
+    'Füllstand per Bluetooth-Verbindung, kein Kabel am Tank. Der Sensor ist dann nur noch eingeschränkt mit der App nutzbar (siehe „Für App freigeben“).'
 ];
 
 function applyGreyType() {
     $('cfg-grey-type').value = String(greyType);
     $('grey-type-hint').textContent = GREY_TYPE_HINTS[greyType];
     $('grey-teach').classList.toggle('hidden', greyType !== 1);
+    tankType.grey = greyType;
+    applyTankTypes();
     // Taught values = the 0 % and 100 % points of the table
     const pts = TANKS.grey.calib;
     const empty = pts.find(p => p.l === 0);
@@ -1174,6 +1269,11 @@ async function setGreyType(sel) {
     }
     try {
         await postConfig({ grey_type: type });
+        if (type === SS || greyType === SS) {
+            showToast('✓ Gespeichert - Neustart...');
+            setTimeout(() => restartDevice(), 1000);
+            return;
+        }
         showToast('✓ Gebertyp gespeichert');
         loadSetup();
     } catch (e) {
@@ -1210,6 +1310,94 @@ async function toggleFilter(kind) {
         const j = await resp.json();
         $(t.filter).textContent = (j.filter === 'ON') ? 'AN' : 'AUS';
     } catch (e) { showToast('Fehler beim Umschalten'); }
+}
+
+// ---------- SuperSense (Bluetooth tank sensor) ----------
+
+// Shows the SuperSense or the analog settings of both tanks
+function applyTankTypes() {
+    for (const kind of ['water', 'grey']) {
+        const ss = tankType[kind] === SS;
+        document.querySelectorAll('.ss-only-' + kind).forEach(e => e.classList.toggle('hidden', !ss));
+        document.querySelectorAll('.volt-only-' + kind).forEach(e => e.classList.toggle('hidden', ss));
+    }
+    $('water-src-hint').textContent = tankType.water === SS ? 'SuperSense-Sensor über Bluetooth' : 'Votronic-Tankgeber am analogen Eingang';
+    $('grey-src-hint').textContent = tankType.grey === SS ? 'SuperSense-Sensor über Bluetooth, optional' : 'Zweiter Votronic-Tankgeber (GPIO1), optional';
+}
+
+// Fresh water sender type; Bluetooth starts at boot, so the device restarts
+async function setTankType(kind, sel) {
+    const type = parseInt(sel.value);
+    if (type === tankType[kind]) return;
+    if (!confirm('Gebertyp wechseln? Das Gerät startet neu.')) { sel.value = String(tankType[kind]); return; }
+    try {
+        await postConfig({ fresh_type: type });
+        tankType[kind] = type;
+        applyTankTypes();
+        showToast('✓ Gespeichert - Neustart...');
+        setTimeout(() => restartDevice(), 1000);
+    } catch (e) {
+        sel.value = String(tankType[kind]);
+        showToast('Fehler: ' + e.message);
+    }
+}
+
+async function saveSs(kind) {
+    const t = TANKS[kind];
+    const mac = $('ss-' + kind + '-mac').value.trim();
+    const factor = parseFloat($('ss-' + kind + '-factor').value);
+    if (!isValidMac(mac)) { showToast('Ungültige MAC-Adresse'); return; }
+    if (!Number.isFinite(factor) || factor < 0.00001 || factor > 10) { showToast('Faktor: 0,00001 bis 10'); return; }
+    try {
+        await postConfig({ [t.key + 'ss_mac']: mac, [t.key + 'ss_factor']: factor });
+        showToast('✓ Sensor gespeichert');
+    } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+async function ssRelease(kind) {
+    const on = $('ss-' + kind + '-rel').dataset.on !== '1';
+    try {
+        await fetch('/api/ss_release?tank=' + (kind === 'grey' ? 'grey' : 'water') + '&on=' + (on ? 1 : 0), { method: 'POST' });
+        showToast(on ? 'Freigegeben für 30 min' : 'Freigabe beendet');
+    } catch (e) { showToast('Fehler'); }
+}
+
+// Nearby devices with the SuperSense service first; built with DOM nodes (foreign names)
+async function ssScan(kind) {
+    const list = $('ss-' + kind + '-list');
+    list.replaceChildren();
+    let devs = [];
+    try {
+        const resp = await fetch('/api/scan');
+        if (resp.ok) devs = (await resp.json()).devices || [];
+    } catch (e) {}
+    devs.sort((a, b) => (b.ss ? 1 : 0) - (a.ss ? 1 : 0));
+    if (!devs.length) {
+        const e = document.createElement('div');
+        e.className = 'empty';
+        e.textContent = 'Keine Geräte gefunden (Bluetooth läuft erst nach dem Neustart mit Gebertyp SuperSense)';
+        list.appendChild(e);
+        return;
+    }
+    devs.slice(0, 10).forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'dev' + (d.ss ? ' match' : '');
+        const main = document.createElement('div'); main.className = 'dev-main';
+        const mac = document.createElement('div'); mac.className = 'dev-mac'; mac.textContent = d.mac;
+        if (d.ss) {
+            const b = document.createElement('span');
+            b.className = 'badge'; b.textContent = 'SuperSense';
+            mac.appendChild(b);
+        }
+        const name = document.createElement('div'); name.className = 'dev-name'; name.textContent = d.name || '(ohne Namen)';
+        main.append(mac, name);
+        const rssi = document.createElement('div'); rssi.className = 'dev-rssi'; rssi.textContent = d.rssi + ' dBm';
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary btn-small'; btn.textContent = 'Übernehmen';
+        btn.onclick = () => { $('ss-' + kind + '-mac').value = d.mac; showToast('MAC übernommen - bitte speichern'); };
+        row.append(main, rssi, btn);
+        list.appendChild(row);
+    });
 }
 
 // ---------- Gas ----------

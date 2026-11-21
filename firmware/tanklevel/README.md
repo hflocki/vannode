@@ -6,6 +6,7 @@ Eine Firmware für **einen** ESP32-C3 (oder klassischen ESP32), die zwei Projekt
 
 - **Frischwasser** aus [camper-waterlevel](https://github.com/hflocki/camper-waterlevel): Votronic-Tankgeber am analogen Eingang, Volt-zu-Füllstand-Matrix, Glättungsfilter
 - **Grauwasser** (optional): zweiter Votronic-Geber, wahlweise Tankelektrode (wie Frischwasser) oder kapazitiver Tank-Sensor FL, mit eigener Tankgröße, Matrix und Filter
+- **SuperSense** statt Votronic (optional, je Tank): Füllstandssensor SuperSense (Pro, Solid, Laser) über eine Bluetooth-Verbindung, ohne Kabel am Tank (siehe [unten](#supersense-statt-votronic))
 - **Gas** aus [camper-gaslevel](https://github.com/hflocki/camper-gaslevel): BLE-Gassensor (Standard: Rotarex DIMES / SRG WAVE), passiv über Bluetooth-Advertising, Füllstopp-Berechnung. Alternativ **Mopeka Pro** (Pro Check, Pro Check Universal, Pro Plus …) oder **Mopeka Standard** (Std Check), umschaltbar im Tab Gas
 
 Alle Werte gehen per **MQTT** (mit Home-Assistant-Discovery) raus und sind in einer gemeinsamen **Web-Oberfläche** zu sehen und einzustellen. Jeder Sensor lässt sich einzeln ein- und ausschalten.
@@ -51,6 +52,7 @@ camper_tanklevel/data/   LittleFS-Inhalt: index.html.gz (komprimiert, wird hochg
 | `config.h` | Pins, Standardwerte, **GAS SENSOR DEFINITION** (Byte-Zuordnung) |
 | `water_sensor.cpp` | ADC für Frisch- und Grauwasser, gleitender Mittelwert, Interpolation über die Matrix |
 | `gas_sensor.cpp` | NimBLE-Scan, Dekodierung, Geräteliste, Füllstopp |
+| `supersense_link.cpp` | Bluetooth-Verbindung zu SuperSense-Sensoren (je Tank eine), Dekodierung in `supersense_decode.h` (Kopie aus `firmware/_common`) |
 | `mqtt_ha.cpp` | MQTT, HA-Discovery, Filter-Schalter |
 | `webserver.cpp` | Web-UI (gzip), REST-API, Konfiguration in LittleFS |
 | `wifi_manager.cpp` | WLAN mit AP-Fallback (Modem-Sleep für WiFi/BLE-Koexistenz) |
@@ -140,7 +142,18 @@ Frischwasser und Gas sind standardmäßig an, Grauwasser ist aus. Jede Kombinati
   ```
 - **In der Web-UI:** oben im Tab **Wasser**, **Grau** bzw. **Gas** gibt es einen Schalter. Danach startet das Gerät neu.
 
-Ein ausgeschalteter Sensor verschwindet von der Live-Seite und aus Home Assistant (die Entitäten werden per MQTT entfernt). Ist Gas aus, wird Bluetooth gar nicht gestartet.
+Ein ausgeschalteter Sensor verschwindet von der Live-Seite und aus Home Assistant (die Entitäten werden per MQTT entfernt). Ist Gas aus und kein Tank auf SuperSense gestellt, wird Bluetooth gar nicht gestartet.
+
+## SuperSense statt Votronic
+
+Frisch- und Grauwasser können statt des analogen Votronic-Gebers einen **SuperSense**-Füllstandssensor (Pro, Solid, Laser) nutzen. Im Tab **Wasser** bzw. **Grau** unter **Gebertyp** „SuperSense (Bluetooth)“ wählen, das Gerät startet neu. Danach in der Karte **SuperSense-Sensor** auf **Suchen** tippen (Geräte mit SuperSense-Dienst stehen oben), die MAC übernehmen und speichern.
+
+- Der ESP hält eine Bluetooth-Verbindung zum Sensor, schickt einmal den Startbefehl und bekommt dann laufend die Werte. Keine Kopplung, keine PIN.
+- **Einheit noch nicht bestätigt:** Laut Quelle liefert der Sensor den Füllstand in ml; mit 4 Stellen reicht das aber nur bis knapp 10 L. Deshalb gibt es das Feld **Liter je Rohwert-Einheit** (Standard 0,001) und die Anzeige **Rohwert**: bei bekanntem Inhalt den Rohwert ablesen und Faktor = Liter ÷ Rohwert eintragen. Prozent = Liter ÷ Tankgröße.
+- Der Glättungsfilter wirkt auf den Rohwert, die Volt-Matrix wird nicht gebraucht. Ohne neue Werte (länger als 70 s) bleibt der letzte Füllstand stehen, der Status zeigt „Keine Daten“ bzw. „Nicht erreichbar“.
+- Solange der ESP verbunden ist, kommt die Hersteller-App meist nicht an den Sensor: **Für App freigeben** trennt die Verbindung für 30 Minuten.
+- MQTT: statt `…/voltage` kommen `…/ss_raw`, `…/temperature`, `…/ble_rssi` und `…/ble_state` ([TOPICS.md](../../docs/TOPICS.md#tanks-campertanklevel)).
+- Dieselbe Dekodierung nutzt das Plugin `supersense` im [ble-Node](../ble), für Tanks, die nicht am Tanklevel-Node hängen.
 
 ## Mopeka-Sensoren
 
@@ -224,7 +237,7 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 
 ## Lizenz
 
-GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md).
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). SuperSense-Protokoll (eigene Umsetzung, kein Code übernommen) nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT).
 
 Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

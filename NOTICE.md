@@ -59,7 +59,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Daly, Ective, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -82,7 +82,9 @@ determined only to make the devices work together (interoperability).
 | `firmware/ble` – CaraWater pump, first version | protocol knowledge, own C++ implementation | Home Assistant integration "carawater_isp15" by a community member, shared in a user group; he did not answer whether and how he wants to be named and will be credited on request | – (no license stated) |
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
+| `firmware/ble` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
 | `firmware/tanklevel` – Mopeka Pro gas sensor decoding | decoding as in this library, own implementation | [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
+| `firmware/tanklevel` – SuperSense tank sensor (UUIDs, init packet, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
 | `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
 | `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
 | `firmware/level` – BNO085 level sensor (sensor logic, mounting positions, spirit level page, HA card, images, 3D print files) | based on | [klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), Copyright (c) 2026 klehnst | MIT ([`firmware/level/LICENSE-klehnst-MIT`](firmware/level/LICENSE-klehnst-MIT)) |

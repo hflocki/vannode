@@ -65,6 +65,9 @@
 #ifndef PLUGIN_ECTIVE
 #define PLUGIN_ECTIVE         1      // Battery: Ective BM X battery monitor (LiPower), BLE connection
 #endif
+#ifndef PLUGIN_SUPERSENSE
+#define PLUGIN_SUPERSENSE     1      // Tank: SuperSense level sensor (Pro, Solid, Laser), BLE connection
+#endif
 #ifndef PLUGIN_BM2
 #define PLUGIN_BM2            1      // Battery: BM2 battery monitor (broadcast, connection as fallback)
 #endif
@@ -84,7 +87,7 @@
 #define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
 #define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
-#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + CT_BMS)
+#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
 
@@ -95,7 +98,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.1.26"
+#define FW_VERSION            "2.2.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 
@@ -494,6 +497,13 @@
 #endif
 #ifndef MQTT_WCS_MS
 #define MQTT_WCS_MS           30000
+#endif
+// SuperSense tank sensor (protocol constants in supersense_decode.h)
+#ifndef SUPERSENSE_DEFAULT_TANK
+#define SUPERSENSE_DEFAULT_TANK 100.0f // Tank size in litres (web UI)
+#endif
+#ifndef MQTT_SUPERSENSE_MS
+#define MQTT_SUPERSENSE_MS    30000
 #endif
 #ifndef WIPRO_OFFLINE_MS
 #define WIPRO_OFFLINE_MS      120000 // No status for 2 min = alarm module offline

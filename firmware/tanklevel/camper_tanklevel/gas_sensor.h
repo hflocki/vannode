@@ -10,7 +10,9 @@
 #include <ArduinoJson.h>
 #include "config.h"
 
-// Gas level: passive BLE advertising sensor (default: Rotarex DIMES / SRG WAVE)
+// Gas level: passive BLE advertising sensor (default: Rotarex DIMES / SRG WAVE).
+// The scanner also runs without gas sensor when a water tank uses a SuperSense sensor
+// (device list for picking its MAC, address type for the connection).
 
 bool gasInit();
 void gasLoop();
@@ -24,5 +26,12 @@ void gasRecalculate();
 // Nearby BLE devices for the web UI (address, name, rssi, company ID, service data UUID)
 void gasFillSeenList(JsonArray arr);
 void gasPrintSeenList();
+
+// Bluetooth is running (gasInit() was called)
+bool gasBleStarted();
+// Pause / resume the scan while a connection is set up (calls nest)
+void gasScanPause(bool pause);
+// Address type (public / random) of a device seen by the scan; false = not seen
+bool gasFindAddrType(const char* mac, uint8_t* type);
 
 #endif // GAS_SENSOR_H

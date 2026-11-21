@@ -9,6 +9,8 @@
  * Hardware: ESP32-C3 / ESP32
  *   - Fresh water: Votronic analog tank sender on ADC_PIN (ESP32-C3: GPIO0)
  *   - Grey water (optional): second Votronic tank sender on GREY_ADC_PIN (ESP32-C3: GPIO1)
+ *   - Instead of a Votronic sender, each water tank can use a SuperSense level sensor
+ *     over a Bluetooth connection (supersense_link.cpp)
  *   - Gas: BLE gas level sensor, received passively via the built-in Bluetooth LE
  *          (default: Rotarex DIMES / SRG WAVE, see GAS SENSOR DEFINITION in config.h)
  *
@@ -26,6 +28,7 @@
 #include "evlog.h"
 #include "water_sensor.h"
 #include "gas_sensor.h"
+#include "supersense_link.h"
 #include "mqtt_ha.h"
 #include "webserver.h"
 
@@ -33,6 +36,7 @@ AppConfig config;
 SensorData sensorData;
 
 static unsigned long lastStatusPrint = 0;
+static bool bleOn = false;   // Bluetooth started (gas sensor and / or SuperSense tank)
 
 void setupOTA() {
     ArduinoOTA.setHostname(OTA_HOSTNAME);
@@ -121,10 +125,14 @@ void setup() {
     // Phase 3: WiFi (blocking connect or AP fallback)
     startWiFi();
 
-    // Phase 4: Bluetooth LE scanner (after WiFi, both share the radio)
-    if (config.gas_enabled) {
+    // Phase 4: Bluetooth LE scanner (after WiFi, both share the radio). Also needed without
+    // gas sensor when a water tank uses a SuperSense sensor.
+    bleOn = config.gas_enabled || ssUsed();
+    if (bleOn) {
         gasInit();
-    } else {
+        ssInit();
+    }
+    if (!config.gas_enabled) {
         sensorData.gas.battery = NAN;
         strlcpy(sensorData.gas.ble_state, "Deaktiviert", sizeof(sensorData.gas.ble_state));
     }
@@ -146,7 +154,10 @@ void loop() {
     ArduinoOTA.handle();
 
     if (config.water_enabled || config.grey_enabled) waterLoop();
-    if (config.gas_enabled) gasLoop();
+    if (bleOn) {
+        gasLoop();
+        ssLoop();
+    }
     mqttLoop();
     webserverLoop();
 
@@ -156,8 +167,8 @@ void loop() {
         if (cmd == "read") {
             printRead();
         } else if (cmd == "scan") {
-            if (config.gas_enabled) gasPrintSeenList();
-            else Serial.println("[CMD] Gas sensor is disabled");
+            if (bleOn) gasPrintSeenList();
+            else Serial.println("[CMD] Bluetooth is off (no gas sensor, no SuperSense tank)");
         } else if (cmd == "filter") {
             config.fresh.filter_active = !config.fresh.filter_active;
             saveConfig();

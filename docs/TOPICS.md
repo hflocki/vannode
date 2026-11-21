@@ -39,9 +39,11 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 
 | Topic | Inhalt |
 | --- | --- |
-| `…/water/percent`, `liters`, `voltage` | Frischwasser |
+| `…/water/percent`, `liters`, `voltage` | Frischwasser (`voltage` nur mit Votronic-Geber) |
+| `…/water/ss_raw`, `temperature`, `ble_rssi`, `ble_state` | nur Gebertyp SuperSense: Rohwert des Sensors, Sensortemperatur °C, Bluetooth-Signal, Verbindungsstatus (`OK`, `Verbinde...`, `Nicht erreichbar` …); `ss_raw` und `temperature` erst nach dem ersten gültigen Wert |
 | `…/water/filter_active` | `ON` / `OFF` |
-| `…/grey/percent`, `liters`, `voltage` | Grauwasser (nur wenn eingeschaltet) |
+| `…/grey/percent`, `liters`, `voltage` | Grauwasser (nur wenn eingeschaltet; `voltage` nur mit Votronic-Geber) |
+| `…/grey/ss_raw`, `temperature`, `ble_rssi`, `ble_state` | Grauwasser mit Gebertyp SuperSense, wie bei `water` |
 | `…/grey/filter_active` | `ON` / `OFF` |
 | `…/gas/level`, `raw_level`, `content` | Gasflasche in %, Rohwert, Restmenge in kg (erst nach dem ersten gültigen Wert) |
 | `…/gas/battery`, `ble_rssi`, `ble_state` | Gassensor: Akku, Bluetooth-Signal, `OK` oder Fehler |
@@ -246,7 +248,7 @@ Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `batte
 
 ## BLE-Node Tool `camper/tool`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -264,6 +266,7 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) Kontaktnamen im Feld „Kontaktnamen“ der Plugin-Einstellungen |
 | `…/obd/rpm`, `speed`, `coolant`, `oil_temp`, `fuel`, `fuel_rate`, `adblue`, `adblue_temp`, `adblue_conc`, `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count`, `voltage`, `running` (`ON`/`OFF`), `mil` (`ON`/`OFF`), `dtc`, `protocol`, `adapter`, `raw`, `scan` | OBD2-Adapter (nur lesen): Standardwerte des Motorsteuergeräts (nur die, die das Fahrzeug meldet; `fuel_rate` in l/h, `adblue` Füllstand %, `adblue_temp` °C, `adblue_conc` Konzentration %), Bordspannung am Adapter, Motor läuft, Motorkontrollleuchte, Fehlercodes als Text. `scan` = Bericht des letzten Fahrzeug-Scans (Text, retained). Befehle `…/cmd/obd/read_dtc/set` (`PRESS`), `…/cmd/obd/scan/set` (`PRESS`, Fahrzeug scannen), `…/cmd/obd/raw/set` (Adapter-Befehl, Antwort in `raw`) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
+| `…/supersense/percent`, `liters`, `raw`, `temperature`, `pressure`, `sensor_status`, `ble_rssi` | Tanksensor SuperSense (nur lesen): Füllstand %, Inhalt in Litern (Rohwert × Faktor aus den Einstellungen), Rohwert, Sensortemperatur °C, Rohdruck und Status des Sensors |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |
 | `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |

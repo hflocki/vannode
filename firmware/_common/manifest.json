@@ -113,6 +113,10 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node"
+    ],
+    "supersense_decode.h": [
+      "firmware/tanklevel/camper_tanklevel",
+      "firmware/ble/ble_node"
     ]
   },
   "blocks": {

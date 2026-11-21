@@ -17,7 +17,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.9.6"
+#define FW_VERSION            "1.10.0"
 #define FW_DEVICE             "tanklevel"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID
@@ -168,6 +168,11 @@
 #endif
 #ifndef GREY_TYPE_FL
 #define GREY_TYPE_FL          1
+#endif
+// Both tanks: SuperSense level sensor over Bluetooth instead of an analog sender
+// (fresh water: type 0 = Votronic tank electrode, 2 = SuperSense)
+#ifndef TANK_TYPE_SUPERSENSE
+#define TANK_TYPE_SUPERSENSE  2
 #endif
 #ifndef GREY_SENSOR_TYPE
 #define GREY_SENSOR_TYPE      GREY_TYPE_ELECTRODE
@@ -397,6 +402,8 @@ struct TankConfig {
     bool filter_active;    // Moving-average filter on/off
     CalibPoint calibTable[MAX_CALIB_POINTS];  // Volt-to-percent table, sorted by voltage
     uint8_t calibCount;
+    char ss_mac[18];       // SuperSense sensor (type TANK_TYPE_SUPERSENSE), "" = none
+    float ss_factor;       // SuperSense: liters per raw unit (supersense_decode.h)
 };
 
 // ============================================================
@@ -427,7 +434,8 @@ struct AppConfig {
     // Water tanks
     TankConfig fresh;
     TankConfig grey;
-    uint8_t grey_type;     // GREY_TYPE_ELECTRODE or GREY_TYPE_FL
+    uint8_t fresh_type;    // GREY_TYPE_ELECTRODE (Votronic) or TANK_TYPE_SUPERSENSE
+    uint8_t grey_type;     // GREY_TYPE_ELECTRODE, GREY_TYPE_FL or TANK_TYPE_SUPERSENSE
 
     // Gas (data mapping is defined at compile time, see GAS SENSOR DEFINITION)
     char sensor_mac[18];   // "AA:BB:CC:DD:EE:FF" (upper case), empty = no sensor
@@ -444,10 +452,19 @@ struct AppConfig {
 // SENSOR DATA STRUCTS
 // ============================================================
 struct WaterData {
-    float raw_voltage;     // Raw voltage from the ADC
-    float avg_voltage;     // Filtered voltage
+    float raw_voltage;     // Raw voltage from the ADC (SuperSense: raw level value)
+    float avg_voltage;     // Filtered voltage (SuperSense: filtered raw level value)
     float liters;          // Calculated content in liters
     float percent;         // Calculated content in % (0-100)
+    // SuperSense only (written by supersense_link.cpp)
+    bool ss_has_data;      // At least one valid reading since boot
+    int32_t ss_raw;        // Last raw level value
+    float ss_temp;         // Sensor temperature in °C (NAN = none)
+    int ss_rssi;           // Bluetooth signal of the connection
+    unsigned long ss_last; // millis() of the last valid reading
+    uint32_t ss_updates;   // Counter of valid readings
+    char ss_state[24];     // Connection state for the web UI / MQTT
+    char ss_hex[26];       // Last notification as hex
 };
 
 struct GasData {

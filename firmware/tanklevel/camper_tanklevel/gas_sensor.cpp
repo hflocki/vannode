@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "gas_sensor.h"
+#include "supersense_decode.h"
 #include <NimBLEDevice.h>
 
 // ============================================================
@@ -18,6 +19,8 @@ struct SeenDevice {
     char svc[40];          // UUID of the first service data block ("" = none)
     int32_t company;       // Company ID of the first manufacturer data block (-1 = none)
     uint8_t prio;          // List priority (see devicePriority)
+    uint8_t type;          // Address type (public / random)
+    bool ss;               // Advertises the SuperSense service
     int rssi;
     unsigned long last;
 };
@@ -39,6 +42,7 @@ static size_t rawLen = 0;
 static bool rawPending = false;
 
 static NimBLEScan* scan = nullptr;
+static uint8_t scanPaused = 0;          // > 0: a connection is being set up (supersense_link.cpp)
 static volatile uint32_t advCount = 0;  // Advertisements received (diagnosis)
 
 // Compile-time sensor definition (see config.h)
@@ -206,8 +210,11 @@ static bool decodeMopeka(const uint8_t* d, size_t n, float& battery, float& temp
 // Higher = more important. Keeps the gas sensor in the list even when many phones are around.
 //   3 = configured sensor, 2 = company ID matches the sensor definition,
 //   1 = other device with data, 0 = Apple devices (rotating addresses) / no data
-static uint8_t devicePriority(const char* addr, const char* svc, int32_t company) {
+static uint8_t devicePriority(const char* addr, const char* svc, int32_t company, bool ss) {
     if (config.sensor_mac[0] && strcmp(addr, config.sensor_mac) == 0) return 3;
+    if (config.fresh.ss_mac[0] && strcmp(addr, config.fresh.ss_mac) == 0) return 3;
+    if (config.grey.ss_mac[0] && strcmp(addr, config.grey.ss_mac) == 0) return 3;
+    if (ss) return 2;
     if (config.gas_type == GAS_TYPE_MOPEKA) {
         if (company == MOPEKA_COMPANY_ID) return 2;
     } else if (config.gas_type == GAS_TYPE_MOPEKA_STD) {
@@ -221,9 +228,10 @@ static uint8_t devicePriority(const char* addr, const char* svc, int32_t company
     return 0;
 }
 
-static void rememberDevice(const char* addr, const char* name, const char* svc, int32_t company, int rssi) {
+static void rememberDevice(const char* addr, uint8_t type, bool ss, const char* name, const char* svc,
+                           int32_t company, int rssi) {
     unsigned long now = millis();
-    uint8_t prio = devicePriority(addr, svc, company);
+    uint8_t prio = devicePriority(addr, svc, company, ss);
     int match = -1, freeSlot = -1, victim = -1;
 
     portENTER_CRITICAL(&dataMux);
@@ -253,12 +261,14 @@ static void rememberDevice(const char* addr, const char* name, const char* svc, 
         d.company = -1;
     }
     d.used = true;
+    d.type = type;
+    if (ss) d.ss = true;
     d.rssi = rssi;
     d.last = now;
     if (company >= 0) d.company = company;
     if (svc[0]) strlcpy(d.svc, svc, sizeof(d.svc));
     if (name && name[0]) strlcpy(d.name, name, sizeof(d.name));
-    d.prio = devicePriority(d.addr, d.svc, d.company);
+    d.prio = devicePriority(d.addr, d.svc, d.company, d.ss);
     portEXIT_CRITICAL(&dataMux);
 }
 
@@ -319,9 +329,11 @@ class ScanCallbacks : public NimBLEScanCallbacks {
             strlcpy(svc, dev->getServiceDataUUID(0).toString().c_str(), sizeof(svc));
         }
         std::string name = dev->haveName() ? dev->getName() : std::string();
-        rememberDevice(addr, name.c_str(), svc, company, dev->getRSSI());
+        static const NimBLEUUID ssUuid(SS_SERVICE_UUID);
+        bool ss = dev->isAdvertisingService(ssUuid);
+        rememberDevice(addr, dev->getAddressType(), ss, name.c_str(), svc, company, dev->getRSSI());
 
-        if (config.sensor_mac[0] == '\0' || strcmp(addr, config.sensor_mac) != 0) return;
+        if (!config.gas_enabled || config.sensor_mac[0] == '\0' || strcmp(addr, config.sensor_mac) != 0) return;
 
         // Find the payload: manufacturer data (without the 2 company ID bytes) or service data
         std::string payload;
@@ -399,7 +411,7 @@ class ScanCallbacks : public NimBLEScanCallbacks {
 static ScanCallbacks scanCallbacks;
 
 static void startScan() {
-    if (!scan || scan->isScanning()) return;
+    if (!scan || scanPaused || scan->isScanning()) return;
     // 0 = scan forever, results are not stored (setMaxResults(0)) to save RAM
     if (!scan->start(0, false, true)) {
         Serial.println("[BLE] Scan start FAILED");
@@ -482,7 +494,8 @@ void gasLoop() {
     // Human readable state
     const unsigned long timeout = DATA_TIMEOUT_MS;
     const char* state;
-    if (config.sensor_mac[0] == '\0')                     state = "Kein Sensor";
+    if (!config.gas_enabled)                             state = "Deaktiviert";
+    else if (config.sensor_mac[0] == '\0')                state = "Kein Sensor";
     else if (!sensorData.gas.has_data)                        state = "Warte auf Daten";
     else if (millis() - sensorData.gas.last_update > timeout) state = "Keine Daten";
     else                                                  state = "OK";
@@ -546,6 +559,7 @@ void gasFillSeenList(JsonArray arr) {
                 o["mfg"] = "";
             }
             o["svc"] = (const char*)d.svc;
+            if (d.ss) o["ss"] = true;
             o["age"] = (now - d.last) / 1000;
         }
     }
@@ -562,4 +576,31 @@ void gasPrintSeenList() {
             o["mfg"].as<const char*>(), o["svc"].as<const char*>(), o["name"].as<const char*>());
     }
     Serial.printf("[BLE] Raw data of configured sensor: %s\n", sensorData.gas.raw_hex);
+}
+
+bool gasBleStarted() {
+    return scan != nullptr;
+}
+
+void gasScanPause(bool pause) {
+    if (!scan) return;
+    if (pause) {
+        if (scanPaused++ == 0 && scan->isScanning()) scan->stop();
+    } else if (scanPaused > 0 && --scanPaused == 0) {
+        startScan();
+    }
+}
+
+bool gasFindAddrType(const char* mac, uint8_t* type) {
+    bool found = false;
+    portENTER_CRITICAL(&dataMux);
+    for (int i = 0; i < BLE_MAX_SEEN; i++) {
+        if (seen[i].used && strcmp(seen[i].addr, mac) == 0) {
+            *type = seen[i].type;
+            found = true;
+            break;
+        }
+    }
+    portEXIT_CRITICAL(&dataMux);
+    return found;
 }

@@ -5,16 +5,19 @@
 # See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 """Collect the firmware files listed in .github/bundle.txt into one folder for the bundle release.
 
-Usage: bundle.py <artifact dir> <output dir>
+Usage: bundle.py <artifact dir> <output dir> [<name>]
        bundle.py --version <device>      prints FW_VERSION of the device (used by the build)
 
 For every listed device it copies <device>-node-<target>-v<version>.bin from the build artifacts,
 adds the packed web page (data/index.html.gz) as <device>-node-web.html.gz where the
-device has one, and writes NOTES.md with the firmware versions. Standard library only.
+device has one, and writes NOTES.md with the firmware versions. With <name> (the bundle tag,
+e.g. bundle-v2026.11.21) it also packs everything into vannode-<version>.zip, together with
+LICENSE and NOTICE.md. Standard library only.
 """
 import re
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,9 +47,10 @@ def main():
     if len(sys.argv) == 3 and sys.argv[1] == "--version":
         print(version(sys.argv[2]))
         return
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         sys.exit(__doc__)
     src, out = Path(sys.argv[1]), Path(sys.argv[2])
+    tag = sys.argv[3] if len(sys.argv) == 4 else ""
     out.mkdir(parents=True, exist_ok=True)
     rows, missing = [], []
     for device, target in entries():
@@ -76,6 +80,23 @@ def main():
     ]
     (out / "NOTES.md").write_text("\n".join(notes) + "\n", encoding="utf-8")
     print("\n".join(rows))
+    if tag:
+        make_zip(out, tag)
+
+
+def make_zip(out, tag):
+    """All files of the bundle in one zip; the folder inside carries the same name."""
+    ver = tag.split("-v", 1)[1] if "-v" in tag else tag
+    base = f"vannode-{ver}"
+    zpath = out / f"{base}.zip"
+    files = sorted(p for p in out.iterdir() if p.suffix in (".bin", ".gz") or p.name == "NOTES.md")
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in files:
+            z.write(p, f"{base}/{p.name}")
+        # The license travels with the binaries (GPL); the source is the tagged commit
+        for extra in ("LICENSE", "NOTICE.md"):
+            z.write(ROOT / extra, f"{base}/{extra}")
+    print(f"zip: {zpath.name} ({len(files) + 2} files)")
 
 
 if __name__ == "__main__":

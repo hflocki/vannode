@@ -8,7 +8,8 @@
 # creates a GitHub release with its .bin file; the release text comes from the device's
 # CHANGELOG.md (tools/release/notes.py). The file name carries the firmware version
 # (FW_VERSION), e.g. temp-node-esp32c3-v1.1.0.bin. A tag "bundle-v<version>" builds every
-# device and creates one release with the files listed in .github/bundle.txt.
+# device and creates one release with the files listed in .github/bundle.txt, also packed
+# as vannode-<version>.zip.
 name: Build
 
 on:
@@ -245,11 +246,12 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - run: python3 tools/release/bundle.py artifacts dist
+      - run: python3 tools/release/bundle.py artifacts dist "${{ github.ref_name }}"
       - uses: softprops/action-gh-release@v2
         with:
           name: VanNode ${{ github.ref_name }}
           body_path: dist/NOTES.md
           files: |
+            dist/*.zip
             dist/*.bin
             dist/*.gz

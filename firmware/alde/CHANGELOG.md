@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `alde-v<ver
 
 | Version | Änderungen |
 |---|---|
+| 0.6.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 0.6.1 | Über-Karte aus der gemeinsamen Vorlage (`firmware/_common/web/vannode-about.js`), „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md |
 | 0.6.0 | Heizung **ein- und ausschalten** über den Bedienteil-Bus: MQTT `…/cmd/power`, Schalter „Heizung schalten“ in Home Assistant, Auswahl „Heizung“ in der Web-Seite (nur im Modus „Lesen und steuern“). Gesetzt wird Bit 0 im 6. Byte des Steuer-Frames, wie es die Heizung im Info-Frame meldet. Der Wert `panel_on` heißt jetzt „Heizung an“ |
 | 0.5.1 | Build-Fehler aus 0.5.0 behoben (Namenskonflikt mit ArduinoJson), sonst wie 0.5.0 – 0.5.0 gab es nie als fertige Firmware |

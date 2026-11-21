@@ -22,8 +22,8 @@ and to every work based on it:
    to the original project <https://github.com/hflocki/vannode> and the license information that
    the program shows must be preserved in all copies and modified versions as part of their
    Appropriate Legal Notices. In VanNode these are: the card "Über VanNode" on the web page of
-   every device, *Einstellungen → Info* on the web page of the display, the logo card on the
-   system page of the wall panel and the footer of the Pocket-Node update page. They may be moved
+   every device (including the Pocket-Node update page), *Einstellungen → Info* on the web page of
+   the display and the logo card on the system page of the wall panel. They may be moved
    or restyled, but not removed, shortened or made unreadable.
 2. **No misrepresentation of origin (section 7 c).** Modified versions must be marked in a
    reasonable way as different from the original version (for example in their name, version and

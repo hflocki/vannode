@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `maxxfan-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 1.9.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 1.9.1 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |
 | 1.9.0 | Optionaler Haubenkontakt: Reedkontakt an einem freien GPIO (in der Web-UI wählbar, Standard aus) meldet `…/lid` = `open`/`closed`, Anzeige im Reiter Live, HA-Fenster-Sensor „Lid“; Eintrag im Ereignis-Log, wenn die Haube 90 s nach „Schließen“ noch offen ist |
 | 1.8.6 | Haftungsausschluss: Über-Karte zeigt „Ohne Gewähr – Nutzung auf eigene Gefahr“ und den Markenhinweis; Lizenzköpfe (SPDX) in allen Quelldateien |

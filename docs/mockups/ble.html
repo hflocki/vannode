@@ -2345,6 +2345,7 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
     heater:    {n: 'Heater-Node', d: 'heater'},
     level:     {n: 'Level-Node', d: 'level'},
     alde:      {n: 'Alde-Node', d: 'alde'},
+    pocket:    {n: 'Pocket-Node', d: 'pocket'},
   };
   DEV.ble = DEV.toolbox;   // mockups use the folder name
   DEV.template = DEV.example;
@@ -2353,7 +2354,8 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   const small = 'margin:6px 0;font-size:.85em;opacity:.8';
 
   function card(upd, fw) {
-    const info = DEV[fw.dev] || {n: fw.dev || 'VanNode', d: ''};
+    // Devices not listed above: name and folder from /api/system (fw.name, fw.dir), if sent
+    const info = DEV[fw.dev] || {n: fw.name || fw.dev || 'VanNode', d: fw.dir || ''};
     const c = document.createElement('div');
     c.className = upd.className;
     c.id = 'vn-about';

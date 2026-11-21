@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `ble-v<vers
 
 | Version | Änderungen |
 | --- | --- |
+| 2.3.1 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 2.3.0 | Neues Plugin **Reifendruck SuperSense TireCheck** (passiv, bis 8 Räder in einem Gerät): je Rad Druck, Temperatur, Batterie und Signal, Position wählbar, nicht zugeordnete Sensoren mit MAC in der Live-Ansicht, Warnung unter / über einstellbarem Druck. Topics `…/tpms/…`, Host-Test `tests/tpms_test.cpp`. Über-Karte: keine eigene Liste fremder Teile mehr, nur noch der Link auf die zentrale NOTICE.md |
 | 2.2.0 | Neues Plugin **Tank: SuperSense Füllstandssensor** (Pro, Solid, Laser), Bluetooth-Verbindung, nur lesen: Füllstand %, Inhalt in Litern, Rohwert, Temperatur, Rohdruck, Status, „Bluetooth für App freigeben“. Die Einheit des Füllstands ist noch nicht bestätigt, daher Umrechnung mit einstellbarem Faktor (Liter je Rohwert-Einheit, Standard 0,001). Topics `…/supersense/…`, Host-Test `tests/supersense_test.cpp` |
 | 2.1.26 | **MQTT:** Zwischen den regelmäßigen Meldungen sendet jedes Gerät nur noch Topics, deren Wert sich geändert hat. Bisher ging bei jeder neuen Messung alles noch einmal raus, z. B. bei der Dachhaube jedes Mal `state` = „Verbunden“, `connected`, `release` und `available`. Die regelmäßige Meldung (Dachhaube alle 60 s) und die erste nach einem (Neu-)Verbinden schicken weiter alle Topics. Gilt für alle Plugins |

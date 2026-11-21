@@ -23,8 +23,8 @@ nutzen, zu ändern und weiterzugeben, gibt aber keine Rechte an Name und Logo.
 
 Ein Fork bekommt einen **eigenen Namen und ein eigenes Logo** und nennt VanNode als Ursprung, zum
 Beispiel „basiert auf VanNode (github.com/hflocki/vannode)“. Der Urhebervermerk und die
-Lizenzangaben in der Oberfläche (Karte „Über VanNode“, *Einstellungen → Info* am Display, Logo-Karte
-am Wandpanel, Fußzeile der Update-Seite der Pocket-Node) bleiben nach den Bedingungen in `NOTICE.md`
+Lizenzangaben in der Oberfläche (Karte „Über VanNode“ auf allen Geräte-Webseiten, *Einstellungen → Info*
+am Display, Logo-Karte am Wandpanel) bleiben nach den Bedingungen in `NOTICE.md`
 erhalten; dort darf und soll stehen, dass die Fassung auf VanNode beruht.
 
 ## Anfragen

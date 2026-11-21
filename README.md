@@ -297,7 +297,7 @@ VanNode steht unter der **GNU General Public License Version 3** ([`LICENSE`](LI
 zusätzlichen Bedingungen nach Abschnitt 7 ([`NOTICE.md`](NOTICE.md)):
 
 - der Urhebervermerk „Copyright © 2026 hflocki“, der Link zum Projekt und die Lizenzangaben, die die
-  Geräte anzeigen (Karte „Über VanNode“, Display-Info, Wandpanel, Update-Seite der Pocket-Node), bleiben
+  Geräte anzeigen (Karte „Über VanNode“ auf allen Geräte-Webseiten, Display-Info, Wandpanel), bleiben
   in allen Kopien und veränderten Fassungen erhalten;
 - veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk
   ausgegeben werden;

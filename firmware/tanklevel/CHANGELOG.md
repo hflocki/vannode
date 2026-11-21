@@ -6,6 +6,7 @@ Die laufende Version steht in der Web-UI im Tab **WiFi** und in Home Assistant i
 
 | Version | Änderungen |
 | --- | --- |
+| 1.10.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 1.10.1 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |
 | 1.10.0 | **SuperSense** als Gebertyp für Frisch- und Grauwasser (Pro, Solid, Laser): Füllstand über eine Bluetooth-Verbindung statt Votronic-Geber, Auswahl im Tab Wasser / Grau unter **Gebertyp**, Gerätesuche, Faktor „Liter je Rohwert-Einheit“ (Einheit noch nicht bestätigt, Standard 0,001), Rohwert, Temperatur und Status in der Web-UI, „Für App freigeben“ (30 min). MQTT statt `voltage`: `ss_raw`, `temperature`, `ble_rssi`, `ble_state`. Bluetooth startet jetzt auch ohne Gassensor, wenn ein Tank SuperSense nutzt |
 | 1.9.6 | Haftungsausschluss: Über-Karte zeigt „Ohne Gewähr – Nutzung auf eigene Gefahr“ und den Markenhinweis; Lizenzköpfe (SPDX) in allen Quelldateien |

@@ -138,6 +138,18 @@ public:
     virtual void onAdvertisement(const NimBLEAdvertisedDevice* dev, const char* addr) {}
     // Configured device address (keeps it on top of the "nearby" list)
     virtual const char* bleAddress() const { return ""; }
+    // Label for a configured address in the "nearby" list ("Reifendruck: Vorne links"), nullptr =
+    // not this plugin's device. Default: the instance name for bleAddress(). Plugins with several
+    // devices (tpms) override it. Called from the NimBLE host task too: no allocation, no locks.
+    virtual const char* bleLabel(const char* addr, char* buf, size_t size) const {
+        const char* a = bleAddress();
+        if (!a[0] || strcmp(a, addr) != 0) return nullptr;
+        strlcpy(buf, name, size);
+        return buf;
+    }
+    // Device sends its values only in the scan response (e.g. Govee H5179): the scan then
+    // runs active (asks every device for its scan response) as long as such a plugin exists
+    virtual bool bleActiveScan() const { return false; }
     // Could this advertisement be a device of this plugin? (marks it in the "nearby" list)
     virtual bool bleCandidate(int32_t company, const char* uuid, const char* name) const { return false; }
 

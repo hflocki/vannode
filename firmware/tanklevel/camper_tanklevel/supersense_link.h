@@ -9,10 +9,11 @@
 #include <Arduino.h>
 #include "config.h"
 
-// SuperSense level sensor as source of the fresh and / or grey water tank (tank type
-// TANK_TYPE_SUPERSENSE). One BLE connection per tank, set up without blocking loop().
-// Readings land in sensorData.water / sensorData.grey (ss_* fields); water_sensor.cpp
-// turns them into liters and percent. Protocol: supersense_decode.h.
+// SuperSense receiver box (up to 4 tank sensors) as source of the fresh and / or grey water
+// tank (tank type TANK_TYPE_SUPERSENSE, sensor number 1..4 per tank). One BLE connection per
+// box, shared when both tanks use the same box; set up without blocking loop(). Readings land
+// in sensorData.water / sensorData.grey (ss_* fields); water_sensor.cpp turns them into
+// percent and liters. Protocol: supersense_decode.h.
 
 // A switched-on tank uses a SuperSense sensor (Bluetooth must be started for it)
 bool ssUsed();

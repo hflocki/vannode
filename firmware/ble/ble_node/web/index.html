@@ -154,6 +154,8 @@
         display: flex; align-items: center; justify-content: space-between; gap: 10px;
         background: var(--bg-input); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 0.8rem;
       }
+      /* configured device in the "nearby" list: plugin name / wheel */
+      .tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--accent); color: #0b1520; font-size: 0.72rem; }
       .dev b { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; font-weight: 600; word-break: break-all; }
       .dev > span:last-child { text-align: right; white-space: nowrap; }
       .picker { margin-top: 8px; }
@@ -962,6 +964,7 @@ nav button .ico{display:inline-flex}
                   el("b", {}, d.mac),
                   " ",
                   d.name || "",
+                  d.use ? el("span", { className: "tag" }, d.use) : "",
                   d.fits.includes(pt) ? " ✔ passt" : "",
                 ),
                 el(
@@ -1021,6 +1024,7 @@ nav button .ico{display:inline-flex}
                     el("b", {}, d.mac),
                     " ",
                     d.name || "",
+                    d.use ? el("span", { className: "tag" }, d.use) : "",
                     el("br"),
                     el(
                       "span",

@@ -47,6 +47,7 @@ int32_t blePinParse(const char* s);
 
 struct BlePacket {
     uint16_t len;
+    uint16_t src;   // First 16 bits of the characteristic UUID ("8215dd0f-…" -> 0x8215, 0xFFE1 -> 0xFFE1)
     uint8_t data[BLE_PACKET_MAX];
 };
 
@@ -151,7 +152,7 @@ private:
     bool pairNow(bool sc, bool mitm = true, bool idKey = false);
     void pairFailedOnce();
     void dumpGatt();
-    void push(const uint8_t* d, size_t n);
+    void push(const uint8_t* d, size_t n, uint16_t src);
 };
 
 #endif // CT_BLE_LINKS

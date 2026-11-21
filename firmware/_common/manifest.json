@@ -116,7 +116,7 @@
     ],
     "supersense_decode.h": [
       "firmware/tanklevel/camper_tanklevel",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node/src/plugins"
     ]
   },
   "blocks": {

@@ -79,7 +79,7 @@ static const PluginType TYPES[] = {
     {"obd", "Fahrzeug: OBD2-Adapter (ELM327 / vLinker)", BLE_LINK, createObd},
 #endif
 #if PLUGIN_SUPERSENSE
-    {"supersense", "Tank: SuperSense Füllstandssensor", BLE_LINK, createSuperSense},
+    {"supersense", "Tanks: SuperSense Empfängerbox (bis 4 Sensoren)", BLE_LINK, createSuperSense},
 #endif
 #if PLUGIN_DALY
     {"daly", "Batterie: Daly BMS", BLE_LINK, createDaly},

@@ -80,7 +80,7 @@ static void readChannel(TankChannel& ch) {
 
     // SuperSense: the raw level value takes the place of the voltage (filter as usual).
     // Without a fresh reading the last level stays.
-    if (ss && (!w.ss_has_data || millis() - w.ss_last > SS_SILENCE_MS)) return;
+    if (ss && (!w.ss_has_data || w.ss_raw < 0 || millis() - w.ss_last > SS_SILENCE_MS)) return;
     float voltage = ss ? (float)w.ss_raw : readVoltage(ch.pin);
     w.raw_voltage = voltage;
 
@@ -103,8 +103,8 @@ static void readChannel(TankChannel& ch) {
     // SuperSense: liters = raw value * factor, percent from the tank size.
     float percent;
     if (ss) {
-        percent = cfg.tank_size > 0 ? ssLiters(lroundf(w.avg_voltage), cfg.ss_factor) / cfg.tank_size * 100.0f : 0.0f;
-        percent = constrain(percent, 0.0f, 100.0f);
+        percent = ssPercent(lroundf(w.avg_voltage), cfg.ss_empty, cfg.ss_full);
+        if (percent < 0) percent = 0;
     } else {
         percent = constrain(interpolatePercent(cfg, w.avg_voltage), 0.0f, 100.0f);
     }

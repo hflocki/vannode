@@ -17,7 +17,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.10.2"
+#define FW_VERSION            "1.11.0"
 #define FW_DEVICE             "tanklevel"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID
@@ -402,8 +402,10 @@ struct TankConfig {
     bool filter_active;    // Moving-average filter on/off
     CalibPoint calibTable[MAX_CALIB_POINTS];  // Volt-to-percent table, sorted by voltage
     uint8_t calibCount;
-    char ss_mac[18];       // SuperSense sensor (type TANK_TYPE_SUPERSENSE), "" = none
-    float ss_factor;       // SuperSense: liters per raw unit (supersense_decode.h)
+    char ss_mac[18];       // SuperSense receiver box (type TANK_TYPE_SUPERSENSE), "" = none
+    uint8_t ss_channel;    // Sensor at the box, 1..4
+    int32_t ss_empty;      // Taught raw value at empty (empty = full = 0: default scale)
+    int32_t ss_full;       // Taught raw value at full
 };
 
 // ============================================================
@@ -458,7 +460,8 @@ struct WaterData {
     float percent;         // Calculated content in % (0-100)
     // SuperSense only (written by supersense_link.cpp)
     bool ss_has_data;      // At least one valid reading since boot
-    int32_t ss_raw;        // Last raw level value
+    int32_t ss_raw;        // Raw level value of the tank's channel (SS_NONE: no sensor there)
+    int32_t ss_box[4];     // Raw levels of all 4 channels of the box (web UI, SS_NONE = none)
     float ss_temp;         // Sensor temperature in °C (NAN = none)
     int ss_rssi;           // Bluetooth signal of the connection
     unsigned long ss_last; // millis() of the last valid reading

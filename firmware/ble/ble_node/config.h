@@ -69,7 +69,7 @@
 #define PLUGIN_ECTIVE         1      // Battery: Ective BM X battery monitor (LiPower), BLE connection
 #endif
 #ifndef PLUGIN_SUPERSENSE
-#define PLUGIN_SUPERSENSE     1      // Tank: SuperSense level sensor (Pro, Solid, Laser), BLE connection
+#define PLUGIN_SUPERSENSE     1      // Tanks: SuperSense receiver box with up to 4 sensors, BLE connection
 #endif
 #ifndef PLUGIN_BM2
 #define PLUGIN_BM2            1      // Battery: BM2 battery monitor (broadcast, connection as fallback)
@@ -101,7 +101,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.3.1"
+#define FW_VERSION            "2.4.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
 

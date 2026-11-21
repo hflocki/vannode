@@ -92,7 +92,9 @@ static void setDefaultTank(TankConfig& t, float size) {
     t.tank_size = size;
     t.filter_active = true;
     t.ss_mac[0] = '\0';
-    t.ss_factor = SS_DEFAULT_FACTOR;
+    t.ss_channel = 1;
+    t.ss_empty = 0;
+    t.ss_full = 0;
     setElectrodeCalib(t);
 }
 
@@ -179,7 +181,9 @@ static void tankToJson(JsonDocument& doc, const char* prefix, const TankConfig& 
     doc[tankKey(prefix, "tank_size")] = t.tank_size;
     doc[tankKey(prefix, "filter_active")] = t.filter_active;
     doc[tankKey(prefix, "ss_mac")] = (const char*)t.ss_mac;
-    doc[tankKey(prefix, "ss_factor")] = t.ss_factor;
+    doc[tankKey(prefix, "ss_channel")] = t.ss_channel;
+    doc[tankKey(prefix, "ss_empty")] = t.ss_empty;
+    doc[tankKey(prefix, "ss_full")] = t.ss_full;
     JsonArray arr = doc[tankKey(prefix, "calib")].to<JsonArray>();
     for (int i = 0; i < t.calibCount; i++) {
         JsonObject item = arr.add<JsonObject>();
@@ -190,16 +194,19 @@ static void tankToJson(JsonDocument& doc, const char* prefix, const TankConfig& 
 
 static bool normalizeMac(const char* in, char* out, size_t size);
 
-static bool validFactor(float f) {
-    return f >= 0.00001f && f <= 10.0f;
+static bool validRaw(long v) {
+    return v >= 0 && v <= 9998;
 }
 
 // Reads a stored tank; invalid or missing values keep the defaults
 static void tankFromJson(JsonDocument& doc, const char* prefix, TankConfig& t) {
     char mac[18];
     if (normalizeMac(doc[tankKey(prefix, "ss_mac")] | "", mac, sizeof(mac))) strlcpy(t.ss_mac, mac, sizeof(t.ss_mac));
-    JsonVariant ssf = doc[tankKey(prefix, "ss_factor")];
-    if ((ssf.is<float>() || ssf.is<int>()) && validFactor(ssf.as<float>())) t.ss_factor = ssf.as<float>();
+    int ch = doc[tankKey(prefix, "ss_channel")] | 0;
+    if (ch >= 1 && ch <= SS_CHANNELS) t.ss_channel = (uint8_t)ch;
+    long rawEmpty = doc[tankKey(prefix, "ss_empty")] | -1L, rawFull = doc[tankKey(prefix, "ss_full")] | -1L;
+    if (validRaw(rawEmpty)) t.ss_empty = rawEmpty;
+    if (validRaw(rawFull)) t.ss_full = rawFull;
     JsonVariant f = doc[tankKey(prefix, "filter_active")];
     if (f.is<bool>()) t.filter_active = f.as<bool>();
     JsonVariant s = doc[tankKey(prefix, "tank_size")];
@@ -225,8 +232,10 @@ struct TankUpdate {
     bool filter = false;
     bool hasMac = false;
     char mac[18] = "";
-    bool hasFactor = false;
-    float factor = 0.0f;
+    bool hasChannel = false;
+    int channel = 1;
+    bool hasEmpty = false, hasFull = false;
+    long empty = 0, full = 0;
 };
 
 // Returns an error message or nullptr if the values are valid
@@ -246,10 +255,16 @@ static const char* validateTank(JsonDocument& doc, const char* prefix, TankUpdat
     JsonVariant m = doc[tankKey(prefix, "ss_mac")];
     u.hasMac = m.is<const char*>();
     if (u.hasMac && !normalizeMac(m.as<const char*>(), u.mac, sizeof(u.mac))) return "Invalid SuperSense MAC address";
-    JsonVariant k = doc[tankKey(prefix, "ss_factor")];
-    u.hasFactor = isNumber(k);
-    u.factor = u.hasFactor ? k.as<float>() : 0.0f;
-    if (u.hasFactor && !validFactor(u.factor)) return "SuperSense factor must be 0.00001-10";
+    JsonVariant k = doc[tankKey(prefix, "ss_channel")];
+    u.hasChannel = k.is<int>();
+    u.channel = u.hasChannel ? k.as<int>() : 1;
+    if (u.hasChannel && (u.channel < 1 || u.channel > SS_CHANNELS)) return "SuperSense sensor number must be 1-4";
+    JsonVariant ke = doc[tankKey(prefix, "ss_empty")], kf = doc[tankKey(prefix, "ss_full")];
+    u.hasEmpty = ke.is<int>() || ke.is<long>();
+    u.hasFull = kf.is<int>() || kf.is<long>();
+    u.empty = u.hasEmpty ? ke.as<long>() : 0;
+    u.full = u.hasFull ? kf.as<long>() : 0;
+    if ((u.hasEmpty && !validRaw(u.empty)) || (u.hasFull && !validRaw(u.full))) return "SuperSense raw values must be 0-9998";
     return nullptr;
 }
 
@@ -257,7 +272,9 @@ static void applyTank(TankConfig& t, const TankUpdate& u) {
     if (u.hasSize) t.tank_size = u.size;
     if (u.hasFilter) t.filter_active = u.filter;
     if (u.hasMac) strlcpy(t.ss_mac, u.mac, sizeof(t.ss_mac));
-    if (u.hasFactor) t.ss_factor = u.factor;
+    if (u.hasChannel) t.ss_channel = (uint8_t)u.channel;
+    if (u.hasEmpty) t.ss_empty = u.empty;
+    if (u.hasFull) t.ss_full = u.full;
     if (u.hasCalib) applyCalib(t, u.calib, u.calibCount);
 }
 
@@ -481,7 +498,9 @@ static void addSuperSense(JsonObject o, const WaterData& w, uint8_t tank) {
     JsonObject s = o["ss"].to<JsonObject>();
     s["state"] = (const char*)w.ss_state;
     s["has_data"] = w.ss_has_data;
-    if (w.ss_has_data) s["raw"] = w.ss_raw;
+    if (w.ss_has_data && w.ss_raw >= 0) s["raw"] = w.ss_raw;
+    JsonArray box = s["box"].to<JsonArray>();
+    for (int c = 0; c < SS_CHANNELS; c++) box.add(w.ss_box[c]);
     if (!isnan(w.ss_temp)) s["temp"] = round(w.ss_temp * 10.0f) / 10.0f;
     if (w.ss_rssi) s["rssi"] = w.ss_rssi;
     s["age"] = w.ss_has_data ? (long)((millis() - w.ss_last) / 1000) : -1;

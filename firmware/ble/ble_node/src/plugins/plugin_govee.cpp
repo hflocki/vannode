@@ -67,6 +67,9 @@ public:
     }
 
     // NimBLE host task: decode (cheap, no allocation) and hand the result to loop()
+    // H5179 (and some newer models) put the values into the scan response only
+    bool bleActiveScan() const override { return true; }
+
     void onAdvertisement(const NimBLEAdvertisedDevice* dev, const char* addr) override {
         if (c.mac[0] == '\0' || strcmp(addr, c.mac) != 0) return;
         for (uint8_t i = 0; i < dev->getManufacturerDataCount(); i++) {

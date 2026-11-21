@@ -181,7 +181,7 @@ static void publishTankState(const char* sub, const WaterData& w, const TankConf
             itoa(w.ss_rssi, buf, 10);
             mqtt.publish(topic((base + "ble_rssi").c_str()).c_str(), buf, true);
         }
-        if (!w.ss_has_data) return;
+        if (!w.ss_has_data || w.ss_raw < 0) return;
         ltoa((long)w.ss_raw, buf, 10);
         mqtt.publish(topic((base + "ss_raw").c_str()).c_str(), buf, true);
         if (!isnan(w.ss_temp)) {

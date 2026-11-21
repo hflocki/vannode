@@ -48,10 +48,10 @@ static void toUpperAddr(const std::string& in, char* out, size_t size) {
 //   0 = Apple devices (rotating addresses) / no data
 static uint8_t devicePriority(const char* addr, const char* uuid, int32_t company, const char* name) {
     bool candidate = false;
+    char label[48];
     FOR_EACH_ENABLED_PLUGIN(p) {
         if (p->bleUse() == BLE_NONE) continue;
-        const char* a = p->bleAddress();
-        if (a[0] && strcmp(addr, a) == 0) return 3;
+        if (p->bleLabel(addr, label, sizeof(label))) return 3;
         if (p->bleCandidate(company, uuid, name)) candidate = true;
     }
     if (candidate) return 2;
@@ -168,7 +168,13 @@ void bleInit() {
 
     scan = NimBLEDevice::getScan();
     scan->setScanCallbacks(&scanCallbacks, true);  // true = report every advertisement
-    scan->setActiveScan(false);                    // Passive: battery friendly for the sensors
+    // Passive is battery friendly for the sensors; active only if a plugin needs scan responses
+    bool activeScan = false;
+    FOR_EACH_ENABLED_PLUGIN(p) {
+        if (p->bleUse() != BLE_NONE && p->bleActiveScan()) activeScan = true;
+    }
+    scan->setActiveScan(activeScan);
+    Serial.printf("[BLE] Scan: %s\n", activeScan ? "active (scan responses needed)" : "passive");
     scan->setInterval(BLE_SCAN_INTERVAL);
     scan->setWindow(BLE_SCAN_WINDOW);
     scanWindow = BLE_SCAN_WINDOW;
@@ -285,6 +291,15 @@ void bleFillSeenList(JsonArray arr) {
             }
             o["uuid"] = (const char*)d.uuid;
             o["age"] = (now - d.last) / 1000;
+            // Configured in a plugin: its label (instance name, for tpms also the wheel)
+            char label[48];
+            FOR_EACH_ENABLED_PLUGIN(p) {
+                if (p->bleUse() == BLE_NONE) continue;
+                if (p->bleLabel(d.addr, label, sizeof(label))) {
+                    o["use"] = (const char*)label;   // const char* is copied (see the cast note above)
+                    break;
+                }
+            }
             // Plugin types that recognize this device (web UI: "passt zu")
             JsonArray fits = o["fits"].to<JsonArray>();
             FOR_EACH_PLUGIN(p) {

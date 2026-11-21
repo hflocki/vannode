@@ -40,7 +40,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Topic | Inhalt |
 | --- | --- |
 | `…/water/percent`, `liters`, `voltage` | Frischwasser (`voltage` nur mit Votronic-Geber) |
-| `…/water/ss_raw`, `temperature`, `ble_rssi`, `ble_state` | nur Gebertyp SuperSense: Rohwert des Sensors, Sensortemperatur °C, Bluetooth-Signal, Verbindungsstatus (`OK`, `Verbinde...`, `Nicht erreichbar` …); `ss_raw` und `temperature` erst nach dem ersten gültigen Wert |
+| `…/water/ss_raw`, `temperature`, `ble_rssi`, `ble_state` | nur Gebertyp SuperSense: Rohwert des gewählten Sensors der Box, Sensortemperatur °C, Bluetooth-Signal, Verbindungsstatus (`OK`, `Verbinde...`, `Nicht erreichbar` …); `ss_raw` und `temperature` erst nach dem ersten gültigen Wert |
 | `…/water/filter_active` | `ON` / `OFF` |
 | `…/grey/percent`, `liters`, `voltage` | Grauwasser (nur wenn eingeschaltet; `voltage` nur mit Votronic-Geber) |
 | `…/grey/ss_raw`, `temperature`, `ble_rssi`, `ble_state` | Grauwasser mit Gebertyp SuperSense, wie bei `water` |
@@ -266,9 +266,10 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) Kontaktnamen im Feld „Kontaktnamen“ der Plugin-Einstellungen |
 | `…/obd/rpm`, `speed`, `coolant`, `oil_temp`, `fuel`, `fuel_rate`, `adblue`, `adblue_temp`, `adblue_conc`, `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count`, `voltage`, `running` (`ON`/`OFF`), `mil` (`ON`/`OFF`), `dtc`, `protocol`, `adapter`, `raw`, `scan` | OBD2-Adapter (nur lesen): Standardwerte des Motorsteuergeräts (nur die, die das Fahrzeug meldet; `fuel_rate` in l/h, `adblue` Füllstand %, `adblue_temp` °C, `adblue_conc` Konzentration %), Bordspannung am Adapter, Motor läuft, Motorkontrollleuchte, Fehlercodes als Text. `scan` = Bericht des letzten Fahrzeug-Scans (Text, retained). Befehle `…/cmd/obd/read_dtc/set` (`PRESS`), `…/cmd/obd/scan/set` (`PRESS`, Fahrzeug scannen), `…/cmd/obd/raw/set` (Adapter-Befehl, Antwort in `raw`) |
 | `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
-| `…/supersense/percent`, `liters`, `raw`, `temperature`, `pressure`, `sensor_status`, `ble_rssi` | Tanksensor SuperSense (nur lesen): Füllstand %, Inhalt in Litern (Rohwert × Faktor aus den Einstellungen), Rohwert, Sensortemperatur °C, Rohdruck und Status des Sensors |
+| `…/supersense/s1_percent` … `s4_percent`, `sN_liters`, `sN_temperature`, `sN_raw`, `state`, `connected`, `ble_rssi` | SuperSense-Empfängerbox (nur lesen): je benutztem Sensor N (1–4) Füllstand %, Inhalt in Litern (Prozent × Tankgröße), Temperatur °C und Rohwert (2475 = 100 % ohne eigene Leer-/Voll-Werte); Status und Verbindung der Box |
 | `…/tpms/r1_pressure` … `r8_pressure`, `rN_temperature`, `rN_battery`, `rN_rssi` | Reifendruck SuperSense TireCheck (nur mithören): je belegtem Rad N (1–8, Position in den Einstellungen) Druck in bar, Reifentemperatur °C, Batterie %, Signal dBm |
-| `…/tpms/warning`, `warning_text` | `ON` / `OFF`, wenn ein Rad unter bzw. über der eingestellten Grenze liegt; Text z. B. `Vorne links: 2.80 bar zu niedrig` oder `OK` |
+| `…/tpms/r1_alarm` … `r8_alarm` | `ON` / `OFF` je Rad: Druck unter bzw. über der Grenze seiner Achse |
+| `…/tpms/warning`, `warning_text` | `ON` / `OFF`, wenn irgendein Rad außerhalb der Grenzen seiner Achse liegt; Text z. B. `Vorne links: 2.80 bar zu niedrig` oder `OK` |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |
 | `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |

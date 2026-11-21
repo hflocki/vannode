@@ -6,7 +6,7 @@ Eine Firmware für **einen** ESP32-C3 (oder klassischen ESP32), die zwei Projekt
 
 - **Frischwasser** aus [camper-waterlevel](https://github.com/hflocki/camper-waterlevel): Votronic-Tankgeber am analogen Eingang, Volt-zu-Füllstand-Matrix, Glättungsfilter
 - **Grauwasser** (optional): zweiter Votronic-Geber, wahlweise Tankelektrode (wie Frischwasser) oder kapazitiver Tank-Sensor FL, mit eigener Tankgröße, Matrix und Filter
-- **SuperSense** statt Votronic (optional, je Tank): Füllstandssensor SuperSense (Pro, Solid, Laser) über eine Bluetooth-Verbindung, ohne Kabel am Tank (siehe [unten](#supersense-statt-votronic))
+- **SuperSense** statt Votronic (optional, je Tank): SuperSense-Tanksensoren über ihre Empfängerbox (Bluetooth, bis 4 Sensoren), ohne Kabel am Tank (siehe [unten](#supersense-statt-votronic))
 - **Gas** aus [camper-gaslevel](https://github.com/hflocki/camper-gaslevel): BLE-Gassensor (Standard: Rotarex DIMES / SRG WAVE), passiv über Bluetooth-Advertising, Füllstopp-Berechnung. Alternativ **Mopeka Pro** (Pro Check, Pro Check Universal, Pro Plus …) oder **Mopeka Standard** (Std Check), umschaltbar im Tab Gas
 
 Alle Werte gehen per **MQTT** (mit Home-Assistant-Discovery) raus und sind in einer gemeinsamen **Web-Oberfläche** zu sehen und einzustellen. Jeder Sensor lässt sich einzeln ein- und ausschalten.
@@ -52,7 +52,7 @@ camper_tanklevel/data/   LittleFS-Inhalt: index.html.gz (komprimiert, wird hochg
 | `config.h` | Pins, Standardwerte, **GAS SENSOR DEFINITION** (Byte-Zuordnung) |
 | `water_sensor.cpp` | ADC für Frisch- und Grauwasser, gleitender Mittelwert, Interpolation über die Matrix |
 | `gas_sensor.cpp` | NimBLE-Scan, Dekodierung, Geräteliste, Füllstopp |
-| `supersense_link.cpp` | Bluetooth-Verbindung zu SuperSense-Sensoren (je Tank eine), Dekodierung in `supersense_decode.h` (Kopie aus `firmware/_common`) |
+| `supersense_link.cpp` | Bluetooth-Verbindung zur SuperSense-Empfängerbox (eine je Box, beide Tanks teilen sie bei gleicher MAC), Dekodierung in `supersense_decode.h` (Kopie aus `firmware/_common`) |
 | `mqtt_ha.cpp` | MQTT, HA-Discovery, Filter-Schalter |
 | `webserver.cpp` | Web-UI (gzip), REST-API, Konfiguration in LittleFS |
 | `wifi_manager.cpp` | WLAN mit AP-Fallback (Modem-Sleep für WiFi/BLE-Koexistenz) |
@@ -146,10 +146,11 @@ Ein ausgeschalteter Sensor verschwindet von der Live-Seite und aus Home Assistan
 
 ## SuperSense statt Votronic
 
-Frisch- und Grauwasser können statt des analogen Votronic-Gebers einen **SuperSense**-Füllstandssensor (Pro, Solid, Laser) nutzen. Im Tab **Wasser** bzw. **Grau** unter **Gebertyp** „SuperSense (Bluetooth)“ wählen, das Gerät startet neu. Danach in der Karte **SuperSense-Sensor** auf **Suchen** tippen (Geräte mit SuperSense-Dienst stehen oben), die MAC übernehmen und speichern.
+Frisch- und Grauwasser können statt des analogen Votronic-Gebers einen **SuperSense**-Tanksensor nutzen. Die Sensoren hängen an der SuperSense-**Empfängerbox** (Bluetooth-Name `SSBT…`, bis zu 4 Sensoren). Im Tab **Wasser** bzw. **Grau** unter **Gebertyp** „SuperSense (Bluetooth)“ wählen, das Gerät startet neu. Danach in der Karte **SuperSense-Box** auf **Suchen** tippen (passende Geräte stehen oben), die MAC übernehmen, die **Sensornummer** (1–4) wählen und speichern.
 
-- Der ESP hält eine Bluetooth-Verbindung zum Sensor, schickt einmal den Startbefehl und bekommt dann laufend die Werte. Keine Kopplung, keine PIN.
-- **Einheit noch nicht bestätigt:** Laut Quelle liefert der Sensor den Füllstand in ml; mit 4 Stellen reicht das aber nur bis knapp 10 L. Deshalb gibt es das Feld **Liter je Rohwert-Einheit** (Standard 0,001) und die Anzeige **Rohwert**: bei bekanntem Inhalt den Rohwert ablesen und Faktor = Liter ÷ Rohwert eintragen. Prozent = Liter ÷ Tankgröße.
+- Der ESP hält eine Bluetooth-Verbindung zur Box, schickt einmal den Startbefehl und bekommt dann laufend die Werte aller 4 Sensoren. Keine Kopplung, keine PIN. Nutzen beide Tanks dieselbe Box, gibt es nur eine Verbindung.
+- Welcher Sensor welcher ist, zeigt **Alle Sensoren** in der Karte: der Wert, der sich beim Füllen ändert (`–` = an diesem Platz kein Sensor).
+- **Prozent:** ohne Einstellung gilt Rohwert 2475 = 100 %. Wer genauer will, trägt den **Rohwert leer** und **voll** ein (bei leerem bzw. vollem Tank ablesen), dazwischen wird linear gerechnet. Liter = Prozent × Tankgröße.
 - Der Glättungsfilter wirkt auf den Rohwert, die Volt-Matrix wird nicht gebraucht. Ohne neue Werte (länger als 70 s) bleibt der letzte Füllstand stehen, der Status zeigt „Keine Daten“ bzw. „Nicht erreichbar“.
 - Solange der ESP verbunden ist, kommt die Hersteller-App meist nicht an den Sensor: **Für App freigeben** trennt die Verbindung für 30 Minuten.
 - MQTT: statt `…/voltage` kommen `…/ss_raw`, `…/temperature`, `…/ble_rssi` und `…/ble_state` ([TOPICS.md](../../docs/TOPICS.md#tanks-campertanklevel)).

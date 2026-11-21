@@ -160,9 +160,10 @@ void BleLink::onConfirmPasskey(NimBLEConnInfo& info, uint32_t p) {
     NimBLEDevice::injectConfirmPasskey(info, true);
 }
 
-void BleLink::push(const uint8_t* d, size_t n) {
+void BleLink::push(const uint8_t* d, size_t n, uint16_t src) {
     if (!queue) return;
     BlePacket p;
+    p.src = src;
     // Longer notifications (large MTU, e.g. a Daly BMS answer of 129 bytes) are split into
     // several packets in order; plugins that reassemble frames get every byte.
     do {
@@ -232,10 +233,19 @@ bool BleLink::startConnect() {
     return true;
 }
 
+// First 16 bits of a UUID: the 16-bit value itself, or the leading 4 hex digits of a 128-bit one
+static uint16_t uuidSrc(const NimBLEUUID& u) {
+    std::string s = u.toString();   // "0xffe1" or "8215dd0f-cc20-…"
+    const char* p = s.c_str();
+    if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) p += 2;
+    return (uint16_t)strtoul(std::string(p, 4).c_str(), nullptr, 16);
+}
+
 bool BleLink::subscribeChr(NimBLERemoteCharacteristic* c) {
     if (!c || !(c->canNotify() || c->canIndicate())) return false;
-    bool ok = c->subscribe(c->canNotify(), [this](NimBLERemoteCharacteristic*, uint8_t* d, size_t n, bool) {
-        push(d, n);
+    const uint16_t src = uuidSrc(c->getUUID());
+    bool ok = c->subscribe(c->canNotify(), [this, src](NimBLERemoteCharacteristic*, uint8_t* d, size_t n, bool) {
+        push(d, n, src);
     });
     if (ok) {
         subscribed++;

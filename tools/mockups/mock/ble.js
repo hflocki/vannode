@@ -35,14 +35,16 @@ const M = {
       P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),
       P('ective', 'ective', 'Batterie: Ective BM X', 2, {name: 'Zweitbatterie', mac: MAC(7), interval: 10}),
       P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)}),
-      P('supersense', 'supersense', 'Tank: SuperSense Füllstandssensor', 2, {name: 'Abwassertank', mac: MAC(15), medium: 1, tank_size: 90, factor: 0.01}),
+      P('supersense', 'supersense', 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', 2, {name: 'Tanks', mac: MAC(15), medium: 1, tank_size: 100, empty1: 0, full1: 0,
+        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 0, size3: 0, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0}),
       // passive sensors (advertisements only)
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
       P('mopeka_std', 'mopeka_std', 'Gas: Mopeka Standard', 1, Object.assign({name: 'Gasflasche 3', mac: MAC(11), empty_mm: 38, full_mm: 336, lpg_propane: 100}, GAS_CFG, {capacity: 14.6})),
       P('govee', 'govee', 'Thermometer Govee', 1, {name: 'Thermometer außen', mac: MAC(12), temp_offset: 0, hum_offset: 0}),
       P('tpms', 'tpms', 'Reifendruck SuperSense TireCheck', 1, {name: 'Reifendruck', mac1: MAC(21), pos1: 0, mac2: MAC(22), pos2: 1, mac3: MAC(23), pos3: 4, mac4: MAC(24), pos4: 5,
-        mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 3.0, p_max: 5.5}),
+        mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 0, p_max: 0,
+        va_min: 3.3, va_max: 4.2, ha_min: 4.0, ha_max: 5.2}),
       P('bthome', 'bthome', 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', 1, {name: 'Thermometer Bad', mac: MAC(13), objs: '01,02,03,0C'}),
       // own BLE sensor: a thermometer with custom firmware (service data 181A)
       P('blesensor', 'blesensor', 'Eigener BLE-Sensor', 1, {name: 'Eigener Sensor', mac: MAC(14), source: 1, company: '', uuid: '181A',
@@ -92,11 +94,23 @@ const M = {
       daly: BMS_FIELDS('Batterie-MAC'),
       ective: BMS_FIELDS('Batterie-MAC'),
       bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
-      supersense: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
-                   {k: 'medium', l: 'Tank', t: 'select', o: 'Frischwasser|Grauwasser|Schwarzwasser|Sonstiges'},
-                   {k: 'tank_size', l: 'Tankgröße', t: 'float', min: 1, max: 5000, step: 0.1, u: 'L'},
-                   {k: 'factor', l: 'Liter je Rohwert-Einheit', t: 'float', min: 0.00001, max: 10, step: 0.00001, u: 'L',
-                    h: 'Laut Quelle ist der Rohwert in ml (0,001). Noch nicht am echten Sensor bestätigt: Rohwert bei bekanntem Inhalt ablesen und Faktor = Liter / Rohwert eintragen.'}],
+      supersense: [{k: 'mac', l: 'MAC der Box', t: 'mac', h: 'SSBT… – über "Suchen" aus der Liste wählen'},
+                   {k: 'medium', l: 'Sensor 1: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'tank_size', l: 'Sensor 1: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty1', l: 'Sensor 1: Rohwert leer', t: 'int', min: 0, max: 9998, h: 'Leer und voll = 0: Standard (2475 = 100 %). Sonst den Rohwert aus der Live-Ansicht bei leerem bzw. vollem Tank eintragen'},
+                   {k: 'full1', l: 'Sensor 1: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind2', l: 'Sensor 2: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size2', l: 'Sensor 2: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty2', l: 'Sensor 2: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full2', l: 'Sensor 2: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind3', l: 'Sensor 3: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size3', l: 'Sensor 3: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty3', l: 'Sensor 3: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full3', l: 'Sensor 3: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind4', l: 'Sensor 4: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size4', l: 'Sensor 4: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
       dimes: GAS_FIELDS,
       mopeka: MOPEKA_FIELDS,
       mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
@@ -116,8 +130,20 @@ const M = {
              {k: 'pos7', l: 'Rad 7: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
              {k: 'mac8', l: 'Rad 8: Sensor-MAC', t: 'mac'},
              {k: 'pos8', l: 'Rad 8: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
-             {k: 'p_min', l: 'Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'},
-             {k: 'p_max', l: 'Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'}],
+             {k: 'p_min', l: 'Standard: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: 'Gilt für alle Achsen ohne eigene Grenze, 0 = keine Warnung'},
+             {k: 'p_max', l: 'Standard: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'},
+             {k: 'va_min', l: 'Vorderachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = Standard von oben'},
+             {k: 'va_max', l: 'Vorderachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ma_min', l: 'Mittelachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ma_max', l: 'Mittelachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ha_min', l: 'Hinterachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ha_max', l: 'Hinterachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'av_min', l: 'Anhänger vorne: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'av_max', l: 'Anhänger vorne: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ah_min', l: 'Anhänger hinten: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ah_max', l: 'Anhänger hinten: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'rr_min', l: 'Reserverad: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'rr_max', l: 'Reserverad: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'}],
       govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
               {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
               {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
@@ -143,7 +169,7 @@ const M = {
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'wipro', name: 'Alarm WiPro III (nur lesen)', ble: 2},
             {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
             {type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2}, {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2},
-            {type: 'supersense', name: 'Tank: SuperSense Füllstandssensor', ble: 2},
+            {type: 'supersense', name: 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
@@ -232,7 +258,9 @@ const M = {
     if (path === '/api/log/clear') return { ok: true };
     if (path === '/api/scan') {
       return {active: true, devices: [
-        {mac: MAC(1), name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech']},
+        {mac: MAC(1), name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech'], use: 'Dachhaube'},
+        {mac: MAC(21), name: '', rssi: -77, mfg: '', uuid: 'faf0', age: 9, fits: ['tpms'], use: 'Reifendruck: Vorne links'},
+        {mac: MAC(22), name: '', rssi: -81, mfg: '', uuid: 'faf0', age: 14, fits: ['tpms'], use: 'Reifendruck: Vorne rechts'},
         {mac: MAC(2), name: 'ISP-Pump', rssi: -74, mfg: '', uuid: '', age: 3, fits: ['pump']},
         {mac: MAC(5), name: 'vLinker MC-IOS', rssi: -80, mfg: '', uuid: 'e7810a71', age: 4, fits: ['obd']},
         {mac: MAC(6), name: 'DL-C8478C000003', rssi: -68, mfg: '0102', uuid: '0xfff0', age: 1, fits: ['daly']},
@@ -330,19 +358,22 @@ const M = {
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
       }
       case 'supersense': {
-        const raw = Math.round(wave(3720, 15, 11)), size = +p.cfg.tank_size || 90, l = raw * (+p.cfg.factor || 0.01);
-        const label = ['Frischwasser', 'Grauwasser', 'Schwarzwasser', 'Tank'][p.cfg.medium || 0];
-        return {state: rel ? 'Für App freigegeben' : 'Verbunden', ok: !rel,
-          gauge: {v: Math.round(Math.min(100, l / size * 100)), unit: '%', label, max: 100},
-          rows: [['Inhalt', Math.round(l * 10) / 10, 'L'], ['Rohwert', raw, ''], ['Temperatur', 9.5, '°C'],
-                 ['Rohdruck', 412, ''], ['Sensorstatus', 1, ''], ['Bluetooth', -76, 'dBm']],
-          ctrl: [sw], raw: '37 20 00 95 04 12 00 01'};
+        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor
+        const raw = [Math.round(wave(1820, 6, 11)), 640, 9999, 9999];
+        const pct = raw.map(r => Math.round(r / 24.75));
+        const size = [+p.cfg.tank_size || 100, +p.cfg.size2 || 90];
+        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel,
+          gauge: {v: pct[0], unit: '%', label: 'Frischwasser', max: 100},
+          rows: [['Sensor 1: Frischwasser', pct[0] + ' % · ' + (pct[0] * size[0] / 100).toFixed(1) + ' L · Rohwert ' + raw[0] + ' · 9.3 °C', ''],
+                 ['Sensor 2: Grauwasser', pct[1] + ' % · ' + (pct[1] * size[1] / 100).toFixed(1) + ' L · Rohwert ' + raw[1] + ' · 10.2 °C', ''],
+                 ['Bluetooth', -76, 'dBm']],
+          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 99 99 99 99'};
       }
       case 'tpms': {
-        const p = [3.62, 3.58, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];
+        const p = [3.62, 3.21, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];
         const pos = ['Vorne links', 'Vorne rechts', 'Hinten links', 'Hinten rechts'];
-        return {state: '4 von 4 Rädern aktuell', ok: true,
-          rows: pos.map((n, i) => [n, p[i].toFixed(2) + ' bar · ' + (9 + i) + ' °C · ' + [100, 100, 62, 100][i] + ' % · ' + (20 + 7 * i) + ' s', '']).concat(
+        return {state: 'Vorne rechts: 3.21 bar zu niedrig', ok: false,
+          rows: pos.map((n, i) => [n, p[i].toFixed(2) + ' bar · ' + (9 + i) + ' °C · ' + [100, 100, 62, 100][i] + ' % · ' + (20 + 7 * i) + ' s' + (i === 1 ? ' · ⚠' : ''), '']).concat(
                 [[MAC(31), '2.10 bar · -88 dBm · nicht zugeordnet', '']])};
       }
       case 'govee':

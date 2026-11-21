@@ -402,16 +402,21 @@ nav button .ico{display:inline-flex}
         </div>
 
         <div class="card ss-only-water">
-            <div class="card-title water">SuperSense-Sensor</div>
+            <div class="card-title water">SuperSense-Box</div>
             <div class="info-row"><span class="info-label">Status</span><span id="ss-water-state">--</span></div>
             <div class="info-row"><span class="info-label">Rohwert</span><span id="ss-water-raw">--</span></div>
             <div class="info-row"><span class="info-label">Temperatur</span><span id="ss-water-temp">--</span></div>
             <div class="info-row"><span class="info-label">Bluetooth Signal</span><span id="ss-water-rssi">--</span></div>
             <div class="info-row"><span class="info-label">Letzter Wert</span><span id="ss-water-age">--</span></div>
+            <div class="info-row"><span class="info-label">Alle Sensoren</span><span id="ss-water-box" class="mono">--</span></div>
             <div class="info-row"><span class="info-label">Rohdaten</span><span id="ss-water-hex" class="mono">--</span></div>
-            <div class="form-group"><label>Sensor-MAC</label><input type="text" id="ss-water-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
-            <div class="form-group"><label>Liter je Rohwert-Einheit</label><input type="number" id="ss-water-factor" min="0.00001" max="10" step="0.00001">
-                <div class="form-hint">Laut Quelle liefert der Sensor ml (0,001). Noch nicht am echten Sensor bestätigt: bei bekanntem Inhalt den Rohwert ablesen und Liter ÷ Rohwert eintragen.</div></div>
+            <div class="form-group"><label>MAC der Box (SSBT…)</label><input type="text" id="ss-water-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
+            <div class="form-group"><label>Sensor an der Box</label><select id="ss-water-ch">
+                <option value="1">Sensor 1</option><option value="2">Sensor 2</option><option value="3">Sensor 3</option><option value="4">Sensor 4</option></select>
+                <div class="form-hint">Die Box hat bis zu 4 Sensoren. Welcher welcher ist, zeigt „Alle Sensoren“ oben (der Wert, der sich beim Füllen ändert).</div></div>
+            <div class="form-group"><label>Rohwert leer / voll</label>
+                <div class="btn-row"><input type="number" id="ss-water-empty" min="0" max="9998" step="1" placeholder="0"><input type="number" id="ss-water-full" min="0" max="9998" step="1" placeholder="2475"></div>
+                <div class="form-hint">Beide 0: Standard (Rohwert 2475 = 100 %). Sonst den Rohwert bei leerem und bei vollem Tank eintragen, dazwischen wird linear gerechnet.</div></div>
             <div class="btn-row">
                 <button class="btn btn-primary" onclick="saveSs('water')">💾 Sensor speichern</button>
                 <button class="btn btn-secondary" onclick="ssScan('water')">Suchen</button>
@@ -473,16 +478,21 @@ nav button .ico{display:inline-flex}
 
 
         <div class="card ss-only-grey">
-            <div class="card-title grey">SuperSense-Sensor</div>
+            <div class="card-title grey">SuperSense-Box</div>
             <div class="info-row"><span class="info-label">Status</span><span id="ss-grey-state">--</span></div>
             <div class="info-row"><span class="info-label">Rohwert</span><span id="ss-grey-raw">--</span></div>
             <div class="info-row"><span class="info-label">Temperatur</span><span id="ss-grey-temp">--</span></div>
             <div class="info-row"><span class="info-label">Bluetooth Signal</span><span id="ss-grey-rssi">--</span></div>
             <div class="info-row"><span class="info-label">Letzter Wert</span><span id="ss-grey-age">--</span></div>
+            <div class="info-row"><span class="info-label">Alle Sensoren</span><span id="ss-grey-box" class="mono">--</span></div>
             <div class="info-row"><span class="info-label">Rohdaten</span><span id="ss-grey-hex" class="mono">--</span></div>
-            <div class="form-group"><label>Sensor-MAC</label><input type="text" id="ss-grey-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
-            <div class="form-group"><label>Liter je Rohwert-Einheit</label><input type="number" id="ss-grey-factor" min="0.00001" max="10" step="0.00001">
-                <div class="form-hint">Laut Quelle liefert der Sensor ml (0,001). Noch nicht am echten Sensor bestätigt: bei bekanntem Inhalt den Rohwert ablesen und Liter ÷ Rohwert eintragen.</div></div>
+            <div class="form-group"><label>MAC der Box (SSBT…)</label><input type="text" id="ss-grey-mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
+            <div class="form-group"><label>Sensor an der Box</label><select id="ss-grey-ch">
+                <option value="1">Sensor 1</option><option value="2">Sensor 2</option><option value="3">Sensor 3</option><option value="4">Sensor 4</option></select>
+                <div class="form-hint">Die Box hat bis zu 4 Sensoren. Welcher welcher ist, zeigt „Alle Sensoren“ oben (der Wert, der sich beim Füllen ändert).</div></div>
+            <div class="form-group"><label>Rohwert leer / voll</label>
+                <div class="btn-row"><input type="number" id="ss-grey-empty" min="0" max="9998" step="1" placeholder="0"><input type="number" id="ss-grey-full" min="0" max="9998" step="1" placeholder="2475"></div>
+                <div class="form-hint">Beide 0: Standard (Rohwert 2475 = 100 %). Sonst den Rohwert bei leerem und bei vollem Tank eintragen, dazwischen wird linear gerechnet.</div></div>
             <div class="btn-row">
                 <button class="btn btn-grey" onclick="saveSs('grey')">💾 Sensor speichern</button>
                 <button class="btn btn-secondary" onclick="ssScan('grey')">Suchen</button>
@@ -804,6 +814,8 @@ function updateSs(kind, s) {
     $('ss-' + kind + '-rssi').textContent = s.rssi ? s.rssi + ' dBm' : '--';
     $('ss-' + kind + '-age').textContent = formatAge(s.age);
     $('ss-' + kind + '-hex').textContent = s.hex || '--';
+    $('ss-' + kind + '-box').textContent = Array.isArray(s.box)
+        ? s.box.map((v, i) => (i + 1) + ': ' + (v < 0 ? '–' : v)).join(' · ') : '--';
     $('ss-' + kind + '-rel').textContent = s.released ? 'App-Freigabe beenden' : 'Für App freigeben';
     $('ss-' + kind + '-rel').dataset.on = s.released ? '1' : '0';
 }
@@ -915,7 +927,9 @@ async function loadSetup() {
         for (const kind of ['water', 'grey']) {
             const t = TANKS[kind];
             $('ss-' + kind + '-mac').value = cfg[t.key + 'ss_mac'] || '';
-            $('ss-' + kind + '-factor').value = cfg[t.key + 'ss_factor'] ?? 0.001;
+            $('ss-' + kind + '-ch').value = String(cfg[t.key + 'ss_channel'] || 1);
+            $('ss-' + kind + '-empty').value = cfg[t.key + 'ss_empty'] ?? 0;
+            $('ss-' + kind + '-full').value = cfg[t.key + 'ss_full'] ?? 0;
         }
         applyGreyType();
         applyTankTypes();
@@ -1045,7 +1059,7 @@ let greyType = 0;   // 0 = tank electrode, 1 = Tank-Sensor FL
 const GREY_TYPE_HINTS = [
     'Kennlinie über die Matrix mit mehreren Punkten, Startwerte wie beim Frischwasser.',
     'Lineares Signal: unten Leer und Voll einlernen, die Matrix besteht dann aus zwei Punkten.',
-    'Füllstand per Bluetooth-Verbindung, kein Kabel am Tank. Der Sensor ist dann nur noch eingeschränkt mit der App nutzbar (siehe „Für App freigeben“).'
+    'Füllstand per Bluetooth von der SuperSense-Empfängerbox (bis 4 Sensoren), kein Kabel am Tank. Die Box ist dann nur noch eingeschränkt mit der App nutzbar (siehe „Für App freigeben“).'
 ];
 
 function applyGreyType() {
@@ -1123,8 +1137,8 @@ function applyTankTypes() {
         document.querySelectorAll('.ss-only-' + kind).forEach(e => e.classList.toggle('hidden', !ss));
         document.querySelectorAll('.volt-only-' + kind).forEach(e => e.classList.toggle('hidden', ss));
     }
-    $('water-src-hint').textContent = tankType.water === SS ? 'SuperSense-Sensor über Bluetooth' : 'Votronic-Tankgeber am analogen Eingang';
-    $('grey-src-hint').textContent = tankType.grey === SS ? 'SuperSense-Sensor über Bluetooth, optional' : 'Zweiter Votronic-Tankgeber (GPIO1), optional';
+    $('water-src-hint').textContent = tankType.water === SS ? 'SuperSense-Box über Bluetooth' : 'Votronic-Tankgeber am analogen Eingang';
+    $('grey-src-hint').textContent = tankType.grey === SS ? 'SuperSense-Box über Bluetooth, optional' : 'Zweiter Votronic-Tankgeber (GPIO1), optional';
 }
 
 // Fresh water sender type; Bluetooth starts at boot, so the device restarts
@@ -1147,11 +1161,15 @@ async function setTankType(kind, sel) {
 async function saveSs(kind) {
     const t = TANKS[kind];
     const mac = $('ss-' + kind + '-mac').value.trim();
-    const factor = parseFloat($('ss-' + kind + '-factor').value);
+    const ch = parseInt($('ss-' + kind + '-ch').value);
+    const empty = parseInt($('ss-' + kind + '-empty').value || '0');
+    const full = parseInt($('ss-' + kind + '-full').value || '0');
     if (!isValidMac(mac)) { showToast('Ungültige MAC-Adresse'); return; }
-    if (!Number.isFinite(factor) || factor < 0.00001 || factor > 10) { showToast('Faktor: 0,00001 bis 10'); return; }
+    const okRaw = v => Number.isInteger(v) && v >= 0 && v <= 9998;
+    if (!okRaw(empty) || !okRaw(full)) { showToast('Rohwerte: 0 bis 9998'); return; }
+    if (full !== 0 && full <= empty) { showToast('Rohwert voll muss größer als leer sein'); return; }
     try {
-        await postConfig({ [t.key + 'ss_mac']: mac, [t.key + 'ss_factor']: factor });
+        await postConfig({ [t.key + 'ss_mac']: mac, [t.key + 'ss_channel']: ch, [t.key + 'ss_empty']: empty, [t.key + 'ss_full']: full });
         showToast('✓ Sensor gespeichert');
     } catch (e) { showToast('Fehler: ' + e.message); }
 }

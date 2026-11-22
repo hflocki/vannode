@@ -11,7 +11,7 @@ Jedes Gerät ist ein **Plugin**. Welche in die Firmware kommen, legst du in `con
 
 Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jetzt Teil von VanNode mit derselben Update-Absicherung wie die übrigen Geräte. Ein ESP32 für alle Bluetooth-Geräte im Camper, jedes als Plugin.
 
-**Batterien haben einen eigenen Node.** Daly BMS, Ective BM X und BM2 laufen seit ble 2.5.0 auf dem **[battery-node](../battery)** (`firmware/battery`, M5Stack AtomS3 Lite, Topic `camper/battery`). Beide nutzen denselben Kern und dieselbe Web-Oberfläche aus [`firmware/_common/ble`](../_common/ble) (siehe [Aufbau](#aufbau-gemeinsamer-kern)), haben aber eigene Releases. Dieser Node heißt ab Werk **tool-node** (`camper/tool`); für mehr Geräte reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
+**Batterien haben einen eigenen Node.** Daly BMS, Ective BM X und BM2 laufen seit ble 2.5.0 auf dem **[battery-node](../battery)** (`firmware/battery`, M5Stack AtomS3 Lite, Topic `camper/battery`). Beide nutzen denselben Kern und dieselbe Web-Oberfläche aus [`firmware/_common/ble`](../_common/ble) (siehe [Aufbau](#aufbau-gemeinsamer-kern)), haben aber eigene Releases. Dieser Node heißt ab Werk **ble-node** (`camper/ble`, bis 2.5.0 `tool-node` / `camper/tool`, siehe [Umstieg auf 2.5.1](#umstieg-auf-251-tool--ble)); für mehr Geräte reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `ble2-node`, `camper/ble2`).
 
 Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
@@ -38,14 +38,14 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
 - **Verbinden:** Geräte mit fester Bluetooth-Verbindung. Höchstens **3 gleichzeitig** eingeschaltet (Grenze von NimBLE). Die Web-Oberfläche sperrt weitere, das Gerät prüft es beim Speichern und beim Start noch einmal.
 - Insgesamt höchstens **12 Geräte** (Arbeitsspeicher, `MAX_PLUGINS`).
-- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/tool2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_tool2`).
-- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Pocket-Node nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/tool/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
+- **Mehr Geräte?** Einfach einen zweiten BLE-Node nehmen und ihm in der Web-Oberfläche (Reiter **MQTT**) ein eigenes Topic geben, z. B. `camper/ble2`. Home Assistant führt ihn dann als eigenes Gerät (`camper_tool2`).
+- **Gas ist optional:** Im VanNode-System liest [`tanklevel`](../tanklevel) Gas und Tanks, Display und Pocket-Node nehmen die Werte von dort. Die Gas-Plugins hier sind für alle, die nur Bluetooth-Geräte haben und mit einem einzigen ESP auskommen wollen. Ihre Werte stehen unter `camper/ble/<gas>/…` und erscheinen in Home Assistant, nicht am Display.
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
 
 ### Batterien
 
-Die Batterie-Plugins (Daly, Ective, BM2) sind ab 2.5.0 nicht mehr in dieser Firmware, sondern im eigenen **[battery-node](../battery)**. Wer sie bisher auf einem tool-node hatte: Nach dem Update werden diese Geräte beim Start übersprungen (`Unknown device … skipped` im Seriellen Monitor), erscheinen nicht mehr in der Web-Oberfläche und fallen beim nächsten Speichern aus der Konfiguration. Auf dem battery-node neu anlegen; ihre alten Einträge in Home Assistant von Hand löschen.
+Die Batterie-Plugins (Daly, Ective, BM2) sind ab 2.5.0 nicht mehr in dieser Firmware, sondern im eigenen **[battery-node](../battery)**. Wer sie bisher auf einem ble-node hatte: Nach dem Update werden diese Geräte beim Start übersprungen (`Unknown device … skipped` im Seriellen Monitor), erscheinen nicht mehr in der Web-Oberfläche und fallen beim nächsten Speichern aus der Konfiguration. Auf dem battery-node neu anlegen; ihre alten Einträge in Home Assistant von Hand löschen.
 
 ### BTHome-Sensor
 
@@ -53,7 +53,7 @@ Die Batterie-Plugins (Daly, Ective, BM2) sind ab 2.5.0 nicht mehr in dieser Firm
 
 1. Gerät **BTHome-Sensor** hinzufügen, **Suchen** und den Sensor wählen (passende Geräte senden den Dienst `FCD2` und sind mit „✔ passt“ markiert).
 2. Nach dem Neustart erscheinen die Werte, sobald das erste Paket kommt. Sie stehen dann unter **Erkannte Werte** (z. B. `01,02,03,0C`), damit Home Assistant sie auch nach einem Neustart gleich kennt. Zum Neu-Erkennen das Feld leeren und speichern.
-3. Werte unter `camper/tool/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
+3. Werte unter `camper/ble/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
 
 - **ATC/pvvx** (Xiaomi LYWSD03MMC u. a.): im Telink-Flasher *Advertising type* **BTHome** wählen (Werkseinstellung neuerer Versionen).
 - **Verschlüsselte** Sensoren (Shelly BLU mit gesetztem Schlüssel) werden nicht gelesen, die Live-Seite zeigt dann „Verschlüsselt“.
@@ -76,7 +76,7 @@ Beispiel: Xiaomi-Thermometer LYWSD03MMC mit der Firmware von pvvx (Service-Daten
 | Luftfeuchte | 8 | 2 Byte | nein | 0,01 | % | Luftfeuchte |
 | Batterie | 12 | 1 Byte | nein | 1 | % | Batterie |
 
-Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/tool/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
+Die Stellen eines Sensors findest du mit nRF Connect (Werte am Sensor ändern und schauen, welche Bytes sich bewegen) oder in Projekten wie Theengs Decoder und ESPHome. **Verschlüsselte Sensoren** (z. B. Victron, Xiaomi mit Original-Firmware) lassen sich so nicht lesen. Werte erscheinen unter `camper/ble/<id>/v1` … `v3`, Home Assistant bekommt je Wert eine Entität mit dem eingetragenen Namen.
 
 ### OBD2-Adapter (Fahrzeug)
 
@@ -88,8 +88,8 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 - **Weitere Herstellerwerte** (DPF, Diesel bei Fahrzeugen ohne Standardwert) brauchen eigene Abfragen je Fahrzeug. Sie kommen als Fahrzeugprofile dazu, sobald sie an einem echten Fahrzeug bestätigt sind. Zum Ausprobieren gibt es den Testbefehl (unten).
 - **Starterbatterie schonen:** Ab Werk fragt das Plugin das Fahrzeug nur bei laufendem Motor ab (Bordspannung ab „Motor läuft ab“, Standard 13,2 V, bzw. Drehzahl). Fahrzeuge mit **intelligenter Lichtmaschine** kommen im Leerlauf nicht über 13 V (Ducato: 12,3–12,6 V); dort *Motor erkennen an: Drehzahl* wählen. Dann fragt der Node das Steuergerät jede Minute nach der Drehzahl; zwischendurch gilt die Ruhepause wie unten. Ist der Motor 30 s aus, hört es auf; nach 2 Minuten trennt es die Bluetooth-Verbindung für die **Ruhepause** (Standard 2 min), damit der Adapter schlafen kann, und schaut danach wieder nach. *Abfragen: Immer, wenn das Steuergerät antwortet* liest auch bei Zündung an und stehendem Motor, z. B. den Tankfüllstand.
 - **Bluetooth-Kanäle:** *Automatisch* nimmt die Kanäle, die der Adapter anbietet; das Log zeigt nach dem Verbinden alle Dienste. Klappt das nicht, einen der bekannten Aufbauten wählen (FFF0, FFE0, 18F0, Vgate / vLinker) oder *Eigene UUIDs* eintragen.
-- **Fahrzeug scannen** (Knopf in der Karte, in Home Assistant unter Diagnose, oder `camper/tool/cmd/obd/scan/set` mit `PRESS`): Bei laufendem Motor (oder Zündung an) fragt der Node mit eingeschalteten Headern, welche Steuergeräte antworten, welche Werte jedes einzelne meldet und welches Steuergerät Diesel, Verbrauch, AdBlue und Kilometer liefert. Dauert etwa 10–30 s. Der Bericht steht im Geräte-Log und unter `camper/tool/obd/scan`; wer ein neues Fahrzeugprofil möchte, schickt diesen Text mit Fahrzeug, Baujahr und Euro-Norm. Der Scan liest nur und enthält keine Fahrgestellnummer.
-- **Testbefehl** (nur per MQTT): `camper/tool/cmd/obd/raw/set` mit einem Adapter-Befehl, z. B. `ATRV` oder `0105`. Die Antwort steht im Geräte-Log und unter `camper/tool/obd/raw`. `04` (Fehler löschen) wird abgelehnt. Nach Versuchen mit `ATSH…` (anderes Steuergerät) mit `ATSH7DF` (11 Bit) bzw. `ATSHDB33F1` (29 Bit, Ducato) zurückstellen oder den Adapter neu verbinden.
+- **Fahrzeug scannen** (Knopf in der Karte, in Home Assistant unter Diagnose, oder `camper/ble/cmd/obd/scan/set` mit `PRESS`): Bei laufendem Motor (oder Zündung an) fragt der Node mit eingeschalteten Headern, welche Steuergeräte antworten, welche Werte jedes einzelne meldet und welches Steuergerät Diesel, Verbrauch, AdBlue und Kilometer liefert. Dauert etwa 10–30 s. Der Bericht steht im Geräte-Log und unter `camper/ble/obd/scan`; wer ein neues Fahrzeugprofil möchte, schickt diesen Text mit Fahrzeug, Baujahr und Euro-Norm. Der Scan liest nur und enthält keine Fahrgestellnummer.
+- **Testbefehl** (nur per MQTT): `camper/ble/cmd/obd/raw/set` mit einem Adapter-Befehl, z. B. `ATRV` oder `0105`. Die Antwort steht im Geräte-Log und unter `camper/ble/obd/raw`. `04` (Fehler löschen) wird abgelehnt. Nach Versuchen mit `ATSH…` (anderes Steuergerät) mit `ATSH7DF` (11 Bit) bzw. `ATSHDB33F1` (29 Bit, Ducato) zurückstellen oder den Adapter neu verbinden.
 
 ## Hardware
 
@@ -107,7 +107,7 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 | Sketch | `ble_node/ble_node.ino` |
 | Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`), danach Updates unter **System → Firmware- & Web-Update** |
 
-Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Ab Werk heißt der Node `tool-node` mit Topic `camper/tool`; ein zweiter bekommt unter **MQTT** eigenen Namen und Topic (z. B. `tool2-node` / `camper/tool2`).
+Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Ab Werk heißt der Node `ble-node` mit Topic `camper/ble`; ein zweiter bekommt unter **MQTT** eigenen Namen und Topic (z. B. `ble2-node` / `camper/ble2`).
 
 ## Bluetooth-Geräte einrichten
 
@@ -130,7 +130,7 @@ Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwo
 
 ## MQTT / Home Assistant
 
-Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/tool/<plugin>/…`, Befehle unter `camper/tool/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics und Befehle der Plugins (Dachhaube, Pumpe, Kühlschrank, WiPro, OBD2, Thermometer …): **[docs/TOPICS.md](../../docs/TOPICS.md#ble-node-tool-campertool)**.
+Basis-Topic `camper/ble` (in der Web-UI änderbar). Jedes Plugin hat eigene Topics unter `camper/ble/<plugin>/…`, Befehle unter `camper/ble/cmd/<plugin>/<key>/set`. Dazu `…/status` (Last Will) und `…/info` (Diagnose) wie bei allen Geräten. Alle Topics und Befehle der Plugins (Dachhaube, Pumpe, Kühlschrank, WiPro, OBD2, Thermometer …): **[docs/TOPICS.md](../../docs/TOPICS.md#ble-node-camperble)**.
 
 **Dachhaube:** Die Stellungen für Regen, Lüften und Favorit stellst du je Haube in den Einstellungen ein (zweite Haube `rvtech2` mit eigenen Werten und Topics `…/cmd/rvtech2/…`): **Stellung Regen** (Standard 12 %), **Stellung Lüften** (0 = Lüften-Funktion der Haube, jedes Drücken verlängert die Lüftzeit; sonst fester Wert in %), **Stellung Favorit** (0 = in der Haube gespeicherter Favorit, dann gibt es „Favorit speichern“; sonst fester Wert in %, „Favorit speichern“ entfällt). Die Knöpfe in der Karte zeigen den eingestellten Wert.
 
@@ -146,15 +146,22 @@ Basis-Topic `camper/tool` (in der Web-UI änderbar). Jedes Plugin hat eigene Top
 
 In Home Assistant erscheint ein Gerät „BLE Node“ (WLAN, Status) und je Plugin ein eigenes Gerät, die Dachhaube als Abdeckung (`cover`).
 
-> **Umstieg von der Toolbox (bis 1.2.x):** Das Gerät stellt ein gespeichertes `camper/toolbox` beim ersten Start selbst auf `camper/ble` um, das Display (ab 2.16.2) ebenso. Danach die alten retained Topics und die alten HA-Entitäten löschen: `python3 tools/mqtt/clean.py --host <broker> camper/toolbox homeassistant/sensor/camper_toolbox …` bzw. die Geräte „Toolbox Node“ in Home Assistant entfernen.
+### Umstieg auf 2.5.1 (tool → ble)
 
-> Wer die Toolbox schon aus dem alten Repo nutzt: Das Basis-Topic war `camper/tool`, der Hostname `camper-tool`. Ein Gerät mit gespeicherten Einstellungen behält sein altes Topic, bis es in der Web-UI geändert wird. Ändert man es, legt Home Assistant die Entitäten neu an.
+Bis 2.5.0 hieß der Node `tool-node` mit Topic `camper/tool` und Firmware-Kennung `toolbox`. Seit 2.5.1 heißt alles **ble**:
+
+1. **Einmal über die Arduino IDE flashen** (per USB ohne *Erase All Flash* oder über den Netzwerk-Port): Die Update-Seite von 2.5.0 und älter nimmt die neue Datei nicht an, weil die Kennung jetzt `ble` statt `toolbox` ist. Danach `data/index.html.gz` hochladen. Alle weiteren Updates gehen wieder über die Web-Oberfläche.
+2. Beim ersten Start stellt der Node gespeicherte Standardnamen selbst um: `camper/tool` → `camper/ble`, `camper/tool2` → `camper/ble2` …, `tool-node` → `ble-node`, `tool2-node` → `ble2-node` …, dazu das alte Toolbox-Topic `camper/toolbox` → `camper/ble`. Selbst gewählte Namen bleiben.
+3. Das **Display ab 2.21.5** stellt seine Topics genauso um (`camper/tool…` → `camper/ble…`). Ältere Displays: unter *Einstellungen → Topics der Geräte* von Hand ändern.
+4. **Aufräumen:** Home Assistant legt den Node als `camper_ble` neu an. Die alten retained Topics und HA-Einträge löschen: `python3 tools/mqtt/clean.py --host <broker> camper/tool homeassistant/+/camper_tool` (venv, siehe [tools/mqtt](../../tools/mqtt)) bzw. die alten Geräte in Home Assistant entfernen.
+
+Noch ältere Stände (Toolbox bis 1.2.x, Topic `camper/toolbox`) springen direkt auf `camper/ble`.
 
 ### Dachhaube am Display
 
-Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/tool/rvtech/…` und senden die Voreinstellungen und die Position an `camper/tool/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
+Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine kleine Kachel für die Übersicht (beide ab Werk aus, einschalten unter *Einstellungen → Anzeige*). Sie lesen `camper/ble/rvtech/…` und senden die Voreinstellungen und die Position an `camper/ble/cmd/rvtech/…`. Eigene Kacheln dafür braucht es nicht mehr; wer sie angelegt hat, kann sie löschen.
 
-- Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node Tool* (Standard `camper/tool`). Weitere BLE-Nodes trägst du bei *Tool 2* und *Tool 3* ein; die Dachhaube wird auf jedem davon gefunden.
+- Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node* (Standard `camper/ble`). Weitere BLE-Nodes trägst du bei *BLE-Node 2* und *BLE-Node 3* ein; die Dachhaube wird auf jedem davon gefunden.
 - Eine zweite Haube (`rvtech2`) kennt das Display noch nicht, ebenso der Abfahrtscheck.
 
 ## Aufbau (gemeinsamer Kern)
@@ -183,7 +190,7 @@ Für eine Fehlermeldung den Monitor vom Einschalten an mitschneiden, bis das Pro
 
 ## Sicheres Update, Ereignisse und Rückfall
 
-Jede Firmware hat eine Kennung (`CAMPER-FW:toolbox:<version>:<chip>;`, bleibt `toolbox`, damit Geräte mit der Toolbox-Firmware das Update annehmen) und dieselbe Absicherung wie alle VanNode-Geräte (`fwcheck.*`, `evlog.*`, `safeguard.*` aus `firmware/_common`):
+Jede Firmware hat eine Kennung (`CAMPER-FW:ble:<version>:<chip>;`, bis 2.5.0 `toolbox`, siehe [Umstieg auf 2.5.1](#umstieg-auf-251-tool--ble)) und dieselbe Absicherung wie alle VanNode-Geräte (`fwcheck.*`, `evlog.*`, `safeguard.*` aus `firmware/_common`):
 
 - **Prüfung beim Update** (Tab **System → Firmware- & Web-Update**): Die installierte Version steht dabei. Eine gewählte Datei wird schon im Browser und beim Hochladen im Gerät geprüft. Abgelehnt werden eine `.merged.bin`, Firmware für ein anderes Gerät oder einen anderen Chip und zu große Dateien. Firmware aus dem alten Repo (ohne Kennung) geht nur mit „Ohne Kennung hochladen“.
 - **Ereignisse:** Start mit Grund, WLAN und MQTT, Uploads mit Ergebnis, Rückfall, gespeicherte Einstellungen. Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.
@@ -192,7 +199,7 @@ Jede Firmware hat eine Kennung (`CAMPER-FW:toolbox:<version>:<chip>;`, bleibt `t
 
 Ein Update ersetzt nur das Programm: WLAN, MQTT, Login, Plugin-Einstellungen (MAC, PIN …) und Bluetooth-Kopplungen bleiben erhalten.
 
-**Umstieg vom alten Repo:** Die alte Firmware (0.1.x) prüft nichts und meldet bei Fehlern nur „Update failed“. Die neue `.bin` (`ble-node-esp32c3.bin`) über das alte Update-Feld hochladen, danach `data/index.html.gz`. Die `-full.bin` bzw. `.merged.bin` nur per USB.
+**Umstieg vom alten Repo:** Die alte Firmware (0.1.x) prüft nichts und meldet bei Fehlern nur „Update failed“. Die neue `.bin` (`ble-node-esp32c3-…`) über das alte Update-Feld hochladen, danach `data/index.html.gz`. Die `.merged.bin` nur per USB.
 
 ## Versionen
 

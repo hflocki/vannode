@@ -5,7 +5,7 @@ M.hw = 'atoms3';
 M.chip = 'esp32s3';
 M.fw = {name: 'Battery Node', dir: 'battery'};
 Object.assign(M.config, {
-  version: '2.5.0', device: 'battery-node', ha_node: 'camper_battery',
+  version: '2.5.1', device: 'battery-node', ha_node: 'camper_battery',
   core: Object.assign({}, M.config.core, {ap_ssid: 'Battery-Node-A1B2C3', mqtt_prefix: 'camper/battery', node_name: 'battery-node'}),
   plugins: [
     P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),

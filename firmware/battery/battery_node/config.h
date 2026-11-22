@@ -61,7 +61,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.5.0"
+#define FW_VERSION            "2.5.1"
 #define FW_DEVICE             "battery"   // device id in the firmware marker (fwcheck.h)
 #define NODE_TITLE            "Battery Node" // web page without index.html.gz, Home Assistant model, serial
 #define NODE_DIR              "battery"   // repo folder (about card)

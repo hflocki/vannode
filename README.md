@@ -42,8 +42,8 @@ flowchart LR
   subgraph ble["Bluetooth – gemeinsamer Kern"]
     direction TB
     bat["battery<br/>Daly · Ective · BM2"]
-    tool["ble (tool-node)<br/>Dachhaube · Pumpe<br/>Kühlschrank · Thermometer"]
-    more["tool2 / tool3<br/>(optional)"]
+    tool["ble<br/>Dachhaube · Pumpe<br/>Kühlschrank · Thermometer"]
+    more["ble2 / ble3<br/>(optional)"]
   end
   broker(("MQTT-Broker<br/>z. B. RUT956"))
   subgraph ui["Anzeige"]
@@ -64,7 +64,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 | **tool-node**: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Alarm WiPro III und OBD2-Adapter (nur lesen), SuperSense-Tanks und -Reifendruck, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren; weitere Nodes als `camper/tool2` … | `camper/tool` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 | **ble-node**: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Alarm WiPro III und OBD2-Adapter (nur lesen), SuperSense-Tanks und -Reifendruck, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren; weitere Nodes als `camper/ble2` … | `camper/ble` |
 | [`firmware/battery`](firmware/battery) | M5Stack AtomS3 Lite | **battery-node**: Batterien per Bluetooth (Daly BMS, Ective BM X, BM2), Status-LED; gleicher Kern und gleiche Web-Oberfläche wie `ble` ([`firmware/_common/ble`](firmware/_common/ble)), eigene Releases | `camper/battery` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
 | [`firmware/alde`](firmware/alde) | ESP32 + LIN-Transceiver | Alde Compact 3020 HE: liest den Heizbus passiv (Raum, Glykol, Warmwasser, Gas, Heizstab …) und setzt optional Sollwert, Gas, Heizstab und Warmwasser über den Bedienteil-Bus, in Entwicklung (basiert auf [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) und [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), MIT) | `camper/alde` |
@@ -95,7 +95,7 @@ Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, 
 
 | Gerät | Setup-WLAN | Passwort ab Werk | Danach erreichbar unter | Setup-WLAN aktiv |
 | --- | --- | --- | --- | --- |
-| ble | `BLE-Node-XXXXXX` | `blenode1234` | `http://tool-node.local` (Name im Web-UI änderbar) | immer (abschaltbar) |
+| ble | `BLE-Node-XXXXXX` | `blenode1234` | `http://ble-node.local` (Name im Web-UI änderbar) | immer (abschaltbar) |
 | battery | `Battery-Node-XXXXXX` | `battery1234` | `http://battery-node.local` (Name im Web-UI änderbar) | immer (abschaltbar) |
 | tanklevel | `Tanklevel-Node-XXXXXX` | `tanklevel1234` | `http://tanklevel-node.local` | immer (abschaltbar) |
 | temp | `Temp-Node-XXXXXX` | `camptemp1234` | `http://temp-node.local` | immer (abschaltbar) |

@@ -1178,7 +1178,7 @@ nav button .ico{display:inline-flex}
             "node_name",
             c.node_name,
             "text",
-            "Hostname, Titel und Gerät in Home Assistant, z. B. tool-node oder battery-node (a–z, 0–9, -)",
+            "Hostname, Titel und Gerät in Home Assistant, z. B. ble-node, ble2-node oder battery-node (a–z, 0–9, -)",
           ),
           inp("Broker", "mqtt_server", c.mqtt_server),
           inp("Port", "mqtt_port", c.mqtt_port, "number"),
@@ -1197,7 +1197,7 @@ nav button .ico{display:inline-flex}
             "text",
             "Home-Assistant-Knoten: " +
               CFG.ha_node +
-              " – zwei Geräte brauchen zwei Präfixe (z. B. camper/tool und camper/tool2)",
+              " – zwei Geräte brauchen zwei Präfixe (z. B. camper/ble und camper/ble2)",
           ),
         );
         $("#main").append(
@@ -1365,7 +1365,7 @@ nav button .ico{display:inline-flex}
             ...group("Mithören", "Sensoren, die nur senden (Thermometer, Gas, eigener BLE-Sensor). Beliebig viele.", listen),
             ...group(
               "Verbinden",
-              `Geräte mit fester Bluetooth-Verbindung (z. B. Batterien, Dachhaube, Pumpe, Kühlschrank). Höchstens ${max} gleichzeitig – für mehr einen zweiten Node mit eigenem Topic nehmen (z. B. camper/tool2).`,
+              `Geräte mit fester Bluetooth-Verbindung (z. B. Batterien, Dachhaube, Pumpe, Kühlschrank). Höchstens ${max} gleichzeitig – für mehr einen zweiten Node mit eigenem Topic nehmen (z. B. camper/ble2).`,
               link,
               count,
             ),

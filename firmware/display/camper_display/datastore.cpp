@@ -120,7 +120,7 @@ std::vector<bool>   tileDirtyF[2];
 
 const String EMPTY;
 
-// BLE node with the roof hatch: tool, tool2 or tool3 - the one an rvtech topic came from
+// BLE node with the roof hatch: ble, ble2 or ble3 - the one an rvtech topic came from
 // (tool until then)
 String bleActive;
 const String& blePrefixNow() {
@@ -218,7 +218,7 @@ void rebuildTopics() {
 
 bool onMessage(const char* topic, const char* payload, unsigned int len) {
   bool used = false;
-  // Roof hatch on another BLE node (tool2 / tool3): follow it
+  // Roof hatch on another BLE node (ble2 / ble3): follow it
   {
     const String* all[] = {&settings.prefixBle, &settings.prefixBle2, &settings.prefixBle3};
     for (auto p : all) {

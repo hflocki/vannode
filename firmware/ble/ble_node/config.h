@@ -24,7 +24,7 @@
 //   - passive sensors (gas, own BLE sensor) only listen, any number works
 //   - connecting devices (pump, roof hatch, fridge) keep a BLE connection each:
 //     at most MAX_BLE_LINKS (3) of them switched on at the same time
-// More devices: a second BLE node with its own topic (e.g. camper/tool2).
+// More devices: a second BLE node with its own topic (e.g. camper/ble2).
 // ============================================================
 #ifndef PLUGIN_DIMES
 #define PLUGIN_DIMES          1      // Gas: Rotarex DIMES / SRG WAVE (passive BLE)
@@ -92,11 +92,13 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.5.0"
-#define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
-                                          // so devices with the former Toolbox firmware accept updates
+#define FW_VERSION            "2.5.1"
+#define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
+                                          // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial
 #define NODE_DIR              "ble"       // repo folder (about card)
+#define NODE_RENAMED_FROM     "tool"      // default names up to 2.5.0 (camper/tool[N], tool[N]-node), moved to:
+#define NODE_RENAMED_TO       "ble"       // camper/ble[N], ble[N]-node (settings.cpp)
 
 // Network upload from the Arduino IDE (port in the IDE, password DEFAULT_OTA_PASSWORD).
 // 0 = off, updates then only through the web UI (with login, if set).
@@ -105,8 +107,8 @@
 #endif
 
 #ifndef DEFAULT_NODE_NAME
-#define DEFAULT_NODE_NAME     "tool-node"         // Node name (web UI, MQTT tab): host name, Home Assistant
-#endif                                            // device and web UI title, e.g. "tool2-node"
+#define DEFAULT_NODE_NAME     "ble-node"          // Node name (web UI, MQTT tab): host name, Home Assistant
+#endif                                            // device and web UI title, e.g. "ble2-node"
 #ifndef DEFAULT_AP_SSID
 #define DEFAULT_AP_SSID       "BLE-Node"          // Base name; "-XXXXXX" (last 3 MAC bytes) is appended
 #endif
@@ -147,9 +149,9 @@
 #endif
 // Topics: <prefix>/<plugin>/<value>, commands <prefix>/cmd/<plugin>/<value>/set,
 // <prefix>/status, <prefix>/info (docs/TOPICS.md). The Home Assistant node ID is derived
-// from it ("camper/tool" -> "camper_tool"), so two BLE nodes need two prefixes.
+// from it ("camper/ble" -> "camper_ble"), so two BLE nodes need two prefixes.
 #ifndef DEFAULT_MQTT_PREFIX
-#define DEFAULT_MQTT_PREFIX   "camper/tool"
+#define DEFAULT_MQTT_PREFIX   "camper/ble"
 #endif
 
 // WiFi TX power in 0.25 dBm steps: 70 = 17.5 dBm (factory default, selectable in the web UI).
@@ -541,7 +543,7 @@ struct AppConfig {
     char web_user[32];     // Web UI login, empty = no login
     char web_pass[32];
 
-    char node_name[24];    // "tool-node", "battery-node" ...: host name, HA device, web UI title
+    char node_name[24];    // "ble-node", "battery-node" ...: host name, HA device, web UI title
 };
 
 // Device wide runtime values (WiFi diagnosis)

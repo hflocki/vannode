@@ -34,6 +34,14 @@ const char* DEFAULT_PAGES = "{\"pages\":[],\"tiles\":[]}";
 
 namespace cfg {
 
+// "camper/tool" + digits -> "camper/ble" + digits (BLE node renamed in its firmware 2.5.1), anything else stays
+static void renameToolPrefix(String& p) {
+  if (!p.startsWith("camper/tool")) return;
+  String rest = p.substring(11);
+  for (size_t i = 0; i < rest.length(); i++) if (!isDigit(rest[i])) return;
+  p = "camper/ble" + rest;
+}
+
 void load() {
   prefs.begin(NS, true);
   settings.hostname     = prefs.getString("host",   DEFAULT_HOSTNAME);
@@ -61,10 +69,14 @@ void load() {
   settings.prefixTemp   = prefs.getString("ptemp",  DEFAULT_PREFIX_TEMP);
   settings.prefixBattery = prefs.getString("pbat",  DEFAULT_PREFIX_BATTERY);
   settings.prefixBle = prefs.getString("ptbx",  DEFAULT_PREFIX_BLE);
-  // Toolbox -> BLE node -> "tool" (2.17.0): the old default topics move along with the BLE firmware 2.0.1
-  if (settings.prefixBle == "camper/toolbox" || settings.prefixBle == "camper/ble") settings.prefixBle = DEFAULT_PREFIX_BLE;
   settings.prefixBle2 = prefs.getString("pbl2", "");
   settings.prefixBle3 = prefs.getString("pbl3", "");
+  // Old default topics of the BLE node move along with its firmware 2.5.1: Toolbox camper/toolbox and
+  // "tool" (2.17.0 - 2.21.4) camper/tool, camper/tool2, camper/tool3 -> camper/ble, camper/ble2, camper/ble3
+  if (settings.prefixBle == "camper/toolbox") settings.prefixBle = DEFAULT_PREFIX_BLE;
+  renameToolPrefix(settings.prefixBle);
+  renameToolPrefix(settings.prefixBle2);
+  renameToolPrefix(settings.prefixBle3);
   settings.fanPort      = prefs.getUChar ("fport",  DEFAULT_FAN_PORT);
   settings.ntpServer    = prefs.getString("ntp",    DEFAULT_NTP_SERVER);
   settings.tz           = prefs.getString("tz",     DEFAULT_TZ);

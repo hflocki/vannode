@@ -26,7 +26,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
 | Battery-Node (Batterien: Daly, Ective, BM2) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
-| BLE-Node Tool (tool-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/tool2`, `camper/tool3`) | `camper/tool` | ble (Gerätename tool-node) | [firmware/ble](../firmware/ble/README.md) |
+| BLE-Node (ble-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/ble2`, `camper/ble3`; bis ble 2.5.0 `camper/ble…`) | `camper/ble` | ble (Gerätename ble-node) | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
 | Emulator (Werkzeug am PC) | `camper/emulator` (+ die Topics der nachgebildeten Geräte) | – | [tools/emulator](../tools/emulator/README.md) |
@@ -246,7 +246,7 @@ Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die
 | `…/<id>/connected`, `…/<id>/release`, `…/<id>/ble_rssi` | Bluetooth-Verbindung, für die Hersteller-App freigegeben, Signal |
 | `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` |
 
-## BLE-Node Tool `camper/tool`
+## BLE-Node `camper/ble`
 
 Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 

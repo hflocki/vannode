@@ -48,6 +48,21 @@ static bool isValidNodeName(const char* s) {
     return true;
 }
 
+#ifdef NODE_RENAMED_FROM
+// <head>NODE_RENAMED_FROM[digits]<tail> -> <head>NODE_RENAMED_TO[digits]<tail>, anything else stays
+static void renameOld(char* s, size_t size, const char* head, const char* tail) {
+    const size_t hl = strlen(head), fl = strlen(NODE_RENAMED_FROM);
+    if (strncmp(s, head, hl) != 0 || strncmp(s + hl, NODE_RENAMED_FROM, fl) != 0) return;
+    const char* digits = s + hl + fl;
+    size_t dl = 0;
+    while (digits[dl] >= '0' && digits[dl] <= '9') dl++;
+    if (strcmp(digits + dl, tail) != 0) return;
+    char out[64];
+    snprintf(out, sizeof(out), "%s%s%.*s%s", head, NODE_RENAMED_TO, (int)dl, digits, tail);
+    if (strlen(out) < size) strlcpy(s, out, size);
+}
+#endif
+
 static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.wifi_ssid,   doc["wifi_ssid"]   | DEFAULT_WIFI_SSID,     sizeof(config.wifi_ssid));
     strlcpy(config.wifi_pass,   doc["wifi_pass"]   | DEFAULT_WIFI_PASSWORD, sizeof(config.wifi_pass));
@@ -68,11 +83,16 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.node_name,   doc["node_name"]   | DEFAULT_NODE_NAME,     sizeof(config.node_name));
     if (!isValidNodeName(config.node_name)) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
     if (config.mqtt_prefix[0] == '\0') strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
-    // Toolbox -> BLE node (1.3.0) -> "tool" (2.0.1): move the old default topics and names along
-    // (the display 2.17.0 does the same); battery-node keeps camper/battery
-    if (!strcmp(config.mqtt_prefix, "camper/toolbox") || !strcmp(config.mqtt_prefix, "camper/ble"))
+#ifdef NODE_RENAMED_FROM
+    // Former default names of this node (config.h): the ble-node was "tool" from 2.0.1 to 2.5.0 and is
+    // "ble" again since 2.5.1 (the display 2.21.5 does the same). Numbered nodes move along:
+    // camper/tool -> camper/ble, camper/tool2 -> camper/ble2, tool-node -> ble-node, tool2-node -> ble2-node.
+    // The Toolbox topic camper/toolbox (up to 1.2.x) becomes the default.
+    if (!strcmp(config.mqtt_prefix, "camper/toolbox"))
         strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
-    if (!strcmp(config.node_name, "ble-node")) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
+    renameOld(config.mqtt_prefix, sizeof(config.mqtt_prefix), "camper/", "");
+    renameOld(config.node_name, sizeof(config.node_name), "", "-node");
+#endif
     if (!strncmp(config.ap_ssid, "Toolbox-Node", 12)) strlcpy(config.ap_ssid, defaultApSsid(), sizeof(config.ap_ssid));
 }
 

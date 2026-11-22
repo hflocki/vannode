@@ -19,6 +19,12 @@ static uint32_t be(const uint8_t* d, size_t n) {
     return v;
 }
 
+static uint32_t le(const uint8_t* d, size_t n) {
+    uint32_t v = 0;
+    for (size_t i = n; i > 0; i--) v = (v << 8) | d[i - 1];
+    return v;
+}
+
 void bmsClear(BmsSample& s) {
     memset(&s, 0, sizeof(s));
     s.voltage = s.current = s.power = s.soc = s.charge_ah = s.energy_wh = NAN;
@@ -202,6 +208,215 @@ bool bm2Decode(const uint8_t p[16], BmsSample& s) {
 }
 
 // ============================================================
+// JBD / Xiaoxiang (aiobmsble jbd_bms.py)
+// ============================================================
+
+size_t jbdRequest(uint8_t cmd, uint8_t out[7]) {
+    uint16_t crc = (uint16_t)(0x10000 - (cmd + 0));   // over command and length byte
+    out[0] = 0xDD;
+    out[1] = 0xA5;
+    out[2] = cmd;
+    out[3] = 0x00;
+    out[4] = crc >> 8;
+    out[5] = crc & 0xFF;
+    out[6] = 0x77;
+    return 7;
+}
+
+int jbdExpectedLen(const uint8_t* d, size_t n) {
+    if (n == 0) return 0;
+    if (d[0] != 0xDD) return -1;
+    if (n < 2) return 0;
+    if (d[1] != JBD_CMD_BASIC && d[1] != JBD_CMD_CELLS && d[1] != 0x05) return -1;
+    if (n < 4) return 0;
+    return 7 + d[3];
+}
+
+bool jbdFrameOk(const uint8_t* d, size_t n, uint8_t cmd) {
+    if (n < 7 || jbdExpectedLen(d, n) != (int)n) return false;
+    if (d[n - 1] != 0x77 || d[1] != cmd || (d[2] & 0x80)) return false;
+    uint32_t sum = 0;
+    for (size_t i = 2; i < n - 3; i++) sum += d[i];
+    uint16_t crc = (uint16_t)(0x10000 - sum);
+    return d[n - 3] == (crc >> 8) && d[n - 2] == (crc & 0xFF);
+}
+
+bool jbdDecodeBasic(const uint8_t* d, size_t n, BmsSample& s) {
+    bmsClear(s);
+    if (!jbdFrameOk(d, n, JBD_CMD_BASIC) || n < 27 + 3) return false;
+    uint8_t temps = d[26];
+    size_t ctrl = 27 + 2 * (size_t)temps;
+    bool d10 = ctrl < n - 3 && (d[ctrl] & 0x80);        // 100 mA / 100 mAh units
+    s.voltage = be(d + 4, 2) / 100.0f;
+    s.current = (int16_t)be(d + 6, 2) / (d10 ? 10.0f : 100.0f);
+    s.charge_ah = be(d + 8, 2) / (d10 ? 10.0f : 100.0f);
+    s.cycles = be(d + 12, 2);
+    s.problem_code = be(d + 20, 2);
+    s.problem_fmt = 2;
+    s.problem = s.problem_code != 0;
+    s.soc = d[23];
+    s.charge_fet = (d[24] & 0x01) ? 1 : 0;
+    s.discharge_fet = (d[24] & 0x02) ? 1 : 0;
+    s.temp_count = 0;
+    for (uint8_t i = 0; i < temps && s.temp_count < BMS_MAX_TEMPS; i++) {
+        size_t p = 27 + 2 * (size_t)i;
+        if (p + 2 > n - 3) break;
+        uint16_t raw = be(d + p, 2);
+        if (raw == 0) continue;                          // sensor missing
+        s.temp_c[s.temp_count++] = ((int)raw - 2731) / 10.0f;
+    }
+    s.cell_count = 0;                                    // cells come with command 0x04
+    bmsFinish(s);
+    return true;
+}
+
+bool jbdDecodeCells(const uint8_t* d, size_t n, BmsSample& s) {
+    if (!jbdFrameOk(d, n, JBD_CMD_CELLS)) return false;
+    size_t cells = d[3] / 2;
+    s.cell_count = 0;
+    for (size_t i = 0; i < cells && s.cell_count < BMS_MAX_CELLS; i++) {
+        uint16_t mv = be(d + 4 + 2 * i, 2);
+        if (mv == 0) continue;
+        s.cell_v[s.cell_count++] = mv / 1000.0f;
+    }
+    bmsFinish(s);
+    return true;
+}
+
+// ============================================================
+// JK-BMS JK02 (aiobmsble jikong_bms.py)
+// ============================================================
+
+size_t jkCommand(uint8_t cmd, uint8_t out[20]) {
+    memset(out, 0, 20);
+    out[0] = 0xAA;
+    out[1] = 0x55;
+    out[2] = 0x90;
+    out[3] = 0xEB;
+    out[4] = cmd;
+    out[5] = 0x00;                                       // no value
+    uint8_t sum = 0;
+    for (int i = 0; i < 19; i++) sum += out[i];
+    out[19] = sum;
+    return 20;
+}
+
+bool jkFrameOk(const uint8_t* d, size_t n) {
+    if (n != JK_FRAME_LEN) return false;
+    if (d[0] != 0x55 || d[1] != 0xAA || d[2] != 0xEB || d[3] != 0x90) return false;
+    uint8_t sum = 0;
+    for (size_t i = 0; i < n - 1; i++) sum += d[i];
+    return sum == d[n - 1];
+}
+
+int jkSwVersion(const uint8_t* d, size_t n) {
+    if (!jkFrameOk(d, n) || d[4] != 0x03) return -1;
+    // bytes 30..37: text such as "11.XW" or "V19.05"; leading digits = major version
+    int v = -1;
+    for (size_t i = 30; i < 38; i++) {
+        char c = (char)d[i];
+        if (c >= '0' && c <= '9') v = (v < 0 ? 0 : v * 10) + (c - '0');
+        else if (v >= 0) break;
+    }
+    return v;
+}
+
+bool jkDecode(const uint8_t* d, size_t n, int sw, BmsSample& s) {
+    bmsClear(s);
+    if (!jkFrameOk(d, n) || d[4] != 0x02) return false;
+    const int off = (sw >= 0 && sw < 11) ? -32 : 0;      // older 24S layout
+    const int h = off / 2;                               // cell area moves by half
+    s.voltage = le(d + 150 + off, 4) / 1000.0f;
+    s.current = (int32_t)le(d + 158 + off, 4) / 1000.0f;
+    uint32_t prb = le(d + 166 + off, 4);
+    if (off) prb >>= 16;
+    s.problem_code = prb;
+    s.problem_fmt = 3;
+    s.soc = d[173 + off];
+    s.charge_ah = le(d + 174 + off, 4) / 1000.0f;
+    s.cycles = le(d + 182 + off, 4);
+    s.charge_fet = d[198 + off] ? 1 : 0;
+    s.discharge_fet = d[199 + off] ? 1 : 0;
+
+    uint32_t mask = le(d + 70 + h, 4);
+    uint8_t cells = 0;
+    for (int b = 0; b < 32; b++) cells += (mask >> b) & 1;
+    s.cell_count = 0;
+    for (uint8_t i = 0; i < cells && s.cell_count < BMS_MAX_CELLS; i++) {
+        uint16_t mv = le(d + 6 + 2 * i, 2);
+        if (mv == 0) continue;
+        s.cell_v[s.cell_count++] = mv / 1000.0f;
+    }
+
+    // Temperature sensors: positions depend on the firmware, bit mask at 214
+    uint8_t tmask = d[214 + off];
+    static const uint16_t POS_V11[6] = {144, 162, 164, 254, 256, 258};
+    static const uint16_t POS_OLD[3] = {130, 132, 134};
+    const uint16_t* pos = sw >= 11 ? POS_V11 : POS_OLD;
+    uint8_t npos = sw >= 14 ? 6 : sw >= 11 ? 4 : 3;
+    s.temp_count = 0;
+    for (uint8_t i = 0; i < npos && s.temp_count < BMS_MAX_TEMPS; i++) {
+        if (!(tmask & (1 << i))) continue;
+        int16_t raw = (int16_t)le(d + pos[i], 2);
+        if (raw == -2000) continue;                      // not fitted
+        s.temp_c[s.temp_count++] = raw / 10.0f;
+    }
+    // Bit 4 = "fully charged" is only information, not a problem
+    s.problem = (s.problem_code & ~(uint64_t)(1u << 4)) != 0;
+    bmsFinish(s);
+    return true;
+}
+
+// ============================================================
+// LiTime / Redodo / PowerQueen (aiobmsble redodo_bms.py)
+// ============================================================
+
+const uint8_t LITIME_REQUEST[8] = {0x00, 0x00, 0x04, 0x01, 0x13, 0x55, 0xAA, 0x17};
+
+int litimeExpectedLen(const uint8_t* d, size_t n) {
+    if (n == 0) return 0;
+    if (d[0] != 0x00) return -1;
+    if (n < 2) return 0;
+    if (d[1] != 0x00) return -1;
+    if (n < 3) return 0;
+    return d[2] + 4;
+}
+
+bool litimeDecode(const uint8_t* d, size_t n, BmsSample& s) {
+    bmsClear(s);
+    if (n < 100 || litimeExpectedLen(d, n) != (int)n) return false;
+    uint8_t sum = 0;
+    for (size_t i = 0; i < n - 1; i++) sum += d[i];
+    if (sum != d[n - 1]) return false;
+    s.voltage = le(d + 12, 2) / 1000.0f;
+    s.current = (int32_t)le(d + 48, 4) / 1000.0f;
+    s.soc = le(d + 90, 2);
+    s.charge_ah = le(d + 62, 2) / 100.0f;
+    s.cycles = le(d + 96, 4);
+    uint64_t prb = 0;
+    for (int i = 7; i >= 0; i--) prb = (prb << 8) | d[76 + i];
+    s.problem_code = prb;
+    s.problem = prb != 0;
+    s.cell_count = 0;
+    for (uint8_t i = 0; i < 16 && s.cell_count < BMS_MAX_CELLS; i++) {
+        uint16_t mv = le(d + 16 + 2 * i, 2);
+        if (mv == 0) continue;
+        s.cell_v[s.cell_count++] = mv / 1000.0f;
+    }
+    // Up to 5 sensors; the first always counts, further ones once they report a value
+    int16_t t[5];
+    uint8_t used = 1;
+    for (uint8_t i = 0; i < 5; i++) {
+        t[i] = (int16_t)le(d + 52 + 2 * i, 2);
+        if (i > 0 && t[i] != 0) used = i + 1;
+    }
+    s.temp_count = 0;
+    for (uint8_t i = 0; i < used && s.temp_count < BMS_MAX_TEMPS; i++) s.temp_c[s.temp_count++] = t[i];
+    bmsFinish(s);
+    return true;
+}
+
+// ============================================================
 // Derived values
 // ============================================================
 
@@ -264,6 +479,9 @@ const char* bmsTypeName(uint8_t t) {
         case BMS_DALY:   return "Daly";
         case BMS_ECTIVE: return "Ective BM X";
         case BMS_BM2:    return "BM2";
+        case BMS_JBD:    return "JBD";
+        case BMS_JK:     return "JK-BMS";
+        case BMS_LITIME: return "LiTime";
         default:         return "-";
     }
 }
@@ -292,6 +510,25 @@ static const char* const DALY_FAULTS[7][8] = {
      "Uhr (RTC) defekt", "Vorladung fehlgeschlagen", "Kommunikationsfehler", "interner Kommunikationsfehler"},
     {"Strommessung defekt", "Gesamtspannungsmessung defekt", "Kurzschlussschutz ausgelöst", "Laden gesperrt (Spannung zu niedrig)",
      nullptr, nullptr, nullptr, nullptr},
+};
+
+// JBD protection status (register 0x03, bytes 20-21), bits 14 and 15 undocumented
+static const char* const JBD_FAULTS[16] = {
+    "Zellspannung zu hoch", "Zellspannung zu niedrig", "Gesamtspannung zu hoch", "Gesamtspannung zu niedrig",
+    "Ladetemperatur zu hoch", "Ladetemperatur zu niedrig", "Entladetemperatur zu hoch", "Entladetemperatur zu niedrig",
+    "Ladestrom zu hoch", "Entladestrom zu hoch", "Kurzschluss", "Messchip (AFE) defekt",
+    "MOSFET per Software gesperrt", "Ladezeit überschritten", nullptr, nullptr,
+};
+// JK02 alarm bits; bit 4 ("fully charged") is skipped in bmsProblemText()
+static const char* const JK_FAULTS[32] = {
+    "Leitungswiderstand zu hoch", "MOSFET zu heiß", "Zellenzahl passt nicht zur Einstellung", nullptr,
+    nullptr, "Gesamtspannung zu hoch", "Ladestrom zu hoch", "Kurzschluss beim Laden",
+    "Ladetemperatur zu hoch", "Ladetemperatur zu niedrig", "Kommunikationsfehler", "Zellspannung zu niedrig",
+    "Gesamtspannung zu niedrig", "Entladestrom zu hoch", "Kurzschluss beim Entladen", "Entladetemperatur zu hoch",
+    "Lade-MOSFET defekt", "Entlade-MOSFET defekt", "GPS getrennt", "Passwort ändern",
+    "Entladen einschalten fehlgeschlagen", "Batterie zu heiß", "Temperaturfühler defekt", "Parallelmodul gestört",
+    "Kurzschlussschutz lässt sich nicht lösen", "Entladestrom zu hoch (Stufe 2)", "Entladestrom zu hoch (Stufe 3)", "Entladetemperatur zu niedrig",
+    "Per GPS gesperrt", nullptr, nullptr, nullptr,
 };
 
 size_t bmsProblemText(const BmsSample& s, char* out, size_t n) {
@@ -324,6 +561,15 @@ size_t bmsProblemText(const BmsSample& s, char* out, size_t n) {
                 if (t) add(t);
                 else unknown |= (uint64_t)1 << (8 * (7 - byte) + bit);
             }
+        }
+    } else if (s.problem_fmt == 2 || s.problem_fmt == 3) {
+        const char* const* tab = s.problem_fmt == 2 ? JBD_FAULTS : JK_FAULTS;
+        int bits = s.problem_fmt == 2 ? 16 : 32;
+        for (int bit = 0; bit < bits; bit++) {
+            if (!(s.problem_code & ((uint64_t)1 << bit))) continue;
+            if (s.problem_fmt == 3 && bit == 4) continue;   // "fully charged": no problem
+            if (tab[bit]) add(tab[bit]);
+            else unknown |= (uint64_t)1 << bit;
         }
     } else {
         unknown = s.problem_code;

@@ -3,11 +3,12 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
-// Host test of the battery protocols (plugins daly, ective, bm2; bms_proto.cpp): ./run.sh
+// Host test of the battery protocols (plugins daly, ective, bm2, jbd, jk, litime; bms_proto.cpp): ./run.sh
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include "../battery_node/src/plugins/bms_proto.h"
+#include "bms_vectors.h"
 
 static int fails = 0;
 static void check(bool ok, const char* what) {
@@ -99,6 +100,105 @@ int main() {
     uint8_t a[16] = {0};
     a[6] = 0x05; a[7] = 0x6E; a[8] = 100;   // 1390 -> 13.90 V
     check(bm2DecodeAdv(a, s) && near(s.voltage, 13.9f) && s.bat_state == BAT_STATE_CHARGING, "BM2 broadcast: charging");
+
+
+    // ---- JBD (reference frames from aiobmsble) --------------------------------------
+    {
+        uint8_t rq[7];
+        jbdRequest(JBD_CMD_BASIC, rq);
+        const uint8_t exp[7] = {0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77};
+        check(memcmp(rq, exp, 7) == 0, "JBD request 0x03");
+        jbdRequest(JBD_CMD_CELLS, rq);
+        check(rq[4] == 0xFF && rq[5] == 0xFC, "JBD request 0x04");
+        check(jbdExpectedLen(JBD_BASIC, 4) == (int)sizeof(JBD_BASIC), "JBD expected length");
+        BmsSample s;
+        // aiobmsble: 15.6 V, -2.87 A, 100 %, 4.98 Ah, 42 cycles, 22.4/22.3/21.7 C
+        bool ok = jbdDecodeBasic(JBD_BASIC, sizeof(JBD_BASIC), s);
+        check(ok && near(s.voltage, 15.6f) && near(s.current, -2.87f) && near(s.soc, 100) &&
+              near(s.charge_ah, 4.98f) && s.cycles == 42, "JBD basic info");
+        check(s.temp_count == 3 && near(s.temp_c[0], 22.4f, 0.01f) && near(s.temp_c[2], 21.7f, 0.01f) &&
+              !s.problem && s.charge_fet == 1 && s.discharge_fet == 1, "JBD temperatures, FETs");
+        // cells: 3.43 3.425 3.432 3.417, delta 0.015
+        ok = jbdDecodeCells(JBD_CELLS, sizeof(JBD_CELLS), s);
+        check(ok && s.cell_count == 4 && near(s.cell_v[1], 3.425f) && near(s.delta_v, 0.015f), "JBD cells");
+        // 100 mA units (control byte 0x88): -5.8 A, 471.9 Ah, 13.28 V, 72 %, 37 cycles
+        ok = jbdDecodeBasic(JBD_BASIC_D10, sizeof(JBD_BASIC_D10), s);
+        check(ok && near(s.current, -5.8f) && near(s.charge_ah, 471.9f, 0.01f) && near(s.voltage, 13.28f) &&
+              near(s.soc, 72) && s.cycles == 37, "JBD 100 mA units");
+        uint8_t bad[sizeof(JBD_BASIC)];
+        memcpy(bad, JBD_BASIC, sizeof(bad));
+        bad[10] ^= 1;
+        check(!jbdDecodeBasic(bad, sizeof(bad), s), "JBD bad checksum rejected");
+        BmsSample p;
+        bmsClear(p);
+        p.problem = true;
+        p.problem_fmt = 2;
+        p.problem_code = (1 << 0) | (1 << 10);
+        char t[160];
+        bmsProblemText(p, t, sizeof(t));
+        check(!strcmp(t, "Zellspannung zu hoch, Kurzschluss"), "JBD problem text");
+    }
+
+    // ---- JK-BMS JK02 (reference frames from aiobmsble) ------------------------------
+    {
+        uint8_t cmd[20];
+        jkCommand(JK_CMD_CELLS, cmd);
+        uint8_t sum = 0;
+        for (int i = 0; i < 19; i++) sum += cmd[i];
+        check(cmd[0] == 0xAA && cmd[3] == 0xEB && cmd[4] == 0x96 && cmd[19] == sum, "JK command 0x96");
+        struct JkCase {
+            const char* name;
+            const uint8_t* dev;
+            const uint8_t* cell;
+            int sw;
+            float v, a, soc, ah, delta, t0;
+            int cycles, cells, temps;
+        };
+        // values as decoded by aiobmsble (temperatures: first sensor, count capped at BMS_MAX_TEMPS)
+        const JkCase cases[] = {
+            {"JK02 24S (fw 10)", JK_JK02_24S_DEV, JK_JK02_24S_CELL, 10, 52.971f, 2.329f, 56, 113.245f, 0.005f, 18.1f, 60, 16, 3},
+            {"JK02 32S (fw 11)", JK_JK02_32S_DEV, JK_JK02_32S_CELL, 11, 26.509f, -7.063f, 68, 142.464f, 0.003f, 31.0f, 21, 8, 4},
+            {"JK02 32S (fw 15)", JK_JK02_32S_v15_DEV, JK_JK02_32S_v15_CELL, 15, 53.224f, 31.881f, 25, 49.286f, 0.016f, 12.9f, 9, 16, 4},
+            {"JK02 32S (fw 19.05)", JK_JK02_32S_v19_05_DEV, JK_JK02_32S_v19_05_CELL, 19, 53.224f, 31.881f, 25, 49.286f, 0.016f, 12.9f, 9, 16, 4},
+            {"JK02 32S (fw 19.27)", JK_JK02_32S_v19_27_DEV, JK_JK02_32S_v19_27_CELL, 19, 26.481f, -12.684f, 78, 244.296f, 0.005f, 26.2f, 15, 8, 4},
+        };
+        for (const JkCase& c : cases) {
+            char what[80];
+            int sw = jkSwVersion(c.dev, JK_FRAME_LEN);
+            snprintf(what, sizeof(what), "%s: firmware version %d", c.name, sw);
+            check(sw == c.sw, what);
+            BmsSample s;
+            bool ok = jkDecode(c.cell, JK_FRAME_LEN, sw, s);
+            snprintf(what, sizeof(what), "%s: values", c.name);
+            check(ok && near(s.voltage, c.v) && near(s.current, c.a) && near(s.soc, c.soc) &&
+                  near(s.charge_ah, c.ah) && s.cycles == c.cycles && !s.problem, what);
+            snprintf(what, sizeof(what), "%s: %u cells, delta, %u temperatures", c.name, s.cell_count, s.temp_count);
+            check(s.cell_count == c.cells && near(s.delta_v, c.delta) && s.temp_count == c.temps &&
+                  near(s.temp_c[0], c.t0, 0.01f), what);
+        }
+        BmsSample s;
+        check(!jkDecode(JK_JK02_32S_DEV, JK_FRAME_LEN, 11, s), "JK device info is not cell info");
+        uint8_t bad[JK_FRAME_LEN];
+        memcpy(bad, JK_JK02_32S_CELL, JK_FRAME_LEN);
+        bad[100] ^= 1;
+        check(!jkDecode(bad, JK_FRAME_LEN, 11, s), "JK bad checksum rejected");
+    }
+
+    // ---- LiTime / Redodo (reference frame from aiobmsble) ---------------------------
+    {
+        check(litimeExpectedLen(LITIME_RESP, 3) == (int)sizeof(LITIME_RESP), "LiTime expected length");
+        BmsSample s;
+        // aiobmsble: 26.556 V, -1.435 A, 65 %, 68.89 Ah, 3 cycles, 8 cells, 23/22/-2 C
+        bool ok = litimeDecode(LITIME_RESP, sizeof(LITIME_RESP), s);
+        check(ok && near(s.voltage, 26.556f) && near(s.current, -1.435f) && near(s.soc, 65) &&
+              near(s.charge_ah, 68.89f) && s.cycles == 3 && !s.problem, "LiTime values");
+        check(s.cell_count == 8 && near(s.cell_v[0], 3.317f) && near(s.delta_v, 0.010f) &&
+              s.temp_count == 3 && near(s.temp_c[2], -2), "LiTime cells, temperatures");
+        uint8_t bad[sizeof(LITIME_RESP)];
+        memcpy(bad, LITIME_RESP, sizeof(bad));
+        bad[sizeof(bad) - 1] ^= 0xFF;
+        check(!litimeDecode(bad, sizeof(bad), s), "LiTime bad checksum rejected");
+    }
 
     if (fails) {
         printf("%d test(s) failed\n", fails);

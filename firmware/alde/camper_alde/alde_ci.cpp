@@ -29,6 +29,17 @@ uint8_t aldeCiChecksum(uint8_t id, const uint8_t* d, int n) {
     return (uint8_t)(~total & 0xFF);
 }
 
+uint8_t aldeCiChecksumClassic(const uint8_t* d, int n) {
+    uint16_t total = 0;
+    for (int i = 0; i < n; i++) total += d[i];
+    while (total > 0xFF) total = (total & 0xFF) + (total >> 8);
+    return (uint8_t)(~total & 0xFF);
+}
+
+uint8_t aldeCiControlChecksum(const AldeCiState& s, const uint8_t* d, int n) {
+    return s.classic ? aldeCiChecksumClassic(d, n) : aldeCiChecksum(ALDE_CI_ID_CONTROL, d, n);
+}
+
 float aldeCiTemp(uint8_t raw) {
     if (raw >= 0xFB) return NAN;   // below/above range, no sensor, zone unused, invalid
     return raw * 0.5f - 42.0f;
@@ -46,12 +57,17 @@ void aldeCiDiagPayload(uint16_t functionId, uint8_t out[8]) {
 }
 
 bool aldeCiParseInfo(const uint8_t* buf, int n, AldeCiState* out) {
-    for (int i = 0; i + 2 + 9 <= n; i++) {
-        if (buf[i] != 0x55 || buf[i + 1] != ALDE_CI_ID_INFO) continue;
-        const uint8_t* d = buf + i + 2;
-        if (aldeCiChecksum(ALDE_CI_ID_INFO, d, 8) != d[8]) continue;
+    // i = position of the protected id 0x5B; the sync byte 0x55 before it may be missing
+    for (int i = 0; i + 1 + 9 <= n; i++) {
+        if (buf[i] != ALDE_CI_ID_INFO) continue;
+        const uint8_t* d = buf + i + 1;
+        uint8_t classic;
+        if (aldeCiChecksum(ALDE_CI_ID_INFO, d, 8) == d[8]) classic = 0;
+        else if (aldeCiChecksumClassic(d, 8) == d[8]) classic = 1;
+        else continue;
 
         AldeCiState s;
+        s.classic = classic;
         memcpy(s.raw, d, 8);
         s.room = aldeCiTemp(d[0]);
         s.outdoor = aldeCiTemp(d[2]);

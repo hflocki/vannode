@@ -59,7 +59,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -89,12 +89,14 @@ added here, under its node, and nowhere else.
 | --- | --- | --- | --- |
 | `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
 | `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
+| `firmware/alde` – panel bus: classic checksum fallback, answer window | reference | [holdestmade/esphome-alde-3020](https://github.com/holdestmade/esphome-alde-3020) | MIT ([`firmware/alde/LICENSE-alde3020-MIT`](firmware/alde/LICENSE-alde3020-MIT)) |
 
 ### Battery-Node (`firmware/battery`)
 
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
-| `firmware/battery` – battery protocols `bms_proto.*` (Daly, Ective, BM2) | ported | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) |
+| `firmware/battery` – battery protocols `bms_proto.*` (Daly, Ective, BM2, JBD, JK-BMS JK02, LiTime/Redodo) | ported |
+| `firmware/battery/tests/bms_vectors.h` – reference frames (JBD, JK-BMS, LiTime/Redodo) | test data | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) test suite | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) |
 | `firmware/battery` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
 
 ### BLE-Node (`firmware/ble`)

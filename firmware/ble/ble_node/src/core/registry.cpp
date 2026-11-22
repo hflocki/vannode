@@ -45,6 +45,15 @@ Plugin* createEctive(uint8_t index);
 #if PLUGIN_BM2
 Plugin* createBm2(uint8_t index);
 #endif
+#if PLUGIN_JBD
+Plugin* createJbd(uint8_t index);
+#endif
+#if PLUGIN_JK
+Plugin* createJk(uint8_t index);
+#endif
+#if PLUGIN_LITIME
+Plugin* createLitime(uint8_t index);
+#endif
 #if PLUGIN_CARAWATER
 Plugin* createCaraWater(uint8_t index);
 #endif
@@ -92,6 +101,15 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_BM2
     {"bm2", "Batterie: BM2 Batteriewächter", BLE_LINK, createBm2},
+#endif
+#if PLUGIN_JBD
+    {"jbd", "Batterie: JBD / Xiaoxiang BMS", BLE_LINK, createJbd},
+#endif
+#if PLUGIN_JK
+    {"jk", "Batterie: JK-BMS", BLE_LINK, createJk},
+#endif
+#if PLUGIN_LITIME
+    {"litime", "Batterie: LiTime / Redodo / PowerQueen", BLE_LINK, createLitime},
 #endif
 #if PLUGIN_DIMES
     {"dimes", "Gas: DIMES / SRG WAVE", BLE_PASSIVE, createDimes},

@@ -28,6 +28,9 @@ enum BmsType : uint8_t {
     BMS_DALY   = 1,   // Daly smart BMS (BLE name "DL-...", service FFF0)
     BMS_ECTIVE = 2,   // Ective BM X / LiPower (Modbus RTU over BLE, advertises service AF30)
     BMS_BM2    = 3,   // BM2 battery monitor (voltage only, AES encrypted notifications on FFF4)
+    BMS_JBD    = 4,   // JBD / Xiaoxiang smart BMS (service FF00, many battery brands)
+    BMS_JK     = 5,   // JK-BMS (JK02 protocol, service FFE0, 300-byte frames)
+    BMS_LITIME = 6,   // LiTime / Redodo / PowerQueen batteries (service FFE0)
 };
 
 // Daly protocol variants
@@ -54,7 +57,8 @@ struct BmsSample {
     float temp_c[BMS_MAX_TEMPS];
     bool problem;         // BMS reports an error / protection
     uint64_t problem_code;
-    uint8_t problem_fmt;  // layout of problem_code: 0 unknown, 1 Daly fault bytes (8 bytes, byte 0 = most significant)
+    uint8_t problem_fmt;  // layout of problem_code: 0 unknown, 1 Daly fault bytes (8 bytes, byte 0 = most significant),
+                          // 2 JBD protection bits, 3 JK02 alarm bits
     int8_t charge_fet;    // 1 on, 0 off, -1 unknown
     int8_t discharge_fet;
     int8_t bat_state;     // battery state reported by the monitor (BatState), -1 unknown
@@ -130,6 +134,40 @@ bool bm2Decode(const uint8_t plain[16], BmsSample& s);
 // included), same key; decrypted bytes 6-7 = voltage in 10 mV (big endian), byte 8 = SoC.
 // Layout as in DJBenson/bm2-esphome and andystewart999/ha_bm2monitor (MIT).
 bool bm2DecodeAdv(const uint8_t plain[16], BmsSample& s);
+
+// ---- JBD / Xiaoxiang smart BMS --------------------------------------
+// Request DD A5 <cmd> 00 <crc16 big endian> 77, answer DD <cmd> <status> <len> <data> <crc16> 77.
+// Command 0x03 = basic info, 0x04 = cell voltages. Positions as in aiobmsble jbd_bms.py.
+#define JBD_CMD_BASIC  0x03
+#define JBD_CMD_CELLS  0x04
+size_t jbdRequest(uint8_t cmd, uint8_t out[7]);
+// Expected total length once the first 4 bytes are there, 0 = need more, -1 = not a JBD answer
+int jbdExpectedLen(const uint8_t* d, size_t n);
+// Tail, checksum, command and status of a complete answer
+bool jbdFrameOk(const uint8_t* d, size_t n, uint8_t cmd);
+bool jbdDecodeBasic(const uint8_t* d, size_t n, BmsSample& s);   // clears s first
+bool jbdDecodeCells(const uint8_t* d, size_t n, BmsSample& s);   // adds the cells, then bmsFinish()
+
+// ---- JK-BMS (JK02) -----------------------------------------------------
+// Commands AA 55 90 EB <cmd> <len> <13 bytes> <sum>; 0x97 = device info (answer type 0x03),
+// 0x96 = cell info (answer type 0x02, then sent about once per second without asking).
+// Answers are 300 bytes starting 55 AA EB 90 <type>, last byte = sum of the others.
+#define JK_FRAME_LEN   300
+#define JK_CMD_INFO    0x97
+#define JK_CMD_CELLS   0x96
+size_t jkCommand(uint8_t cmd, uint8_t out[20]);
+bool jkFrameOk(const uint8_t* d, size_t n);                  // header, length, checksum
+// Firmware major version from a device info frame (type 0x03), -1 if unreadable.
+// Below 11 the cell info uses the older 24S layout (offset -32).
+int jkSwVersion(const uint8_t* d, size_t n);
+bool jkDecode(const uint8_t* d, size_t n, int swVersion, BmsSample& s);
+
+// ---- LiTime / Redodo / PowerQueen -------------------------------------
+// Request 00 00 04 01 13 55 AA 17; answer 00 00 <len> ... <sum>, total len + 4 bytes,
+// little endian fields (positions as in aiobmsble redodo_bms.py).
+extern const uint8_t LITIME_REQUEST[8];
+int litimeExpectedLen(const uint8_t* d, size_t n);            // 0 = need more, -1 = not an answer
+bool litimeDecode(const uint8_t* d, size_t n, BmsSample& s);
 
 // Fills power, energy, delta, mean temperature and runtime from the raw values
 void bmsFinish(BmsSample& s);

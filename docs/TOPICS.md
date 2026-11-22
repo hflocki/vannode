@@ -25,7 +25,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Heizung (Alde) | `camper/alde` | alde | [firmware/alde](../firmware/alde/README.md) |
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
-| Battery-Node (Batterien: Daly, Ective, BM2) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
+| Battery-Node (Batterien: Daly, Ective, BM2, JBD, JK-BMS, LiTime) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
 | BLE-Node (ble-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/ble2`, `camper/ble3`; bis ble 2.5.0 `camper/ble…`) | `camper/ble` | ble (Gerätename ble-node) | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
@@ -234,17 +234,17 @@ Gesendet wird nach jeder Messung (Intervall in der Web-UI, Standard 10 s), spät
 
 ## Batterien `camper/battery`
 
-Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die BLE-Firmware; Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2` … (bis battery-node 1.x eine frei gewählte ID).
+Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die BLE-Firmware; Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2`, `jbd`, `jk`, `litime` … (bis battery-node 1.x eine frei gewählte ID).
 
 | Topic | Inhalt |
 | --- | --- |
 | `…/<id>/available` | `online`, solange das BMS antwortet |
 | `…/<id>/soc`, `voltage`, `current`, `power`, `charge`, `energy`, `runtime`, `charging` | Messwerte (Strom positiv = Laden) |
 | `…/<id>/problem`, `…/<id>/problem_text` | Fehler des BMS |
-| `…/<id>/temperature`, `cycles`, `delta`, `cell_1` … | nur Daly |
+| `…/<id>/temperature`, `cycles`, `delta`, `cell_1` … | Daly, JBD, JK-BMS, LiTime |
 | `…/<id>/state` | nur BM2: `Normal`, `Schwach`, `Kritisch`, `Lädt`, `Erhaltungsladung` |
 | `…/<id>/connected`, `…/<id>/release`, `…/<id>/ble_rssi` | Bluetooth-Verbindung, für die Hersteller-App freigegeben, Signal |
-| `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` |
+| `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` (`t` = Typ: 1 Daly, 2 Ective, 3 BM2, 4 JBD, 5 JK-BMS, 6 LiTime) |
 
 ## BLE-Node `camper/ble`
 

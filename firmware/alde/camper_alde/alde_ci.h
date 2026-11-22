@@ -14,6 +14,8 @@
 // Copyright (c) 2026 daviddootson), see LICENSE-alde3030-MIT and NOTICE.md.
 // Verified there on an Alde 3030 Plus. For the Compact 3020 (function id 0x0001) and the
 // 3030 (0x0002) the same frames are assumed - NOT verified.
+// Checksum fallback (classic LIN 1.x checksum on some 3020 panels) and the longer answer
+// window follow holdestmade/esphome-alde-3020 (MIT), see NOTICE.md.
 //
 // Plain C++ without Arduino dependencies, so it can be tested on the host.
 #ifndef ALDE_CI_H
@@ -40,6 +42,8 @@ struct AldeCiState {
     uint8_t ac_input;  // 230 V present
     uint8_t pump;
     uint8_t raw[8];    // info payload, used to build control frames
+    uint8_t classic;   // 1 = the panel answered with the classic checksum (data only);
+                       // control frames then use the same kind
 };
 
 // A requested change. Fields left at -1 / hasTarget=false keep the current value.
@@ -58,14 +62,22 @@ bool aldeCiCommandEmpty(const AldeCiCommand& c);
 // Enhanced checksum over the id as sent plus the data (carry wrap-around)
 uint8_t aldeCiChecksum(uint8_t id, const uint8_t* d, int n);
 
+// Classic checksum (LIN 1.x): data only. Used only if the panel answers with it.
+uint8_t aldeCiChecksumClassic(const uint8_t* d, int n);
+
+// Checksum for a control frame: the kind the panel used in its last info answer
+uint8_t aldeCiControlChecksum(const AldeCiState& s, const uint8_t* d, int n);
+
 // Temperature byte: raw * 0.5 - 42; 0xFB..0xFF = special values -> NAN
 float aldeCiTemp(uint8_t raw);
 
 // Registration payload for the 0x3C frame (function id: 1 = 3020, 2 = 3030, 3 = 3030 Plus)
 void aldeCiDiagPayload(uint16_t functionId, uint8_t out[8]);
 
-// Find "55 5B" (echo of our header) in the received bytes and decode the 8 data bytes +
-// checksum after it. Returns false if nothing valid was found.
+// Find the echo of our header ("55 5B", or only "5B" if the sync byte was lost after
+// the break) and decode the 8 data bytes + checksum after it. The enhanced checksum is
+// tried first, the classic one only as fallback (sets out->classic). Returns false if
+// nothing valid was found.
 bool aldeCiParseInfo(const uint8_t* buf, int n, AldeCiState* out);
 
 // True if the panel must not get a command right now (busy or error bit set)

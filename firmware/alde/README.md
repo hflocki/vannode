@@ -30,6 +30,7 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 - 13 Werte vom Bus plus „Klimaanlage aktiv“ und „LIN-Bus“ unter `camper/alde/<key>`, Home Assistant legt die Entitäten automatisch an (Gas, Klimaanlage aktiv und LIN-Bus als Binärsensoren)
 - Werte gehen bei Änderung raus, höchstens alle *Sendeabstand* Sekunden (Standard 5 s), unverändert spätestens jede Minute
 - Ungültige Werte (Platzhalter `0xFFFF`/`0x7FFF`, unbekannte Gas-Codes, falsche Prüfsumme) werden verworfen, der letzte gültige Wert bleibt stehen
+- Bedienteil-Bus erkennt die Prüfsumme des Bedienteils selbst (erweitert oder klassisch, wie in [esphome-alde-3020](https://github.com/holdestmade/esphome-alde-3020)) und sendet Befehle mit derselben
 - Optional Bedienteil-Bus: 11 weitere Werte und – nur im Modus „Lesen und steuern“ – Heizung an/aus, Sollwert (5–30 °C), Gas, Heizstab (bis zur eingestellten Höchststufe) und Warmwasser (aus/an/Boost) per MQTT, Web-UI und Home Assistant
 - Vor jedem Befehl meldet sich der Node neu am Bedienteil an und liest den aktuellen Stand. Gesendet wird nur, was sich wirklich ändert; am Bedienteil gemachte Einstellungen werden nicht überschrieben
 - Kein Befehl, solange das Bedienteil „beschäftigt“ oder eine Störung meldet: Der Node versucht es bis zu fünfmal im Abstand von 0,3 s und verwirft den Befehl dann (Ereignis-Log)

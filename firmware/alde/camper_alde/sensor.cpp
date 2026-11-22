@@ -190,12 +190,13 @@ static int ciRead(uint8_t* buf, int max, unsigned long timeoutMs) {
     return n;
 }
 
-static void ciSendFrame(uint8_t id, const uint8_t* d) {
+// classic: data-only checksum (only for control frames, when the panel answers that way)
+static void ciSendFrame(uint8_t id, const uint8_t* d, bool classic = false) {
     ciDrain();
     ciBreak();
     uint8_t frame[11] = {0x55, id};
     memcpy(frame + 2, d, 8);
-    frame[10] = aldeCiChecksum(id, d, 8);
+    frame[10] = classic ? aldeCiChecksumClassic(d, 8) : aldeCiChecksum(id, d, 8);
     ciSerial.write(frame, sizeof(frame));
     ciSerial.flush();
     if (logDetail()) {
@@ -223,7 +224,8 @@ static bool ciPoll() {
     ciSerial.write(hdr, 2);
     ciSerial.flush();
     uint8_t buf[24];
-    int n = ciRead(buf, sizeof(buf), 60);
+    // 150 ms for the first byte: some panels (3030 Plus) answer later than 60 ms
+    int n = ciRead(buf, sizeof(buf), 150);
     AldeCiState s;
     if (!aldeCiParseInfo(buf, n, &s)) {
         ciPollsBad++;
@@ -242,6 +244,8 @@ static bool ciPoll() {
         dbglogf("[CI] Info 0x1B changed: %s", hex);
     }
     if (!ciState.valid || memcmp(ciState.raw, s.raw, 8) != 0) ciChanged = true;
+    if (s.classic != ciState.classic || !ciState.valid)
+        dbglogf("[CI] Panel uses the %s checksum\n", s.classic ? "classic" : "enhanced");
     ciState = s;
     return true;
 }
@@ -372,7 +376,7 @@ static void ciLoop(unsigned long now) {
         }
         uint8_t d[8];
         aldeCiBuildControl(ciState, cmd, d);
-        ciSendFrame(ALDE_CI_ID_CONTROL, d);
+        ciSendFrame(ALDE_CI_ID_CONTROL, d, ciState.classic);
         ciCmdsSent++;
         evlog::add("Befehl an Bedienteil: %02X %02X %02X", d[3], d[4], d[5]);
         dbglogf("[CI] Control sent: 00 00 00 %02X %02X %02X FF FF\n", d[3], d[4], d[5]);

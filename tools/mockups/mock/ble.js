@@ -19,7 +19,7 @@ const GAS_CFG = {capacity: 27.2, fill_stop_on: false, fill_stop: 80};
 const M = {
   id: 'ble',
   config: {
-    version: '2.5.1', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '2.5.2', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false, node_name: 'ble-node', debug: true},
@@ -91,6 +91,9 @@ const M = {
             {k: 'rest_min', l: 'Ruhepause', t: 'int', min: 0, max: 60, u: 'min', h: 'Motor aus: so lange trennt der Node die Verbindung, damit der Adapter schlafen kann. 0 = verbunden bleiben'}],
       daly: BMS_FIELDS('Batterie-MAC'),
       ective: BMS_FIELDS('Batterie-MAC'),
+      jbd: BMS_FIELDS('Batterie-MAC'),
+      jk: BMS_FIELDS('Batterie-MAC'),
+      litime: BMS_FIELDS('Batterie-MAC'),
       bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
       supersense: [{k: 'mac', l: 'MAC der Box', t: 'mac', h: 'SSBT… – über "Suchen" aus der Liste wählen'},
                    {k: 'medium', l: 'Sensor 1: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
@@ -333,15 +336,17 @@ const M = {
                 ctrl: [{t: 'buttons', k: 'action', b: [['read_dtc', 'Fehlercodes lesen'], ['scan', 'Fahrzeug scannen']]}, sw],
                 raw: '41 0C 19 C8'};
       }
-      case 'daly': case 'ective': case 'bm2': {
+      case 'daly': case 'ective': case 'bm2': case 'jbd': case 'jk': case 'litime': {
         const B = {daly: [78, 13.31, -4.2, 78, 1038, 18.6, 14.5, 41], ective: [92, 13.38, 1.6, 92, 1224, null, 15.1, 12],
-                   bm2: [86, 12.62, null, null, null, null, null, null]}[p.type];
+                   bm2: [86, 12.62, null, null, null, null, null, null],
+                   jbd: [72, 13.28, -5.8, 72, 956, 12.4, 19.9, 37], jk: [68, 26.51, -7.1, 142, 3776, 20.1, 29.2, 21],
+                   litime: [65, 13.27, -1.4, 68.9, 914, 49.2, 23, 3]}[p.type];
         const rows = [['Spannung', B[1], 'V']];
         if (B[2] !== null) rows.push(['Strom', B[2], 'A'], ['Leistung', Math.round(B[1] * B[2]), 'W']);
         if (B[3] !== null) rows.push(['Restkapazität', B[3], 'Ah'], ['Energie', B[4], 'Wh']);
         if (B[5] !== null) rows.push(['Restlaufzeit', B[5], 'h']);
         if (B[6] !== null) rows.push(['Temperatur', B[6], '°C']);
-        if (p.type === 'daly') rows.push(['Zellen', '4 × 3.326 … 3.331 V', ''], ['Zelldifferenz', 5, 'mV']);
+        if (['daly', 'jbd', 'jk', 'litime'].includes(p.type)) rows.push(['Zellen', '4 × 3.326 … 3.331 V', ''], ['Zelldifferenz', 5, 'mV']);
         if (B[7] !== null) rows.push(['Zyklen', B[7], '']);
         rows.push(['Zustand', B[2] === null ? 'Ruhe' : B[2] < 0 ? 'Entladen' : 'Laden', ''], ['Alter', 3, 's'], ['Bluetooth', -68, 'dBm']);
         return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, gauge: {v: B[0], unit: '%', label: 'Ladestand', max: 100}, rows, ctrl: [sw]};

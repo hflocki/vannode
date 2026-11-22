@@ -33,6 +33,15 @@
 #ifndef PLUGIN_BM2
 #define PLUGIN_BM2            1      // Battery: BM2 battery monitor (broadcast, connection as fallback)
 #endif
+#ifndef PLUGIN_JBD
+#define PLUGIN_JBD            1      // Battery: JBD / Xiaoxiang smart BMS (service FF00), BLE connection
+#endif
+#ifndef PLUGIN_JK
+#define PLUGIN_JK             1      // Battery: JK-BMS (JK02 protocol), BLE connection
+#endif
+#ifndef PLUGIN_LITIME
+#define PLUGIN_LITIME         1      // Battery: LiTime / Redodo / PowerQueen, BLE connection
+#endif
 
 // At most this many connecting devices may be switched on at the same time
 // (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS = 3). Checked in the web UI, when saving
@@ -49,7 +58,7 @@
 // Plugins of the ble-node are not part of this firmware.
 #define CT_BLE_PASSIVE  0
 #define CT_GAS          0
-#define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
+#define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2 + PLUGIN_JBD + PLUGIN_JK + PLUGIN_LITIME)
 #define CT_BLE_LINKS    CT_BMS
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
@@ -61,7 +70,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.5.1"
+#define FW_VERSION            "2.6.0"
 #define FW_DEVICE             "battery"   // device id in the firmware marker (fwcheck.h)
 #define NODE_TITLE            "Battery Node" // web page without index.html.gz, Home Assistant model, serial
 #define NODE_DIR              "battery"   // repo folder (about card)

@@ -132,6 +132,29 @@ int main() {
         AldeCiState none = {};
         CHECK(aldeCiBlocked(none), "invalid state not blocked");
     }
+    // 10. Classic checksum (data only) is accepted as fallback and used for control frames;
+    //     the enhanced one stays the default
+    {
+        std::vector<uint8_t> b = {0x00, 0x55, ALDE_CI_ID_INFO};
+        for (int i = 0; i < 8; i++) b.push_back(info[i]);
+        b.push_back(aldeCiChecksumClassic(info, 8));
+        AldeCiState t;
+        CHECK(aldeCiParseInfo(b.data(), (int)b.size(), &t) && t.classic == 1, "classic checksum not accepted");
+        uint8_t d[8];
+        AldeCiCommand c; aldeCiCommandClear(c);
+        aldeCiBuildControl(t, c, d);
+        CHECK(aldeCiControlChecksum(t, d, 8) == aldeCiChecksumClassic(d, 8), "control checksum not classic");
+        std::vector<uint8_t> e = infoBytes(info);
+        CHECK(aldeCiParseInfo(e.data(), (int)e.size(), &t) && t.classic == 0, "enhanced not preferred");
+        CHECK(aldeCiControlChecksum(t, d, 8) == aldeCiChecksum(ALDE_CI_ID_CONTROL, d, 8), "control checksum not enhanced");
+    }
+    // 11. Sync byte lost after the break: "00 5B" + answer is still found
+    {
+        std::vector<uint8_t> b = infoBytes(info);
+        b.erase(b.begin() + 1);                 // drop 0x55
+        AldeCiState t;
+        CHECK(aldeCiParseInfo(b.data(), (int)b.size(), &t) && std::fabs(t.room - 21.0f) < 0.01f, "without sync byte");
+    }
     if (failures) { printf("%d FAILURE(S)\n", failures); return 1; }
     printf("ALL CI TESTS PASSED\n");
     return 0;

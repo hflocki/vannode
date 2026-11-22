@@ -3,7 +3,7 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
-// Plugins "daly", "ective", "bm2": batteries (BMS / battery monitors) over Bluetooth.
+// Plugins "daly", "ective", "bm2", "jbd", "jk", "litime": batteries (BMS / battery monitors) over Bluetooth.
 // Formerly the separate battery-node firmware (firmware/battery); protocol decoding in
 // bms_proto.cpp (ported from aiobmsble, Apache-2.0).
 //
@@ -11,6 +11,10 @@
 //   ective  Ective BM X / LiPower: MODBUS read over FFE0/FFE1 (or AF30/FFE1), device id detected
 //   bm2     BM2 battery monitor: AES encrypted broadcast; a connection (notify FFF4) only
 //           while no broadcast arrives (older firmware)
+//   jbd     JBD / Xiaoxiang smart BMS: requests 0x03 (basic info) and 0x04 (cells) over FF00/FF01/FF02
+//   jk      JK-BMS (JK02): device info 0x97 once, then 0x96; the BMS then sends a 300-byte
+//           frame about every second on FFE1, the plugin takes one per interval
+//   litime  LiTime / Redodo / PowerQueen: one request over FFE0/FFE1/FFE2
 //
 // Values: <prefix>/<id>/soc, voltage, current ... and, for all batteries of the node, the
 // JSON list <prefix>/batteries for the displays (bmsBatteryList(), published by mqtt_ha).
@@ -104,6 +108,16 @@ static const BmsUuids ECTIVE_LAYOUTS[] = {
 static const BmsUuids BM2_LAYOUTS[] = {
     {"0000fff0-0000-1000-8000-00805f9b34fb", "0000fff4-0000-1000-8000-00805f9b34fb", ""},
 };
+static const BmsUuids JBD_LAYOUTS[] = {
+    {"0000ff00-0000-1000-8000-00805f9b34fb", "0000ff01-0000-1000-8000-00805f9b34fb", "0000ff02-0000-1000-8000-00805f9b34fb"},
+};
+static const BmsUuids JK_LAYOUTS[] = {
+    {"0000ffe0-0000-1000-8000-00805f9b34fb", "0000ffe1-0000-1000-8000-00805f9b34fb", "0000ffe1-0000-1000-8000-00805f9b34fb"},
+};
+static const BmsUuids LITIME_LAYOUTS[] = {
+    {"0000ffe0-0000-1000-8000-00805f9b34fb", "0000ffe1-0000-1000-8000-00805f9b34fb", "0000ffe2-0000-1000-8000-00805f9b34fb"},
+};
+#define LAYOUT_COUNT(a) (uint8_t)(sizeof(a) / sizeof(a[0]))
 
 class BmsPlugin : public Plugin {
 public:
@@ -136,6 +150,8 @@ public:
             hasData = false;
             dalyProto = 0;
             ectiveId = -1;
+            jkSw = -1;
+            jkLinked = false;
             advAt = 0;
             bmsClear(sample);
             bmsListChanges = bmsListChanges + 1;
@@ -153,10 +169,22 @@ public:
                    (strstr(uuid, "fff0") && (company == 0x102 || company == 0x104 || company == 0x302 ||
                                              company == 0x303 || company == 0x402));
         if (kind == BMS_ECTIVE) return strstr(uuid, "af30") != nullptr;
+        if (kind == BMS_JBD)
+            return strstr(uuid, "ff00") != nullptr ||
+                   (name && (!strncmp(name, "JBD-", 4) || !strncmp(name, "SX1", 3) || !strncmp(name, "xiaoxiang", 9)));
+        if (kind == BMS_JK) return company == 0x0B65 || company == 0x4B4A || (name && !strncmp(name, "JK-", 3));
+        if (kind == BMS_LITIME) return company == 0x585A;
         return name && (!strcmp(name, "Battery Monitor") || !strncmp(name, "BM2", 3));
     }
     const char* manufacturer() const override {
-        return kind == BMS_DALY ? "Daly" : kind == BMS_ECTIVE ? "Ective" : "BM2";
+        switch (kind) {
+            case BMS_DALY:   return "Daly";
+            case BMS_ECTIVE: return "Ective";
+            case BMS_JBD:    return "JBD";
+            case BMS_JK:     return "JK-BMS";
+            case BMS_LITIME: return "LiTime";
+            default:         return "BM2";
+        }
     }
     const char* model() const override { return typeName; }
 
@@ -193,6 +221,8 @@ public:
 
         if (kind == BMS_BM2) {
             loopBm2(now);
+        } else if (kind == BMS_JK) {
+            loopJk(now);
         } else {
             BlePacket pkt;
             while (link.receive(pkt)) collect(pkt.data, pkt.len);
@@ -283,8 +313,8 @@ public:
         if (!strcmp(k, "current") || !strcmp(k, "power") || !strcmp(k, "charge") || !strcmp(k, "energy") ||
             !strcmp(k, "runtime"))
             return !bm2;
-        if (!strcmp(k, "temperature") || !strcmp(k, "cycles") || !strcmp(k, "delta")) return kind == BMS_DALY;
-        if (!strcmp(k, "problem") || !strcmp(k, "problem_text")) return kind == BMS_DALY;
+        if (!strcmp(k, "temperature") || !strcmp(k, "cycles") || !strcmp(k, "delta")) return fullBms();
+        if (!strcmp(k, "problem") || !strcmp(k, "problem_text")) return fullBms();
         return true;
     }
     uint32_t publishIntervalMs() const override { return 60000; }
@@ -313,7 +343,7 @@ public:
         out.num("delta", s.delta_v, 3);
         for (uint8_t i = 0; i < s.cell_count && i < BMS_MAX_CELLS; i++) out.num(CELL_KEYS[i], s.cell_v[i], 3);
         out.onoff("charging", charging());
-        if (kind == BMS_DALY) {
+        if (fullBms()) {
             out.onoff("problem", s.problem);
             char pt[160];
             bmsProblemText(s, pt, sizeof(pt));
@@ -377,7 +407,7 @@ private:
     unsigned long lastPoll = 0;
     unsigned long reqAt = 0;
     uint8_t head = 0;          // expected first byte of the answer
-    uint8_t buf[200];
+    uint8_t buf[JK_FRAME_LEN];   // largest frame: JK-BMS (300 bytes)
     size_t len = 0;
     bool frameDone = false;
     uint8_t dalyProto = 0;     // 0 = not detected yet
@@ -386,6 +416,7 @@ private:
     uint8_t f1[200];
     size_t n1 = 0;
     int16_t ectiveId = -1;     // -1 = not detected yet
+    BmsSample jbdBasic;        // JBD: answer to 0x03 while 0x04 is pending
     uint8_t tryIdx = 0;        // index into the protocol / id list being tried
 
     // BM2 broadcast
@@ -396,13 +427,36 @@ private:
     unsigned long advAt = 0;
     bool bm2Linked = false;
 
+    // JK-BMS
+    int jkSw = -1;              // firmware major version, -1 = device info not read yet
+    unsigned long jkReqAt = 0;  // last command sent
+    unsigned long jkFrameAt = 0; // last cell frame received
+    bool jkLinked = false;
+
+    // BMS with cells, temperatures, cycles and problem bits (not Ective, BM2)
+    bool fullBms() const {
+        return kind == BMS_DALY || kind == BMS_JBD || kind == BMS_JK || kind == BMS_LITIME;
+    }
+
     const BmsUuids* layouts() const {
-        return kind == BMS_DALY ? DALY_LAYOUTS : kind == BMS_ECTIVE ? ECTIVE_LAYOUTS : BM2_LAYOUTS;
+        switch (kind) {
+            case BMS_DALY:   return DALY_LAYOUTS;
+            case BMS_ECTIVE: return ECTIVE_LAYOUTS;
+            case BMS_JBD:    return JBD_LAYOUTS;
+            case BMS_JK:     return JK_LAYOUTS;
+            case BMS_LITIME: return LITIME_LAYOUTS;
+            default:         return BM2_LAYOUTS;
+        }
     }
     uint8_t layoutCount() const {
-        return kind == BMS_DALY ? sizeof(DALY_LAYOUTS) / sizeof(DALY_LAYOUTS[0])
-             : kind == BMS_ECTIVE ? sizeof(ECTIVE_LAYOUTS) / sizeof(ECTIVE_LAYOUTS[0])
-                                  : sizeof(BM2_LAYOUTS) / sizeof(BM2_LAYOUTS[0]);
+        switch (kind) {
+            case BMS_DALY:   return LAYOUT_COUNT(DALY_LAYOUTS);
+            case BMS_ECTIVE: return LAYOUT_COUNT(ECTIVE_LAYOUTS);
+            case BMS_JBD:    return LAYOUT_COUNT(JBD_LAYOUTS);
+            case BMS_JK:     return LAYOUT_COUNT(JK_LAYOUTS);
+            case BMS_LITIME: return LAYOUT_COUNT(LITIME_LAYOUTS);
+            default:         return LAYOUT_COUNT(BM2_LAYOUTS);
+        }
     }
 
     bool charging() const {
@@ -494,13 +548,13 @@ private:
         if (len + n > sizeof(buf)) len = 0;
         memcpy(buf + len, data, n);
         len += n;
-        int need = bmsModbusExpectedLen(buf, len, head);
+        int need = expectedLen();
         if (need < 0) {
             // Garbage in the buffer: start over if this piece begins a new frame
             if (data[0] != head) { len = 0; return; }
             memmove(buf, data, n);
             len = n;
-            need = bmsModbusExpectedLen(buf, len, head);
+            need = expectedLen();
             if (need < 0) { len = 0; return; }
         }
         if (need > 0 && len >= (size_t)need) {
@@ -509,11 +563,98 @@ private:
         }
     }
 
+    int expectedLen() const {
+        if (kind == BMS_JBD) return jbdExpectedLen(buf, len);
+        if (kind == BMS_LITIME) return litimeExpectedLen(buf, len);
+        return bmsModbusExpectedLen(buf, len, head);
+    }
+
     void startPoll() {
         tryIdx = 0;
         reqIdx = 0;
         if (kind == BMS_DALY) startDaly();
+        else if (kind == BMS_JBD) startJbd();
+        else if (kind == BMS_LITIME) sendRaw(LITIME_REQUEST, sizeof(LITIME_REQUEST), 0x00);
         else startEctive();
+    }
+
+    // Request that is not a MODBUS read (JBD, LiTime)
+    void sendRaw(const uint8_t* cmd, size_t n, uint8_t expectHead) {
+        head = expectHead;
+        len = 0;
+        frameDone = false;
+        reqAt = millis();
+        step = S_WAIT;
+        if (!link.writeAuto(cmd, n)) reqAt = 0;   // fails at once: counts as timeout
+    }
+
+    // JBD: reqIdx 0 = basic info, 1 = cell voltages
+    void startJbd() {
+        uint8_t cmd[7];
+        jbdRequest(reqIdx == 0 ? JBD_CMD_BASIC : JBD_CMD_CELLS, cmd);
+        sendRaw(cmd, sizeof(cmd), 0xDD);
+    }
+
+    // ---- JK-BMS: the BMS streams cell frames once asked ---------------------------
+    void sendJk(uint8_t cmd) {
+        uint8_t f[20];
+        jkCommand(cmd, f);
+        link.writeAuto(f, sizeof(f));
+        jkReqAt = millis();
+    }
+
+    // Collects the 300-byte frames (header 55 AA EB 90); "AT\r\n" from the BLE module is dropped
+    void collectJk(const uint8_t* data, size_t n) {
+        if (n >= 4 && !memcmp(data, "AT\r\n", 4)) { data += 4; n -= 4; }
+        if (n == 0) return;
+        if (n >= 4 && data[0] == 0x55 && data[1] == 0xAA && data[2] == 0xEB && data[3] == 0x90) len = 0;
+        else if (len == 0) return;   // middle of a frame we did not see start
+        size_t take = n;
+        if (len + take > JK_FRAME_LEN) take = JK_FRAME_LEN - len;
+        memcpy(buf + len, data, take);
+        len += take;
+        if (len < JK_FRAME_LEN) return;
+        len = 0;
+        if (!jkFrameOk(buf, JK_FRAME_LEN)) return;
+        unsigned long now = millis();
+        if (buf[4] == 0x03) {
+            int sw = jkSwVersion(buf, JK_FRAME_LEN);
+            if (jkSw < 0) devlogf(id, "JK firmware %d", sw);
+            jkSw = sw < 0 ? 0 : sw;
+            sendJk(JK_CMD_CELLS);
+            return;
+        }
+        if (buf[4] != 0x02 || jkSw < 0) return;
+        jkFrameAt = now ? now : 1;
+        // one reading per interval; the BMS sends about every second
+        if (hasData && now - lastOk < (unsigned long)c.interval * 1000UL) return;
+        BmsSample s;
+        if (jkDecode(buf, JK_FRAME_LEN, jkSw, s)) accept(s, link.rssi());
+    }
+
+    void loopJk(unsigned long now) {
+        static_assert(sizeof(buf) >= JK_FRAME_LEN, "buffer too small for JK frames");
+        BlePacket pkt;
+        while (link.receive(pkt)) collectJk(pkt.data, pkt.len);
+        if (!link.connected()) {
+            if (jkLinked) { jkLinked = false; jkSw = -1; len = 0; }
+            return;
+        }
+        if (!jkLinked) {             // new connection: ask for the device info first
+            jkLinked = true;
+            jkSw = -1;
+            jkFrameAt = 0;
+            len = 0;
+            sendJk(JK_CMD_INFO);
+            return;
+        }
+        // No answer / stream stopped: ask again
+        unsigned long wait = (unsigned long)c.interval * 1000UL + BMS_RESPONSE_TIMEOUT_MS;
+        if (now - jkReqAt >= BMS_RESPONSE_TIMEOUT_MS * 2 && (jkFrameAt == 0 || now - jkFrameAt >= wait)) {
+            if (jkSw < 0) sendJk(JK_CMD_INFO);
+            else sendJk(JK_CMD_CELLS);
+            if (jkFrameAt) { devlogf(id, "No answer"); updates++; }
+        }
     }
 
     void startDaly() {
@@ -578,6 +719,32 @@ private:
             reqIdx = 0;
             tryIdx++;
             startDaly();
+        } else if (kind == BMS_JBD) {
+            uint8_t cmd = reqIdx == 0 ? JBD_CMD_BASIC : JBD_CMD_CELLS;
+            if (frameDone && reqIdx == 0 && jbdDecodeBasic(buf, len, jbdBasic)) {
+                reqIdx = 1;          // basic info ok, now the cell voltages
+                startJbd();
+                return;
+            }
+            step = S_IDLE;
+            if (frameDone && reqIdx == 1 && jbdFrameOk(buf, len, cmd)) {
+                s = jbdBasic;
+                jbdDecodeCells(buf, len, s);
+                accept(s, link.rssi());
+                return;
+            }
+            if (reqIdx == 1) {       // cells missing: the basic values are still good
+                accept(jbdBasic, link.rssi());
+                return;
+            }
+            pollFailed();
+        } else if (kind == BMS_LITIME) {
+            step = S_IDLE;
+            if (frameDone && litimeDecode(buf, len, s)) {
+                accept(s, link.rssi());
+                return;
+            }
+            pollFailed();
         } else {
             if (crcOk && ectiveDecode(buf, len, s)) {
                 if (ectiveId < 0) devlogf(id, "Ective device id 0x%02X", tryProto);
@@ -595,7 +762,10 @@ private:
 static Plugin* bmsAt(uint8_t i, BmsPlugin** out) {
     Plugin* p = pluginAt(i);
     if (!p || !p->enabled || p->removed) return nullptr;
-    if (strcmp(p->type, "daly") && strcmp(p->type, "ective") && strcmp(p->type, "bm2")) return nullptr;
+    static const char* const BMS_TYPES[] = {"daly", "ective", "bm2", "jbd", "jk", "litime"};
+    bool isBms = false;
+    for (const char* t : BMS_TYPES) isBms |= !strcmp(p->type, t);
+    if (!isBms) return nullptr;
     *out = static_cast<BmsPlugin*>(p);
     return p;
 }
@@ -625,6 +795,15 @@ Plugin* createEctive(uint8_t index) { return new BmsPlugin(BMS_ECTIVE, "ective",
 #endif
 #if PLUGIN_BM2
 Plugin* createBm2(uint8_t index) { return new BmsPlugin(BMS_BM2, "bm2", "BM2 Batteriewächter", "Starterbatterie", index); }
+#endif
+#if PLUGIN_JBD
+Plugin* createJbd(uint8_t index) { return new BmsPlugin(BMS_JBD, "jbd", "JBD / Xiaoxiang BMS", "Batterie", index); }
+#endif
+#if PLUGIN_JK
+Plugin* createJk(uint8_t index) { return new BmsPlugin(BMS_JK, "jk", "JK-BMS", "Batterie", index); }
+#endif
+#if PLUGIN_LITIME
+Plugin* createLitime(uint8_t index) { return new BmsPlugin(BMS_LITIME, "litime", "LiTime / Redodo", "Batterie", index); }
 #endif
 
 #endif // CT_BMS

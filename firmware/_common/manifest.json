@@ -147,6 +147,22 @@
         "firmware/pocket/pocket/webota.cpp"
       ]
     },
+    "web/vannode-system.js": {
+      "begin": "// vannode-system:begin",
+      "end": "// vannode-system:end",
+      "before": "</script>",
+      "files": [
+        "firmware/_template/camper_example/web/index.html",
+        "firmware/tanklevel/camper_tanklevel/web/index.html",
+        "firmware/temp/camper_temp/web/index.html",
+        "firmware/level/camper_level/web/index.html",
+        "firmware/maxxfan/camper_maxxfan/web/index.html",
+        "firmware/_common/ble/web/index.html",
+        "firmware/heater/truma_heater/web/index.html",
+        "firmware/alde/camper_alde/web/index.html",
+        "firmware/display/camper_display/web/index.html"
+      ]
+    },
     "web/vannode-about.js": {
       "begin": "// vannode-about:begin",
       "end": "// vannode-about:end",
@@ -175,7 +191,8 @@
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
-        "firmware/alde/camper_alde/web/index.html"
+        "firmware/alde/camper_alde/web/index.html",
+        "firmware/display/camper_display/web/index.html"
       ]
     },
     "web/camper-theme.css": {

@@ -122,7 +122,7 @@ Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant s
 | Einrichtung | Access Point `<Gerät>-Node-XXXXXX`, Einstellungen im Browser unter `http://192.168.4.1` |
 | Web-Oberfläche | Gleiche Optik auf allen Geräten, optionaler Login (HTTP Basic Auth); Login vergessen → `noauth` im seriellen Monitor bzw. Werkseinstellungen |
 | Updates | Im Browser, mit Prüfung (falsches Gerät, `.merged.bin`, zu groß), Ereignis-Log und Rückfall auf die vorherige Firmware |
-| Sicherung | Karte „Einstellungen sichern“ unter dem Update: alle Einstellungen als JSON-Datei sichern und einspielen, ohne Passwörter und Anmeldung; WLAN/MQTT-Server nur auf Wunsch (Display: eigene Sicherung mit Seiten und Kacheln) |
+| Update, Sicherung, Neustart | Auf allen Geräte-Webseiten dieselben Karten in derselben Reihenfolge: *Firmware- & Web-Update*, *Einstellungen sichern* (JSON-Datei ohne Passwörter und Anmeldung; WLAN/MQTT-Server nur auf Wunsch; beim Display mit Seiten, Kacheln, Automationen und Sensoren), *Ereignisse*, *Gerät* (Neustart, Werkseinstellungen) und *Über VanNode* – gemeinsame Bausteine `firmware/_common/web/vannode-system.js` und `vannode-backup.js` |
 | Firmware-Version | `FW_VERSION` in der `config.h` des Geräts, sichtbar im Web-UI und in HA |
 
 ## Eigene Einstellungen (`config_local.h`)

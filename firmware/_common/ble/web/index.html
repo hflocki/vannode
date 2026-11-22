@@ -1585,25 +1585,6 @@ nav button .ico{display:inline-flex}
             ),
           ),
         );
-        // Firmware / web page update with checks (fwInspect) and the event log
-        const upd = el("div", { className: "card" });
-        upd.innerHTML = `<h2>Firmware- &amp; Web-Update</h2>
-          <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
-          <div class="fwu-hint">Firmware: die <code>.bin</code> aus dem Release (<code>&lt;node&gt;-&lt;board&gt;-v….bin</code>, z. B. <code>ble-node-esp32c3-…</code> oder <code>battery-node-atoms3-…</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>…_node.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>), danach Neustart.<br>
-          Web-Oberfläche: <code>data/index.html.gz</code>, ohne Neustart. Die Datei wird vor dem Hochladen geprüft.</div>
-          <div class="f"><input type="file" id="fwu-file" accept=".bin,.gz"></div>
-          <div class="fwu-chk" id="fwu-chk"></div>
-          <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force">Ohne Kennung hochladen</label>
-          <progress id="fwu-pr" value="0" max="100" class="hide" style="width:100%"></progress>
-          <div class="ctl"><button class="b" id="fwu-btn" disabled>Hochladen</button></div>`;
-        const log = el("div", { className: "card" });
-        log.innerHTML = `<h2>Ereignisse</h2><div class="fwu-log" id="fwu-log">Lade …</div>
-          <div class="fwu-hint" style="margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>`;
-        $("#main").append(upd, log);
-        fwEl("fwu-file").addEventListener("change", () => fwChosen(false));
-        fwEl("fwu-force").addEventListener("change", fwForce);
-        fwEl("fwu-btn").addEventListener("click", () => fwUpload("f", toast));
-        fwLoad();
         $("#main").append(
           el(
             "div",
@@ -1643,130 +1624,11 @@ nav button .ico{display:inline-flex}
                 el("tr", {}, el("td", {}, r[0]), el("td", {}, String(r[1]))),
               ),
             ),
-            el(
-              "div",
-              { className: "ctl" },
-              el("button", {
-                className: "b s",
-                textContent: "Neustart",
-                on: {
-                  click: () =>
-                    api("/api/restart", {}).then(() => {
-                      toast("Neustart…");
-                      setTimeout(() => location.reload(), 8000);
-                    }),
-                },
-              }),
-              el("button", {
-                className: "b d",
-                textContent: "Werkseinstellungen",
-                on: {
-                  click: () => {
-                    if (confirm("Alle Einstellungen löschen?"))
-                      api("/api/factory", {}).then(() =>
-                        toast("Zurückgesetzt – Neustart…"),
-                      );
-                  },
-                },
-              }),
-            ),
           ),
         );
+        // Firmware update, backup, event log, restart, about: shared cards (vannode-system.js)
+        $("#main").append(el("div", { id: "vn-system" }));
       }
-
-      // ---- Firmware update with checks, event log (same checks as fwcheck.cpp on the device) ----
-      // Elements: fwu-cur, fwu-file, fwu-chk, fwu-force-row, fwu-force, fwu-btn, fwu-pr, fwu-log
-      let FWI = null;   // running firmware: {dev, ver, chip, chip_id, max}
-      const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
-      const fwEl = id => document.getElementById(id);
-      const fwEsc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-      function fwVerCmp(a, b) {
-          const x = String(a).split('.').map(n => parseInt(n) || 0), y = String(b).split('.').map(n => parseInt(n) || 0);
-          for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
-          return 0;
-      }
-      function fwAgo(s) { return s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; }
-      async function fwLoad() {
-          try {
-              const r = await fetch('/api/system', {cache: 'no-store'});
-              if (!r.ok) return;
-              const d = await r.json();
-              FWI = d.fw || null;
-              if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB` +
-            (FWI.hw ? `<br>Passende Datei aus dem Release: <b>…-node-${fwEsc(FWI.hw)}-v….bin</b>` : '');
-              const box = fwEl('fwu-log');
-              if (box) box.innerHTML = (d.log || []).length ? d.log.map(e => {
-                  const when = e.b === 0 ? 'vor ' + fwAgo(Math.max(0, (d.up || 0) - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + fwAgo(e.t);
-                  const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
-                  return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${fwEsc(when)}</span>${fwEsc(e.m)}</div>`;
-              }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
-          } catch (e) {}
-      }
-      // Which release file fits this device (FW_HW of the running firmware), added to "wrong chip" errors
-function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : ''; }
-// Checks the chosen file in the browser: {ok, kind, msg, warn, force}
-      async function fwInspect(file, fsImages) {
-          const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
-          if (n.endsWith('.gz')) return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
-          if (fsImages && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
-          if (!n.endsWith('.bin')) return {ok: false, msg: 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)'};
-          const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
-          if (n.includes('merged')) return {ok: false, msg: merged};
-          const u = new Uint8Array(await file.arrayBuffer());
-          if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
-          const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
-          if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
-          const chip = u[12] | (u[13] << 8);
-          if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${fwHwHint()}`};
-          if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
-          const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
-          if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
-          if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
-          if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${fwHwHint()}`};
-          const c = FWI ? fwVerCmp(m[2], FWI.ver) : 1;
-          return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
-              (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
-      }
-      let fwPick = null;
-      async function fwChosen(fsImages) {
-          const f = fwEl('fwu-file').files[0], chk = fwEl('fwu-chk');
-          fwPick = null;
-          fwEl('fwu-force-row').style.display = 'none';
-          fwEl('fwu-force').checked = false;
-          if (!f) { chk.textContent = ''; fwEl('fwu-btn').disabled = true; return; }
-          chk.className = 'fwu-chk'; chk.textContent = 'Prüfe …';
-          const r = await fwInspect(f, fsImages);
-          fwPick = r;
-          chk.textContent = (r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg;
-          chk.className = 'fwu-chk ' + (r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
-          if (r.force) fwEl('fwu-force-row').style.display = '';
-          fwEl('fwu-btn').disabled = !r.ok;
-      }
-      function fwForce() { fwEl('fwu-btn').disabled = !(fwPick && (fwPick.ok || (fwPick.force && fwEl('fwu-force').checked))); }
-      function fwUpload(field, toast) {
-          const f = fwEl('fwu-file').files[0];
-          if (!f || !fwPick) { toast('Erst eine Datei wählen', true); return; }
-          if (fwPick.warn && fwPick.kind === 'fw' && !confirm(fwPick.msg + '\nTrotzdem installieren?')) return;
-          const force = !fwPick.ok && fwPick.force && fwEl('fwu-force').checked;
-          const fd = new FormData();
-          fd.append(field, f);
-          const x = new XMLHttpRequest(), pr = fwEl('fwu-pr');
-          pr.classList.remove('hide', 'hidden'); pr.style.display = ''; pr.value = 0;
-          fwEl('fwu-btn').disabled = true;
-          x.upload.onprogress = e => { if (e.lengthComputable) pr.value = e.loaded / e.total * 100; };
-          x.onload = () => {
-              if (x.status === 200 && x.responseText === 'OK web') { toast('Web-Oberfläche ersetzt – lädt neu …'); setTimeout(() => location.reload(), 1500); return; }
-              if (x.status === 200) { toast('Update ok – Neustart …'); setTimeout(() => location.reload(), 15000); return; }
-              toast(x.responseText || ('Fehler HTTP ' + x.status), true);
-              const chk = fwEl('fwu-chk'); chk.textContent = '✕ ' + (x.responseText || 'Fehler HTTP ' + x.status); chk.className = 'fwu-chk bad';
-              fwEl('fwu-btn').disabled = false;
-              fwLoad();
-          };
-          x.onerror = () => { toast('Verbindung abgebrochen', true); fwEl('fwu-btn').disabled = false; fwLoad(); };
-          x.open('POST', '/api/update' + (force ? '?force=1' : ''));
-          x.send(fd);
-      }
-      setInterval(() => { if (fwEl('fwu-log')) fwLoad(); }, 15000);
 
       // ---------------- Data ----------------
       function chips() {
@@ -1893,8 +1755,8 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
 })();
 // vannode-about:end
 // vannode-backup:begin
-// VanNode "Einstellungen sichern / wiederherstellen" card, placed right below the firmware update
-// card of every device page (like the "Über VanNode" card). Shared copy from firmware/_common/web
+// VanNode "Einstellungen sichern" card, placed right below the firmware update card of every
+// device page (vannode-system.js). Shared copy from firmware/_common/web
 // (tools/common/sync_common.py) - edit it there.
 // Works only in the browser with the existing /api/config of the device: the backup is the
 // answer of GET /api/config without passwords, login and read-only values; restoring takes the
@@ -1914,6 +1776,13 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   // Nodes whose /api/config takes form fields instead of JSON
   const FORM = {maxxfan: 1, heater: 1};
   const BLE = {ble: 1, toolbox: 1, battery: 1};
+  // Display: settings, pages and tiles, automations and sensors (own API, camelCase keys)
+  const D_SECRET = ['wifiPass', 'mqttPass', 'webPass', 'apPass', 'poToken', 'poUser'];
+  const D_READONLY = ['fw', 'mac', 'poStatus'];
+  const D_NET = ['wifiSsid', 'staticIp', 'ip', 'gateway', 'subnet', 'dns', 'hostname'];
+  const IC_UP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>';
+  const IC_DOWN = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>';
+  const IC_FILE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>';
 
   const keep = (k) => !SECRET.test(k) && READONLY.indexOf(k) < 0 && !/_set$/.test(k);
   const strip = (o) => { const r = {}; for (const k in o) if (keep(k)) r[k] = o[k]; return r; };
@@ -1951,6 +1820,15 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   }
 
   async function makeBackup(fw) {
+    if (fw.dev === 'display') {
+      const st = await getJson('/api/settings');
+      D_SECRET.concat(D_READONLY).forEach((k) => delete st[k]);
+      const b = {type: 'vannode-backup', version: 1, device: 'display', fw: fw.ver || '', date: new Date().toISOString(),
+                 settings: st, pages: await getJson('/api/pages')};
+      try { b.rules = await getJson('/api/rules'); } catch (e) {}
+      try { b.sensors = await getJson('/api/sensors'); } catch (e) {}
+      return b;
+    }
     const cfg = await getJson('/api/config');
     const b = {type: 'vannode-backup', version: 1, device: fw.dev || '', fw: fw.ver || '', date: new Date().toISOString()};
     if (BLE[fw.dev]) {
@@ -1973,6 +1851,18 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
       out[k] = saved[k];
     }
     return out;
+  }
+
+  // Display: pages, automations, sensors, then the settings (they may restart the display)
+  async function restoreDisplay(b, net, log) {
+    if (b.pages && b.pages.pages) { await post('/api/pages', b.pages); log('Seiten und Kacheln übernommen'); }
+    if (b.rules && b.rules.rules) { await post('/api/rules', b.rules); log('Automationen übernommen'); }
+    if (b.sensors && b.sensors.devices) { await post('/api/sensors', b.sensors); log('Sensoren übernommen'); }
+    const s = Object.assign({}, b.settings || {});
+    D_SECRET.concat(D_READONLY).forEach((k) => delete s[k]);
+    if (!net) D_NET.forEach((k) => delete s[k]);
+    await post('/api/settings', s);
+    log('Einstellungen übernommen');
   }
 
   async function restoreBle(b, net, log) {
@@ -2003,27 +1893,32 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
     const c = document.createElement('div');
     c.className = upd.className;
     c.id = 'vn-backup';
-    c.style.marginTop = '12px';
     const t = upd.firstElementChild;
     const title = document.createElement(t ? t.tagName : 'h2');
     if (t) title.className = t.className;
     title.textContent = 'Einstellungen sichern';
-    const btn = upd.querySelector('button');
-    const bc = btn ? btn.className : '';
     c.append(title);
+    const disp = fw.dev === 'display';
+    const what = disp ? 'Alle Einstellungen, Seiten, Kacheln, Automationen und Sensoren' : BLE[fw.dev] ? 'Alle Einstellungen und Geräte' : 'Alle Einstellungen';
     c.insertAdjacentHTML('beforeend',
-      '<p style="margin:6px 0;font-size:.9em">Alle Einstellungen' + (BLE[fw.dev] ? ' und Geräte' : '') +
-      ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</p>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0">' +
-      '<button type="button" class="' + bc + '" id="vnbk-exp">Sichern</button>' +
-      '<input type="file" id="vnbk-file" accept=".json,application/json" style="flex:1;min-width:160px">' +
-      '<button type="button" class="' + bc + '" id="vnbk-imp">Einspielen</button></div>' +
-      '<label style="display:flex;gap:6px;align-items:center;font-size:.9em;margin:6px 0"><input type="checkbox" id="vnbk-net">' +
-      ' Auch WLAN, IP, Gerätename und MQTT-Server übernehmen</label>' +
-      '<p id="vnbk-msg" style="margin:6px 0;font-size:.85em;opacity:.85;white-space:pre-line"></p>');
-    upd.insertAdjacentElement('afterend', c);
+      '<div class="vnc-hint">' + what + ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</div>' +
+      '<label class="vnc-file" id="vnbk-label">' + IC_FILE + '<span class="nm">Sicherung zum Einspielen wählen …</span>' +
+      '<span class="pick">Durchsuchen</span><input type="file" id="vnbk-file" accept=".json,application/json"></label>' +
+      '<label class="vnc-opt"><input type="checkbox" id="vnbk-net"> Auch WLAN, IP und Gerätename' + (disp ? '' : ' sowie MQTT-Server') + ' übernehmen</label>' +
+      '<div class="vnc-row"><button type="button" class="vnc-b" id="vnbk-exp">' + IC_DOWN + 'Sichern</button>' +
+      '<button type="button" class="vnc-b p" id="vnbk-imp" disabled>' + IC_UP + 'Einspielen</button></div>' +
+      '<div class="vnc-msg" id="vnbk-msg"></div>');
+    const vu = document.getElementById('vn-update');
+    (vu || upd).insertAdjacentElement('afterend', c);
     const msg = c.querySelector('#vnbk-msg');
     const say = (s) => { msg.textContent = s; };
+    const file = c.querySelector('#vnbk-file');
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      c.querySelector('#vnbk-label').classList.toggle('has', !!f);
+      c.querySelector('#vnbk-label .nm').textContent = f ? f.name : 'Sicherung zum Einspielen wählen …';
+      c.querySelector('#vnbk-imp').disabled = !f;
+    });
 
     c.querySelector('#vnbk-exp').onclick = async () => {
       try {
@@ -2040,22 +1935,28 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
     };
 
     c.querySelector('#vnbk-imp').onclick = async () => {
-      const f = c.querySelector('#vnbk-file').files[0];
+      const f = file.files[0];
       if (!f) return say('Erst eine Sicherungsdatei wählen');
       let b;
       try { b = JSON.parse(await f.text()); } catch (e) { return say('Keine gültige Datei'); }
+      // older display backups have their own type
+      if (b && b.type === 'camper-display-backup') b = Object.assign({}, b, {type: 'vannode-backup', device: 'display'});
       if (!b || b.type !== 'vannode-backup') return say('Keine VanNode-Sicherung');
       const same = b.device === fw.dev || (BLE[b.device] && BLE[fw.dev] && (b.device === 'battery') === (fw.dev === 'battery'));
       if (!same) return say('Die Sicherung gehört zu „' + b.device + '“, nicht zu diesem Gerät („' + fw.dev + '“)');
       const net = c.querySelector('#vnbk-net').checked;
       if (!confirm('Einstellungen aus der Sicherung vom ' + String(b.date || '').slice(0, 10) + ' übernehmen?' +
-        (net ? '\nWLAN, IP und MQTT-Server werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
+        (net ? '\nWLAN, IP und Gerätename werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
       const lines = [];
       const log = (s) => { lines.push(s); say(lines.join('\n')); };
       try {
-        if (BLE[fw.dev]) {
+        if (disp) {
+          await restoreDisplay(b, net, log);
+          log('Fertig – Seite lädt gleich neu.');
+          setTimeout(() => location.reload(), 4000);
+        } else if (BLE[fw.dev]) {
           await restoreBle(b, net, log);
-          log('Fertig. Geänderte Geräte gelten nach einem Neustart (System → Neustart).');
+          log('Fertig. Geänderte Geräte gelten nach einem Neustart (Karte Gerät → Neustart).');
         } else {
           const cur = await getJson('/api/config');
           await post('/api/config', merged(cur, b.config || {}, net), !!FORM[fw.dev]);
@@ -2070,8 +1971,10 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   function place() {
     const cur = document.getElementById('fwu-cur');
     const upd = cur && cur.closest('.card');
-    // after the "Über VanNode" card exists, so the order is always update, backup, about
-    if (!upd || !document.getElementById('vn-about') || document.getElementById('vn-backup')) return;
+    // with the shared system cards right below the update card; on pages without them (older
+    // layout) only once the "Über VanNode" card exists, so the order stays update, backup, about
+    const shared = !!document.getElementById('vn-update');
+    if (!upd || (!shared && !document.getElementById('vn-about')) || document.getElementById('vn-backup')) return;
     if (fw) return card(upd, fw);
     if (busy) return;
     busy = true;
@@ -2083,6 +1986,283 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   document.addEventListener('DOMContentLoaded', place);
 })();
 // vannode-backup:end
+// vannode-system:begin
+// VanNode system cards, the same on every device page: "Firmware- & Web-Update", "Ereignisse"
+// and "Gerät" (restart, factory reset). Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// The page only puts <div id="vn-system"></div> where the cards belong (data-log="0": no event
+// card, the page shows the log elsewhere). The "Einstellungen sichern" card (vannode-backup.js)
+// goes right below the update card, "Über VanNode" (vannode-about.js) at the end.
+// The file checks (fwInspect) are the same rules as fwcheck.cpp on the devices: change both together.
+(function () {
+  // Device differences, by firmware id (FW_DEVICE)
+  const DEVCFG = {
+    heater:  {upd: '/update', field: 'firmware', web: false, restart: '/api/reboot'},
+    display: {upd: '/update', field: 'firmware', web: false, restart: '/api/reboot', factory: '/api/factory'},
+    maxxfan: {field: 'update', fs: true, restart: '/api/reboot', factory: '/api/factory'},
+    ble:     {factory: '/api/factory'},
+    toolbox: {factory: '/api/factory'},
+    battery: {factory: '/api/factory'},
+  };
+  const DEF = {upd: '/api/update', field: 'f', web: true, fs: false, restart: '/api/restart', factory: ''};
+  const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const ICON = {
+    up: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
+    down: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>',
+    file: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>',
+    restart: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>',
+  };
+  // Own look, independent of the page's classes; colours from the page's variables (VanNode theme
+  // or display), with the dark theme values as fallback
+  const CSS = `
+.vnc{background:var(--card,var(--bg-card,#151B21));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line,var(--border,#222B34));border-radius:14px;padding:16px;margin:0 0 12px;text-align:left;box-sizing:border-box}
+.vnc *{box-sizing:border-box}
+.vnc .vnc-t{font-size:.85rem;font-weight:600;margin:0 0 12px;color:var(--tx2,var(--text-secondary,#B4BEC8));text-transform:none;letter-spacing:0;padding:0;border:0}
+.vnc .vnc-cur{font-size:.85rem;margin:0 0 10px;line-height:1.45}
+.vnc .vnc-hint{font-size:.78rem;color:var(--mu,var(--text-muted,#8B98A5));margin:0 0 12px;line-height:1.5}
+.vnc .vnc-hint code{font-size:.95em}
+.vnc .vnc-file{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 6px 6px 12px;margin:0 0 10px;border:1px dashed var(--line2,var(--cm-line2,#2F3A45));border-radius:10px;background:var(--bg-input,var(--bg,#0D1115));color:var(--mu,var(--text-muted,#8B98A5));cursor:pointer}
+.vnc .vnc-file:hover{border-color:var(--ac,var(--accent,#4DA3F0))}
+.vnc .vnc-file input{display:none}
+.vnc .vnc-file .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.vnc .vnc-file.has .nm{color:var(--tx,var(--text-primary,#E7ECF0))}
+.vnc .vnc-file .pick{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:8px;font-size:.85rem;font-weight:600;background:var(--hi,var(--cm-hi,#1C242C));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45))}
+.vnc .vnc-row{display:flex;gap:10px;flex-wrap:wrap}
+.vnc .vnc-b{flex:1 1 0;min-width:120px;min-height:44px;margin:0;padding:0 14px;border-radius:10px;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--hi,var(--cm-hi,#1C242C));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45))}
+.vnc .vnc-b.p{background:var(--ac,var(--accent,#4DA3F0));border-color:var(--ac,var(--accent,#4DA3F0));color:var(--acx,var(--cm-acx,#06131F))}
+.vnc .vnc-b.d{background:transparent;color:#E5534B;border-color:rgba(229,83,75,.45)}
+.vnc .vnc-b:disabled{opacity:.45;cursor:default}
+.vnc .vnc-chk{font-size:.82rem;margin:0 0 10px;line-height:1.45}
+.vnc .vnc-chk:empty{display:none}
+.vnc .ok{color:#46B97C}.vnc .warn{color:#E5A23B}.vnc .bad{color:#E5534B}
+.vnc .vnc-opt{display:flex;gap:8px;align-items:center;font-size:.85rem;margin:0 0 10px;cursor:pointer}
+.vnc .vnc-opt input{width:18px;height:18px;margin:0;accent-color:var(--ac,var(--accent,#4DA3F0))}
+.vnc .vnc-bar{height:6px;border-radius:3px;background:var(--line,var(--border,#222B34));overflow:hidden;margin:0 0 10px}
+.vnc .vnc-bar i{display:block;height:100%;width:0;background:var(--ac,var(--accent,#4DA3F0));transition:width .2s}
+.vnc .vnc-msg{font-size:.82rem;margin:10px 0 0;line-height:1.45;white-space:pre-line;color:var(--mu,var(--text-muted,#8B98A5))}
+.vnc .vnc-msg:empty{display:none}
+.vnc .fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
+.vnc .fwu-ev{padding:4px 0;border-bottom:1px solid var(--line,var(--border,#222B34))}
+.vnc .fwu-ev span{color:var(--mu,var(--text-muted,#8B98A5));margin-right:8px}
+.vnc .fwu-ev.bad{color:#E5534B}`;
+
+  let FWI = null, LOG = null, UP = 0, cfg = DEF, pick = null;
+  const $ = (id) => document.getElementById(id);
+
+  function verCmp(a, b) {
+    const x = String(a).split('.').map((n) => parseInt(n) || 0), y = String(b).split('.').map((n) => parseInt(n) || 0);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+  }
+  const ago = (s) => s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d';
+  const hwHint = () => FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : '';
+
+  // Checks the chosen file in the browser: {ok, kind, msg, warn, force} (rules as in fwcheck.cpp)
+  async function inspect(file) {
+    const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
+    if (n.endsWith('.gz')) {
+      if (!cfg.web) return {ok: false, msg: 'Die Web-Oberfläche steckt bei diesem Gerät in der Firmware – nur die .bin hochladen'};
+      return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
+    }
+    if (cfg.fs && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
+    if (!n.endsWith('.bin')) return {ok: false, msg: cfg.web ? 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)' : 'Nur .bin (Firmware)'};
+    const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
+    if (n.includes('merged')) return {ok: false, msg: merged};
+    const u = new Uint8Array(await file.arrayBuffer());
+    if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
+    const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
+    if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
+    const chip = u[12] | (u[13] << 8);
+    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${hwHint()}`};
+    if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
+    const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
+    if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
+    if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
+    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${hwHint()}`};
+    const c = FWI ? verCmp(m[2], FWI.ver) : 1;
+    return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
+      (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
+  }
+
+  function showInfo() {
+    const cur = $('fwu-cur');
+    if (cur && FWI) cur.innerHTML = `Installiert: <b>${esc(FWI.dev)} v${esc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || esc(FWI.chip)}` +
+      (FWI.max ? ` · Platz ${Math.round(FWI.max / 1024)} kB` : '');
+    const hint = $('vnc-uhint');
+    if (hint && FWI) {
+      const dev = esc(FWI.dev || 'gerät'), hw = esc(FWI.hw || '<board>');
+      hint.innerHTML = `Firmware: die <code>${dev}-node-${hw}-v….bin</code> aus dem Release oder aus der Arduino IDE ` +
+        `(Sketch → Kompilierte Binärdatei exportieren → <code>….ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>), danach Neustart.` +
+        (cfg.web ? `<br>Web-Oberfläche: die <code>${dev}-node-web-v….html.gz</code> aus dem Release oder <code>data/index.html.gz</code>, ohne Neustart.` : '') +
+        (cfg.fs ? ' Ein LittleFS-Abbild (Dateiname mit „littlefs“) wird ebenfalls erkannt.' : '') +
+        ' Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.';
+    }
+    // Event log: every .fwu-log on the page (the display shows it on its system page)
+    document.querySelectorAll('.fwu-log').forEach((box) => {
+      if (!LOG) return;
+      box.innerHTML = LOG.length ? LOG.map((e) => {
+        const when = e.b === 0 ? 'vor ' + ago(Math.max(0, UP - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + ago(e.t);
+        const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
+        return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${esc(when)}</span>${esc(e.m)}</div>`;
+      }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
+    });
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/system', {cache: 'no-store'});
+      if (!r.ok) return;
+      const d = await r.json();
+      FWI = d.fw || null;
+      LOG = d.log || [];
+      UP = d.up || 0;
+      cfg = Object.assign({}, DEF, FWI && DEVCFG[FWI.dev] || {});
+      const inp = $('vnc-ufile');
+      if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
+      showInfo();
+    } catch (e) {}
+  }
+
+  function setChk(text, cls) {
+    const chk = $('fwu-chk');
+    if (!chk) return;
+    chk.textContent = text;
+    chk.className = 'vnc-chk ' + (cls || '');
+  }
+
+  async function chosen() {
+    const f = $('vnc-ufile').files[0], btn = $('fwu-btn'), lab = $('vnc-ulabel');
+    pick = null;
+    $('vnc-uforce-row').style.display = 'none';
+    $('vnc-uforce').checked = false;
+    lab.classList.toggle('has', !!f);
+    lab.querySelector('.nm').textContent = f ? f.name : (cfg.web ? '.bin oder .html.gz wählen …' : '.bin wählen …');
+    if (!f) { setChk(''); btn.disabled = true; return; }
+    setChk('Prüfe …');
+    const r = await inspect(f);
+    pick = r;
+    setChk((r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg, r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+    if (r.force) $('vnc-uforce-row').style.display = '';
+    btn.disabled = !r.ok;
+  }
+
+  function upload() {
+    const f = $('vnc-ufile').files[0], btn = $('fwu-btn'), bar = $('vnc-ubar');
+    if (!f || !pick) return setChk('Erst eine Datei wählen', 'bad');
+    if (pick.warn && pick.kind === 'fw' && !confirm(pick.msg + '\nTrotzdem installieren?')) return;
+    const force = !pick.ok && pick.force && $('vnc-uforce').checked;
+    const fd = new FormData();
+    fd.append(cfg.field, f);
+    const x = new XMLHttpRequest();
+    bar.style.display = '';
+    bar.firstChild.style.width = '0%';
+    btn.disabled = true;
+    x.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const p = Math.round(e.loaded / e.total * 100);
+      bar.firstChild.style.width = p + '%';
+      setChk(p < 100 ? `Übertrage … ${p} %` : 'Wird geschrieben …');
+    };
+    x.onload = () => {
+      let j = null;
+      try { j = JSON.parse(x.responseText); } catch (e) {}
+      const text = (j && j.msg) || x.responseText || ('Fehler HTTP ' + x.status);
+      const ok = x.status === 200 && (j ? j.ok !== false : /^OK/i.test(x.responseText) || x.responseText === '');
+      if (ok && /^OK web/.test(x.responseText)) { setChk('✓ Web-Oberfläche ersetzt – Seite lädt neu …', 'ok'); setTimeout(() => location.reload(), 1500); return; }
+      if (ok) { setChk('✓ Update ok – das Gerät startet neu, die Seite lädt gleich neu …', 'ok'); setTimeout(() => location.reload(), 15000); return; }
+      bar.style.display = 'none';
+      setChk('✕ ' + text, 'bad');
+      btn.disabled = false;
+      load();
+    };
+    x.onerror = () => { bar.style.display = 'none'; setChk('✕ Verbindung abgebrochen', 'bad'); btn.disabled = false; load(); };
+    x.open('POST', cfg.upd + (force ? '?force=1' : ''));
+    x.send(fd);
+  }
+
+  async function devAction(url, question, msg) {
+    if (!confirm(question)) return;
+    const out = $('vnc-dmsg');
+    try {
+      await fetch(url, {method: 'POST'});
+      out.textContent = msg;
+      setTimeout(() => location.reload(), 10000);
+    } catch (e) { out.textContent = 'Keine Verbindung zum Gerät'; }
+  }
+
+  function card(title) {
+    const c = document.createElement('div');
+    c.className = 'card vnc';
+    c.innerHTML = `<h3 class="vnc-t">${title}</h3>`;
+    return c;
+  }
+
+  function build(box) {
+    box.dataset.vnBuilt = '1';
+    if (!$('vn-sys-css')) {
+      const st = document.createElement('style');
+      st.id = 'vn-sys-css';
+      st.textContent = CSS;
+      document.head.appendChild(st);
+    }
+    const upd = card('Firmware- &amp; Web-Update');
+    upd.id = 'vn-update';
+    upd.insertAdjacentHTML('beforeend',
+      '<div class="vnc-cur" id="fwu-cur">Installiert: …</div>' +
+      '<div class="vnc-hint" id="vnc-uhint">Die Datei wird vor dem Hochladen geprüft.</div>' +
+      '<label class="vnc-file" id="vnc-ulabel">' + ICON.file + '<span class="nm">Datei wählen …</span>' +
+      '<span class="pick">Durchsuchen</span><input type="file" id="vnc-ufile" accept=".bin,.gz"></label>' +
+      '<div class="vnc-chk" id="fwu-chk"></div>' +
+      '<label class="vnc-opt" id="vnc-uforce-row" style="display:none"><input type="checkbox" id="vnc-uforce"> Ohne Kennung hochladen</label>' +
+      '<div class="vnc-bar" id="vnc-ubar" style="display:none"><i></i></div>' +
+      '<div class="vnc-row"><button type="button" class="vnc-b p" id="fwu-btn" disabled>' + ICON.up + 'Hochladen</button></div>');
+    box.appendChild(upd);
+
+    if (box.dataset.log !== '0') {
+      const log = card('Ereignisse');
+      log.insertAdjacentHTML('beforeend', '<div class="fwu-log">Lade …</div>' +
+        '<div class="vnc-hint" style="margin:8px 0 0">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>');
+      box.appendChild(log);
+    }
+
+    const dev = card('Gerät');
+    dev.insertAdjacentHTML('beforeend',
+      '<div class="vnc-row"><button type="button" class="vnc-b" id="vnc-restart">' + ICON.restart + 'Neustart</button>' +
+      '<button type="button" class="vnc-b d" id="vnc-factory" style="display:none">Werkseinstellungen</button></div>' +
+      '<div class="vnc-msg" id="vnc-dmsg"></div>');
+    box.appendChild(dev);
+
+    $('vnc-ufile').addEventListener('change', chosen);
+    $('vnc-uforce').addEventListener('change', () => {
+      $('fwu-btn').disabled = !(pick && (pick.ok || (pick.force && $('vnc-uforce').checked)));
+    });
+    $('fwu-btn').addEventListener('click', upload);
+    $('vnc-restart').addEventListener('click', () => devAction(cfg.restart, 'Gerät neu starten?', 'Startet neu – die Seite lädt gleich neu …'));
+    $('vnc-factory').addEventListener('click', () => devAction(cfg.factory,
+      'Alle Einstellungen löschen?\nDas Gerät startet danach mit den Werkseinstellungen und öffnet sein Setup-WLAN.',
+      'Zurückgesetzt – das Gerät startet neu und öffnet sein Setup-WLAN.'));
+    load().then(() => {
+      $('vnc-factory').style.display = cfg.factory ? '' : 'none';
+      chosen();
+    });
+  }
+
+  function place() {
+    const box = $('vn-system');
+    if (box && !box.dataset.vnBuilt) build(box);
+    // "Über VanNode" (vannode-about.js) puts itself below the update card: move it to the end
+    const about = $('vn-about');
+    if (box && about && box.lastElementChild !== about && box.contains($('vn-update'))) box.appendChild(about);
+    else if (!box && LOG === null && document.querySelector('.fwu-log')) { LOG = []; load(); }
+  }
+  window.vnSystemRefresh = load;   // pages may call it, e.g. after their own actions
+  // The page may build the container later or again (tabs): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+  setInterval(() => { if ($('vn-system') || document.querySelector('.fwu-log')) load(); }, 15000);
+})();
+// vannode-system:end
 </script>
   </body>
 </html>

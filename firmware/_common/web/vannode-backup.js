@@ -1,5 +1,5 @@
-// VanNode "Einstellungen sichern / wiederherstellen" card, placed right below the firmware update
-// card of every device page (like the "Über VanNode" card). Shared copy from firmware/_common/web
+// VanNode "Einstellungen sichern" card, placed right below the firmware update card of every
+// device page (vannode-system.js). Shared copy from firmware/_common/web
 // (tools/common/sync_common.py) - edit it there.
 // Works only in the browser with the existing /api/config of the device: the backup is the
 // answer of GET /api/config without passwords, login and read-only values; restoring takes the
@@ -19,6 +19,13 @@
   // Nodes whose /api/config takes form fields instead of JSON
   const FORM = {maxxfan: 1, heater: 1};
   const BLE = {ble: 1, toolbox: 1, battery: 1};
+  // Display: settings, pages and tiles, automations and sensors (own API, camelCase keys)
+  const D_SECRET = ['wifiPass', 'mqttPass', 'webPass', 'apPass', 'poToken', 'poUser'];
+  const D_READONLY = ['fw', 'mac', 'poStatus'];
+  const D_NET = ['wifiSsid', 'staticIp', 'ip', 'gateway', 'subnet', 'dns', 'hostname'];
+  const IC_UP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>';
+  const IC_DOWN = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>';
+  const IC_FILE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>';
 
   const keep = (k) => !SECRET.test(k) && READONLY.indexOf(k) < 0 && !/_set$/.test(k);
   const strip = (o) => { const r = {}; for (const k in o) if (keep(k)) r[k] = o[k]; return r; };
@@ -56,6 +63,15 @@
   }
 
   async function makeBackup(fw) {
+    if (fw.dev === 'display') {
+      const st = await getJson('/api/settings');
+      D_SECRET.concat(D_READONLY).forEach((k) => delete st[k]);
+      const b = {type: 'vannode-backup', version: 1, device: 'display', fw: fw.ver || '', date: new Date().toISOString(),
+                 settings: st, pages: await getJson('/api/pages')};
+      try { b.rules = await getJson('/api/rules'); } catch (e) {}
+      try { b.sensors = await getJson('/api/sensors'); } catch (e) {}
+      return b;
+    }
     const cfg = await getJson('/api/config');
     const b = {type: 'vannode-backup', version: 1, device: fw.dev || '', fw: fw.ver || '', date: new Date().toISOString()};
     if (BLE[fw.dev]) {
@@ -78,6 +94,18 @@
       out[k] = saved[k];
     }
     return out;
+  }
+
+  // Display: pages, automations, sensors, then the settings (they may restart the display)
+  async function restoreDisplay(b, net, log) {
+    if (b.pages && b.pages.pages) { await post('/api/pages', b.pages); log('Seiten und Kacheln übernommen'); }
+    if (b.rules && b.rules.rules) { await post('/api/rules', b.rules); log('Automationen übernommen'); }
+    if (b.sensors && b.sensors.devices) { await post('/api/sensors', b.sensors); log('Sensoren übernommen'); }
+    const s = Object.assign({}, b.settings || {});
+    D_SECRET.concat(D_READONLY).forEach((k) => delete s[k]);
+    if (!net) D_NET.forEach((k) => delete s[k]);
+    await post('/api/settings', s);
+    log('Einstellungen übernommen');
   }
 
   async function restoreBle(b, net, log) {
@@ -108,27 +136,32 @@
     const c = document.createElement('div');
     c.className = upd.className;
     c.id = 'vn-backup';
-    c.style.marginTop = '12px';
     const t = upd.firstElementChild;
     const title = document.createElement(t ? t.tagName : 'h2');
     if (t) title.className = t.className;
     title.textContent = 'Einstellungen sichern';
-    const btn = upd.querySelector('button');
-    const bc = btn ? btn.className : '';
     c.append(title);
+    const disp = fw.dev === 'display';
+    const what = disp ? 'Alle Einstellungen, Seiten, Kacheln, Automationen und Sensoren' : BLE[fw.dev] ? 'Alle Einstellungen und Geräte' : 'Alle Einstellungen';
     c.insertAdjacentHTML('beforeend',
-      '<p style="margin:6px 0;font-size:.9em">Alle Einstellungen' + (BLE[fw.dev] ? ' und Geräte' : '') +
-      ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</p>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0">' +
-      '<button type="button" class="' + bc + '" id="vnbk-exp">Sichern</button>' +
-      '<input type="file" id="vnbk-file" accept=".json,application/json" style="flex:1;min-width:160px">' +
-      '<button type="button" class="' + bc + '" id="vnbk-imp">Einspielen</button></div>' +
-      '<label style="display:flex;gap:6px;align-items:center;font-size:.9em;margin:6px 0"><input type="checkbox" id="vnbk-net">' +
-      ' Auch WLAN, IP, Gerätename und MQTT-Server übernehmen</label>' +
-      '<p id="vnbk-msg" style="margin:6px 0;font-size:.85em;opacity:.85;white-space:pre-line"></p>');
-    upd.insertAdjacentElement('afterend', c);
+      '<div class="vnc-hint">' + what + ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</div>' +
+      '<label class="vnc-file" id="vnbk-label">' + IC_FILE + '<span class="nm">Sicherung zum Einspielen wählen …</span>' +
+      '<span class="pick">Durchsuchen</span><input type="file" id="vnbk-file" accept=".json,application/json"></label>' +
+      '<label class="vnc-opt"><input type="checkbox" id="vnbk-net"> Auch WLAN, IP und Gerätename' + (disp ? '' : ' sowie MQTT-Server') + ' übernehmen</label>' +
+      '<div class="vnc-row"><button type="button" class="vnc-b" id="vnbk-exp">' + IC_DOWN + 'Sichern</button>' +
+      '<button type="button" class="vnc-b p" id="vnbk-imp" disabled>' + IC_UP + 'Einspielen</button></div>' +
+      '<div class="vnc-msg" id="vnbk-msg"></div>');
+    const vu = document.getElementById('vn-update');
+    (vu || upd).insertAdjacentElement('afterend', c);
     const msg = c.querySelector('#vnbk-msg');
     const say = (s) => { msg.textContent = s; };
+    const file = c.querySelector('#vnbk-file');
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      c.querySelector('#vnbk-label').classList.toggle('has', !!f);
+      c.querySelector('#vnbk-label .nm').textContent = f ? f.name : 'Sicherung zum Einspielen wählen …';
+      c.querySelector('#vnbk-imp').disabled = !f;
+    });
 
     c.querySelector('#vnbk-exp').onclick = async () => {
       try {
@@ -145,22 +178,28 @@
     };
 
     c.querySelector('#vnbk-imp').onclick = async () => {
-      const f = c.querySelector('#vnbk-file').files[0];
+      const f = file.files[0];
       if (!f) return say('Erst eine Sicherungsdatei wählen');
       let b;
       try { b = JSON.parse(await f.text()); } catch (e) { return say('Keine gültige Datei'); }
+      // older display backups have their own type
+      if (b && b.type === 'camper-display-backup') b = Object.assign({}, b, {type: 'vannode-backup', device: 'display'});
       if (!b || b.type !== 'vannode-backup') return say('Keine VanNode-Sicherung');
       const same = b.device === fw.dev || (BLE[b.device] && BLE[fw.dev] && (b.device === 'battery') === (fw.dev === 'battery'));
       if (!same) return say('Die Sicherung gehört zu „' + b.device + '“, nicht zu diesem Gerät („' + fw.dev + '“)');
       const net = c.querySelector('#vnbk-net').checked;
       if (!confirm('Einstellungen aus der Sicherung vom ' + String(b.date || '').slice(0, 10) + ' übernehmen?' +
-        (net ? '\nWLAN, IP und MQTT-Server werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
+        (net ? '\nWLAN, IP und Gerätename werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
       const lines = [];
       const log = (s) => { lines.push(s); say(lines.join('\n')); };
       try {
-        if (BLE[fw.dev]) {
+        if (disp) {
+          await restoreDisplay(b, net, log);
+          log('Fertig – Seite lädt gleich neu.');
+          setTimeout(() => location.reload(), 4000);
+        } else if (BLE[fw.dev]) {
           await restoreBle(b, net, log);
-          log('Fertig. Geänderte Geräte gelten nach einem Neustart (System → Neustart).');
+          log('Fertig. Geänderte Geräte gelten nach einem Neustart (Karte Gerät → Neustart).');
         } else {
           const cur = await getJson('/api/config');
           await post('/api/config', merged(cur, b.config || {}, net), !!FORM[fw.dev]);
@@ -175,8 +214,10 @@
   function place() {
     const cur = document.getElementById('fwu-cur');
     const upd = cur && cur.closest('.card');
-    // after the "Über VanNode" card exists, so the order is always update, backup, about
-    if (!upd || !document.getElementById('vn-about') || document.getElementById('vn-backup')) return;
+    // with the shared system cards right below the update card; on pages without them (older
+    // layout) only once the "Über VanNode" card exists, so the order stays update, backup, about
+    const shared = !!document.getElementById('vn-update');
+    if (!upd || (!shared && !document.getElementById('vn-about')) || document.getElementById('vn-backup')) return;
     if (fw) return card(upd, fw);
     if (busy) return;
     busy = true;

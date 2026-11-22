@@ -10,6 +10,10 @@ firmware/_common/manifest.json, so each sketch folder stays self-contained.
 pages into web/index.html), between a begin and an end marker. A file without the markers
 gets the block in front of "before" (e.g. "</style>").
 
+"dirs" copy a whole folder of firmware/_common into several sketches, keeping the layout
+below it (e.g. _common/ble/src/core/ble.cpp -> <sketch>/src/core/ble.cpp). They run after
+the blocks, so a block may target a file inside such a folder (the shared BLE web page).
+
   python3 tools/common/sync_common.py           copy changed files, list affected devices
   python3 tools/common/sync_common.py --check   only compare, exit code 1 on any difference (CI)
 """
@@ -85,7 +89,27 @@ def main() -> int:
             if not args.check:
                 dst.write_text(new, encoding="utf-8")
 
-    for m in missing:
+    for name, sketches in manifest.get("dirs", {}).items():
+        src_dir = COMMON / name
+        if not src_dir.is_dir():
+            missing.append(str(src_dir.relative_to(ROOT)))
+            continue
+        for src in sorted(f for f in src_dir.rglob("*") if f.is_file()):
+            rel = src.relative_to(src_dir)
+            data = src.read_bytes()
+            for sketch in sketches:
+                if not (ROOT / sketch).is_dir():
+                    missing.append(sketch)
+                    continue
+                dst = ROOT / sketch / rel
+                if dst.is_file() and dst.read_bytes() == data:
+                    continue
+                differing.append((str(rel), sketch))
+                if not args.check:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_bytes(data)
+
+    for m in sorted(set(missing)):
         print(f"missing: {m}", file=sys.stderr)
 
     if args.check:
@@ -98,7 +122,7 @@ def main() -> int:
     if differing:
         for name, sketch in differing:
             print(f"updated: {sketch}/{name}")
-        devices = sorted({device_of(s) for _, s in differing} - {"_template"})
+        devices = sorted({device_of(s) for _, s in differing} - {"_template", "_common"})
         if devices:
             print("\nBump FW_VERSION in config.h and tag: " + ", ".join(devices))
     else:

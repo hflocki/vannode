@@ -83,7 +83,8 @@ const M = {
       const S3 = M.id === 'level' || M.id === 'display';
       const chip = M.chip || (S3 ? 'esp32s3' : 'esp32c3');   // M.chip: device script may set its chip
       const chipId = {esp32: 0, esp32s3: 9, esp32c3: 5}[chip] ?? 5;
-      return json({fw: {dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: chip, max: 1966080},
+      // M.fw: device script may add fields, e.g. name and dir for the about card (battery-node)
+      return json({fw: Object.assign({dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: M.hw || chip, max: 1966080}, M.fw || {}),
                    up: 5400, log: [
         {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
         {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},

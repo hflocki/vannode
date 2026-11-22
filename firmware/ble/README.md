@@ -1,9 +1,9 @@
 > [!WARNING]
 > **IN ENTWICKLUNG.**
 
-# BLE Node / Battery Node
+# BLE Node
 
-> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Pumpe und Dachhaube werden aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird; Batteriewerte sind kein Schutz für die Batterie.
+> **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Pumpe und Dachhaube werden aus der Ferne geschaltet – vorher sicherstellen, dass niemand gefährdet wird.
 
 Ein ESP32 als **Bluetooth-Gateway mit Plugins**: Er liest Bluetooth-Geräte im Camper aus bzw. steuert sie und stellt alles über eine Web-Oberfläche und MQTT (mit Home-Assistant-Discovery) bereit. Es wird nichts verdrahtet, nur ein ESP32 mit Strom.
 
@@ -11,14 +11,7 @@ Jedes Gerät ist ein **Plugin**. Welche in die Firmware kommen, legst du in `con
 
 Früher „Toolbox“ und davor ein eigenes Repo (`hflocki/camper_toolbox`), jetzt Teil von VanNode mit derselben Update-Absicherung wie die übrigen Geräte. Ein ESP32 für alle Bluetooth-Geräte im Camper, jedes als Plugin.
 
-**Eine Firmware, zwei Rollen.** Seit 2.0 läuft dieselbe Firmware auch auf dem **battery-node** (vorher eigene Firmware `firmware/battery`). Welche Rolle ein Gerät hat, steht nur in seinen Einstellungen (Reiter **MQTT**):
-
-| Rolle | Gerätename | Topic | Geräte darauf |
-| --- | --- | --- | --- |
-| battery-node | `battery-node` | `camper/battery` | Daly BMS, Ective BM X, BM2 |
-| tool-node | `tool-node` | `camper/tool` | Dachhaube, Pumpe, Kühlschrank, Alarm (nur lesen), OBD2-Adapter, Thermometer, Gas, eigene Sensoren |
-
-Die Batterien bekommen damit eigene Verbindungsplätze und laufen weiter, auch wenn am anderen Node etwas hängt. Technisch kann jeder Node jeden Typ – für einen dritten Node reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
+**Batterien haben einen eigenen Node.** Daly BMS, Ective BM X und BM2 laufen seit ble 2.5.0 auf dem **[battery-node](../battery)** (`firmware/battery`, M5Stack AtomS3 Lite, Topic `camper/battery`). Beide nutzen denselben Kern und dieselbe Web-Oberfläche aus [`firmware/_common/ble`](../_common/ble) (siehe [Aufbau](#aufbau-gemeinsamer-kern)), haben aber eigene Releases. Dieser Node heißt ab Werk **tool-node** (`camper/tool`); für mehr Geräte reicht ein weiterer ESP mit eigenem Namen und Topic (z. B. `tool2-node`, `camper/tool2`).
 
 Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/ble.html`](../../docs/mockups/ble.html) (herunterladen und im Browser öffnen).
 
@@ -33,9 +26,6 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Kühlschrank WCS (Kompressor; Ein/Aus, Zonen einzeln ein/aus, Umluft, Nachtmodus, Soll-Temperatur je Zone, Batterieschutz, Fehlercodes mit Verlauf, Schnellkühlen je Zone, Türheizung) | Verbinden + App-Passwort | MAC, App-Passwort der WCS-App (Werkseinstellung `1234`, leer = `1234`), Namen der Zonen (Standard Gefrierfach / Kühlfach), optional UUIDs (Standard Service E530, Write E531, Notify alle; `*` = alle Services) / Abfrage. Keine Bluetooth-Kopplung |
 | Alarm Thitronik WiPro III (**nur lesen**) | Verbinden | MAC, PIN normalerweise leer, Kontaktnamen (mit Komma), optional Status-UUID. Reiner Statusmelder: schaltet die Anlage nie scharf/unscharf |
 | Fahrzeug: OBD2-Adapter ELM327 / vLinker (**nur lesen**; Standardwerte des Motorsteuergeräts, Fehlercodes lesen) | Verbinden | MAC, Bluetooth-Kanäle (Automatisch), Abfragen nur bei laufendem Motor oder immer, Spannung „Motor läuft ab“, Abfrageintervall, Ruhepause (siehe unten) |
-| Batterie: Daly BMS (BLE-Name `DL-…`, Protokoll D2 oder 0x81 wird erkannt) | Verbinden | MAC, Abfrageintervall |
-| Batterie: Ective BM X (LiPower, Geräte-ID wird erkannt) | Verbinden | MAC, Abfrageintervall |
-| Batterie: BM2 Batteriewächter (z. B. Starterbatterie, nur Spannung und Ladestand) | Verbinden (nur falls kein Funk) | MAC |
 | Tanks: SuperSense Empfängerbox (bis 4 Sensoren; **nur lesen**) | Verbinden | MAC der Box, je Sensor Tank (Frisch-/Grau-/Schwarzwasser, Gas …), Tankgröße, optional Rohwert leer / voll (siehe unten) |
 | Gas: Rotarex DIMES / SRG WAVE | Mithören | MAC, Flaschengröße, Füllstopp |
 | Gas: Mopeka Pro (Pro Check, Universal …) | Mithören | MAC, Leer-/Voll-Höhe |
@@ -53,17 +43,9 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 - **Update von 1.3 / 1.4:** Eingeschaltete Plugins (z. B. die Dachhaube) werden beim ersten Start als Geräte übernommen, mit allen Einstellungen. Die leeren Plätze aus 1.4 verschwinden.
 - Einzelne Typen weglassen (kleinere Firmware): in `config_local.h` z. B. `#define PLUGIN_MOPEKA_STD 0`.
 
-### Batterien (battery-node)
+### Batterien
 
-Die Batterie-Plugins sind die frühere battery-node-Firmware. Die Protokolle stammen aus [aiobmsble](https://github.com/patman15/aiobmsble) von Patrick Loschmidt (patman15), der Bibliothek hinter der Home-Assistant-Integration *BLE Battery Management* (Apache-2.0, `src/plugins/bms_proto.*`, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)).
-
-- **Daly / Ective:** feste Verbindung, Abfrage alle *Abfrageintervall* Sekunden (5–300, Standard 10). Ladestand, Spannung, Strom, Leistung, Restkapazität, Energie, Restlaufzeit; bei Daly zusätzlich Zellspannungen, Zelldifferenz, Temperatur, Zyklen und Fehler als Text.
-- **BM2:** neuere Geräte senden ihre Werte per Funk, dann bleibt der Verbindungsplatz frei („OK (Funk)“). Ältere ohne Funkwerte werden verbunden. Zustand aus der Spannung (Normal, Schwach, Kritisch, Lädt, Erhaltungsladung).
-- Solange der ESP verbunden ist, kommt die Hersteller-App meist nicht dran: **Bluetooth für App freigeben** am Gerät (endet nach 30 min von selbst).
-- Für die Displays steht die Liste aller Batterien unter `<prefix>/batteries` (wie bisher), Einzelwerte unter `<prefix>/<geräte-id>/…` (`daly`, `ective`, `bm2` …), siehe [TOPICS](../../docs/TOPICS.md#batterien-camperbattery).
-- **Status-LED** (AtomS3 Lite, sonst `STATUS_LED_PIN`): grün = alle Geräte liefern, gelb = eins fehlt, rot blinkend = kein WLAN/MQTT, blau = noch kein Gerät.
-
-**Umstieg vom alten battery-node (1.x):** Die Update-Seite der alten Firmware nimmt die neue `.bin` nicht an (anderes Gerät), deshalb **einmal per USB flashen** – mit *Erase All Flash Before Sketch Upload: Disabled*, dann bleiben die Einstellungen erhalten. Beim ersten Start werden WLAN, MQTT (Topic `camper/battery`) und Login übernommen, jede eingetragene Batterie wird ein Gerät (`daly`, `ective`, `bm2` …) mit Name, MAC und Abfrageintervall, und der Gerätename wird `battery-node`. Danach `data/index.html.gz` hochladen. Geändert: Die Einzel-Topics heißen jetzt nach der Geräte-ID statt der frei gewählten ID (`camper/battery/daly/soc` statt z. B. `camper/battery/house/soc`); Display und Road Buddy lesen nur die Liste `batteries` und merken davon nichts. In Home Assistant erscheinen die Batterien neu (alte Einträge von Hand löschen).
+Die Batterie-Plugins (Daly, Ective, BM2) sind ab 2.5.0 nicht mehr in dieser Firmware, sondern im eigenen **[battery-node](../battery)**. Wer sie bisher auf einem tool-node hatte: Nach dem Update werden diese Geräte beim Start übersprungen (`Unknown device … skipped` im Seriellen Monitor), erscheinen nicht mehr in der Web-Oberfläche und fallen beim nächsten Speichern aus der Konfiguration. Auf dem battery-node neu anlegen; ihre alten Einträge in Home Assistant von Hand löschen.
 
 ### BTHome-Sensor
 
@@ -111,7 +93,7 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 
 ## Hardware
 
-**ESP32-C3 Super Mini**, **ESP32-S3** (z. B. DevKitC-1) oder **M5Stack AtomS3 Lite** – alle drei baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-esp32s3-v<version>.bin`, `ble-node-atoms3-v<version>.bin`. Der S3 hat mehr Arbeitsspeicher als der C3 und ist die bessere Wahl, wenn viele Bluetooth-Geräte gleichzeitig verbunden sind. Auf ein ESP32-S3-Board nicht die AtomS3-Datei spielen: Sie schaltet eine LED an GPIO35, der auf Boards mit 8 MB PSRAM (N16R8) zum Speicher gehört. Klassischer ESP32 geht ebenso (selbst bauen). Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
+**ESP32-C3 Super Mini** oder **ESP32-S3** (z. B. DevKitC-1) – beide baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-esp32s3-v<version>.bin`. Der S3 hat mehr Arbeitsspeicher als der C3 und ist die bessere Wahl, wenn viele Bluetooth-Geräte gleichzeitig verbunden sind. Den M5Stack AtomS3 Lite gibt es ab 2.5.0 nur noch als [battery-node](../battery). Klassischer ESP32 geht ebenso (selbst bauen). Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
 
 ## Arduino IDE
 
@@ -119,13 +101,13 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 | Einstellung | Wert |
 | --- | --- |
-| Boards | ESP32-C3 Super Mini, ESP32-S3 (mehr Speicher für mehrere Bluetooth-Geräte), M5Stack AtomS3 Lite (mit Status-LED) |
-| Release-Dateien | `ble-node-esp32c3-…`, `ble-node-esp32s3-…`, `ble-node-atoms3-…` – passend zum Board nehmen |
+| Boards | ESP32-C3 Super Mini, ESP32-S3 (mehr Speicher für mehrere Bluetooth-Geräte) |
+| Release-Dateien | `ble-node-esp32c3-…`, `ble-node-esp32s3-…` – passend zum Board nehmen |
 | Zusätzliche Bibliothek | NimBLE-Arduino 2.5.1 |
 | Sketch | `ble_node/ble_node.ino` |
 | Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`), danach Updates unter **System → Firmware- & Web-Update** |
 
-Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Danach unter **MQTT** Gerätename und Topic für die Rolle setzen (z. B. `battery-node` / `camper/battery`).
+Ohne eingetragenes WLAN öffnet der ESP das Setup-WLAN `BLE-Node-XXXXXX` (Passwort `blenode1234`), die Seite liegt dann unter `http://192.168.4.1`. Ab Werk heißt der Node `tool-node` mit Topic `camper/tool`; ein zweiter bekommt unter **MQTT** eigenen Namen und Topic (z. B. `tool2-node` / `camper/tool2`).
 
 ## Bluetooth-Geräte einrichten
 
@@ -175,12 +157,16 @@ Ab display-node 2.10.3 hat das Display eine eigene Seite **Dachhaube** und eine 
 - Basis-Topic am Display: *Einstellungen → Topics der Geräte → BLE-Node Tool* (Standard `camper/tool`). Weitere BLE-Nodes trägst du bei *Tool 2* und *Tool 3* ein; die Dachhaube wird auf jedem davon gefunden.
 - Eine zweite Haube (`rvtech2`) kennt das Display noch nicht, ebenso der Abfahrtscheck.
 
+## Aufbau (gemeinsamer Kern)
+
+Kern und Web-Oberfläche teilt sich der ble-node mit dem [battery-node](../battery): Das Original liegt in [`firmware/_common/ble`](../_common/ble) (`src/core/` mit `main.cpp` für `setup()`/`loop()`, `web/index.html`). `python3 tools/common/sync_common.py` kopiert den Ordner in beide Sketches, danach `python3 tools/web/pack_web.py`. In `ble_node/src/core/` und `ble_node/web/` nichts von Hand ändern (CI prüft mit `--check`). Was ein Node kann, steht nur in seiner `config.h` (Plugin-Schalter, `NODE_TITLE`, Gerätename, Topic) und in seinem `src/plugins/`. Eine Änderung am Kern heißt: beide Nodes bekommen eine neue Version.
+
 ## Neues Plugin schreiben
 
 1. Neue Datei `src/plugins/plugin_<name>.cpp`, Klasse von `Plugin` ableiten (`src/core/plugin.h`): Einstellungen `fields()`, HA-Entitäten `entities()`, MQTT-Werte `publish()`, Befehle `command()`, Web-Karte `live()`. Für Geräte mit Verbindung gibt es `BleLink` (`src/core/ble_link.h`), für passive Sensoren `onAdvertisement()`.
 2. Fabrik `Plugin* create<Name>(uint8_t index)` am Ende der Datei.
 3. `config.h`: Schalter `PLUGIN_<NAME> 1` und in `CT_BLE_PASSIVE` bzw. `CT_BLE_LINKS` aufnehmen.
-4. `src/core/registry.cpp`: Fabrik deklarieren und eine Zeile in `TYPES` (Typ-ID, Name in der Web-UI, Bluetooth-Art). Danach steht der Typ unter „+ Gerät hinzufügen“ zur Auswahl.
+4. `firmware/_common/ble/src/core/registry.cpp` (dann `sync_common.py`): Fabrik deklarieren und eine Zeile in `TYPES` (Typ-ID, Name in der Web-UI, Bluetooth-Art). Danach steht der Typ unter „+ Gerät hinzufügen“ zur Auswahl.
 5. Topics in `docs/TOPICS.md` eintragen, Plugin-Tabelle oben ergänzen.
 
 Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fields()` selbst und braucht in der Regel keine Änderung.
@@ -189,7 +175,7 @@ Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fie
 
 115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login löschen), `help`.
 
-**Ohne USB-Kabel:** Jedes verbindende Gerät (Dachhaube, Pumpe, Kühlschrank, Batterien per Verbindung) hat auf seiner Seite unter *Geräte* eine Karte **Log** mit „Log herunterladen“ und „Log leeren“. Darin stehen dieselben Zeilen wie im seriellen Monitor (Verbindung, Kopplung, GATT-Tabelle, empfangene Daten), bis 8 kB je Gerät, seit dem letzten Neustart. Bei Problemen: Log leeren, Fehler abwarten, herunterladen und schicken.
+**Ohne USB-Kabel:** Jedes verbindende Gerät (Dachhaube, Pumpe, Kühlschrank …) hat auf seiner Seite unter *Geräte* eine Karte **Log** mit „Log herunterladen“ und „Log leeren“. Darin stehen dieselben Zeilen wie im seriellen Monitor (Verbindung, Kopplung, GATT-Tabelle, empfangene Daten), bis 8 kB je Gerät, seit dem letzten Neustart. Bei Problemen: Log leeren, Fehler abwarten, herunterladen und schicken.
 
 **Reiter Debug** (einschalten unter *System → Debug*, ohne Neustart): Zustand des Nodes (Speicher, BLE-Advertisements, WLAN, MQTT), Zustand aller Geräte und das Log jedes Geräts in einem Fenster, das alle 3 s mitläuft. **Herunterladen** speichert das Log des gewählten Geräts, **Alle herunterladen** alle Geräte-Logs in einer Datei – das ist die einfachste Art, einem Entwickler alles auf einmal zu schicken.
 
@@ -214,11 +200,11 @@ Die laufende Version steht in der Web-Oberfläche des Geräts. Alle Änderungen 
 
 ## Fertige Firmware
 
-Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3.bin` und `ble-node-atoms3.bin` (battery-node auf dem AtomS3). Siehe [Fertige Firmware](../../README.md#fertige-firmware).
+Wird im Haupt-Repo per GitHub Actions gebaut, Tag `ble-v<version>`, Dateien `ble-node-esp32c3-v<version>.bin` und `ble-node-esp32s3-v<version>.bin`. Siehe [Fertige Firmware](../../README.md#fertige-firmware).
 
 ## Lizenz
 
-GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](../../NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Batterie-Protokolle `bms_proto.*` aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0, [LICENSE-Apache-2.0](LICENSE-Apache-2.0)), Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll (eigene Umsetzung, kein Code übernommen) nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (Ordner `carawater-isp-ble`, MIT: Schaltbefehl `AA 39`, Statusrahmen `AA 45`), [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (keine Lizenzangabe: Telemetrie `AA 93`, Status-Bits, Prüfsumme, Umrechnung) und der ersten HA-Integration carawater_isp15 eines Community-Mitglieds. SuperSense-Protokoll (eigene Umsetzung, kein Code übernommen) nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT).
+GNU GPL Version 3 mit zusätzlichen Bedingungen (Urhebervermerk bleibt erhalten, veränderte Fassungen sind zu kennzeichnen), siehe [LICENSE](LICENSE) und [NOTICE.md](../../NOTICE.md). Name und Logo „VanNode“ sind nicht Teil der Lizenz: [NAME-UND-LOGO.md](../../NAME-UND-LOGO.md). Fremde Teile: Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT, [LICENSE-rvtech-MIT](LICENSE-rvtech-MIT)), Pumpen-Protokoll (eigene Umsetzung, kein Code übernommen) nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (Ordner `carawater-isp-ble`, MIT: Schaltbefehl `AA 39`, Statusrahmen `AA 45`), [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (keine Lizenzangabe: Telemetrie `AA 93`, Status-Bits, Prüfsumme, Umrechnung) und der ersten HA-Integration carawater_isp15 eines Community-Mitglieds. SuperSense-Protokoll (eigene Umsetzung, kein Code übernommen) nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT).
 
 Ohne Gewähr, Nutzung auf eigene Gefahr; die Haftung ist ausgeschlossen, soweit gesetzlich zulässig (siehe [NOTICE.md](../../NOTICE.md)). Produkt- und Firmennamen sind Marken ihrer Inhaber, VanNode hat keine Verbindung zu ihnen.
 

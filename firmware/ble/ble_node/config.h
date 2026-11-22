@@ -62,17 +62,8 @@
 #ifndef PLUGIN_OBD
 #define PLUGIN_OBD            1      // Vehicle: OBD2 adapter ELM327 / vLinker (BLE), base values of the engine
 #endif
-#ifndef PLUGIN_DALY
-#define PLUGIN_DALY           1      // Battery: Daly smart BMS (BLE name "DL-..."), BLE connection
-#endif
-#ifndef PLUGIN_ECTIVE
-#define PLUGIN_ECTIVE         1      // Battery: Ective BM X battery monitor (LiPower), BLE connection
-#endif
 #ifndef PLUGIN_SUPERSENSE
 #define PLUGIN_SUPERSENSE     1      // Tanks: SuperSense receiver box with up to 4 sensors, BLE connection
-#endif
-#ifndef PLUGIN_BM2
-#define PLUGIN_BM2            1      // Battery: BM2 battery monitor (broadcast, connection as fallback)
 #endif
 
 // At most this many connecting devices may be switched on at the same time
@@ -89,7 +80,7 @@
 // Derived switches (do not edit): which code parts are compiled
 #define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME + PLUGIN_TPMS)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
-#define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2)
+#define CT_BMS          0      // batteries: own node (firmware/battery)
 #define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
@@ -101,9 +92,11 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.4.0"
+#define FW_VERSION            "2.5.0"
 #define FW_DEVICE             "toolbox"   // device id in the firmware marker (fwcheck.h); stays "toolbox"
                                           // so devices with the former Toolbox firmware accept updates
+#define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial
+#define NODE_DIR              "ble"       // repo folder (about card)
 
 // Network upload from the Arduino IDE (port in the IDE, password DEFAULT_OTA_PASSWORD).
 // 0 = off, updates then only through the web UI (with login, if set).
@@ -113,7 +106,7 @@
 
 #ifndef DEFAULT_NODE_NAME
 #define DEFAULT_NODE_NAME     "tool-node"         // Node name (web UI, MQTT tab): host name, Home Assistant
-#endif                                            // device and web UI title, e.g. "battery-node"
+#endif                                            // device and web UI title, e.g. "tool2-node"
 #ifndef DEFAULT_AP_SSID
 #define DEFAULT_AP_SSID       "BLE-Node"          // Base name; "-XXXXXX" (last 3 MAC bytes) is appended
 #endif
@@ -445,48 +438,15 @@
 #endif
 
 // ============================================================
-// PLUGINS: BATTERIES (Daly, Ective BM X, BM2)
-// ------------------------------------------------------------
-// Protocols ported from aiobmsble (Apache-2.0), see src/plugins/bms_proto.h.
-// Every battery keeps a BLE connection and is polled every "Abfrageintervall" seconds
-// (web UI); the BM2 is read from its broadcast while that works and only connects if not.
-// All batteries of the node are also published as one JSON list <prefix>/batteries
-// for the displays (wall panel, Road Buddy).
-// ============================================================
-#ifndef BMS_DEFAULT_INTERVAL_S
-#define BMS_DEFAULT_INTERVAL_S 10    // Poll interval (web UI, 5-300 s)
-#endif
-#ifndef BMS_RESPONSE_TIMEOUT_MS
-#define BMS_RESPONSE_TIMEOUT_MS 3000 // Wait for an answer
-#endif
-#ifndef BMS_STALE_MS
-#define BMS_STALE_MS          120000 // Values older than this count as unavailable
-#endif
-#ifndef BM2_WAIT_MS
-#define BM2_WAIT_MS           4000   // BM2 notifies about once per second
-#endif
-#ifndef BM2_ADV_FRESH_MS
-#define BM2_ADV_FRESH_MS      90000  // BM2 broadcast younger than this: no connection needed
-#endif
-#ifndef BM2_ADV_GRACE_MS
-#define BM2_ADV_GRACE_MS      30000  // After start: wait this long for a broadcast before connecting
-#endif
-
-// ============================================================
 // STATUS LED (optional RGB LED, WS2812)
-// M5Stack AtomS3 Lite: switched on automatically (board "M5AtomS3", RGB LED on GPIO35).
-// Other boards with an RGB LED: set STATUS_LED_PIN in config_local.h. -1 = no LED.
+// Boards with an RGB LED: set STATUS_LED_PIN in config_local.h. -1 = no LED.
 //   green  = every switched-on device delivers values
 //   yellow = at least one device missing / no data
 //   red    = no WiFi or no MQTT connection (blinking)
 //   blue   = no device set up yet
 // ============================================================
 #ifndef STATUS_LED_PIN
-#if defined(ARDUINO_M5STACK_ATOMS3) && defined(PIN_RGB_LED)
-#define STATUS_LED_PIN        PIN_RGB_LED
-#else
 #define STATUS_LED_PIN        -1
-#endif
 #endif
 #ifndef STATUS_LED_BRIGHTNESS
 #define STATUS_LED_BRIGHTNESS 24     // 0-255, kept low so it does not light up the camper at night
@@ -581,7 +541,7 @@ struct AppConfig {
     char web_user[32];     // Web UI login, empty = no login
     char web_pass[32];
 
-    char node_name[24];    // "ble-node", "battery-node" ...: host name, HA device, web UI title
+    char node_name[24];    // "tool-node", "battery-node" ...: host name, HA device, web UI title
 };
 
 // Device wide runtime values (WiFi diagnosis)

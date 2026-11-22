@@ -1,0 +1,2451 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode - GNU GPL v3 with additional terms, see NOTICE.md. NO WARRANTY, use at your own risk. -->
+<!-- Shared web page of the BLE nodes (ble-node, battery-node): edit only in firmware/_common/ble/web, then run tools/common/sync_common.py and tools/web/pack_web.py -->
+<html lang="de">
+  <head>
+<script>
+// ble-node: Bluetooth devices as plugins. The mockup shows every plugin type at once.
+// The battery-node mockup (battery.js) builds on this file; battery types live there.
+// A real node allows at most 12 devices and 3 Bluetooth connections, so the limits below
+// are raised for the mockup only.
+const MAC = (n) => 'C0:FF:EE:00:00:' + String(n).padStart(2, '0');
+const P = (id, type, type_name, ble, cfg) => ({id, type, type_name, ble, running: true, cfg: Object.assign({enabled: true}, cfg)});
+const GAS_FIELDS = [
+  {k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+  {k: 'capacity', l: 'Flaschengröße', t: 'float', min: 1, max: 200, step: 0.1, u: 'L', h: 'Bruttovolumen, z. B. 11 kg = 27,2 L'},
+  {k: 'fill_stop_on', l: 'Füllstopp vorhanden', t: 'bool', h: 'Tankflaschen mit 80-%-Füllstopp'},
+  {k: 'fill_stop', l: 'Füllstopp', t: 'float', min: 10, max: 100, step: 1, u: '%'}];
+const MOPEKA_FIELDS = GAS_FIELDS.concat([
+  {k: 'empty_mm', l: 'Höhe leer', t: 'int', min: 0, max: 2000, u: 'mm', h: 'Europa 6 kg 38/336, 11 kg 38/366, 14 kg 38/467, US 20 lb 38/254 mm'},
+  {k: 'full_mm', l: 'Höhe voll', t: 'int', min: 1, max: 2000, u: 'mm'}]);
+const BMS_FIELDS = (l) => [{k: 'mac', l, t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+  {k: 'interval', l: 'Abfrageintervall', t: 'int', min: 5, max: 300, u: 's', h: 'Wie oft die Werte gelesen werden'}];
+const GAS_CFG = {capacity: 27.2, fill_stop_on: false, fill_stop: 80};
+
+const M = {
+  id: 'ble',
+  config: {
+    version: '2.5.0', device: 'tool-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_tool',
+    core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
+           mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/tool',
+           web_user: '', web_pass_set: false, node_name: 'tool-node', debug: true},
+    plugins: [
+      // devices with a Bluetooth connection
+      P('rvtech', 'rvtech', 'Dachhaube RV Tech', 2, {name: 'Dachhaube', mac: MAC(1), pin: '', pos_rain: 12, pos_vent: 0, pos_fav: 0}),
+      P('pump', 'pump', 'Wasserpumpe CaraWater', 2, {name: 'Wasserpumpe', mac: MAC(2), model: 'ISP 15'}),
+      P('fridge', 'fridge', 'Kühlschrank WCS', 2, {name: 'Kühlschrank', mac: MAC(3), pin: '', zone2: true, name1: '', name2: '',
+        service: '', notify: '', write: '', poll: '', poll_s: 5}),
+      P('wipro', 'wipro', 'Alarm WiPro III (nur lesen)', 2, {name: 'Alarmanlage', mac: MAC(4), pin: '',
+        names: 'Tür vorn,Tür hinten,Heckklappe,Fenster', service: '', notify: ''}),
+      P('obd', 'obd', 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', 2, {name: 'Fahrzeug', mac: MAC(5), pin: '', gatt: 0,
+        service: '', notify: '', write: '', profile: 1, mode: 0, detect: 1, run_v: 13.2, poll_s: 5, rest_min: 10}),
+      P('supersense', 'supersense', 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', 2, {name: 'Tanks', mac: MAC(15), medium: 1, tank_size: 100, empty1: 0, full1: 0,
+        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 0, size3: 0, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0}),
+      // passive sensors (advertisements only)
+      P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
+      P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
+      P('mopeka_std', 'mopeka_std', 'Gas: Mopeka Standard', 1, Object.assign({name: 'Gasflasche 3', mac: MAC(11), empty_mm: 38, full_mm: 336, lpg_propane: 100}, GAS_CFG, {capacity: 14.6})),
+      P('govee', 'govee', 'Thermometer Govee', 1, {name: 'Thermometer außen', mac: MAC(12), temp_offset: 0, hum_offset: 0}),
+      P('tpms', 'tpms', 'Reifendruck SuperSense TireCheck', 1, {name: 'Reifendruck', mac1: MAC(21), pos1: 0, mac2: MAC(22), pos2: 1, mac3: MAC(23), pos3: 4, mac4: MAC(24), pos4: 5,
+        mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 0, p_max: 0,
+        va_min: 3.3, va_max: 4.2, ha_min: 4.0, ha_max: 5.2}),
+      P('bthome', 'bthome', 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', 1, {name: 'Thermometer Bad', mac: MAC(13), objs: '01,02,03,0C'}),
+      // own BLE sensor: a thermometer with custom firmware (service data 181A)
+      P('blesensor', 'blesensor', 'Eigener BLE-Sensor', 1, {name: 'Eigener Sensor', mac: MAC(14), source: 1, company: '', uuid: '181A',
+        v1_name: 'Temperatur', v1_pos: 6, v1_len: 1, v1_signed: true, v1_big: false, v1_factor: 0.01, v1_add: 0, v1_dec: 1, v1_unit: '°C', v1_kind: 1,
+        v2_name: 'Luftfeuchte', v2_pos: 8, v2_len: 1, v2_signed: false, v2_big: false, v2_factor: 0.01, v2_add: 0, v2_dec: 0, v2_unit: '%', v2_kind: 2,
+        v3_name: 'Batterie', v3_pos: 12, v3_len: 0, v3_signed: false, v3_big: false, v3_factor: 1, v3_add: 0, v3_dec: 0, v3_unit: '%', v3_kind: 3})],
+    // field descriptions once per type (as the firmware sends them, see fields() of each plugin)
+    schemas: {
+      rvtech: [{k: 'mac', l: 'Hauben-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+               {k: 'pin', l: 'PIN', t: 'text', max: 7, h: 'Nur Ziffern (1-6, auch 000000). Leer lassen, wenn keine nötig ist. Kein anderes Gerät (Handy) darf gleichzeitig verbunden sein.'},
+               {k: 'pos_rain', l: 'Stellung Regen', t: 'int', min: 1, max: 100, u: '%', h: 'Standard 12 %'},
+               {k: 'pos_vent', l: 'Stellung Lüften', t: 'int', min: 0, max: 100, u: '%', h: '0 = Lüften-Funktion der Haube (jedes Drücken verlängert die Lüftzeit)'},
+               {k: 'pos_fav', l: 'Stellung Favorit', t: 'int', min: 0, max: 100, u: '%', h: '0 = in der Haube gespeicherter Favorit ("Favorit speichern")'}],
+      pump: [{k: 'mac', l: 'Pumpen-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+             {k: 'model', l: 'Modell', t: 'text', max: 23, h: 'Nur Anzeige in Home Assistant, z. B. ISP 15'}],
+      fridge: [{k: 'mac', l: 'Kühlschrank-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+               {k: 'pin', l: 'App-Passwort', t: 'text', max: 7, h: 'Das Passwort der WCS-App (Werkseinstellung 1234). Leer = 1234. Keine Bluetooth-Kopplung nötig.'},
+               {k: 'zone2', l: 'Zweite Zone', t: 'bool', h: 'Kühlschrank mit zweitem Fach / Gefrierfach'},
+               {k: 'name1', l: 'Name Zone 1', t: 'text', max: 23, h: 'Leer = Gefrierfach (bei einer Zone: Innenraum). Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …'},
+               {k: 'name2', l: 'Name Zone 2', t: 'text', max: 23, h: 'Leer = Kühlfach'},
+               {k: 'service', l: 'Service-UUID', t: 'text', max: 39, h: 'Leer = E530 (Standard), * = alle Services'},
+               {k: 'notify', l: 'Notify-UUID', t: 'text', max: 39, h: 'Leer = E532 (Standard), * = jede, die senden kann'},
+               {k: 'write', l: 'Write-UUID', t: 'text', max: 39, h: 'Leer = E531 (Standard)'},
+               {k: 'poll', l: 'Abfragebefehl', t: 'text', max: 39, h: 'Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt'},
+               {k: 'poll_s', l: 'Abfrage alle', t: 'int', min: 2, max: 3600, u: 's', h: 'Standard 5 s'}],
+      wipro: [{k: 'mac', l: 'Alarm-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+              {k: 'pin', l: 'Bluetooth-PIN', t: 'text', max: 7, h: 'Leer lassen - das Modul koppelt nicht. Nur ausfüllen, falls es beim Verbinden doch eine Kopplung verlangt.'},
+              {k: 'names', l: 'Kontaktnamen', t: 'text', max: 95, h: 'Namen der Kontakte (Bit 0-7), mit Komma getrennt, z. B. Tür vorn,Tür hinten,Fenster. Leer = Kontakt 0, Kontakt 1 ...'},
+              {k: 'service', l: 'Service-UUID', t: 'text', max: 39, h: 'Leer = alle Services durchsuchen (Standard)'},
+              {k: 'notify', l: 'Status-UUID', t: 'text', max: 39, h: 'Leer = Standard-Characteristic. * = jede, die senden kann'}],
+      obd: [{k: 'mac', l: 'Adapter-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name z. B. vLinker, OBDII, OBDBLE)'},
+            {k: 'pin', l: 'Bluetooth-PIN', t: 'text', max: 7, h: 'Meist leer. Nur ausfüllen, wenn der Adapter beim Verbinden eine PIN verlangt'},
+            {k: 'gatt', l: 'Bluetooth-Kanäle', t: 'select', o: 'Automatisch|FFF0 (FFF1 / FFF2)|FFE0 (FFE1)|18F0 (2AF0 / 2AF1)|Vgate / vLinker (E7810A71)|Eigene UUIDs',
+             h: 'Automatisch passt für die meisten Adapter. Im Log steht nach dem Verbinden, welche Kanäle es gibt'},
+            {k: 'service', l: 'Service-UUID', t: 'text', max: 39, h: 'Nur bei "Eigene UUIDs"'},
+            {k: 'notify', l: 'Notify-UUID', t: 'text', max: 39, h: 'Nur bei "Eigene UUIDs", leer = jede, die senden kann'},
+            {k: 'write', l: 'Write-UUID', t: 'text', max: 39, h: 'Nur bei "Eigene UUIDs"'},
+            {k: 'profile', l: 'Fahrzeug', t: 'select', o: 'Standard (alle Fahrzeuge)|Fiat Ducato (Euro 6)',
+             h: 'Fiat Ducato: festes Protokoll CAN 29 Bit, AdBlue direkt vom zuständigen Steuergerät, Verbrauch aus der Kraftstoffmasse'},
+            {k: 'mode', l: 'Abfragen', t: 'select', o: 'Nur bei laufendem Motor|Immer, wenn das Steuergerät antwortet',
+             h: '"Nur bei laufendem Motor" schont die Starterbatterie: ohne laufenden Motor fragt der Node das Fahrzeug nicht ab und lässt den Adapter schlafen'},
+            {k: 'detect', l: 'Motor erkennen an', t: 'select', o: 'Bordspannung|Drehzahl (Steuergerät jede Minute fragen)',
+             h: 'Bordspannung: der Node fragt das Fahrzeug erst, wenn die Lichtmaschine lädt. Fahrzeuge mit intelligenter Lichtmaschine (z. B. Fiat Ducato, Leerlauf nur 12,3-12,6 V) brauchen "Drehzahl"'},
+            {k: 'run_v', l: 'Motor läuft ab', t: 'float', min: 12, max: 15, step: 0.1, u: 'V', h: 'Nur bei "Motor erkennen an: Bordspannung": Spannung, ab der der Motor als laufend gilt. Typisch 13,2 V'},
+            {k: 'poll_s', l: 'Abfrage alle', t: 'int', min: 1, max: 60, u: 's', h: 'Pause zwischen zwei Abfragerunden aller Werte'},
+            {k: 'rest_min', l: 'Ruhepause', t: 'int', min: 0, max: 60, u: 'min', h: 'Motor aus: so lange trennt der Node die Verbindung, damit der Adapter schlafen kann. 0 = verbunden bleiben'}],
+      daly: BMS_FIELDS('Batterie-MAC'),
+      ective: BMS_FIELDS('Batterie-MAC'),
+      bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
+      supersense: [{k: 'mac', l: 'MAC der Box', t: 'mac', h: 'SSBT… – über "Suchen" aus der Liste wählen'},
+                   {k: 'medium', l: 'Sensor 1: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'tank_size', l: 'Sensor 1: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty1', l: 'Sensor 1: Rohwert leer', t: 'int', min: 0, max: 9998, h: 'Leer und voll = 0: Standard (2475 = 100 %). Sonst den Rohwert aus der Live-Ansicht bei leerem bzw. vollem Tank eintragen'},
+                   {k: 'full1', l: 'Sensor 1: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind2', l: 'Sensor 2: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size2', l: 'Sensor 2: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty2', l: 'Sensor 2: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full2', l: 'Sensor 2: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind3', l: 'Sensor 3: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size3', l: 'Sensor 3: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty3', l: 'Sensor 3: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full3', l: 'Sensor 3: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'kind4', l: 'Sensor 4: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'size4', l: 'Sensor 4: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
+                   {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
+                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
+      dimes: GAS_FIELDS,
+      mopeka: MOPEKA_FIELDS,
+      mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
+      tpms: [{k: 'mac1', l: 'Rad 1: Sensor-MAC', t: 'mac', h: 'Nicht zugeordnete Sensoren stehen in der Live-Ansicht, MAC von dort übernehmen. Leer = Rad nicht belegt'},
+             {k: 'pos1', l: 'Rad 1: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac2', l: 'Rad 2: Sensor-MAC', t: 'mac'},
+             {k: 'pos2', l: 'Rad 2: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac3', l: 'Rad 3: Sensor-MAC', t: 'mac'},
+             {k: 'pos3', l: 'Rad 3: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac4', l: 'Rad 4: Sensor-MAC', t: 'mac'},
+             {k: 'pos4', l: 'Rad 4: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac5', l: 'Rad 5: Sensor-MAC', t: 'mac'},
+             {k: 'pos5', l: 'Rad 5: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac6', l: 'Rad 6: Sensor-MAC', t: 'mac'},
+             {k: 'pos6', l: 'Rad 6: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac7', l: 'Rad 7: Sensor-MAC', t: 'mac'},
+             {k: 'pos7', l: 'Rad 7: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'mac8', l: 'Rad 8: Sensor-MAC', t: 'mac'},
+             {k: 'pos8', l: 'Rad 8: Position', t: 'select', o: 'Vorne links|Vorne rechts|Mitte links|Mitte rechts|Hinten links|Hinten rechts|Hinten links innen|Hinten rechts innen|Anhänger vorne links|Anhänger vorne rechts|Anhänger hinten links|Anhänger hinten rechts|Reserverad'},
+             {k: 'p_min', l: 'Standard: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: 'Gilt für alle Achsen ohne eigene Grenze, 0 = keine Warnung'},
+             {k: 'p_max', l: 'Standard: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = keine Warnung'},
+             {k: 'va_min', l: 'Vorderachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar', h: '0 = Standard von oben'},
+             {k: 'va_max', l: 'Vorderachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ma_min', l: 'Mittelachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ma_max', l: 'Mittelachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ha_min', l: 'Hinterachse: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ha_max', l: 'Hinterachse: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'av_min', l: 'Anhänger vorne: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'av_max', l: 'Anhänger vorne: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ah_min', l: 'Anhänger hinten: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'ah_max', l: 'Anhänger hinten: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'rr_min', l: 'Reserverad: Warnung unter', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'},
+             {k: 'rr_max', l: 'Reserverad: Warnung über', t: 'float', min: 0, max: 15, step: 0.05, u: 'bar'}],
+      govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
+              {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
+              {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
+      bthome: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (passt: Dienst FCD2)'},
+               {k: 'objs', l: 'Erkannte Werte', t: 'text', max: 24, h: 'Füllt sich beim Empfang von selbst. Leeren und speichern, um die Werte neu zu erkennen'}],
+      blesensor: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                  {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
+                  {k: 'company', l: 'Hersteller-ID', t: 'text', max: 7, h: 'Nur Herstellerdaten: z. B. FFFF, leer = beliebig'},
+                  {k: 'uuid', l: 'Service-UUID', t: 'text', max: 39, h: 'Nur Service-Daten: z. B. 181A, leer = die erste'},
+                  ...[1, 2, 3].flatMap(n => [
+                    {k: `v${n}_name`, l: `Wert ${n}: Name`, t: 'text', max: 23, h: 'Leer = Wert nicht benutzt'},
+                    {k: `v${n}_pos`, l: `Wert ${n}: Stelle`, t: 'int', min: 0, max: 63, step: 1, h: 'Position im Paket, 0 = erstes Byte (siehe Rohdaten)'},
+                    {k: `v${n}_len`, l: `Wert ${n}: Länge`, t: 'select', o: '1 Byte|2 Byte|4 Byte'},
+                    {k: `v${n}_signed`, l: `Wert ${n}: mit Vorzeichen`, t: 'bool'},
+                    {k: `v${n}_big`, l: `Wert ${n}: höchstes Byte zuerst`, t: 'bool'},
+                    {k: `v${n}_factor`, l: `Wert ${n}: Faktor`, t: 'float', min: -1000000, max: 1000000, step: 0.000001},
+                    {k: `v${n}_add`, l: `Wert ${n}: Offset`, t: 'float', min: -1000000, max: 1000000, step: 0.000001},
+                    {k: `v${n}_dec`, l: `Wert ${n}: Nachkommastellen`, t: 'int', min: 0, max: 4, step: 1},
+                    {k: `v${n}_unit`, l: `Wert ${n}: Einheit`, t: 'text', max: 9},
+                    {k: `v${n}_kind`, l: `Wert ${n}: Art`, t: 'select', o: 'Allgemein|Temperatur|Luftfeuchte|Batterie|Spannung|Strom|Leistung|Druck'}])]
+    },
+    types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
+            {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'wipro', name: 'Alarm WiPro III (nur lesen)', ble: 2},
+            {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
+            {type: 'supersense', name: 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', ble: 2},
+            {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
+            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
+    // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
+    max_devices: 16,
+    max_links: 8
+  },
+  // roof hatch: position moves 5 % per update towards the target
+  pos: 0, target: -1,
+  // per device: "Bluetooth für App freigeben"
+  released: {},
+  // fridge: zones bit mask (1 = freezer, 2 = fridge), set points, fan, sleep mode, main power
+  fr: {zones: 3, set1: -18, set2: 4, fan: true, night: false, power: true, q1: false, q2: false, door: false},
+  pump: {enable: true, level: 1, running: false},
+  obdScan: '',
+  // device changes are saved at once and take effect with the restart (restart_needed)
+  keep(plugins) {
+    M.save({plugins, restart_needed: plugins.some(p => p.pending || p.removed || p.cfg.enabled !== p.running)});
+  },
+  route(path, method, body) {
+    if (path === '/api/config' && method === 'POST') {
+      const c = M.cfg;
+      if (body.core) M.save({core: Object.assign({}, c.core, body.core, {wifi_pass: undefined, mqtt_pass: undefined, web_pass: undefined})});
+      else if (body.plugin) {
+        const p = c.plugins.find(x => x.id === body.plugin);
+        if (p) { Object.assign(p.cfg, body.cfg); M.save({plugins: c.plugins}); }
+      } else if (body.enabled) {
+        c.plugins.forEach(p => { if (p.id in body.enabled && !p.removed) p.cfg.enabled = body.enabled[p.id]; });
+        M.keep(c.plugins);
+      } else if (body.remove) {
+        // pending devices disappear right away, running ones after the restart
+        const p = c.plugins.find(x => x.id === body.remove);
+        M.keep(p && p.pending ? c.plugins.filter(x => x !== p) : c.plugins.map(x => x === p ? Object.assign({}, x, {removed: true}) : x));
+      } else if (body.restore) {
+        M.keep(c.plugins.map(x => x.id === body.restore ? Object.assign({}, x, {removed: undefined}) : x));
+      } else if (body.add) {
+        const t = c.types.find(x => x.type === body.add);
+        let n = 1;
+        while (c.plugins.some(p => p.id === (n === 1 ? t.type : t.type + n))) n++;
+        const id = n === 1 ? t.type : t.type + n;
+        M.keep(c.plugins.concat([{id, type: t.type, type_name: t.name, ble: t.ble, running: false, pending: true,
+                                  cfg: {enabled: true, name: t.name + (n > 1 ? ' ' + n : ''), mac: ''}}]));
+      }
+      return {status: 'ok'};
+    }
+    if (path === '/api/restart' && method === 'POST') {
+      // the restart applies all saved device changes
+      const plugins = M.cfg.plugins.filter(p => !p.removed)
+        .map(p => Object.assign({}, p, {pending: undefined, running: p.cfg.enabled}));
+      M.keep(plugins);
+      return {status: 'restarting'};
+    }
+    if (path === '/api/cmd') {
+      const on = body.v === 'true' || body.v === 'ON' || body.v === '1';
+      const k = body.k === 'preset' || body.k === 'action' ? body.v : body.k;
+      const dev = M.cfg.plugins.find(p => p.id === body.p) || {};
+      if (k === 'release') { M.released[dev.id || body.p] = on; return {status: 'ok'}; }
+      const POS = {auf: 100, zu: 0, regen: 12, lueften: 102};
+      if (dev.type === 'rvtech' || (!dev.type && k in POS)) {
+        if (k in POS) M.target = POS[k];
+        else if (k === 'cover_position') M.target = +body.v;
+      } else if (dev.type === 'pump') {
+        if (k === 'enable') M.pump.enable = on;
+        else if (k === 'pressure_level') M.pump.level = +body.v + 1;
+      } else if (dev.type === 'obd') {
+        if (k === 'scan') { M.obdScan = 'läuft …'; setTimeout(() => { M.obdScan = 'fertig: 14 Werte gefunden'; }, 4000); }
+      } else {
+        const F = M.fr;
+        if (k === 'zone1') F.zones = on ? F.zones | 1 : F.zones & ~1;
+        else if (k === 'zone2') F.zones = on ? F.zones | 2 : F.zones & ~2;
+        else if (k === 'fan') F.fan = on;
+        else if (k === 'night') { F.night = on; if (on) F.fan = false; }
+        else if (k === 'power') F.power = on;
+        else if (k === 'quick1') F.q1 = on;
+        else if (k === 'quick2') F.q2 = on;
+        else if (k === 'doorheat') F.door = on;
+        else if (k === 'target1') F.set1 = +body.v;
+        else if (k === 'target2') F.set2 = +body.v;
+      }
+      return {status: 'ok'};
+    }
+    if (path === '/api/log') {
+      const t = Math.floor((Date.now() - M.t0) / 1000);
+      return '# Beispiel-Log (Mockup)\n# Time stamps below: uptime h:mm:ss.mmm\n\n0:00:05.120 State: Verbinde\n0:00:05.880 Connected, MTU 247, 1 subscription(s)\n' +
+        '0:00:06.010 Notify 0xFFE1: 5A 01 64 00 00\n0:00:' + String(6 + t % 50).padStart(2, '0') + '.400 Values updated\n';
+    }
+    if (path === '/api/log/clear') return { ok: true };
+    if (path === '/api/scan') {
+      return {active: true, devices: [
+        {mac: MAC(1), name: 'RVT-Skylight', rssi: -71, mfg: '', uuid: 'ffe0', age: 2, fits: ['rvtech'], use: 'Dachhaube'},
+        {mac: MAC(21), name: '', rssi: -77, mfg: '', uuid: 'faf0', age: 9, fits: ['tpms'], use: 'Reifendruck: Vorne links'},
+        {mac: MAC(22), name: '', rssi: -81, mfg: '', uuid: 'faf0', age: 14, fits: ['tpms'], use: 'Reifendruck: Vorne rechts'},
+        {mac: MAC(2), name: 'ISP-Pump', rssi: -74, mfg: '', uuid: '', age: 3, fits: ['pump']},
+        {mac: MAC(5), name: 'vLinker MC-IOS', rssi: -80, mfg: '', uuid: 'e7810a71', age: 4, fits: ['obd']},
+        {mac: MAC(6), name: 'DL-C8478C000003', rssi: -68, mfg: '0102', uuid: '0xfff0', age: 1, fits: ['daly']},
+        {mac: MAC(9), name: '', rssi: -79, mfg: '', uuid: '', age: 6, fits: ['dimes']},
+        {mac: MAC(13), name: 'ATC_ABCDEF', rssi: -76, mfg: '', uuid: '0xfcd2', age: 3, fits: ['bthome']},
+        {mac: MAC(12), name: 'GVH5075_1A2B', rssi: -83, mfg: '88EC', uuid: '', age: 5, fits: ['govee']}]};
+    }
+  },
+  // live data of one device, built like live() in the plugin of that type
+  live(p, t) {
+    const rel = !!M.released[p.id], sw = {t: 'switch', k: 'release', l: 'Bluetooth für App freigeben', v: rel};
+    const wave = (base, amp, per) => Math.round((base + Math.sin(t / per) * amp) * 100) / 100;
+    switch (p.type) {
+      case 'rvtech': {
+        if (M.target >= 0) {
+          const goal = Math.min(M.target, 100);
+          if (M.pos < goal) M.pos = Math.min(goal, M.pos + 5);
+          else if (M.pos > goal) M.pos = Math.max(goal, M.pos - 5);
+          if (M.pos === goal) { if (M.target === 102) M.pos = 102; M.target = -1; }
+        }
+        const shown = Math.min(M.pos, 100);
+        const label = M.pos === 102 ? 'Lüften' : M.target >= 0 ? (M.target > M.pos ? 'Öffnet...' : 'Schließt...') : M.pos === 0 ? 'Geschlossen' : 'Offen';
+        return {state: rel ? 'Für App freigegeben' : 'Verbunden', ok: !rel, gauge: {v: shown, unit: '%', label},
+          rows: [['Gemeldet', M.pos, ''], ['Ziel', M.target >= 0 ? M.target : null, ''], ['Bluetooth', -71, 'dBm']],
+          ctrl: [{t: 'buttons', k: 'preset', b: [['auf', 'Auf'], ['zu', 'Zu'], ['regen', 'Regen'], ['lueften', 'Lüften']]},
+                 {t: 'slider', k: 'cover_position', l: 'Position', min: 0, max: 100, v: shown}, sw]};
+      }
+      case 'pump': {
+        const run = M.pump.enable && Math.floor(t / 20) % 3 === 0;
+        return {state: rel ? 'Für App freigegeben' : 'Verbunden', ok: !rel,
+          gauge: {v: run ? wave(2.2, 0.15, 3) : 2.6, unit: 'bar', label: run ? 'Druck - läuft' : 'Druck', max: 4},
+          rows: [['Durchfluss', run ? wave(5.8, 0.4, 4) : 0, 'L/min'], ['Spannung', 12.8, 'V'], ['Strom', run ? 4.6 : 0.1, 'A'],
+                 ['Wassertemperatur', 14.2, '°C'], ['Heute', 37, 'L'], ['Gesamt', 1842, 'L'], ['Bluetooth', -74, 'dBm']],
+          ctrl: [{t: 'switch', k: 'enable', l: 'Pumpenfreigabe', v: M.pump.enable},
+                 {t: 'select', k: 'pressure_level', l: 'Konstantdruck', o: 'Stufe 1|Stufe 2|Stufe 3', v: M.pump.level - 1}, sw]};
+      }
+      case 'fridge': {
+        const F = M.fr, z1 = F.power && (F.zones & 1), z2 = F.power && (F.zones & 2);
+        return {state: 'Verbunden', ok: true,
+          zones: [{l: p.cfg.name1 || 'Gefrierfach', v: z1 ? -17 : 2, unit: '°C', s: `Soll ${F.set1} °C`, k: 'zone1', on: !!(F.zones & 1),
+                   step: {k: 'target1', v: F.set1, min: -22, max: 10, d: 1}},
+                  {l: p.cfg.name2 || 'Kühlfach', v: z2 ? 5 : 9, unit: '°C', s: `Soll ${F.set2} °C`, k: 'zone2', on: !!(F.zones & 2),
+                   step: {k: 'target2', v: F.set2, min: -22, max: 10, d: 1}}],
+          rows: [['Spannung', 12.9, 'V'], ['Batterie', 96, '%'], ['Modus', F.night ? 'Nachtmodus' : 'Normal', ''],
+                 ['Grenzen laut Gerät', '-22…-10 / -10…10 °C', ''], ['Bluetooth', -66, 'dBm'], ['Nachrichten', 412, '']],
+          ctrl: [{t: 'switch', k: 'power', l: 'Kühlschrank an', v: F.power, top: true},
+                 {t: 'switch', k: 'fan', l: 'Umluft', v: F.fan},
+                 {t: 'switch', k: 'night', l: 'Nachtmodus', v: F.night},
+                 {t: 'switch', k: 'quick1', l: 'Superfrost (Gefrierfach)', v: F.q1},
+                 {t: 'switch', k: 'quick2', l: 'Superkühlung (Kühlfach)', v: F.q2},
+                 {t: 'switch', k: 'doorheat', l: 'Türheizung', v: F.door},
+                 {t: 'select', k: 'bpd', l: 'Batterieschutz', o: 'Stufe 1|Stufe 2|Stufe 3', v: 1}, sw],
+          raw: '/SC0/2,1,1,-17,5,-18,4,2,129,22,96,3,1,0,0,-10,-22,10,-10'};
+      }
+      case 'wipro': {
+        const names = (p.cfg.names || '').split(',');
+        const open = Math.floor(t / 30) % 2 === 1;   // the rear door opens now and then
+        const rows = [['Scharf', 'Nein', ''], ['Alarmgrund', 'Kein Alarm', ''], ['Offen', open ? (names[1] || 'Kontakt 1') : 'nichts', '']];
+        for (let i = 0; i < 8; i++) rows.push([(names[i] || '').trim() || 'Kontakt ' + i, i === 1 && open ? 'offen' : 'zu', '']);
+        rows.push(['Bluetooth', -78, 'dBm']);
+        return {state: rel ? 'Für App freigegeben' : 'Verbunden', ok: !rel, rows, ctrl: [sw],
+                raw: open ? '01 00 00 00 00 00 02 00' : '01 00 00 00 00 00 00 00'};
+      }
+      case 'obd': {
+        const rows = [['Motor', 'läuft', ''], ['Bordspannung', wave(14.1, 0.05, 7), 'V'], ['Drehzahl', Math.round(wave(1650, 250, 6)), 'U/min'],
+          ['Geschwindigkeit', Math.round(wave(82, 6, 9)), 'km/h'], ['Kühlwasser', 88, '°C'], ['Tankfüllstand', 63, '%'],
+          ['Verbrauch', wave(7.9, 1.2, 5), 'l/h'], ['AdBlue', 71, '%'], ['Motorlast', Math.round(wave(38, 8, 5)), '%'],
+          ['Außentemperatur', 6, '°C'], ['Kilometerstand', 84213.4, 'km'],
+          ['Motorkontrollleuchte', 'aus', ''], ['Fehlercodes', 'keine', ''],
+          ['Protokoll', 'ISO 15765-4 CAN (29 bit, 500 kbaud)', ''], ['Adapter', 'ELM327 v2.3', ''], ['Bluetooth', -80, 'dBm']];
+        if (M.obdScan) rows.push(['Fahrzeug-Scan', M.obdScan, '']);
+        return {state: 'Verbunden', ok: true, rows,
+                ctrl: [{t: 'buttons', k: 'action', b: [['read_dtc', 'Fehlercodes lesen'], ['scan', 'Fahrzeug scannen']]}, sw],
+                raw: '41 0C 19 C8'};
+      }
+      case 'daly': case 'ective': case 'bm2': {
+        const B = {daly: [78, 13.31, -4.2, 78, 1038, 18.6, 14.5, 41], ective: [92, 13.38, 1.6, 92, 1224, null, 15.1, 12],
+                   bm2: [86, 12.62, null, null, null, null, null, null]}[p.type];
+        const rows = [['Spannung', B[1], 'V']];
+        if (B[2] !== null) rows.push(['Strom', B[2], 'A'], ['Leistung', Math.round(B[1] * B[2]), 'W']);
+        if (B[3] !== null) rows.push(['Restkapazität', B[3], 'Ah'], ['Energie', B[4], 'Wh']);
+        if (B[5] !== null) rows.push(['Restlaufzeit', B[5], 'h']);
+        if (B[6] !== null) rows.push(['Temperatur', B[6], '°C']);
+        if (p.type === 'daly') rows.push(['Zellen', '4 × 3.326 … 3.331 V', ''], ['Zelldifferenz', 5, 'mV']);
+        if (B[7] !== null) rows.push(['Zyklen', B[7], '']);
+        rows.push(['Zustand', B[2] === null ? 'Ruhe' : B[2] < 0 ? 'Entladen' : 'Laden', ''], ['Alter', 3, 's'], ['Bluetooth', -68, 'dBm']);
+        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, gauge: {v: B[0], unit: '%', label: 'Ladestand', max: 100}, rows, ctrl: [sw]};
+      }
+      case 'dimes': case 'mopeka': case 'mopeka_std': {
+        const lvl = {dimes: 64.5, mopeka: 41.2, mopeka_std: 87.0}[p.type], cap = +p.cfg.capacity || 27.2;
+        const rows = [['Inhalt', Math.round(cap * lvl / 10) / 10, 'L'], ['Rohwert', lvl, '%']];
+        if (p.type !== 'dimes') rows.push(['Füllhöhe', Math.round(38 + (366 - 38) * lvl / 100), 'mm'], ['Temperatur', 7, '°C'], ['Messqualität', 3, '/ 3']);
+        rows.push(['Batterie', p.type === 'dimes' ? 90 : 75, '%'], ['Bluetooth', -79, 'dBm'], ['Alter', 8, 's']);
+        return {state: 'OK', ok: true, gauge: {v: lvl, unit: '%', label: 'Füllstand'}, rows,
+                raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
+      }
+      case 'supersense': {
+        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor
+        const raw = [Math.round(wave(1820, 6, 11)), 640, 9999, 9999];
+        const pct = raw.map(r => Math.round(r / 24.75));
+        const size = [+p.cfg.tank_size || 100, +p.cfg.size2 || 90];
+        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel,
+          gauge: {v: pct[0], unit: '%', label: 'Frischwasser', max: 100},
+          rows: [['Sensor 1: Frischwasser', pct[0] + ' % · ' + (pct[0] * size[0] / 100).toFixed(1) + ' L · Rohwert ' + raw[0] + ' · 9.3 °C', ''],
+                 ['Sensor 2: Grauwasser', pct[1] + ' % · ' + (pct[1] * size[1] / 100).toFixed(1) + ' L · Rohwert ' + raw[1] + ' · 10.2 °C', ''],
+                 ['Bluetooth', -76, 'dBm']],
+          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 99 99 99 99'};
+      }
+      case 'tpms': {
+        const p = [3.62, 3.21, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];
+        const pos = ['Vorne links', 'Vorne rechts', 'Hinten links', 'Hinten rechts'];
+        return {state: 'Vorne rechts: 3.21 bar zu niedrig', ok: false,
+          rows: pos.map((n, i) => [n, p[i].toFixed(2) + ' bar · ' + (9 + i) + ' °C · ' + [100, 100, 62, 100][i] + ' % · ' + (20 + 7 * i) + ' s' + (i === 1 ? ' · ⚠' : ''), '']).concat(
+                [[MAC(31), '2.10 bar · -88 dBm · nicht zugeordnet', '']])};
+      }
+      case 'govee':
+        return {state: 'OK', ok: true,
+          rows: [['Temperatur', 4.3, '°C'], ['Luftfeuchte', 71, '%'], ['Batterie', 100, '%'], ['Modell', 'H5072/H5075', ''], ['Bluetooth', -83, 'dBm'], ['Alter', 12, 's']]};
+      case 'bthome':
+        return {state: 'OK', ok: true,
+          rows: [['Batterie', 87, '%'], ['Temperatur', 19.8, '°C'], ['Luftfeuchte', 54.2, '%'], ['Spannung', 2.91, 'V'], ['Bluetooth', -76, 'dBm'], ['Alter', 6, 's']],
+          raw: '40 00 A5 01 57 02 BC 07 03 2C 15 0C 5E 0B'};
+      case 'blesensor':
+        return {state: 'OK', ok: true,
+          rows: [['Temperatur', Math.round(wave(21.4, 0.3, 60) * 10) / 10, '°C'], ['Luftfeuchte', 58, '%'], ['Batterie', 87, '%'], ['Bluetooth', -77, 'dBm'], ['Alter', 4, 's']],
+          raw: '0: 56 34 12 38  4: C1 A4 5C 08  8: A8 16 1E 0B  12: 57 C2 0F'};
+    }
+    return {state: 'Warte auf Daten', ok: false, rows: []};
+  },
+  state() {
+    const t = (Date.now() - M.t0) / 1000;
+    // live data: only what runs in this boot (pending devices start with the restart)
+    const runs = p => p.running && !p.removed;
+    const plugins = M.cfg.plugins.filter(p => !p.pending && !p.removed).map(p => {
+      const o = {id: p.id, name: p.cfg.name, type: p.type, enabled: runs(p)};
+      if (!o.enabled) return o;
+      if (!p.cfg.mac) return Object.assign(o, {state: 'Keine MAC eingestellt', ok: false, rows: []});
+      return Object.assign(o, M.live(p, t));
+    });
+    return {rssi: -58, uptime: M.up(), heap: 98000, wifi_drops: 0, wifi_reason: '', wifi: 'Verbunden', mqtt: true,
+            ble: {adv: 1200 + Math.floor((Date.now() - M.t0) / 100), scanning: true}, plugins};
+  }
+};
+
+// base: ble
+// battery-node: same core and web page as the ble-node (ble.js above), only the battery types.
+M.id = 'battery';
+M.hw = 'atoms3';
+M.chip = 'esp32s3';
+M.fw = {name: 'Battery Node', dir: 'battery'};
+Object.assign(M.config, {
+  version: '2.5.0', device: 'battery-node', ha_node: 'camper_battery',
+  core: Object.assign({}, M.config.core, {ap_ssid: 'Battery-Node-A1B2C3', mqtt_prefix: 'camper/battery', node_name: 'battery-node'}),
+  plugins: [
+    P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),
+    P('ective', 'ective', 'Batterie: Ective BM X', 2, {name: 'Zweitbatterie', mac: MAC(7), interval: 10}),
+    P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)})],
+  types: [{type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2},
+          {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2}],
+  max_devices: 6,
+  max_links: 3
+});
+
+// Mockup runtime: replaces the device API (fetch, WebSocket, upload) with a simulation.
+// The device script before this one defines M = {config, state(), route(), wsCmd(), wsOpen()}.
+(function () {
+  const KEY = 'mock:' + (M.id || location.pathname);
+  // Settings survive the "restart" reload of the page (per browser tab only).
+  let saved = {};
+  try { saved = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) {}
+  M.cfg = Object.assign({}, M.config, saved);
+  M.save = function (patch) {
+    Object.assign(M.cfg, patch);
+    Object.assign(saved, patch);
+    try { sessionStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+  };
+  M.t0 = Date.now();
+  M.up = () => (M.uptime0 || 93780) + Math.floor((Date.now() - M.t0) / 1000);
+
+  const json = (o, status) => Promise.resolve(new Response(typeof o === 'string' ? o : JSON.stringify(o),
+    { status: status || 200, headers: { 'Content-Type': typeof o === 'string' ? 'text/plain' : 'application/json' } }));
+  function bodyOf(opt) {
+    const b = opt && opt.body;
+    if (!b) return {};
+    if (typeof b === 'string') {
+      try { return JSON.parse(b); } catch (e) { return Object.fromEntries(new URLSearchParams(b)); }
+    }
+    if (b instanceof URLSearchParams || b instanceof FormData) return Object.fromEntries(b);
+    return {};
+  }
+  window.fetch = function (url, opt) {
+    opt = opt || {};
+    const u = new URL(url, location.href);
+    const method = (opt.method || 'GET').toUpperCase();
+    const body = bodyOf(opt);
+    const r = M.route ? M.route(u.pathname, method, body, u.searchParams) : undefined;
+    if (r !== undefined) return json(r);
+    // firmware info and event log (fwcheck / evlog), the same example for every device
+    if (u.pathname === '/api/system' && method === 'GET') {
+      const S3 = M.id === 'level' || M.id === 'display';
+      const chip = M.chip || (S3 ? 'esp32s3' : 'esp32c3');   // M.chip: device script may set its chip
+      const chipId = {esp32: 0, esp32s3: 9, esp32c3: 5}[chip] ?? 5;
+      // M.fw: device script may add fields, e.g. name and dir for the about card (battery-node)
+      return json({fw: Object.assign({dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: M.hw || chip, max: 1966080}, M.fw || {}),
+                   up: 5400, log: [
+        {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
+        {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},
+        {b: 0, t: 3598, m: 'Firmware-Upload gestartet (1340 kB)'}, {b: 0, t: 3, m: 'MQTT verbunden'},
+        {b: 0, t: 2, m: 'WLAN verbunden (192.168.8.31, -63 dBm)'}, {b: 0, t: 0, m: 'Start v' + ((M.cfg && M.cfg.version) || '1.7.0') + ', Grund: Neustart (Software)'},
+        {b: 1, t: 812, m: 'Update auf v' + ((M.cfg && M.cfg.version) || '1.7.0') + ' ok (1187 kB), Neustart'}, {b: 1, t: 0, m: 'Start v1.6.0, Grund: Einschalten'}]});
+    }
+    if (u.pathname === '/api/config' && method === 'GET') return json(M.cfg);
+    if (u.pathname === '/api/config' && method === 'POST') {
+      const p = Object.assign({}, body);
+      for (const k of Object.keys(p)) if (/pass|token/i.test(k)) delete p[k];  // never echo secrets
+      M.save(p);
+      return json({ ok: true });
+    }
+    return json({ ok: true });
+  };
+
+  // WebSocket: pushes M.state() every M.wsInterval ms, M.wsCmd() gets what the page sends
+  class FakeWS {
+    constructor() {
+      this.readyState = 0;
+      setTimeout(() => {
+        this.readyState = 1;
+        if (this.onopen) this.onopen({});
+        if (M.wsOpen) M.wsOpen((o) => this._emit(o));
+        this._tick();
+      }, 120);
+      this._timer = setInterval(() => this._tick(), M.wsInterval || 1000);
+    }
+    _emit(o) { if (this.onmessage) this.onmessage({ data: JSON.stringify(o) }); }
+    _tick() { if (M.state) this._emit(M.state()); }
+    send(d) {
+      let o = d;
+      try { o = JSON.parse(d); } catch (e) {}
+      const reply = M.wsCmd ? M.wsCmd(o) : null;
+      if (reply) this._emit(reply);
+      setTimeout(() => this._tick(), 150);
+    }
+    close() { clearInterval(this._timer); this.readyState = 3; }
+    addEventListener(ev, fn) { this['on' + ev] = fn; }
+  }
+  FakeWS.CONNECTING = 0; FakeWS.OPEN = 1; FakeWS.CLOSING = 2; FakeWS.CLOSED = 3;
+  window.WebSocket = FakeWS;
+
+  // File upload: simulated progress, answers like the firmware ("OK" or "OK web" for a .gz page)
+  class FakeXHR {
+    constructor() { this.upload = {}; this.status = 0; this.responseText = ''; }
+    open(m, u) { this._u = u; }
+    setRequestHeader() {}
+    send(fd) {
+      let name = '';
+      try { for (const v of fd.values()) if (v && v.name) name = v.name; } catch (e) {}
+      let p = 0;
+      const iv = setInterval(() => {
+        p += 25;
+        if (this.upload.onprogress) this.upload.onprogress({ lengthComputable: true, loaded: p, total: 100 });
+        if (p >= 100) {
+          clearInterval(iv);
+          this.status = 200;
+          this.responseText = /\.gz$/i.test(name) ? 'OK web' : 'OK';
+          if (this.onload) this.onload();
+        }
+      }, 250);
+    }
+  }
+  window.XMLHttpRequest = FakeXHR;
+
+  // Dialogs are blocked in some embedded viewers; the mockup always answers "yes"
+  window.confirm = () => true;
+  window.alert = (m) => console.log('[alert]', m);
+
+  // Banner
+  document.addEventListener('DOMContentLoaded', () => {
+    const b = document.createElement('div');
+    b.textContent = 'Mockup mit Beispieldaten – keine Verbindung zu einem Gerät';
+    b.style.cssText = 'position:sticky;top:0;z-index:9999;background:#d4a017;color:#000;text-align:center;font:600 12px system-ui;padding:4px';
+    document.body.prepend(b);
+    // body as a flex row (e.g. BLE node on wide screens): the bar would become a column,
+    // so it is fixed on top and the body moves down by its height
+    const cs = getComputedStyle(document.body);
+    if (cs.display.includes('flex') && !cs.flexDirection.startsWith('column')) {
+      b.style.position = 'fixed'; b.style.left = '0'; b.style.right = '0';
+      document.body.style.paddingTop = ((parseFloat(cs.paddingTop) || 0) + b.offsetHeight) + 'px';
+    }
+  });
+})();
+
+</script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VanNode BLE</title>
+    <style>
+      /* Same look as the other VanNode devices (battery, tanklevel, temp ...) */
+      :root {
+        --bg-primary: #0f1419;
+        --bg-secondary: #1a2332;
+        --bg-card: #1e2d3d;
+        --bg-input: #0d1b2a;
+        --accent: #4fc3f7;
+        --warning: #ffb800;
+        --danger: #ff4757;
+        --success: #00d4aa;
+        --warm: #ff9f43;
+        --text-primary: #e8f0f8;
+        --text-secondary: #8899aa;
+        --text-muted: #556677;
+        --border: #2a3a4a;
+        --radius: 12px;
+        /* names used by the firmware update block */
+        --ok: var(--success);
+        --warn: var(--warning);
+        --bad: var(--danger);
+        --mute: var(--text-secondary);
+        --line: var(--border);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg-primary); color: var(--text-primary);
+        min-height: 100vh; overflow-x: hidden;
+      }
+      header {
+        background: var(--bg-secondary); padding: 16px 20px; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      }
+      header h1 { font-size: 1.15rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
+      .status-dots { display: flex; gap: 6px; align-items: center; font-size: 0.65rem; color: var(--text-muted); }
+      .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); display: inline-block; margin-right: 4px; }
+      .status-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(0, 212, 170, 0.3); }
+      .status-dot.bad { background: var(--danger); }
+      /* Icon above the label: all tabs fit even on small phones */
+      nav { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
+      nav button {
+        flex: 1 0 64px; min-width: 64px; max-width: 140px; padding: 8px 6px 7px; font: inherit; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
+        display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0;
+        color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+      }
+      nav button .ico { font-size: 1.05rem; line-height: 1; }
+      nav button.on { color: var(--accent); border-bottom-color: var(--accent); background: rgba(79, 195, 247, 0.05); }
+      main { padding: 16px; }
+      @media (min-width: 600px) {
+        body { display: flex; justify-content: center; }
+        .app-wrap { width: 100%; max-width: 520px; }
+      }
+      .card {
+        position: relative; background: var(--bg-card); border-radius: var(--radius); padding: 16px;
+        margin-bottom: 12px; border: 1px solid var(--border); overflow: hidden; font-size: 0.85rem;
+      }
+      .card h2 {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+        font-size: 0.75rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px;
+        color: var(--text-secondary); margin-bottom: 12px;
+      }
+      .card h2 .mute { text-transform: none; letter-spacing: 0; font-size: 0.65rem; color: var(--text-muted); }
+      /* Live: one card per plugin with a coloured bar on the left like the battery cards */
+      .card.dev-card { padding: 14px 14px 12px 20px; }
+      .card.dev-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--text-muted); }
+      .card.dev-card.ok::before { background: var(--success); }
+      .state { font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: none; letter-spacing: 0;
+        background: rgba(255, 184, 0, 0.15); color: var(--warning); white-space: nowrap; }
+      .state.ok { background: rgba(0, 212, 170, 0.15); color: var(--success); }
+      .gauge .v { font-size: 2.4rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; color: var(--accent); }
+      .card.ok .gauge .v { color: var(--success); }
+      .gauge .l { font-size: 0.8rem; color: var(--text-secondary); margin: 2px 0 8px; }
+      .bar { height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+      .bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s; }
+      .card.ok .bar i { background: var(--success); }
+      /* Zones: equal panels side by side (e.g. freezer / fridge), each with its own switch */
+      .zones { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+      .zone { background: var(--bg-input); border-radius: 10px; padding: 10px 8px; text-align: center; min-width: 0; }
+      .zone .l { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .zone .v { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; color: var(--accent); }
+      .card.ok .zone .v { color: var(--success); }
+      .zone.off .v, .card.ok .zone.off .v { color: var(--text-muted); }
+      .zone .s { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px; }
+      .zone label { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+      .zone .step { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .zone .step button.b { width: 40px; height: 36px; padding: 0; margin: 0; font-size: 1.2rem; line-height: 1; }
+      .zone .step b { min-width: 3.6em; font-variant-numeric: tabular-nums; }
+      .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .tile { background: var(--bg-input); border-radius: 8px; padding: 8px 6px; text-align: center; min-width: 0; }
+      .tile span { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tile b { font-size: 1rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+      @media (max-width: 374px) { .tiles { grid-template-columns: 1fr 1fr; } header { padding: 14px 12px; } }
+      .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+      .ctl label { flex: 1 1 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--text-secondary); }
+      .ctl input[type="range"] { flex: 1; accent-color: var(--accent); }
+      .ctl label > span { min-width: 2.5em; text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+      .row { display: flex; gap: 8px; align-items: center; }
+      .row > * { flex: 1; }
+      /* Buttons */
+      button.b {
+        display: inline-flex; align-items: center; justify-content: center; width: 100%; margin-top: 12px;
+        padding: 10px 16px; border-radius: 8px; font: inherit; font-size: 0.85rem; font-weight: 600;
+        cursor: pointer; border: none; background: var(--accent); color: var(--bg-primary);
+      }
+      button.b.s { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+      button.b.d { background: rgba(255, 71, 87, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+      .row button.b, .ctl button.b, .dev button.b { margin-top: 0; }
+      .ctl .row button.b { padding: 8px 6px; }
+      .dev button.b, .f .row button.b { width: auto; padding: 8px 12px; font-size: 0.75rem; }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      /* Toggle switch (checkboxes) */
+      input[type="checkbox"] {
+        appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0;
+        width: 46px; height: 26px; border-radius: 13px; background: var(--border); cursor: pointer; transition: 0.2s;
+      }
+      input[type="checkbox"]::before {
+        content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+        background: var(--text-primary); border-radius: 50%; transition: 0.2s;
+      }
+      input[type="checkbox"]:checked { background: var(--accent); }
+      input[type="checkbox"]:checked::before { transform: translateX(20px); }
+      /* Forms */
+      .f { margin-bottom: 12px; }
+      .f > span { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+      .f > label { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+      .f > label .mute { margin-left: auto; }
+      .f input:not([type="checkbox"]), .f select {
+        width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border);
+        border-radius: 8px; color: var(--text-primary); font: inherit; font-size: 0.9rem; outline: none;
+      }
+      .f input:focus, .f select:focus { border-color: var(--accent); }
+      .f input[type="file"] { padding: 8px; font-size: 0.8rem; }
+      .f small, .card > small { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+      .mute { color: var(--text-muted); font-size: 0.8rem; }
+      code { font-family: ui-monospace, Menlo, monospace; }
+      /* Info table (System) */
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 8px 0; border-bottom: 1px solid var(--border); }
+      td:first-child { color: var(--text-secondary); }
+      td:last-child { text-align: right; }
+      tr:last-child td { border-bottom: 0; }
+      /* Device lists (Bluetooth, picker) */
+      .dev {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        background: var(--bg-input); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 0.8rem;
+      }
+      /* configured device in the "nearby" list: plugin name / wheel */
+      .tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--accent); color: #0b1520; font-size: 0.72rem; }
+      .dev b { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; font-weight: 600; word-break: break-all; }
+      .dev > span:last-child { text-align: right; white-space: nowrap; }
+      .picker { margin-top: 8px; }
+      details { margin-top: 10px; font-size: 0.75rem; color: var(--text-secondary); }
+      .raw { font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-top: 6px; color: var(--text-primary); }
+      #toast {
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); opacity: 0;
+        background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 20px;
+        font-size: 0.85rem; color: var(--accent); transition: all 0.3s; z-index: 999; pointer-events: none;
+      }
+      #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+      #toast.err { border-color: var(--danger); color: var(--danger); }
+      .hide { display: none; }
+      /* Firmware update and event log (same block as the other devices) */
+      .fwu-cur { font-size: 0.8rem; margin: 0 0 10px; }
+      .fwu-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0 0 8px; line-height: 1.4; }
+      .fwu-chk { font-size: 0.8rem; margin: 8px 0; line-height: 1.4; }
+      .fwu-chk.ok { color: var(--ok); }
+      .fwu-chk.warn { color: var(--warn); }
+      .fwu-chk.bad { color: var(--bad); }
+      .f label:has(input:disabled) { opacity: 0.4; cursor: not-allowed; }
+      .fwu-force { display: flex; gap: 8px; align-items: center; font-size: 0.8rem; margin: 0 0 8px; }
+      .fwu-log { font-size: 0.75rem; line-height: 1.4; max-height: 320px; overflow-y: auto; }
+      .fwu-ev { padding: 4px 0; border-bottom: 1px solid var(--line); }
+      .fwu-ev:last-child { border-bottom: 0; }
+      .fwu-ev span { color: var(--mute); margin-right: 8px; white-space: nowrap; }
+      .fwu-ev.bad { color: var(--bad); }
+    /* camper-theme:begin */
+/* VanNode design (same look as the display): calm and technical, colour means state,
+   blue means control. Shared block, edit firmware/_common/web/camper-theme.css and run
+   tools/common/sync_common.py; it overrides the page's own styles above it. */
+:root{
+ --bg-primary:#0D1115;--bg-secondary:#11161B;--bg-card:#151B21;--bg-input:#0D1115;--border:#222B34;--radius:14px;
+ --accent:#4DA3F0;--accent-glow:rgba(77,163,240,.25);--success:#46B97C;--warning:#E5A23B;--danger:#E5534B;
+ --text-primary:#E7ECF0;--text-secondary:#B4BEC8;--text-muted:#8B98A5;
+ --water:#3E9BE0;--water-glow:rgba(62,155,224,.25);--gas:#D9893A;--grey:#8A96A3;
+ --cold:#3E9BE0;--mild:#46B97C;--warm:#E5A23B;--hot:#E5534B;
+ --bg:#0D1115;--bg2:#11161B;--card:#151B21;--input:#0D1115;--acc:#4DA3F0;--acc-glow:rgba(77,163,240,.25);--warn:#E5A23B;
+ --ok:#46B97C;--ink:#E7ECF0;--mute:#8B98A5;--dim:#6F7C89;--line:#222B34;--r:14px;--bad:#E5534B;
+ --cm-line2:#2F3A45;--cm-hi:#1C242C;--cm-acx:#06131F;color-scheme:dark}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.4}
+svg.i{width:20px;height:20px;flex:none;vertical-align:-4px}
+.header{background:var(--bg-primary);padding:14px 16px;border-bottom:1px solid var(--border);gap:12px}
+.header h1{font-size:1.15rem;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:10px;min-width:0}
+.header h1 svg.i{color:var(--accent)}
+.status-dots{gap:6px;font-size:.75rem;color:var(--text-primary);flex-wrap:wrap;justify-content:flex-end}
+.status-dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.status-dot{width:8px;height:8px;margin-right:6px;background:var(--cm-line2);box-shadow:none}
+.status-dot.active{background:var(--success);box-shadow:none}
+.status-dot.warning{background:var(--warning)}
+.tabs{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font-size:.72rem;color:var(--text-muted);border-bottom:2px solid transparent;border-radius:10px 10px 0 0;padding:8px 2px 8px;gap:4px}
+.tab .ico{display:inline-flex;font-size:1.05rem}
+.tab .ico svg.i{width:20px;height:20px}
+.tab.active,.tab.gas.active,.tab.grey.active{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+.tab.active .ico{color:var(--accent)}
+.tab-content{padding:16px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+.card-title,.card-title.accent,.card-title.water,.card-title.gas{font-size:.85rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-secondary);margin-bottom:12px}
+.values-grid{gap:10px}
+.value-item{background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:left}
+.value-label{font-size:.75rem;color:var(--text-muted)}
+.value-num{font-size:1.35rem;font-weight:600}
+.info-row{padding:10px 0;font-size:.9rem}
+.info-label{color:var(--text-muted)}
+.form-group label{font-size:.8rem;color:var(--text-muted);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{min-height:40px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--cm-line2);border-radius:10px;font-size:.95rem;color:var(--text-primary)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
+.form-hint{font-size:.78rem;color:var(--text-muted)}
+.btn{min-height:44px;border-radius:10px;font-size:.95rem;font-weight:600;gap:8px}
+.btn-primary{background:var(--accent);color:var(--cm-acx);border:1px solid var(--accent)}
+.btn-secondary{background:var(--cm-hi);color:var(--text-primary);border:1px solid var(--cm-line2)}
+.btn-danger{background:transparent;color:#F08A84;border:1px solid #5A2A2A}
+.btn-small{min-height:34px;padding:6px 12px;font-size:.85rem;border-radius:9px}
+.btn-row{gap:10px}
+.enable-row{padding:4px 0}
+.toggle{width:44px;height:26px}
+.toggle span{background:var(--cm-line2);border-radius:999px}
+.toggle span::before{width:20px;height:20px;left:3px;top:3px;background:#fff}
+.toggle input:checked+span{background:var(--accent)}
+.toggle input:checked+span::before{transform:translateX(18px)}
+.badge{border-radius:999px;padding:2px 8px;background:rgba(77,163,240,.15);color:var(--accent)}
+.badge.err{background:rgba(229,83,75,.15);color:var(--danger)}
+.badge.new{background:rgba(229,162,59,.15);color:var(--warning)}
+.dev{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.empty{color:var(--text-muted)}
+.toast{background:var(--text-primary);color:var(--bg-primary);border:0;border-radius:10px}
+.toast.err{background:var(--danger);color:#fff}
+.alarm-banner{background:#2A2213;border-color:#4A3A1C;color:#F6D9A3}
+a{color:var(--accent)}
+@media (min-width:600px){.app-wrap{max-width:560px}}
+/* the same parts under other names (toolbox: header/nav, maxxfan: .dots/.dot/.ct) */
+header{background:var(--bg-primary);border-bottom:1px solid var(--border)}
+header h1{color:var(--text-primary);display:flex;align-items:center;gap:10px}
+header h1 svg.i{color:var(--accent)}
+nav{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+nav button{color:var(--text-muted);border-radius:10px 10px 0 0;font-size:.72rem}
+nav button.on{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+nav button.on .ico{color:var(--accent)}
+nav button .ico{display:inline-flex}
+.dots{gap:6px;font-size:.75rem;color:var(--text-primary)}
+.dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.dot{background:var(--cm-line2);margin-right:6px;box-shadow:none}
+.dot.on{background:var(--ok);box-shadow:none}
+/* labels in sentence case instead of capitals, no coloured side stripes, flat fills */
+.ct,.temp-name,.bat-name,.gauge-title,.grp,.wedge .wl{text-transform:none;letter-spacing:0;font-size:.85rem}
+.ct{font-weight:600;color:var(--text-secondary)}
+.temp-tile::before{display:none}
+.temp-tile{padding:14px}
+.tank-fill{background:var(--water)}
+.bat::before{display:none}
+.bat{padding-left:16px}
+.ct.acc{color:var(--text-secondary)}
+.header h1,header h1{white-space:normal}
+.header h1 span,header h1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card h2{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:600}
+.card.dev-card::before{display:none}
+/* camper-theme:end */
+/* vannode-symbol:begin */
+/* VanNode symbol left of the page title, generated by tools/logo/make_logo.py */
+.vn{display:inline-block;width:26px;height:26px;flex:none;vertical-align:-6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E") center/contain no-repeat}
+/* vannode-symbol:end */
+/* vannode-logo-wide:begin */
+/* VanNode logo with wordmark ("Über VanNode"), generated by tools/logo/make_logo.py */
+.vnlogo{display:block;width:240px;max-width:100%;aspect-ratio:681.5/200;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='682' height='200' viewBox='0.0 0.0 681.5 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3Cg transform='translate(225,136.8)'%3E%3Cpath transform='translate(0.00,0) scale(0.10000,-0.10000)' d='M313 160 434 558H616L418 0H207L9 558H192Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(60.60,0) scale(0.10000,-0.10000)' d='M274 566Q333 566 377.5 542.0Q422 518 446 479V558H617V0H446V79Q421 40 376.5 16.0Q332 -8 273 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(126.50,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(191.90,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(257.30,0) scale(0.10000,-0.10000)' d='M28 279Q28 365 66.0 430.5Q104 496 170.0 531.0Q236 566 318 566Q400 566 466.0 531.0Q532 496 570.0 430.5Q608 365 608 279Q608 193 569.5 127.5Q531 62 464.5 27.0Q398 -8 316 -8Q234 -8 168.5 27.0Q103 62 65.5 127.0Q28 192 28 279ZM434 279Q434 346 400.5 382.0Q367 418 318 418Q268 418 235.0 382.5Q202 347 202 279Q202 212 234.5 176.0Q267 140 316 140Q365 140 399.5 176.0Q434 212 434 279Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(319.00,0) scale(0.10000,-0.10000)' d='M274 566Q329 566 374.5 543.0Q420 520 446 481V740H617V0H446V80Q422 40 377.5 16.0Q333 -8 274 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(384.90,0) scale(0.10000,-0.10000)' d='M585 238H198Q202 186 231.5 158.5Q261 131 304 131Q368 131 393 185H575Q561 130 524.5 86.0Q488 42 433.0 17.0Q378 -8 310 -8Q228 -8 164.0 27.0Q100 62 64.0 127.0Q28 192 28 279Q28 366 63.5 431.0Q99 496 163.0 531.0Q227 566 310 566Q391 566 454.0 532.0Q517 498 552.5 435.0Q588 372 588 288Q588 264 585 238ZM413 333Q413 377 383.0 403.0Q353 429 308 429Q265 429 235.5 404.0Q206 379 199 333Z' fill='%232F8AE0'/%3E%3Ccircle cx='289.10' cy='-27.90' r='5.00' fill='%232F8AE0'/%3E%3Cg stroke='%232F8AE0' stroke-width='5.50' stroke-linecap='round'%3E%3Cline x1='289.10' y1='-51.10' x2='289.10' y2='-69.60'/%3E%3Cline x1='306.10' y1='-48.60' x2='316.10' y2='-61.60'/%3E%3C/g%3E%3Ccircle cx='289.10' cy='-74.10' r='7.50' fill='%232F8AE0'/%3E%3Ccircle cx='318.10' cy='-64.60' r='7.50' fill='%232F8AE0'/%3E%3C/g%3E%3C/svg%3E") left center/contain no-repeat}
+/* vannode-logo-wide:end */
+</style>
+  <!-- vannode-icon:begin -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E">
+<!-- vannode-icon:end -->
+</head>
+  <body>
+    <div class="app-wrap">
+    <header>
+      <h1 id="title"><i class="vn" aria-hidden="true"></i><span>BLE Node</span></h1>
+      <div class="status-dots">
+        <span id="cBle"><span class="status-dot"></span>BLE</span>
+        <span id="cWifi"><span class="status-dot"></span>WiFi</span>
+        <span id="cMqtt"><span class="status-dot"></span>MQTT</span>
+      </div>
+    </header>
+    <nav id="nav"></nav>
+    <main id="main"></main>
+    </div>
+    <div id="toast"></div>
+    <script>
+      const $ = (s) => document.querySelector(s),
+        el = (t, a = {}, ...c) => {
+          const e = document.createElement(t);
+          for (const k in a) {
+            if (k == "on")
+              for (const ev in a.on) e.addEventListener(ev, a.on[ev]);
+            else if (k in e && k != "list") e[k] = a[k];
+            else e.setAttribute(k, a[k]);
+          }
+          for (const x of c) if (x != null) e.append(x);
+          return e;
+        };
+      let CFG = null,
+        LIVE = null,
+        tab = "live",
+        ws = null;
+      const TX = {
+        34: "8,5 dBm",
+        44: "11 dBm",
+        52: "13 dBm",
+        60: "15 dBm",
+        70: "17,5 dBm",
+        78: "19,5 dBm",
+      };
+      function toast(t, err) {
+        const x = $("#toast");
+        x.textContent = t;
+        x.classList.toggle("err", !!err);
+        x.classList.add("show");
+        clearTimeout(x._t);
+        x._t = setTimeout(() => x.classList.remove("show"), 2500);
+      }
+      async function api(url, body) {
+        const r = await fetch(
+          url,
+          body === undefined
+            ? {}
+            : {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              },
+        );
+        let j = {};
+        try {
+          j = await r.json();
+        } catch (e) {}
+        if (!r.ok) throw new Error(j.error || r.statusText);
+        return j;
+      }
+      function fmt(v, u) {
+        if (v === null || v === undefined) return "–";
+        if (typeof v == "number") v = v.toLocaleString("de-DE");
+        return v + (u ? " " + u : "");
+      }
+
+      // ---------------- Navigation ----------------
+      // Tab icon per plugin type (unknown types get a plug)
+      const SVGP = {
+        chart: "M4 4v16h16M8 15l3-4 3 3 5-6", hatch: "M3 18h18M6 18l2-7h8l2 7M9 11l3-5 3 5",
+        pump: "M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z", snow: "M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9",
+        fire: "M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 3-5 0 2 1 3 2 3 0-3-1-5 0-8z", plug: "M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0zM12 16v5",
+        radio: "M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12v8", wifi: "M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01",
+        sliders: "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4",
+        sys: "M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4",
+        bug: "M8 8a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0zM12 12v6M4 10h4M16 10h4M4 16h4M16 16h4M9 4l1.5 2M15 4l-1.5 2",
+      };
+      // stroke icons as in all VanNode pages (no emoji)
+      const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio", govee: "radio", bthome: "radio", daly: "plug", ective: "plug", bm2: "plug" };
+      function tabs() {
+        // Devices share one tab ("Geräte": list, add / remove, then the settings of one device),
+        // so the bar stays short however many devices there are
+        const t = [
+          ["live", "Live", "chart"],
+          ["dev", "Geräte", "plug"],
+          ["ble", "Bluetooth", "radio"],
+          ["wifi", "WLAN", "wifi"],
+          ["mqtt", "MQTT", "sliders"],
+          ["sys", "System", "sys"],
+        ];
+        // Debug tab only with the setting System -> Debug
+        if (CFG.core && CFG.core.debug) t.push(["dbg", "Debug", "bug"]);
+        else if (tab == "dbg") tab = "sys";
+        $("#nav").replaceChildren(
+          ...t.map(([k, l, ico]) =>
+            el(
+              "button",
+              {
+                className: tab == k || (k == "dev" && tab.startsWith("p:")) ? "on" : "",
+                title: l,
+                on: {
+                  click: () => {
+                    tab = k;
+                    render();
+                  },
+                },
+              },
+              Object.assign(el("span", { className: "ico" }), { innerHTML: svg(ico) }),
+              el("span", {}, l),
+            ),
+          ),
+        );
+      }
+      function render() {
+        tabs();
+        const m = $("#main");
+        m.replaceChildren();
+        if (CFG.safe)
+          m.append(
+            el(
+              "div",
+              { className: "card", style: "border:1px solid var(--warning)" },
+              el("b", { style: "color:var(--warning)" }, "Sicherer Start – alle Geräte sind aus"),
+              el(
+                "small",
+                { style: "display:block;margin-top:6px" },
+                "Der Node wurde mehrmals schnell hintereinander gestartet. Unter Geräte das Gerät abschalten, das Probleme macht, dann neu starten. Ohne Änderung laufen nach dem nächsten Neustart wieder alle Geräte.",
+              ),
+            ),
+          );
+        if (tab == "live") renderLive();
+        else if (tab == "dev") renderPlugins();
+        else if (tab.startsWith("p:")) {
+          const p = CFG.plugins.find((x) => "p:" + x.id == tab);
+          if (p && !p.removed) renderPlugin(p);
+          else {
+            tab = "dev";
+            return render();
+          }
+        }
+        else if (tab == "ble") renderBle();
+        else if (tab == "wifi") renderWifi();
+        else if (tab == "mqtt") renderMqtt();
+        else if (tab == "dbg") renderDebug();
+        else renderSys();
+      }
+
+      // ---------------- Live ----------------
+      let ctlTouch = 0; // last time a live control was used
+      const pending = {}; // value sent with - / +, shown until the device reports it (max 10 s)
+      document.addEventListener("pointerdown", () => (ctlTouch = Date.now()), true);
+      function cmd(p, k, v) {
+        api("/api/cmd", { p, k, v: String(v) }).catch((e) => toast(e.message, true));
+      }
+      function renderLive() {
+        const g = el("div", { className: "grid", id: "live" });
+        $("#main").append(g);
+        if (!CFG.plugins.length)
+          g.append(
+            el(
+              "div",
+              { className: "card" },
+              "Noch kein Gerät angelegt – unter Geräte mit „+ Gerät hinzufügen“.",
+            ),
+          );
+        else if (!CFG.plugins.some((p) => p.cfg.enabled))
+          g.append(
+            el(
+              "div",
+              { className: "card" },
+              "Alle Geräte sind ausgeschaltet – unter Geräte einschalten.",
+            ),
+          );
+        updateLive();
+      }
+      function updateLive() {
+        const g = $("#live");
+        if (!g || !LIVE) return;
+        const a = document.activeElement;
+        // Do not disturb a control that is in use (open select, slider being dragged).
+        // Controls lose focus after a change, so the view never freezes afterwards.
+        if (a && g.contains(a) && (a.type == "range" || a.tagName == "SELECT") && Date.now() - ctlTouch < 15000)
+          return;
+        if (a && g.contains(a) && a.type == "text") return; // Text being typed: no redraw
+        g.replaceChildren(...LIVE.plugins.filter((p) => p.enabled).map(card));
+      }
+      function card(p) {
+        const c = el("div", { className: "card dev-card" + (p.enabled && p.ok ? " ok" : "") });
+        c.append(
+          el(
+            "h2",
+            {},
+            p.name,
+            el("span", {
+              className: "state" + (p.ok ? " ok" : ""),
+              textContent: p.enabled ? p.state || "" : "Aus",
+            }),
+          ),
+        );
+        if (!p.enabled) {
+          c.append(
+            el(
+              "div",
+              { className: "mute" },
+              "Unter Geräte einschalten.",
+            ),
+          );
+          return c;
+        }
+        if (p.gauge) {
+          const G = p.gauge,
+            min = G.min ?? 0,
+            max = G.max ?? 100,
+            pct =
+              G.v == null
+                ? 0
+                : Math.max(0, Math.min(100, ((G.v - min) / (max - min)) * 100));
+          c.append(
+            el(
+              "div",
+              { className: "gauge" },
+              el("div", { className: "v" }, fmt(G.v, G.unit)),
+              el("div", { className: "l" }, G.label || ""),
+              el(
+                "div",
+                { className: "bar" },
+                el("i", { style: "width:" + pct + "%" }),
+              ),
+            ),
+          );
+        }
+        // Main switch of a device (e.g. whole fridge) above its compartments
+        const top = (p.ctrl || []).filter((x) => x.top);
+        if (top.length) {
+          const box = el("div", { className: "ctl" });
+          for (const x of top) box.append(ctrl(p.id, x));
+          c.append(box);
+        }
+        if (p.zones)
+          c.append(
+            el(
+              "div",
+              { className: "zones" },
+              ...p.zones.map((z) =>
+                el(
+                  "div",
+                  { className: "zone" + (z.k && !z.on ? " off" : "") },
+                  el("div", { className: "l" }, z.l),
+                  el("div", { className: "v" }, fmt(z.v, z.unit)),
+                  z.step ? step(p.id, z.step) : el("div", { className: "s" }, z.s || ""),
+                  z.k ? ctrl(p.id, { t: "switch", k: z.k, l: "An", v: z.on }) : "",
+                ),
+              ),
+            ),
+          );
+        if (p.rows)
+          c.append(
+            el(
+              "div",
+              { className: "tiles" },
+              ...p.rows.map((r) =>
+                el("div", { className: "tile" }, el("span", {}, r[0]), el("b", {}, fmt(r[1], r[2]))),
+              ),
+            ),
+          );
+        // Short history, e.g. the last errors of the fridge
+        if (p.list && p.list.items && p.list.items.length)
+          c.append(
+            el(
+              "details",
+              {},
+              el("summary", {}, p.list.l + " (" + p.list.items.length + ")"),
+              ...p.list.items.map((t) => el("div", { className: "raw" }, t)),
+            ),
+          );
+        if (p.ctrl) {
+          const box = el("div", { className: "ctl" });
+          for (const x of p.ctrl) if (!x.top) box.append(ctrl(p.id, x));
+          c.append(box);
+        }
+        if (p.raw)
+          c.append(
+            el(
+              "details",
+              {},
+              el("summary", {}, "Rohdaten"),
+              el("div", { className: "raw" }, p.raw),
+            ),
+          );
+        return c;
+      }
+      // Set point with - / + buttons; each press sends the new value at once
+      function step(id, x) {
+        const key = id + "/" + x.k,
+          p = pending[key];
+        if (p && (p.v == x.v || Date.now() - p.t > 10000)) delete pending[key];
+        let v = pending[key] ? pending[key].v : x.v;
+        const out = el("b", { textContent: "Soll " + v + " °C" });
+        const go = (d) => {
+          const n = Math.max(x.min, Math.min(x.max, v + d * (x.d || 1)));
+          if (n == v) return;
+          v = n;
+          pending[key] = { v, t: Date.now() };
+          out.textContent = "Soll " + v + " °C";
+          cmd(id, x.k, v);
+        };
+        return el(
+          "div",
+          { className: "step" },
+          el("button", { className: "b s", textContent: "−", title: "1 °C kälter", on: { click: () => go(-1) } }),
+          out,
+          el("button", { className: "b s", textContent: "+", title: "1 °C wärmer", on: { click: () => go(1) } }),
+        );
+      }
+      const textVal = {}; // last text of text controls, kept over live redraws
+      function ctrl(id, x) {
+        if (x.t == "text") {
+          // Free text with a send button (diagnosis)
+          const key = id + "/" + x.k;
+          const i = el("input", { type: "text", value: textVal[key] || "", placeholder: x.ph || "" });
+          i.style.flex = "1";
+          i.style.minWidth = "8em";
+          const send = () => {
+            const v = i.value.trim();
+            if (!v) return;
+            textVal[key] = v;
+            cmd(id, x.k, v);
+            i.blur();
+          };
+          i.addEventListener("keydown", (e) => {
+            if (e.key == "Enter") send();
+          });
+          const d = el("label", {}, x.l + " ", i, el("button", { className: "b s", textContent: "Senden", on: { click: send } }));
+          d.style.flex = "1 1 100%";
+          return d;
+        }
+        if (x.t == "switch") {
+          const i = el("input", {
+            type: "checkbox",
+            checked: !!x.v,
+            on: {
+              change: (e) => cmd(id, x.k, e.target.checked ? "ON" : "OFF"),
+            },
+          });
+          return el("label", {}, x.l, i);
+        }
+        if (x.t == "select") {
+          const o = x.o.split("|");
+          const s = el(
+            "select",
+            {
+              on: {
+                change: (e) => {
+                  cmd(id, x.k, e.target.value);
+                  e.target.blur();
+                },
+              },
+            },
+            ...o.map((t, i) =>
+              el("option", { value: t, textContent: t, selected: i == x.v }),
+            ),
+          );
+          s.style.width = "auto";
+          return el("label", {}, x.l, s);
+        }
+        if (x.t == "buttons") {
+          const d = el("div", { className: "row" });
+          for (const [k, l] of x.b)
+            d.append(
+              el("button", {
+                className: "b s",
+                textContent: l,
+                on: { click: () => cmd(id, x.k, k) },
+              }),
+            );
+          d.style.flex = "1 1 100%";
+          return d;
+        }
+        if (x.t == "slider") {
+          const out = el("span", { textContent: x.v });
+          const r = el("input", {
+            type: "range",
+            min: x.min,
+            max: x.max,
+            value: x.v,
+            on: {
+              input: (e) => (out.textContent = e.target.value),
+              change: (e) => {
+                cmd(id, x.k, e.target.value);
+                e.target.blur();
+              },
+            },
+          });
+          return el("label", {}, x.l + " ", r, out);
+        }
+        return el("span");
+      }
+
+      // ---------------- Plugin settings ----------------
+      function field(f, val) {
+        let i;
+        if (f.t == "bool")
+          i = el("input", { type: "checkbox", checked: !!val });
+        else if (f.t == "select")
+          i = el(
+            "select",
+            {},
+            ...f.o
+              .split("|")
+              .map((t, n) =>
+                el("option", { value: n, textContent: t, selected: n == val }),
+              ),
+          );
+        else if (f.t == "float" || f.t == "int")
+          i = el("input", {
+            type: "number",
+            min: f.min,
+            max: f.max,
+            step: f.t == "int" ? 1 : f.step,
+            value: val,
+          });
+        else
+          i = el("input", {
+            type: "text",
+            value: val ?? "",
+            maxLength: f.t == "mac" ? 17 : f.max,
+            placeholder: f.t == "mac" ? "AA:BB:CC:DD:EE:FF" : "",
+          });
+        i.dataset.k = f.k;
+        i.dataset.t = f.t;
+        const lab = el("span", {}, f.l + (f.u ? " (" + f.u + ")" : ""));
+        const w = el("div", { className: "f" }, lab);
+        if (f.t == "mac") {
+          const r = el(
+            "div",
+            { className: "row" },
+            i,
+            el("button", {
+              className: "b s",
+              type: "button",
+              textContent: "Suchen",
+              style: "flex:0 0 auto",
+              on: { click: () => pick(i, w) },
+            }),
+          );
+          w.append(r);
+        } else w.append(i);
+        if (f.h) w.append(el("small", {}, f.h));
+        return w;
+      }
+      function readFields(box) {
+        const o = {};
+        for (const i of box.querySelectorAll("[data-k]")) {
+          const t = i.dataset.t;
+          o[i.dataset.k] =
+            t == "bool"
+              ? i.checked
+              : t == "select"
+                ? +i.value
+                : t == "int" || t == "float"
+                  ? +i.value
+                  : i.value.trim();
+        }
+        return o;
+      }
+      // Field descriptions: once per type in CFG.schemas (1.5.2), per device before
+      const fieldsOf = (p) => (CFG.schemas && CFG.schemas[p.type]) || p.fields || [];
+      function openDevice(id) {
+        tab = "p:" + id;
+        render();
+        window.scrollTo(0, 0);
+      }
+      function restartButton() {
+        return el("button", {
+          className: "b",
+          textContent: "Jetzt neu starten",
+          on: {
+            click: (e) => {
+              e.target.disabled = true;
+              api("/api/restart", {})
+                .then(() => {
+                  toast("Neustart…");
+                  setTimeout(() => location.reload(), 8000);
+                })
+                .catch((x) => {
+                  e.target.disabled = false;
+                  toast(x.message, true);
+                });
+            },
+          },
+        });
+      }
+      function renderPlugin(p) {
+        $("#main").append(
+          el("button", {
+            className: "b s",
+            textContent: "← Alle Geräte",
+            style: "width:auto;margin:0 0 10px;padding:4px 12px",
+            on: { click: () => { tab = "dev"; render(); } },
+          }),
+        );
+        const c = el("div", { className: "card" });
+        c.append(
+          el(
+            "h2",
+            {},
+            p.cfg.name || p.type_name,
+            el("span", { className: "mute", textContent: p.type_name + " · ID: " + p.id }),
+          ),
+        );
+        if (!p.running)
+          c.append(
+            el(
+              "div",
+              { className: "f", style: "padding:10px 12px;border-radius:8px;background:rgba(229,162,59,.12)" },
+              el(
+                "small",
+                { style: "display:block;margin-bottom:8px;color:var(--warning)" },
+                p.pending
+                  ? "Neu angelegt – läuft erst nach dem Neustart. Einstellungen kannst du schon jetzt speichern, mehrere neue Geräte brauchen nur einen Neustart."
+                  : p.cfg.enabled
+                    ? "Läuft erst nach dem Neustart. Einstellungen kannst du schon jetzt speichern."
+                    : "Ausgeschaltet (unter Geräte einschalten). Einstellungen kannst du trotzdem speichern.",
+              ),
+              p.pending || p.cfg.enabled ? restartButton() : null,
+            ),
+          );
+        const nm = el("input", {
+          type: "text",
+          value: p.cfg.name,
+          maxLength: 31,
+        });
+        c.append(
+          el(
+            "div",
+            { className: "f" },
+            el("span", {}, "Name (Anzeige und Home Assistant)"),
+            nm,
+          ),
+        );
+        const box = el("div");
+        for (const f of fieldsOf(p)) box.append(field(f, p.cfg[f.k]));
+        c.append(box);
+        c.append(
+          el("button", {
+            className: "b",
+            textContent: "Speichern",
+            on: {
+              click: async () => {
+                const cfg = readFields(box);
+                cfg.name = nm.value.trim();
+                try {
+                  const r = await api("/api/config", { plugin: p.id, cfg });
+                  toast(r.restart ? "Gespeichert – Neustart…" : "Gespeichert");
+                  Object.assign(p.cfg, cfg);
+                  if (r.restart) setTimeout(() => location.reload(), 8000);
+                  else render();
+                } catch (e) {
+                  toast(e.message, true);
+                }
+              },
+            },
+          }),
+        );
+        $("#main").append(c);
+        if (p.ble === 2) renderLog(p);
+      }
+      // Device log of a connecting BLE device: download as "<name>_<date>_<time>.log", or clear
+      function renderLog(p) {
+        const clean = (s) =>
+          s
+            .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
+            .replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss")
+            .replace(/[^A-Za-z0-9_-]+/g, "_")
+            .replace(/^_+|_+$/g, "") || p.id;
+        const two = (n) => String(n).padStart(2, "0");
+        const download = async () => {
+          try {
+            const r = await fetch("/api/log?id=" + encodeURIComponent(p.id));
+            if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+            const d = new Date();
+            const date = d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate());
+            const time = two(d.getHours()) + "-" + two(d.getMinutes());
+            const live = LIVE && LIVE.plugins ? LIVE.plugins.find((x) => x.id == p.id) : null;
+            const text =
+              "# Download " + d.toLocaleString("de-DE") + "\n" +
+              "# Live " + JSON.stringify(live || {}) + "\n" +
+              (await r.text());
+            const a = el("a", {
+              href: URL.createObjectURL(new Blob([text], { type: "text/plain" })),
+              download: clean(p.cfg.name || p.type_name) + "_" + date + "_" + time + ".log",
+            });
+            document.body.append(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+          } catch (e) {
+            toast(e.message, true);
+          }
+        };
+        const clear = async () => {
+          try {
+            const r = await fetch("/api/log/clear?id=" + encodeURIComponent(p.id), { method: "POST" });
+            if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+            toast("Log geleert");
+          } catch (e) {
+            toast(e.message, true);
+          }
+        };
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Log"),
+            el(
+              "small",
+              { className: "mute" },
+              "Verbindung, Kopplung, Bluetooth-Dienste und empfangene Daten dieses Geräts. " +
+                "Wird bei einem Neustart gelöscht. Bei Problemen: Log leeren, Fehler abwarten " +
+                "(z. B. 3 Minuten), dann herunterladen und schicken.",
+            ),
+            el(
+              "div",
+              { style: "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" },
+              el("button", { className: "b", textContent: "Log herunterladen", on: { click: download } }),
+              el("button", { className: "b s", textContent: "Log leeren", on: { click: clear } }),
+            ),
+          ),
+        );
+      }
+      async function pick(input, wrap) {
+        let list = wrap.querySelector(".picker");
+        if (list) {
+          list.remove();
+          return;
+        }
+        list = el(
+          "div",
+          { className: "picker" },
+          el("div", { className: "mute" }, "Suche…"),
+        );
+        wrap.append(list);
+        try {
+          const j = await api("/api/scan");
+          const pt = CFG.plugins.find((p) => "p:" + p.id == tab).type;
+          if (!j.active) {
+            list.replaceChildren(
+              el(
+                "div",
+                { className: "mute" },
+                "Bluetooth ist aus (Plugin aktivieren und speichern).",
+              ),
+            );
+            return;
+          }
+          const devs = j.devices.sort(
+            (a, b) =>
+              b.fits.includes(pt) - a.fits.includes(pt) || b.rssi - a.rssi,
+          );
+          list.replaceChildren(
+            ...devs.map((d) =>
+              el(
+                "div",
+                { className: "dev" },
+                el(
+                  "span",
+                  {},
+                  el("b", {}, d.mac),
+                  " ",
+                  d.name || "",
+                  d.use ? el("span", { className: "tag" }, d.use) : "",
+                  d.fits.includes(pt) ? " ✔ passt" : "",
+                ),
+                el(
+                  "span",
+                  {},
+                  d.rssi + " dBm ",
+                  el("button", {
+                    className: "b s",
+                    textContent: "Wählen",
+                    on: {
+                      click: () => {
+                        input.value = d.mac;
+                        list.remove();
+                      },
+                    },
+                  }),
+                ),
+              ),
+            ),
+          );
+          if (!devs.length)
+            list.replaceChildren(
+              el("div", { className: "mute" }, "Noch keine Geräte gefunden."),
+            );
+        } catch (e) {
+          list.replaceChildren(el("div", { className: "mute" }, e.message));
+        }
+      }
+
+      // ---------------- Bluetooth ----------------
+      async function renderBle() {
+        const c = el(
+          "div",
+          { className: "card" },
+          el("h2", {}, "Geräte in der Nähe"),
+          el("div", { className: "mute" }, "Lade…"),
+        );
+        $("#main").append(c);
+        try {
+          const j = await api("/api/scan");
+          if (!j.active) {
+            c.lastChild.textContent =
+              "Bluetooth ist aus – kein aktives Bluetooth-Plugin.";
+            return;
+          }
+          c.lastChild.replaceWith(
+            el(
+              "div",
+              {},
+              ...j.devices.map((d) =>
+                el(
+                  "div",
+                  { className: "dev" },
+                  el(
+                    "span",
+                    {},
+                    el("b", {}, d.mac),
+                    " ",
+                    d.name || "",
+                    d.use ? el("span", { className: "tag" }, d.use) : "",
+                    el("br"),
+                    el(
+                      "span",
+                      { className: "mute" },
+                      (d.mfg ? "Hersteller " + d.mfg + " " : "") +
+                        (d.uuid ? "UUID " + d.uuid + " " : "") +
+                        (d.fits.length ? "→ " + d.fits.join(", ") : ""),
+                    ),
+                  ),
+                  el(
+                    "span",
+                    {},
+                    d.rssi + " dBm",
+                    el("br"),
+                    el("span", { className: "mute" }, d.age + " s"),
+                  ),
+                ),
+              ),
+            ),
+          );
+          c.append(
+            el("button", {
+              className: "b s",
+              textContent: "Aktualisieren",
+              on: { click: render },
+            }),
+          );
+        } catch (e) {
+          c.lastChild.textContent = e.message;
+        }
+      }
+
+      // ---------------- WLAN / MQTT / System ----------------
+      function inp(label, key, val, type = "text", help) {
+        const i = el("input", { type, value: val ?? "" });
+        i.dataset.k = key;
+        i.dataset.t = type == "number" ? "int" : "text";
+        return el(
+          "div",
+          { className: "f" },
+          el("span", {}, label),
+          i,
+          help ? el("small", {}, help) : null,
+        );
+      }
+      function chk(label, key, val, help) {
+        const i = el("input", { type: "checkbox", checked: !!val });
+        i.dataset.k = key;
+        i.dataset.t = "bool";
+        return el(
+          "div",
+          { className: "f" },
+          el(
+            "label",
+            { style: "display:flex;gap:8px;align-items:center" },
+            i,
+            label,
+          ),
+          help ? el("small", {}, help) : null,
+        );
+      }
+      function saveCore(box) {
+        return async () => {
+          const core = readFields(box);
+          for (const k of ["wifi_pass", "mqtt_pass", "ap_pass", "web_pass"])
+            if (k in core && core[k] === "") delete core[k];
+          try {
+            const r = await api("/api/config", { core });
+            toast(r.restart ? "Gespeichert – Neustart…" : "Gespeichert");
+            if (r.restart) setTimeout(() => location.reload(), 10000);
+            else load();
+          } catch (e) {
+            toast(e.message, true);
+          }
+        };
+      }
+      function renderWifi() {
+        const c = CFG.core,
+          box = el("div");
+        box.append(
+          inp("WLAN-Name (SSID)", "wifi_ssid", c.wifi_ssid),
+          inp(
+            "WLAN-Passwort",
+            "wifi_pass",
+            "",
+            "password",
+            c.wifi_pass_set ? "Gesetzt – leer lassen zum Beibehalten" : "",
+          ),
+          inp("Eigener Access Point", "ap_ssid", c.ap_ssid),
+          inp(
+            "AP-Passwort",
+            "ap_pass",
+            "",
+            "password",
+            "Mindestens 8 Zeichen, leer = unverändert",
+          ),
+          chk(
+            "Access Point immer an",
+            "ap_always",
+            c.ap_always,
+            "Aus = AP nur als Rückfall, wenn das WLAN fehlt",
+          ),
+        );
+        const s = el(
+          "select",
+          {},
+          ...Object.keys(TX).map((v) =>
+            el("option", {
+              value: v,
+              textContent: TX[v],
+              selected: v == c.wifi_tx_power,
+            }),
+          ),
+        );
+        s.dataset.k = "wifi_tx_power";
+        s.dataset.t = "select";
+        box.append(
+          el(
+            "div",
+            { className: "f" },
+            el("span", {}, "Sendeleistung"),
+            s,
+            el(
+              "small",
+              {},
+              "Bei Abbrüchen am ESP32-C3 zuerst 8,5 dBm probieren",
+            ),
+          ),
+        );
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "WLAN"),
+            box,
+            el("button", {
+              className: "b",
+              textContent: "Speichern",
+              on: { click: saveCore(box) },
+            }),
+          ),
+        );
+      }
+      function renderMqtt() {
+        const c = CFG.core,
+          box = el("div");
+        box.append(
+          inp(
+            "Gerätename",
+            "node_name",
+            c.node_name,
+            "text",
+            "Hostname, Titel und Gerät in Home Assistant, z. B. tool-node oder battery-node (a–z, 0–9, -)",
+          ),
+          inp("Broker", "mqtt_server", c.mqtt_server),
+          inp("Port", "mqtt_port", c.mqtt_port, "number"),
+          inp("Benutzer", "mqtt_user", c.mqtt_user),
+          inp(
+            "Passwort",
+            "mqtt_pass",
+            "",
+            "password",
+            c.mqtt_pass_set ? "Gesetzt – leer lassen zum Beibehalten" : "",
+          ),
+          inp(
+            "Topic-Präfix",
+            "mqtt_prefix",
+            c.mqtt_prefix,
+            "text",
+            "Home-Assistant-Knoten: " +
+              CFG.ha_node +
+              " – zwei Geräte brauchen zwei Präfixe (z. B. camper/tool und camper/tool2)",
+          ),
+        );
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "MQTT / Home Assistant"),
+            box,
+            el("button", {
+              className: "b",
+              textContent: "Speichern",
+              on: { click: saveCore(box) },
+            }),
+          ),
+        );
+      }
+      function renderPlugins() {
+        const max = CFG.max_links || 3,
+          maxDev = CFG.max_devices || 12,
+          types = CFG.types || [];
+        // Device changes are saved right away and take effect with the next restart
+        // While a change is on its way all buttons of the list are locked (no double add)
+        let busy = false;
+        const save = async (body, msg) => {
+          if (busy) return;
+          busy = true;
+          for (const b of $("#main").querySelectorAll("button")) b.disabled = true;
+          const before = new Set(CFG.plugins.map((p) => p.id));
+          try {
+            await api("/api/config", body);
+            toast(msg);
+            await new Promise((r) => setTimeout(r, 300)); // the device applies it in its main loop
+            const keep = window.scrollY;
+            await load();
+            // a new device: straight to its settings
+            const added = body.add && CFG.plugins.find((p) => !before.has(p.id));
+            if (added) openDevice(added.id);
+            else window.scrollTo(0, keep);
+          } catch (e) {
+            toast(e.message, true);
+            render();
+          }
+        };
+        const active = CFG.plugins.filter((p) => !p.removed);
+        // one line per device: switch, name, state after the restart, type, remove / undo
+        const mk = (p) => {
+          const i = el("input", { type: "checkbox", checked: p.cfg.enabled && !p.removed, disabled: !!p.removed });
+          i.dataset.id = p.id;
+          let note = "";
+          if (p.removed) note = el("span", { className: "badge err", textContent: "wird entfernt" });
+          else if (p.pending) note = el("span", { className: "badge new", textContent: "neu" });
+          else if (p.cfg.enabled !== p.running)
+            note = el("span", { className: "badge new", textContent: p.cfg.enabled ? "wird eingeschaltet" : "wird ausgeschaltet" });
+          const btn = p.removed
+            ? el("button", {
+                className: "b s",
+                title: "Doch behalten",
+                textContent: "Rückgängig",
+                style: "width:auto;margin:0;padding:4px 10px",
+                on: { click: () => save({ restore: p.id }, "Bleibt erhalten") },
+              })
+            : el("button", {
+                className: "b d",
+                title: "Entfernen",
+                textContent: "✕",
+                style: "width:auto;margin:0;padding:4px 10px",
+                on: {
+                  click: () => {
+                    if (!confirm(`„${p.cfg.name}“ entfernen? Die Einstellungen und die Einträge in Home Assistant werden gelöscht.`)) return;
+                    save({ remove: p.id }, "Entfernt");
+                  },
+                },
+              });
+          return el(
+            "div",
+            { className: "f", style: "display:flex;gap:8px;align-items:center" + (p.removed ? ";opacity:.6" : "") },
+            el(
+              "label",
+              { style: "display:flex;gap:8px;align-items:center;flex:1;margin:0;flex-wrap:wrap" },
+              i,
+              el("span", { style: p.removed ? "text-decoration:line-through" : "" }, p.cfg.name),
+              note,
+              el("span", { className: "mute", style: "margin-left:auto", textContent: p.type_name }),
+            ),
+            p.removed
+              ? null
+              : el("button", {
+                  className: "b s",
+                  title: "Einstellungen",
+                  textContent: "Einstellen",
+                  style: "width:auto;margin:0;padding:4px 10px",
+                  on: { click: () => openDevice(p.id) },
+                }),
+            btn,
+          );
+        };
+        const listen = CFG.plugins.filter((p) => p.ble !== 2).map(mk);
+        const link = CFG.plugins.filter((p) => p.ble === 2).map(mk);
+        const boxes = [...listen, ...link];
+        const count = el("span", { className: "mute" });
+        // Connections: at most `max` switched on at the same time, further switches are locked
+        const linkOn = () => link.filter((b) => b.querySelector("input").checked).length;
+        const check = () => {
+          const on = linkOn();
+          count.textContent = `${on} von ${max}`;
+          for (const b of link) {
+            const i = b.querySelector("input");
+            const gone = CFG.plugins.find((p) => p.id === i.dataset.id).removed;
+            i.disabled = gone || (!i.checked && on >= max);
+          }
+          for (const o of sel.options) {
+            const t = types.find((x) => x.type === o.value);
+            o.disabled = (t && t.ble === 2 && on >= max) || active.length >= maxDev;
+          }
+        };
+        for (const b of link) b.querySelector("input").addEventListener("change", check);
+        const group = (title, hint, items, extra) => [
+          el("h3", { style: "margin:14px 0 2px;display:flex;justify-content:space-between;font-size:0.95rem" }, title, extra || ""),
+          el("small", { className: "mute", style: "display:block;margin-bottom:6px" }, hint),
+          ...(items.length ? items : [el("small", { className: "mute", style: "display:block" }, "– noch keins –")]),
+        ];
+        // "+ Gerät hinzufügen": type selection, grouped like the lists
+        const sel = el("select", { style: "flex:1" });
+        for (const [label, ble] of [["Mithören", 1], ["Verbinden", 2]]) {
+          const g = el("optgroup", { label });
+          for (const t of types.filter((t) => (t.ble === 2) === (ble === 2))) g.append(el("option", { value: t.type, textContent: t.name }));
+          if (g.children.length) sel.append(g);
+        }
+        const add = el(
+          "div",
+          { className: "f row", style: "margin-top:14px;align-items:center" },
+          sel,
+          el("button", {
+            className: "b s",
+            textContent: "+ Gerät hinzufügen",
+            on: {
+              click: () => {
+                const o = sel.selectedOptions[0];
+                if (!o || o.disabled) return toast("Dieses Gerät passt gerade nicht dazu (Grenze erreicht)", true);
+                save({ add: o.value }, "Hinzugefügt");
+              },
+            },
+          }),
+        );
+        check();
+        // Pending changes: one restart applies all of them
+        const restartBox = CFG.restart_needed
+          ? el(
+              "div",
+              { className: "f", style: "margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(229,162,59,.12)" },
+              el(
+                "small",
+                { style: "display:block;margin-bottom:8px;color:var(--warning)" },
+                "Änderungen sind gespeichert und wirken nach dem Neustart.",
+              ),
+              restartButton(),
+            )
+          : null;
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Geräte"),
+            restartBox,
+            ...group("Mithören", "Sensoren, die nur senden (Thermometer, Gas, eigener BLE-Sensor). Beliebig viele.", listen),
+            ...group(
+              "Verbinden",
+              `Geräte mit fester Bluetooth-Verbindung (z. B. Batterien, Dachhaube, Pumpe, Kühlschrank). Höchstens ${max} gleichzeitig – für mehr einen zweiten Node mit eigenem Topic nehmen (z. B. camper/tool2).`,
+              link,
+              count,
+            ),
+            add,
+            el(
+              "small",
+              { className: "mute", style: "display:block;margin-top:8px" },
+              `Insgesamt höchstens ${maxDev} Geräte. Ausgeschaltete Geräte behalten ihre Einstellungen, laufen aber nicht und fehlen in Home Assistant. Änderungen werden sofort gespeichert und wirken nach dem Neustart – mehrere Änderungen brauchen nur einen Neustart.`,
+            ),
+            boxes.length
+              ? el("button", {
+                  className: "b",
+                  textContent: "An/Aus speichern",
+                  on: {
+                    click: () => {
+                      const enabled = {};
+                      for (const b of boxes) {
+                        const i = b.querySelector("input");
+                        if (!i.disabled || i.checked) enabled[i.dataset.id] = i.checked;
+                      }
+                      for (const p of CFG.plugins) if (p.removed) delete enabled[p.id];
+                      save({ enabled }, "Gespeichert");
+                    },
+                  },
+                })
+              : null,
+          ),
+        );
+      }
+      // ---------------- Debug ----------------
+      let dbgTimer = null,
+        dbgId = null;
+      function renderDebug() {
+        const L = LIVE || {};
+        const two = (n) => String(n).padStart(2, "0");
+        const stamp = () => {
+          const d = new Date();
+          return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + "_" + two(d.getHours()) + "-" + two(d.getMinutes());
+        };
+        const save = (name, text) => {
+          const a = el("a", { href: URL.createObjectURL(new Blob([text], { type: "text/plain" })), download: name });
+          document.body.append(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        };
+        const fetchLog = async (id) => {
+          const r = await fetch("/api/log?id=" + encodeURIComponent(id), { cache: "no-store" });
+          if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+          return r.text();
+        };
+        const plugins = CFG.plugins.filter((p) => !p.removed && !p.pending);
+        // Node
+        const node = el("table");
+        const fillNode = () => {
+          const l = LIVE || {};
+          node.replaceChildren(
+            ...[
+              ["Firmware", CFG.version],
+              ["Laufzeit", l.uptime != null ? Math.floor(l.uptime / 3600) + " h " + Math.floor((l.uptime % 3600) / 60) + " min" : "–"],
+              ["Freier Speicher", l.heap != null ? Math.round(l.heap / 1024) + " kB" : "–"],
+              ["Speicher minimal / größter Block", l.heap_min != null ? Math.round(l.heap_min / 1024) + " kB / " + Math.round(l.heap_block / 1024) + " kB" : "–"],
+              ["BLE-Advertisements", l.ble ? l.ble.adv : "–"],
+              ["BLE-Suche", l.ble ? (l.ble.scanning ? "läuft" : "aus") : "–"],
+              ["WLAN-Signal", l.rssi ? l.rssi + " dBm" : "–"],
+              ["MQTT", l.mqtt ? "verbunden" : "getrennt"],
+            ].map((r) => el("tr", {}, el("td", {}, r[0]), el("td", {}, String(r[1])))),
+          );
+        };
+        fillNode();
+        // Devices: state as the live data reports it
+        const devs = el("table");
+        const fillDevs = () => {
+          const lp = (LIVE && LIVE.plugins) || [];
+          devs.replaceChildren(
+            ...plugins.map((p) => {
+              const x = lp.find((y) => y.id == p.id) || {};
+              const st = !p.cfg.enabled ? "aus" : x.state || "–";
+              return el("tr", {}, el("td", {}, (p.cfg.name || p.id) + " (" + p.type + ")"), el("td", { style: "color:var(--" + (x.ok ? "success" : "warning") + ")" }, st));
+            }),
+          );
+        };
+        fillDevs();
+        // Log of one device
+        if (!plugins.some((p) => p.id == dbgId)) dbgId = plugins.length ? plugins[0].id : null;
+        const sel = el("select", {}, ...plugins.map((p) => el("option", { value: p.id, textContent: (p.cfg.name || p.id) + " (" + p.type + ")", selected: p.id == dbgId })));
+        const pre = el("pre", { style: "max-height:50vh;overflow:auto;font-size:.72rem;line-height:1.35;white-space:pre-wrap;word-break:break-all;margin:10px 0 0;background:var(--bg);border:1px solid var(--cm-line2);border-radius:8px;padding:8px" }, "Lade …");
+        const auto = el("input", { type: "checkbox", checked: true });
+        const show = async (scroll) => {
+          if (!dbgId) { pre.textContent = "Keine Geräte."; return; }
+          try {
+            const t = await fetchLog(dbgId);
+            const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+            pre.textContent = t;
+            if (scroll || atEnd) pre.scrollTop = pre.scrollHeight;
+          } catch (e) {
+            pre.textContent = e.message;
+          }
+        };
+        sel.addEventListener("change", () => { dbgId = sel.value; show(true); });
+        const one = async () => {
+          try {
+            const p = plugins.find((x) => x.id == dbgId);
+            const live = LIVE && LIVE.plugins ? LIVE.plugins.find((x) => x.id == dbgId) : null;
+            save(CFG.device + "_" + dbgId + "_" + stamp() + ".log",
+                 "# Download " + new Date().toLocaleString("de-DE") + "\n# Live " + JSON.stringify(live || {}) + "\n" + (await fetchLog(p.id)));
+          } catch (e) { toast(e.message, true); }
+        };
+        const all = async () => {
+          try {
+            let text = "# " + CFG.device + " " + CFG.version + " – alle Geräte-Logs\n# Download " + new Date().toLocaleString("de-DE") +
+              "\n# Node " + JSON.stringify({ uptime: (LIVE || {}).uptime, heap: (LIVE || {}).heap, heap_min: (LIVE || {}).heap_min, ble: (LIVE || {}).ble }) + "\n";
+            for (const p of plugins) {
+              const live = LIVE && LIVE.plugins ? LIVE.plugins.find((x) => x.id == p.id) : null;
+              text += "\n\n######## " + (p.cfg.name || p.id) + " (" + p.type + ")\n# Live " + JSON.stringify(live || {}) + "\n";
+              try { text += await fetchLog(p.id); } catch (e) { text += "(" + e.message + ")\n"; }
+            }
+            save(CFG.device + "_alle_" + stamp() + ".log", text);
+          } catch (e) { toast(e.message, true); }
+        };
+        const clear = async () => {
+          try {
+            const r = await fetch("/api/log/clear?id=" + encodeURIComponent(dbgId), { method: "POST" });
+            if (!r.ok) throw new Error(r.statusText || "Fehler " + r.status);
+            toast("Log geleert");
+            show(true);
+          } catch (e) { toast(e.message, true); }
+        };
+        $("#main").append(
+          el("div", { className: "card" }, el("h2", {}, "Node"), node),
+          el("div", { className: "card" }, el("h2", {}, "Geräte"), devs),
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Log"),
+            sel,
+            pre,
+            el("label", { style: "display:flex;gap:8px;align-items:center;margin-top:8px" }, auto, "Automatisch aktualisieren (alle 3 s)"),
+            el("small", { className: "mute", style: "display:block;margin-top:6px" },
+              "Verbindung, Kopplung, Bluetooth-Dienste und empfangene Daten je Gerät. Wird bei einem Neustart gelöscht."),
+            el(
+              "div",
+              { style: "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" },
+              el("button", { className: "b", textContent: "Aktualisieren", on: { click: () => show(true) } }),
+              el("button", { className: "b", textContent: "Herunterladen", on: { click: one } }),
+              el("button", { className: "b", textContent: "Alle herunterladen", on: { click: all } }),
+              el("button", { className: "b s", textContent: "Leeren", on: { click: clear } }),
+            ),
+          ),
+        );
+        show(true);
+        clearInterval(dbgTimer);
+        dbgTimer = setInterval(() => {
+          if (tab != "dbg") { clearInterval(dbgTimer); dbgTimer = null; return; }
+          if (document.hidden) return;
+          fillNode();
+          fillDevs();
+          if (auto.checked) show(false);
+        }, 3000);
+      }
+
+      function renderSys() {
+        const c = CFG.core,
+          L = LIVE || {};
+        const box = el("div");
+        box.append(
+          inp("Benutzer", "web_user", c.web_user, "text", "Leer = kein Login"),
+          inp(
+            "Passwort",
+            "web_pass",
+            "",
+            "password",
+            c.web_pass_set ? "Gesetzt – leer lassen zum Beibehalten" : "",
+          ),
+        );
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Web-Login"),
+            box,
+            el("button", {
+              className: "b",
+              textContent: "Speichern",
+              on: { click: saveCore(box) },
+            }),
+          ),
+        );
+        // Debug tab on / off (web UI only, no restart)
+        const dbg = el("input", { type: "checkbox", checked: !!c.debug });
+        dbg.addEventListener("change", async () => {
+          try {
+            await api("/api/config", { core: { debug: dbg.checked } });
+            toast(dbg.checked ? "Debug an" : "Debug aus");
+            await load();
+          } catch (e) {
+            dbg.checked = !dbg.checked;
+            toast(e.message, true);
+          }
+        });
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Debug"),
+            el(
+              "label",
+              { style: "display:flex;gap:8px;align-items:center" },
+              dbg,
+              "Debug-Reiter anzeigen",
+            ),
+            el(
+              "small",
+              { className: "mute", style: "display:block;margin-top:6px" },
+              "Blendet den Reiter Debug ein: Zustand des Nodes, aller Geräte und die Logs aller Geräte " +
+                "mit Live-Ansicht und Download. Bleibt nach einem Neustart eingeschaltet.",
+            ),
+          ),
+        );
+        // Firmware / web page update with checks (fwInspect) and the event log
+        const upd = el("div", { className: "card" });
+        upd.innerHTML = `<h2>Firmware- &amp; Web-Update</h2>
+          <div class="fwu-cur" id="fwu-cur">Installiert: …</div>
+          <div class="fwu-hint">Firmware: die <code>.bin</code> aus dem Release (<code>&lt;node&gt;-&lt;board&gt;-v….bin</code>, z. B. <code>ble-node-esp32c3-…</code> oder <code>battery-node-atoms3-…</code>) oder aus der Arduino IDE (Sketch → Kompilierte Binärdatei exportieren → <code>…_node.ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>), danach Neustart.<br>
+          Web-Oberfläche: <code>data/index.html.gz</code>, ohne Neustart. Die Datei wird vor dem Hochladen geprüft.</div>
+          <div class="f"><input type="file" id="fwu-file" accept=".bin,.gz"></div>
+          <div class="fwu-chk" id="fwu-chk"></div>
+          <label class="fwu-force" id="fwu-force-row" style="display:none"><input type="checkbox" id="fwu-force">Ohne Kennung hochladen</label>
+          <progress id="fwu-pr" value="0" max="100" class="hide" style="width:100%"></progress>
+          <div class="ctl"><button class="b" id="fwu-btn" disabled>Hochladen</button></div>`;
+        const log = el("div", { className: "card" });
+        log.innerHTML = `<h2>Ereignisse</h2><div class="fwu-log" id="fwu-log">Lade …</div>
+          <div class="fwu-hint" style="margin-top:8px">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>`;
+        $("#main").append(upd, log);
+        fwEl("fwu-file").addEventListener("change", () => fwChosen(false));
+        fwEl("fwu-force").addEventListener("change", fwForce);
+        fwEl("fwu-btn").addEventListener("click", () => fwUpload("f", toast));
+        fwLoad();
+        $("#main").append(
+          el(
+            "div",
+            { className: "card" },
+            el("h2", {}, "Gerät"),
+            el(
+              "table",
+              {},
+              ...[
+                ["Firmware", CFG.version],
+                ["Letzter Neustart", CFG.reset_reason],
+                [
+                  "Laufzeit",
+                  L.uptime != null
+                    ? Math.floor(L.uptime / 3600) +
+                      " h " +
+                      Math.floor((L.uptime % 3600) / 60) +
+                      " min"
+                    : "–",
+                ],
+                [
+                  "Freier Speicher",
+                  L.heap != null ? Math.round(L.heap / 1024) + " kB" : "–",
+                ],
+                [
+                  "Speicher minimal / größter Block",
+                  L.heap_min != null
+                    ? Math.round(L.heap_min / 1024) + " kB / " + Math.round(L.heap_block / 1024) + " kB"
+                    : "–",
+                ],
+                ["WLAN", L.wifi || "–"],
+                ["WLAN-Signal", L.rssi ? L.rssi + " dBm" : "–"],
+                ["WLAN-Abbrüche", L.wifi_drops ?? "–"],
+                ["Letzter Abbruch", L.wifi_reason || "–"],
+                ["BLE-Advertisements", L.ble ? L.ble.adv : "–"],
+              ].map((r) =>
+                el("tr", {}, el("td", {}, r[0]), el("td", {}, String(r[1]))),
+              ),
+            ),
+            el(
+              "div",
+              { className: "ctl" },
+              el("button", {
+                className: "b s",
+                textContent: "Neustart",
+                on: {
+                  click: () =>
+                    api("/api/restart", {}).then(() => {
+                      toast("Neustart…");
+                      setTimeout(() => location.reload(), 8000);
+                    }),
+                },
+              }),
+              el("button", {
+                className: "b d",
+                textContent: "Werkseinstellungen",
+                on: {
+                  click: () => {
+                    if (confirm("Alle Einstellungen löschen?"))
+                      api("/api/factory", {}).then(() =>
+                        toast("Zurückgesetzt – Neustart…"),
+                      );
+                  },
+                },
+              }),
+            ),
+          ),
+        );
+      }
+
+      // ---- Firmware update with checks, event log (same checks as fwcheck.cpp on the device) ----
+      // Elements: fwu-cur, fwu-file, fwu-chk, fwu-force-row, fwu-force, fwu-btn, fwu-pr, fwu-log
+      let FWI = null;   // running firmware: {dev, ver, chip, chip_id, max}
+      const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
+      const fwEl = id => document.getElementById(id);
+      const fwEsc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+      function fwVerCmp(a, b) {
+          const x = String(a).split('.').map(n => parseInt(n) || 0), y = String(b).split('.').map(n => parseInt(n) || 0);
+          for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+          return 0;
+      }
+      function fwAgo(s) { return s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; }
+      async function fwLoad() {
+          try {
+              const r = await fetch('/api/system', {cache: 'no-store'});
+              if (!r.ok) return;
+              const d = await r.json();
+              FWI = d.fw || null;
+              if (FWI && fwEl('fwu-cur')) fwEl('fwu-cur').innerHTML = `Installiert: <b>${fwEsc(FWI.dev)} v${fwEsc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || fwEsc(FWI.chip)} · Platz ${Math.round(FWI.max / 1024)} kB` +
+            (FWI.hw ? `<br>Passende Datei aus dem Release: <b>…-node-${fwEsc(FWI.hw)}-v….bin</b>` : '');
+              const box = fwEl('fwu-log');
+              if (box) box.innerHTML = (d.log || []).length ? d.log.map(e => {
+                  const when = e.b === 0 ? 'vor ' + fwAgo(Math.max(0, (d.up || 0) - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + fwAgo(e.t);
+                  const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
+                  return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${fwEsc(when)}</span>${fwEsc(e.m)}</div>`;
+              }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
+          } catch (e) {}
+      }
+      // Which release file fits this device (FW_HW of the running firmware), added to "wrong chip" errors
+function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : ''; }
+// Checks the chosen file in the browser: {ok, kind, msg, warn, force}
+      async function fwInspect(file, fsImages) {
+          const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
+          if (n.endsWith('.gz')) return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
+          if (fsImages && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
+          if (!n.endsWith('.bin')) return {ok: false, msg: 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)'};
+          const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
+          if (n.includes('merged')) return {ok: false, msg: merged};
+          const u = new Uint8Array(await file.arrayBuffer());
+          if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
+          const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
+          if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
+          const chip = u[12] | (u[13] << 8);
+          if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${fwHwHint()}`};
+          if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
+          const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
+          if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
+          if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
+          if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${fwHwHint()}`};
+          const c = FWI ? fwVerCmp(m[2], FWI.ver) : 1;
+          return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
+              (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
+      }
+      let fwPick = null;
+      async function fwChosen(fsImages) {
+          const f = fwEl('fwu-file').files[0], chk = fwEl('fwu-chk');
+          fwPick = null;
+          fwEl('fwu-force-row').style.display = 'none';
+          fwEl('fwu-force').checked = false;
+          if (!f) { chk.textContent = ''; fwEl('fwu-btn').disabled = true; return; }
+          chk.className = 'fwu-chk'; chk.textContent = 'Prüfe …';
+          const r = await fwInspect(f, fsImages);
+          fwPick = r;
+          chk.textContent = (r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg;
+          chk.className = 'fwu-chk ' + (r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+          if (r.force) fwEl('fwu-force-row').style.display = '';
+          fwEl('fwu-btn').disabled = !r.ok;
+      }
+      function fwForce() { fwEl('fwu-btn').disabled = !(fwPick && (fwPick.ok || (fwPick.force && fwEl('fwu-force').checked))); }
+      function fwUpload(field, toast) {
+          const f = fwEl('fwu-file').files[0];
+          if (!f || !fwPick) { toast('Erst eine Datei wählen', true); return; }
+          if (fwPick.warn && fwPick.kind === 'fw' && !confirm(fwPick.msg + '\nTrotzdem installieren?')) return;
+          const force = !fwPick.ok && fwPick.force && fwEl('fwu-force').checked;
+          const fd = new FormData();
+          fd.append(field, f);
+          const x = new XMLHttpRequest(), pr = fwEl('fwu-pr');
+          pr.classList.remove('hide', 'hidden'); pr.style.display = ''; pr.value = 0;
+          fwEl('fwu-btn').disabled = true;
+          x.upload.onprogress = e => { if (e.lengthComputable) pr.value = e.loaded / e.total * 100; };
+          x.onload = () => {
+              if (x.status === 200 && x.responseText === 'OK web') { toast('Web-Oberfläche ersetzt – lädt neu …'); setTimeout(() => location.reload(), 1500); return; }
+              if (x.status === 200) { toast('Update ok – Neustart …'); setTimeout(() => location.reload(), 15000); return; }
+              toast(x.responseText || ('Fehler HTTP ' + x.status), true);
+              const chk = fwEl('fwu-chk'); chk.textContent = '✕ ' + (x.responseText || 'Fehler HTTP ' + x.status); chk.className = 'fwu-chk bad';
+              fwEl('fwu-btn').disabled = false;
+              fwLoad();
+          };
+          x.onerror = () => { toast('Verbindung abgebrochen', true); fwEl('fwu-btn').disabled = false; fwLoad(); };
+          x.open('POST', '/api/update' + (force ? '?force=1' : ''));
+          x.send(fd);
+      }
+      setInterval(() => { if (fwEl('fwu-log')) fwLoad(); }, 15000);
+
+      // ---------------- Data ----------------
+      function chips() {
+        if (!LIVE) return;
+        const s = (id, ok, title) => {
+          const e = $(id);
+          e.firstChild.className = "status-dot" + (ok ? " active" : " bad");
+          e.title = title;
+        };
+        s("#cWifi", LIVE.rssi != 0, LIVE.rssi ? "WLAN " + LIVE.rssi + " dBm" : String(LIVE.wifi || ""));
+        s("#cMqtt", LIVE.mqtt, LIVE.mqtt ? "MQTT verbunden" : "MQTT getrennt");
+        const b = $("#cBle");
+        if (LIVE.ble) {
+          b.classList.remove("hide");
+          b.firstChild.className = "status-dot" + (LIVE.ble.scanning ? " active" : "");
+        } else b.classList.add("hide");
+      }
+      let oomShown = false;
+      function connect() {
+        ws = new WebSocket(
+          (location.protocol == "https:" ? "wss://" : "ws://") +
+            location.host +
+            "/ws",
+        );
+        ws.onmessage = (e) => {
+          const d = JSON.parse(e.data);
+          if (d.oom) {
+            // Device out of memory: keep the last values, tell once
+            if (!oomShown)
+              toast("Zu wenig Speicher auf dem Gerät (frei " + Math.round(d.heap / 1024) + " kB) – ein Gerät abschalten", true);
+            oomShown = true;
+            return;
+          }
+          LIVE = d;
+          chips();
+          if (tab == "live") updateLive();
+        };
+        ws.onclose = () => setTimeout(connect, 3000);
+      }
+      async function load() {
+        const c = await api("/api/config");
+        if (!Array.isArray(c.plugins)) throw new Error("Einstellungen unvollständig empfangen – bitte neu laden");
+        CFG = c;
+        $("#title span").textContent = CFG.device;
+        document.title = CFG.device;
+        render();
+      }
+      load()
+        .then(connect)
+        .catch((e) => {
+          $("#main").textContent = "Fehler: " + e.message;
+        });
+    // vannode-about:begin
+// VanNode "Über" card: logo, author, license, link to the third-party list and project link, placed right
+// below the firmware update card of every device page. Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// This card is part of the Appropriate Legal Notices of VanNode. Under the additional terms of
+// its GNU GPL v3 license (section 7 b/c, see NOTICE.md) the author attribution, the project link
+// and the license information must stay in every copy and modified version.
+(function () {
+  const REPO = 'https://github.com/hflocki/vannode';
+  const COPY = 'Copyright © 2026 hflocki';
+  const A = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
+  const GPL = 'Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
+  const TERMS = 'Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
+  const RISK = 'Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
+  // firmware id (FW_DEVICE) -> name and repo folder. Third-party parts are not listed on the
+  // devices: the card links to the one central NOTICE.md of the repository (sorted by node).
+  const DEV = {
+    tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel'},
+    temp:      {n: 'Temp-Node', d: 'temp'},
+    maxxfan:   {n: 'MaxxFan-Node', d: 'maxxfan'},
+    example:   {n: 'Vorlage', d: '_template'},
+    toolbox:   {n: 'BLE-Node', d: 'ble'},
+    heater:    {n: 'Heater-Node', d: 'heater'},
+    level:     {n: 'Level-Node', d: 'level'},
+    alde:      {n: 'Alde-Node', d: 'alde'},
+    pocket:    {n: 'Pocket-Node', d: 'pocket'},
+  };
+  DEV.ble = DEV.toolbox;   // mockups use the folder name
+  DEV.template = DEV.example;
+  const HW = {esp32: 'ESP32', esp32c3: 'ESP32-C3', esp32s3: 'ESP32-S3', esp32c6: 'ESP32-C6', esp8266: 'ESP8266', atoms3: 'AtomS3', core2: 'Core2'};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const small = 'margin:6px 0;font-size:.85em;opacity:.8';
+
+  function card(upd, fw) {
+    // Devices not listed above: name and folder from /api/system (fw.name, fw.dir), if sent
+    const info = DEV[fw.dev] || {n: fw.name || fw.dev || 'VanNode', d: fw.dir || ''};
+    const c = document.createElement('div');
+    c.className = upd.className;
+    c.id = 'vn-about';
+    c.style.marginTop = '12px';
+    const t = upd.firstElementChild;
+    const title = document.createElement(t ? t.tagName : 'h2');
+    if (t) title.className = t.className;
+    title.textContent = 'Über VanNode';
+    const base = info.d ? REPO + '/blob/main/firmware/' + info.d + '/' : REPO + '/blob/main/';
+    c.append(title);
+    c.insertAdjacentHTML('beforeend',
+      '<i class="vnlogo" role="img" aria-label="VanNode" style="margin:4px 0 10px"></i>' +
+      '<p style="margin:6px 0"><b>' + esc(info.n) + '</b> · Firmware ' + esc(fw.ver || '--') + (fw.hw ? ' · ' + esc(HW[fw.hw] || fw.hw) : '') + '</p>' +
+      '<p style="margin:6px 0">' + COPY + '<br>Teil von VanNode – Camper-Elektronik über MQTT<br>' + A(REPO, 'github.com/hflocki/vannode') + '</p>' +
+      '<p style="margin:6px 0">Lizenz: <b>GNU GPL Version 3</b>. ' + GPL + '</p>' +
+      '<p style="' + small + '">' + TERMS + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em"><b>Ohne Gewähr.</b> ' + RISK + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(REPO + '/blob/main/NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
+    upd.insertAdjacentElement('afterend', c);
+  }
+
+  let fw = null, busy = false;
+  function place() {
+    const cur = document.getElementById('fwu-cur');
+    const upd = cur && cur.closest('.card');
+    if (!upd || document.getElementById('vn-about')) return;
+    if (fw) return card(upd, fw);
+    if (busy) return;
+    busy = true;
+    fetch('/api/system', {cache: 'no-store'}).then((r) => r.json()).then((j) => { fw = j.fw || {}; })
+      .catch(() => { fw = {}; }).finally(() => { busy = false; place(); });
+  }
+  // The update card is built by the page (sometimes only when its tab opens): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+})();
+// vannode-about:end
+</script>
+  </body>
+</html>

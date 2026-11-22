@@ -13,5 +13,5 @@ temp      esp32c3
 level     esp32s3
 ble       esp32c3
 ble       esp32s3
-ble       atoms3
+battery   atoms3
 pocket core2

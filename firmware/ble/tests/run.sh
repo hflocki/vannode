@@ -15,8 +15,6 @@ ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/bthome_test bthome_test.cpp
 ./build/bthome_test
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/obd_test obd_test.cpp
 ./build/obd_test
-${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/bms_test bms_test.cpp ../ble_node/src/plugins/bms_proto.cpp
-./build/bms_test
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/supersense_test supersense_test.cpp
 ./build/supersense_test
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/tpms_test tpms_test.cpp

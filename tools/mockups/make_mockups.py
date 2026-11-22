@@ -37,9 +37,11 @@ DEVICES = [
      "firmware/level/camper_level/web/index.html"),
     ("maxxfan", "MaxxFan", "Dachlüfter: Öffnen, Schließen, Stufe, Auto-Hold",
      "firmware/maxxfan/camper_maxxfan/web/index.html"),
-    ("ble", "BLE Node / Battery Node", "Alle Plugins auf einmal: Dachhaube RV Tech, Pumpe CaraWater, Kühlschrank WCS, Alarm WiPro, "
-     "OBD2, Batterien (Daly, Ective, BM2), Gas (DIMES, Mopeka), Govee, BTHome, eigener Sensor",
+    ("ble", "BLE Node", "Alle Plugins auf einmal: Dachhaube RV Tech, Pumpe CaraWater, Kühlschrank WCS, Alarm WiPro, "
+     "OBD2, SuperSense, Reifendruck, Gas (DIMES, Mopeka), Govee, BTHome, eigener Sensor",
      "firmware/ble/ble_node/web/index.html"),
+    ("battery", "Battery Node", "Batterien Daly BMS, Ective BM X und BM2 (gleiche Oberfläche wie der BLE Node)",
+     "firmware/battery/battery_node/web/index.html"),
     ("pocket", "Pocket-Node", "M5Stack Core2: Update-Seite im Browser (die Anzeige am Gerät zeichnet die Firmware)",
      "firmware/pocket/pocket/webota.cpp"),
     ("template", "Vorlage", "Muster für ein neues Gerät (firmware/_template)",
@@ -91,6 +93,10 @@ def main():
         else:
             page = page_of(src)
             sim = (MOCK / f"{dev_id}.js").read_text(encoding="utf-8")
+            # "// base: <id>" in the first line: that device's script comes first (battery on ble)
+            first = sim.split("\n", 1)[0]
+            if first.startswith("// base: "):
+                sim = (MOCK / f"{first[9:].strip()}.js").read_text(encoding="utf-8") + "\n" + sim
             html = inject(page, sim + "\n" + core)
         (OUT / f"{dev_id}.html").write_text(html, encoding="utf-8")
         print(f"docs/mockups/{dev_id}.html")

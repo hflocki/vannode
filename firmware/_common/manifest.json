@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared source files and the sketches that carry a copy. Edit the file here, then run tools/common/sync_common.py.",
+  "_comment": "Shared source files and the sketches that carry a copy. Edit the file here, then run tools/common/sync_common.py. \"dirs\": whole folders (layout kept below them), copied after the blocks.",
   "files": {
     "truma_errors.h": [
       "firmware/display/camper_display",
@@ -24,7 +24,8 @@
       "firmware/heater/truma_heater",
       "firmware/display/camper_display",
       "firmware/pocket/pocket",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "devinfo.cpp": [
       "firmware/_template/camper_example",
@@ -35,7 +36,8 @@
       "firmware/heater/truma_heater",
       "firmware/display/camper_display",
       "firmware/pocket/pocket",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "safeguard.h": [
       "firmware/_template/camper_example",
@@ -46,7 +48,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "safeguard.cpp": [
       "firmware/_template/camper_example",
@@ -57,7 +60,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "evlog.h": [
       "firmware/_template/camper_example",
@@ -68,7 +72,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "evlog.cpp": [
       "firmware/_template/camper_example",
@@ -79,7 +84,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "fwcheck.h": [
       "firmware/_template/camper_example",
@@ -90,7 +96,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "fwcheck.cpp": [
       "firmware/_template/camper_example",
@@ -101,7 +108,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "fw_config.h": [
       "firmware/_template/camper_example",
@@ -112,7 +120,8 @@
       "firmware/pocket/pocket",
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
-      "firmware/ble/ble_node"
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ],
     "supersense_decode.h": [
       "firmware/tanklevel/camper_tanklevel",
@@ -130,7 +139,7 @@
         "firmware/temp/camper_temp/web/index.html",
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
-        "firmware/ble/ble_node/web/index.html",
+        "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/pocket/pocket/webota.cpp"
       ]
@@ -145,7 +154,7 @@
         "firmware/temp/camper_temp/web/index.html",
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
-        "firmware/ble/ble_node/web/index.html",
+        "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/alde/camper_alde/web/index.html",
         "firmware/pocket/pocket/webota.cpp"
@@ -161,7 +170,7 @@
         "firmware/temp/camper_temp/web/index.html",
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
-        "firmware/ble/ble_node/web/index.html",
+        "firmware/_common/ble/web/index.html",
         "tools/emulator/web/index.html",
         "firmware/heater/truma_heater/web/index.html"
       ]
@@ -176,7 +185,7 @@
         "firmware/temp/camper_temp/web/index.html",
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
-        "firmware/ble/ble_node/web/index.html",
+        "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/pocket/pocket/webota.cpp",
@@ -193,12 +202,18 @@
         "firmware/temp/camper_temp/web/index.html",
         "firmware/level/camper_level/web/index.html",
         "firmware/maxxfan/camper_maxxfan/web/index.html",
-        "firmware/ble/ble_node/web/index.html",
+        "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/pocket/pocket/webota.cpp",
         "tools/emulator/web/index.html"
       ]
     }
+  },
+  "dirs": {
+    "ble": [
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
+    ]
   }
 }

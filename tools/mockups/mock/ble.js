@@ -1,4 +1,5 @@
 // ble-node: Bluetooth devices as plugins. The mockup shows every plugin type at once.
+// The battery-node mockup (battery.js) builds on this file; battery types live there.
 // A real node allows at most 12 devices and 3 Bluetooth connections, so the limits below
 // are raised for the mockup only.
 const MAC = (n) => 'C0:FF:EE:00:00:' + String(n).padStart(2, '0');
@@ -18,7 +19,7 @@ const GAS_CFG = {capacity: 27.2, fill_stop_on: false, fill_stop: 80};
 const M = {
   id: 'ble',
   config: {
-    version: '2.1.21', device: 'tool-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_tool',
+    version: '2.5.0', device: 'tool-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_tool',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/tool',
            web_user: '', web_pass_set: false, node_name: 'tool-node', debug: true},
@@ -32,9 +33,6 @@ const M = {
         names: 'Tür vorn,Tür hinten,Heckklappe,Fenster', service: '', notify: ''}),
       P('obd', 'obd', 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', 2, {name: 'Fahrzeug', mac: MAC(5), pin: '', gatt: 0,
         service: '', notify: '', write: '', profile: 1, mode: 0, detect: 1, run_v: 13.2, poll_s: 5, rest_min: 10}),
-      P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),
-      P('ective', 'ective', 'Batterie: Ective BM X', 2, {name: 'Zweitbatterie', mac: MAC(7), interval: 10}),
-      P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)}),
       P('supersense', 'supersense', 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', 2, {name: 'Tanks', mac: MAC(15), medium: 1, tank_size: 100, empty1: 0, full1: 0,
         kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 0, size3: 0, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0}),
       // passive sensors (advertisements only)
@@ -168,7 +166,6 @@ const M = {
     types: [{type: 'rvtech', name: 'Dachhaube RV Tech', ble: 2}, {type: 'pump', name: 'Wasserpumpe CaraWater', ble: 2},
             {type: 'fridge', name: 'Kühlschrank WCS', ble: 2}, {type: 'wipro', name: 'Alarm WiPro III (nur lesen)', ble: 2},
             {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
-            {type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2}, {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2},
             {type: 'supersense', name: 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],

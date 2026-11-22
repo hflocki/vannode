@@ -3,12 +3,17 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
+// Shared source of the BLE nodes – edit only in firmware/_common/ble, then run
+// tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
+
 #include "mqtt_ha.h"
 #include "wifi_manager.h"
 #include "registry.h"
 #include "devlog.h"
 #include "../../devinfo.h"
+#if CT_BMS
 #include "../plugins/bms_plugin.h"
+#endif
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -23,7 +28,7 @@
 //   <prefix>/cmd/<plugin>/<key>/set        commands, not retained
 //   <prefix>/batteries                     all battery devices as one JSON list (displays)
 //
-// Home Assistant: one device "BLE Node" (WiFi, status) plus one device per plugin
+// Home Assistant: one device NODE_TITLE (WiFi, status) plus one device per plugin
 // instance, linked via via_device. Entities come from the plugins' Entity tables.
 
 static WiFiClient espClient;
@@ -169,7 +174,7 @@ static void addCoreDevice(JsonDocument& doc) {
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"][0] = mqttNodeId();
     device["name"] = (const char*)config.node_name;
-    device["model"] = "BLE Node";
+    device["model"] = NODE_TITLE;
     device["sw_version"] = FW_VERSION;
     device["configuration_url"] = String("http://") + WiFi.localIP().toString() + "/";
 }

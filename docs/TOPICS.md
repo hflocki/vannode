@@ -25,7 +25,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Heizung (Alde) | `camper/alde` | alde | [firmware/alde](../firmware/alde/README.md) |
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
-| BLE-Node Battery (battery-node: Batterien) | `camper/battery` | ble (Gerätename battery-node) | [firmware/ble](../firmware/ble/README.md#batterien-battery-node) |
+| Battery-Node (Batterien: Daly, Ective, BM2) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
 | BLE-Node Tool (tool-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/tool2`, `camper/tool3`) | `camper/tool` | ble (Gerätename tool-node) | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
@@ -234,7 +234,7 @@ Gesendet wird nach jeder Messung (Intervall in der Web-UI, Standard 10 s), spät
 
 ## Batterien `camper/battery`
 
-Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2` … (bis battery-node 1.x eine frei gewählte ID).
+Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die BLE-Firmware; Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2` … (bis battery-node 1.x eine frei gewählte ID).
 
 | Topic | Inhalt |
 | --- | --- |
@@ -248,7 +248,7 @@ Der battery-node läuft mit der BLE-Firmware (`firmware/ble`, Gerätename `batte
 
 ## BLE-Node Tool `camper/tool`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `daly`, `ective`, `bm2` (Batterien, siehe oben), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |

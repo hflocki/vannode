@@ -53,6 +53,7 @@ jobs:
       - run: python3 firmware/heater/tools/embed_web.py --check
       - run: python3 tools/emulator/emulator.py --selftest
       - run: bash firmware/ble/tests/run.sh
+      - run: bash firmware/battery/tests/run.sh
       - run: bash firmware/heater/tests/run.sh
       - run: bash firmware/alde/tests/run.sh
 
@@ -122,13 +123,12 @@ jobs:
             sketch: firmware/ble/ble_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
             noweb: 1
-          # Same firmware on the M5Stack AtomS3 Lite (formerly the battery-node, status LED)
-          - device: ble
+          # Battery node on the M5Stack AtomS3 Lite (status LED); shares the core with ble
+          - device: battery
             target: atoms3
             fqbn: esp32:esp32:m5stack_atoms3:CDCOnBoot=cdc,PartitionScheme=default_8MB
-            sketch: firmware/ble/ble_node
+            sketch: firmware/battery/battery_node
             libs: https://github.com/h2zero/NimBLE-Arduino.git#2.5.1
-            noweb: 1
           # Template for new devices (firmware/_template/ANLEITUNG.md), built so it always compiles
           - device: template
             target: esp32c3

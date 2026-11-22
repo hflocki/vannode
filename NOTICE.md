@@ -90,17 +90,22 @@ added here, under its node, and nowhere else.
 | `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
 | `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
 
+### Battery-Node (`firmware/battery`)
+
+| Part | Used for | Source | License |
+| --- | --- | --- | --- |
+| `firmware/battery` – battery protocols `bms_proto.*` (Daly, Ective, BM2) | ported | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) |
+| `firmware/battery` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
+
 ### BLE-Node (`firmware/ble`)
 
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
-| `firmware/ble` – battery protocols `bms_proto.*` (Daly, Ective, BM2) | ported | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/ble/LICENSE-Apache-2.0`](firmware/ble/LICENSE-Apache-2.0)) |
 | `firmware/ble` – roof hatch protocol (RV Tech / Heki) | ported | [C64Axel/rvtech-hacs](https://github.com/C64Axel/rvtech-hacs), Copyright (c) 2026 C64Axel | MIT ([`firmware/ble/LICENSE-rvtech-MIT`](firmware/ble/LICENSE-rvtech-MIT)) |
 | `firmware/ble` – CaraWater pump: command `AA 39`, status frame `AA 45` | protocol knowledge, own C++ implementation (no code copied) | [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper), folder `carawater-isp-ble`, Copyright (c) 2026 Blackforest Vanlife (toms2k84) | MIT |
 | `firmware/ble` – CaraWater pump: telemetry `AA 93`, status bits, checksum, conversion | protocol knowledge, own C++ implementation (no code copied) | [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) | – (no license stated) |
 | `firmware/ble` – CaraWater pump, first version | protocol knowledge, own C++ implementation | Home Assistant integration "carawater_isp15" by a community member, shared in a user group; he did not answer whether and how he wants to be named and will be credited on request | – (no license stated) |
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
-| `firmware/ble` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
 | `firmware/ble` – SuperSense tank sensors (service UUID, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
 
 ### Tanklevel-Node (`firmware/tanklevel`)

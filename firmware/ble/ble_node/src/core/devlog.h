@@ -3,6 +3,9 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
+// Shared source of the BLE nodes – edit only in firmware/_common/ble, then run
+// tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
+
 #pragma once
 // Device log: every log line of a BLE device is written to the serial monitor as before
 // ("[tag] message") and also kept in a small ring buffer per device in RAM. The web UI

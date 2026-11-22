@@ -7,7 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include "../ble_node/src/plugins/bms_proto.h"
+#include "../battery_node/src/plugins/bms_proto.h"
 
 static int fails = 0;
 static void check(bool ok, const char* what) {

@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode
+// GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
+// See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
+
+// Shared source of the BLE nodes – edit only in firmware/_common/ble, then run
+// tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
+//
+// Main program of every BLE-based node (ble-node, battery-node): setup() and loop().
+// The sketch's .ino only carries the description; config.h of the sketch decides which
+// plugins are built in, the node name, title (NODE_TITLE) and the default topic.
+
+#include <Arduino.h>
+#include <ArduinoOTA.h>   // also provides U_FLASH for the web upload
+#include <LittleFS.h>
+#include <WiFi.h>
+#include <Preferences.h>
+#include <esp_system.h>
+
+#include "../../config.h"
+#include "../../evlog.h"
+#include "../../safeguard.h"
+#include "registry.h"
+#include "settings.h"
+#include "wifi_manager.h"
+#include "ble.h"
+#include "mqtt_ha.h"
+#include "webserver.h"
+
+AppConfig config;
+CoreData coreData;
+
+static unsigned long lastStatusPrint = 0;
+
+// ---------------- Safe start ----------------
+// Counts starts that end within SAFE_START_WINDOW_MS. Planned restarts (web UI, update)
+// do not count, power-on, crash, watchdog and brown-out do. After SAFE_START_BOOTS such
+// starts the node runs this boot without devices, so a device that breaks the node can be
+// switched off in the web UI instead of flashing again.
+static bool bootCountOpen = false;
+
+static bool safeStartCheck() {
+    esp_reset_reason_t r = esp_reset_reason();
+    if (r == ESP_RST_SW || r == ESP_RST_DEEPSLEEP) return false;
+    Preferences p;
+    if (!p.begin("bootcnt", false)) return false;
+    uint8_t n = p.getUChar("n", 0) + 1;
+    bool safe = n >= SAFE_START_BOOTS;
+    p.putUChar("n", safe ? 0 : n);
+    p.end();
+    bootCountOpen = !safe;
+    return safe;
+}
+
+static void safeStartLoop() {
+    if (!bootCountOpen || millis() < SAFE_START_WINDOW_MS) return;
+    bootCountOpen = false;
+    Preferences p;
+    if (p.begin("bootcnt", false)) {
+        p.putUChar("n", 0);
+        p.end();
+    }
+}
+
+// Event log entry once per boot when the heap gets tight (kept over restarts)
+static void heapWatch() {
+    static bool warned = false;
+    static unsigned long last = 0;
+    if (warned || millis() - last < 5000) return;
+    last = millis();
+    uint32_t block = ESP.getMaxAllocHeap();
+    if (block < HEAP_LOW_WARN) {
+        warned = true;
+        evlog::add("Wenig Speicher: frei %u, größter Block %u, Minimum %u Bytes",
+                   (unsigned)ESP.getFreeHeap(), (unsigned)block, (unsigned)ESP.getMinFreeHeap());
+    }
+}
+
+// ---- Status LED (AtomS3 Lite or STATUS_LED_PIN in config_local.h) ---------
+#if STATUS_LED_PIN >= 0
+static void ledColor(uint8_t r, uint8_t g, uint8_t b) {
+    const uint16_t k = STATUS_LED_BRIGHTNESS;
+    rgbLedWrite(STATUS_LED_PIN, r * k / 255, g * k / 255, b * k / 255);
+}
+
+// red blinking = no WiFi / MQTT, blue = no device, green = all devices deliver, yellow = one missing
+static void statusLedLoop() {
+    static unsigned long last = 0;
+    static bool phase = false;
+    if (millis() - last < 500) return;
+    last = millis();
+    phase = !phase;
+    if (!isConnected() || !mqttIsConnected()) {
+        if (phase) ledColor(255, 0, 0); else ledColor(0, 0, 0);
+        return;
+    }
+    int used = 0, ok = 0;
+    FOR_EACH_ENABLED_PLUGIN(p) {
+        used++;
+        if (p->available()) ok++;
+    }
+    if (used == 0) ledColor(0, 0, 255);
+    else if (ok == used) ledColor(0, 255, 0);
+    else ledColor(255, 160, 0);
+}
+#else
+static void statusLedLoop() {}
+#endif
+
+void setupOTA() {
+#if ENABLE_ARDUINO_OTA
+    ArduinoOTA.setHostname(config.node_name);
+    ArduinoOTA.setPassword(DEFAULT_OTA_PASSWORD);
+
+    ArduinoOTA.onStart([]() {
+        // Filesystem upload over the network replaces config.json too; unmount first
+        if (ArduinoOTA.getCommand() != U_FLASH) LittleFS.end();
+        String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+        Serial.println("[OTA] Start updating " + type);
+    });
+    ArduinoOTA.onEnd([]() {
+        evlog::add("Update über den IDE-Netzwerkport ok, Neustart");
+        if (ArduinoOTA.getCommand() == U_FLASH) guard::otaDone();
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        unsigned int pct = (total > 0) ? (progress * 100U / total) : 0;
+        Serial.printf("[OTA] Progress: %u%%\r", pct);
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        evlog::add("Update über den IDE-Netzwerkport fehlgeschlagen (Fehler %u)", (unsigned)error);
+    });
+
+    ArduinoOTA.begin();
+    Serial.println("[OTA] Ready");
+#else
+    Serial.println("[OTA] Arduino IDE upload off - use the web UI");
+#endif
+}
+
+// WiFi start. A changed WiFi that does not connect is replaced by the previous, working
+// one, followed by a restart so the wifi manager starts clean with it (safeguard.h).
+static void startWiFi() {
+    wifiManagerInit();
+    if (!guard::wifiTrialPending()) return;
+    if (isConnected()) { guard::wifiTrialOk(); return; }
+    String ssid, pass, extra;
+    if (!guard::wifiTrialRestore(ssid, pass, extra)) return;
+    strlcpy(config.wifi_ssid, ssid.c_str(), sizeof(config.wifi_ssid));
+    strlcpy(config.wifi_pass, pass.c_str(), sizeof(config.wifi_pass));
+    saveConfig();
+    Serial.println("[MAIN] New WiFi failed - previous WiFi restored, restarting");
+    delay(200);
+    guard::plannedRestart();
+    ESP.restart();
+}
+
+static void printRead() {
+    JsonDocument doc;
+    buildLiveJson(doc);
+    serializeJsonPretty(doc, Serial);
+    Serial.println();
+}
+
+void setup() {
+    Serial.begin(115200);
+    evlog::begin();
+    evlog::add("Start v%s, Grund: %s", FW_VERSION, evlog::resetReason());
+    guard::begin();   // may boot the previous firmware (failed update)
+    if (guard::status().length()) evlog::add("%s", guard::status().c_str());
+    Serial.setTimeout(50);  // Do not block the loop while waiting for a line end
+    delay(1000);
+
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("  VanNode " NODE_TITLE " firmware v" FW_VERSION);
+    Serial.println("========================================");
+    Serial.println();
+
+    memset(&coreData, 0, sizeof(coreData));
+
+    // Phase 1: mount LittleFS, create the plugins, load the config
+    bool safe = safeStartCheck();
+    settingsInit();
+    registryEnforceLinkLimit();
+    if (safe) {
+        // Devices stay switched on in the settings; they just do not run this boot
+        registrySafeStart = true;
+        FOR_EACH_PLUGIN(p) p->enabled = false;
+        evlog::add("Sicherer Start nach %d schnellen Starts: alle Geräte aus", SAFE_START_BOOTS);
+        Serial.println("[MAIN] Safe start - all devices off for this boot");
+    }
+    FOR_EACH_PLUGIN(p) {
+        Serial.printf("[MAIN] Plugin %-10s %-22s %s\n", p->id, p->typeName, p->enabled ? "on" : "off");
+    }
+    webserverInit();
+
+    // Phase 2: WiFi (blocking connect or AP fallback, previous WiFi if a changed one fails)
+    startWiFi();
+
+    // Phase 3: Bluetooth LE (after WiFi, both share the radio)
+    if (registryNeedsBle()) bleInit();
+
+    // Phase 4: plugins
+    FOR_EACH_ENABLED_PLUGIN(p) p->begin();
+
+    // Phase 5: web server, OTA, MQTT
+    webserverStart();
+    setupOTA();
+    mqttInit();
+
+    Serial.printf("[MAIN] Setup done! Heap: %u\n", (unsigned)ESP.getFreeHeap());
+}
+
+void loop() {
+    wifiManagerLoop();
+    guard::loop(isConnected() || config.wifi_ssid[0] == '\0');
+    evlog::watch(isConnected(), mqttIsConnected());
+#if ENABLE_ARDUINO_OTA
+    ArduinoOTA.handle();
+#endif
+
+    safeStartLoop();
+    heapWatch();
+    bleLoop();
+    FOR_EACH_ENABLED_PLUGIN(p) p->loop();
+    mqttLoop();
+    webserverLoop();
+    statusLedLoop();
+
+    if (Serial.available()) {
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+        if (cmd == "read") {
+            printRead();
+        } else if (cmd == "scan") {
+            blePrintSeenList();
+        } else if (cmd == "noauth") {
+            // Forgotten web login: switch it off over USB
+            config.web_user[0] = '\0';
+            config.web_pass[0] = '\0';
+            saveConfig();
+            evlog::add("Web-Login über USB entfernt");
+            Serial.println("[CMD] Web login removed");
+        } else if (cmd == "help") {
+            Serial.println("[CMD] Commands: read, scan, noauth, help");
+        }
+    }
+
+    if (millis() - lastStatusPrint > 10000) {
+        lastStatusPrint = millis();
+        Serial.printf("[STATUS] WiFi:%s MQTT:%s BLE adv:%lu Heap:%u\n",
+            getWiFiStateString().c_str(), mqttIsConnected() ? "OK" : "---",
+            (unsigned long)bleAdvCount(), (unsigned)ESP.getFreeHeap());
+    }
+
+    delay(5);
+    yield();
+}

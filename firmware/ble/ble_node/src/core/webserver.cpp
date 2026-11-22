@@ -3,6 +3,9 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
+// Shared source of the BLE nodes – edit only in firmware/_common/ble, then run
+// tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
+
 #include "webserver.h"
 #include "wifi_manager.h"
 #include "mqtt_ha.h"
@@ -328,7 +331,7 @@ void webserverInit() {
             request->send(response);
         } else {
             request->send(200, "text/html",
-                "<h1>BLE Node</h1><p>Web page missing. Upload <code>data/index.html.gz</code> "
+                "<h1>" NODE_TITLE "</h1><p>Web page missing. Upload <code>data/index.html.gz</code> "
                 "or a firmware (.bin):</p><form method=POST action=/api/update enctype=multipart/form-data>"
                 "<input type=file name=f accept='.bin,.gz'> <button>Upload</button></form>");
         }
@@ -357,7 +360,10 @@ void webserverInit() {
     server.on("/api/system", HTTP_GET, [](AsyncWebServerRequest* request) {
         if (!auth(request)) return;
         JsonDocument d;
-        fwcheck::info(d["fw"].to<JsonObject>());
+        JsonObject fw = d["fw"].to<JsonObject>();
+        fwcheck::info(fw);
+        fw["name"] = NODE_TITLE;   // about card: name and repo folder of this node
+        fw["dir"] = NODE_DIR;
         evlog::json(d["log"].to<JsonArray>());
         d["up"] = millis() / 1000;
         String out;

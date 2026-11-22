@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `alde-v<ver
 
 | Version | Änderungen |
 |---|---|
+| 0.6.4 | Neue Karte **Einstellungen sichern** unter dem Firmware-Update (gemeinsamer Baustein `firmware/_common/web/vannode-backup.js`): alle Einstellungen als Datei sichern und wieder einspielen. Passwörter und die Anmeldung sind nicht enthalten und bleiben beim Einspielen erhalten; WLAN, IP, Gerätename und MQTT-Server nur mit Häkchen. Läuft nur in der Web-Seite über die vorhandene `/api/config`, die Firmware selbst ist unverändert |
 | 0.6.3 | Bedienteil-Bus robuster: Antwort mit klassischer LIN-Prüfsumme wird erkannt (manche 3020-Bedienteile), Befehle gehen dann mit derselben Prüfsumme raus; Antwort wird auch gefunden, wenn das Sync-Byte nach dem Break verloren geht; Wartezeit auf die erste Antwort 150 ms statt 60 ms (3030 Plus). Bei Bedienteilen mit erweiterter Prüfsumme ändert sich nichts |
 | 0.6.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 0.6.1 | Über-Karte aus der gemeinsamen Vorlage (`firmware/_common/web/vannode-about.js`), „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md |

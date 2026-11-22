@@ -72,6 +72,15 @@ Plugin* createSuperSense(uint8_t index);
 #if PLUGIN_OBD
 Plugin* createObd(uint8_t index);
 #endif
+#if PLUGIN_TRUMALC
+Plugin* createTrumaLc(uint8_t index);
+#endif
+#if PLUGIN_SENSO4S
+Plugin* createSenso4s(uint8_t index);
+#endif
+#if PLUGIN_VICTRON
+Plugin* createVictron(uint8_t index);
+#endif
 
 // type id (= id of the first device of this type), name for the web UI, Bluetooth use
 static const PluginType TYPES[] = {
@@ -119,6 +128,15 @@ static const PluginType TYPES[] = {
 #endif
 #if PLUGIN_MOPEKA_STD
     {"mopeka_std", "Gas: Mopeka Standard", BLE_PASSIVE, createMopekaStd},
+#endif
+#if PLUGIN_SENSO4S
+    {"senso4s", "Gas: Senso4s Waage", BLE_PASSIVE, createSenso4s},
+#endif
+#if PLUGIN_TRUMALC
+    {"trumalc", "Gas: Truma LevelControl", BLE_LINK, createTrumaLc},
+#endif
+#if PLUGIN_VICTRON
+    {"victron", "Batterie: Victron SmartShunt / BMV, Solar, DC-DC (Instant Readout)", BLE_PASSIVE, createVictron},
 #endif
 #if PLUGIN_GOVEE
     {"govee", "Thermometer Govee", BLE_PASSIVE, createGovee},

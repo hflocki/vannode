@@ -770,10 +770,25 @@ static Plugin* bmsAt(uint8_t i, BmsPlugin** out) {
     return p;
 }
 
+#if PLUGIN_VICTRON
+// Victron battery monitor (plugin_victron.cpp): also part of the battery list
+bool victronIsBatteryMonitor(Plugin* p);
+void victronListEntry(Plugin* p, JsonObject o);
+static Plugin* victronAt(uint8_t i) {
+    Plugin* p = pluginAt(i);
+    if (!p || !p->enabled || p->removed || strcmp(p->type, "victron") || !victronIsBatteryMonitor(p)) return nullptr;
+    return p;
+}
+#endif
+
 bool bmsAny() {
     BmsPlugin* b;
-    for (uint8_t i = 0; i < pluginCount(); i++)
+    for (uint8_t i = 0; i < pluginCount(); i++) {
         if (bmsAt(i, &b)) return true;
+#if PLUGIN_VICTRON
+        if (victronAt(i)) return true;
+#endif
+    }
     return false;
 }
 
@@ -781,8 +796,12 @@ size_t bmsBatteryList(char* out, size_t n) {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
     BmsPlugin* b;
-    for (uint8_t i = 0; i < pluginCount(); i++)
+    for (uint8_t i = 0; i < pluginCount(); i++) {
         if (bmsAt(i, &b)) b->listEntry(arr.add<JsonObject>());
+#if PLUGIN_VICTRON
+        else if (Plugin* v = victronAt(i)) victronListEntry(v, arr.add<JsonObject>());
+#endif
+    }
     size_t len = serializeJson(doc, out, n);
     return (len == 0 || len >= n) ? 0 : len;
 }

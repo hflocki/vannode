@@ -19,3 +19,7 @@ ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/supersense_test supersense_test.
 ./build/supersense_test
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/tpms_test tpms_test.cpp
 ./build/tpms_test
+${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/trumalc_test trumalc_test.cpp
+./build/trumalc_test
+${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/senso4s_test senso4s_test.cpp
+./build/senso4s_test

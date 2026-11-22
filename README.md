@@ -41,7 +41,7 @@ flowchart LR
   end
   subgraph ble["Bluetooth – gemeinsamer Kern"]
     direction TB
-    bat["battery<br/>Daly · Ective · BM2 · JBD · JK · LiTime"]
+    bat["battery<br/>Daly · Ective · BM2 · JBD · JK · LiTime · Victron"]
     tool["ble<br/>Dachhaube · Pumpe<br/>Kühlschrank · Thermometer"]
     more["ble2 / ble3<br/>(optional)"]
   end
@@ -64,8 +64,8 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
-| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 | **ble-node**: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Alarm WiPro III und OBD2-Adapter (nur lesen), SuperSense-Tanks und -Reifendruck, Thermometer Govee / BTHome, optional Gas und eigene BLE-Sensoren; weitere Nodes als `camper/ble2` … | `camper/ble` |
-| [`firmware/battery`](firmware/battery) | M5Stack AtomS3 Lite | **battery-node**: Batterien per Bluetooth (Daly BMS, Ective BM X, BM2, JBD, JK-BMS, LiTime/Redodo), Status-LED; gleicher Kern und gleiche Web-Oberfläche wie `ble` ([`firmware/_common/ble`](firmware/_common/ble)), eigene Releases | `camper/battery` |
+| [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 | **ble-node**: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Alarm WiPro III und OBD2-Adapter (nur lesen), SuperSense-Tanks und -Reifendruck, Thermometer Govee / BTHome, optional Gas (DIMES, Mopeka, Senso4s, Truma LevelControl) und eigene BLE-Sensoren; weitere Nodes als `camper/ble2` … | `camper/ble` |
+| [`firmware/battery`](firmware/battery) | M5Stack AtomS3 Lite | **battery-node**: Batterien per Bluetooth (Daly BMS, Ective BM X, BM2, JBD, JK-BMS, LiTime/Redodo) und Victron Instant Readout (SmartShunt/BMV, Solarregler, Orion), Status-LED; gleicher Kern und gleiche Web-Oberfläche wie `ble` ([`firmware/_common/ble`](firmware/_common/ble)), eigene Releases | `camper/battery` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
 | [`firmware/alde`](firmware/alde) | ESP32 + LIN-Transceiver | Alde Compact 3020 HE: liest den Heizbus passiv (Raum, Glykol, Warmwasser, Gas, Heizstab …) und setzt optional Sollwert, Gas, Heizstab und Warmwasser über den Bedienteil-Bus, in Entwicklung (basiert auf [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) und [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), MIT) | `camper/alde` |
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
@@ -122,6 +122,7 @@ Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant s
 | Einrichtung | Access Point `<Gerät>-Node-XXXXXX`, Einstellungen im Browser unter `http://192.168.4.1` |
 | Web-Oberfläche | Gleiche Optik auf allen Geräten, optionaler Login (HTTP Basic Auth); Login vergessen → `noauth` im seriellen Monitor bzw. Werkseinstellungen |
 | Updates | Im Browser, mit Prüfung (falsches Gerät, `.merged.bin`, zu groß), Ereignis-Log und Rückfall auf die vorherige Firmware |
+| Sicherung | Karte „Einstellungen sichern“ unter dem Update: alle Einstellungen als JSON-Datei sichern und einspielen, ohne Passwörter und Anmeldung; WLAN/MQTT-Server nur auf Wunsch (Display: eigene Sicherung mit Seiten und Kacheln) |
 | Firmware-Version | `FW_VERSION` in der `config.h` des Geräts, sichtbar im Web-UI und in HA |
 
 ## Eigene Einstellungen (`config_local.h`)
@@ -286,7 +287,7 @@ Fahrzeug oder andere Sachen beschädigen und Menschen gefährden.
 ## Marken
 
 Produkt- und Firmennamen in diesem Projekt – zum Beispiel Truma, Combi, CP Plus, CaraWater, Daly,
-Ective, JBD, JK-BMS, LiTime, Redodo, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Ective, JBD, JK-BMS, LiTime, Redodo, Victron, Senso4s, Govee, Mopeka, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika und Home Assistant – sind Marken oder eingetragene Marken ihrer Inhaber. Sie stehen hier
 nur, um passende Geräte zu benennen. VanNode hat keine Verbindung zu diesen Inhabern und wird von
 ihnen weder unterstützt noch geprüft oder empfohlen. Die Protokolle stammen aus öffentlichen
@@ -313,9 +314,9 @@ Fremde Teile behalten ihre Lizenz. Die vollständige Liste, nach Node sortiert, 
 | Ordner | Fremde Teile |
 | --- | --- |
 | `firmware/heater` | Protokoll-Logik aus [esphome-truma_inetbox](https://github.com/skrebber/esphome-truma_inetbox) und Timer aus [esphome-truma](https://github.com/havanti/esphome-truma) (GPL-3.0), Test-Mitschnitte aus [WomoLIN](https://github.com/muccc/WomoLIN) (GPL-3.0) |
-| `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0), Protokoll des Bedienteil-Busses aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT) |
-| `firmware/battery` | Batterie-Protokolle aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0) |
-| `firmware/ble` | Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen), SuperSense-Tanksensor nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT, eigene Umsetzung) |
+| `firmware/alde` | LIN-Dekodierung aus [alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin) (Code MIT, Dokumentation CC BY 4.0), Protokoll des Bedienteil-Busses aus [alde_3030_plus](https://github.com/daviddootson/alde_3030_plus) (MIT), Prüfsummen-Erkennung nach [esphome-alde-3020](https://github.com/holdestmade/esphome-alde-3020) (MIT) |
+| `firmware/battery` | Batterie-Protokolle (Daly, Ective, BM2, JBD, JK-BMS, LiTime) und Test-Mitschnitte aus [aiobmsble](https://github.com/patman15/aiobmsble) (Apache-2.0), Victron Instant Readout nach [victron-ble](https://github.com/keshavdv/victron-ble) (Unlicense) |
+| `firmware/ble` | Dachhauben-Protokoll aus [rvtech-hacs](https://github.com/C64Axel/rvtech-hacs) (MIT), Pumpen-Protokoll nach [toms2k84/Blackforest-Vanlife-SmartCamper](https://github.com/toms2k84/Blackforest-Vanlife-SmartCamper) (MIT) und [geierwally1978/carawater-isp15-ble](https://github.com/geierwally1978/carawater-isp15-ble) (eigene Umsetzung, kein Code übernommen), SuperSense-Tanksensor nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (MIT, eigene Umsetzung), Truma LevelControl nach [HAOS-Truma-Levelcontrol-Integration](https://github.com/cyclemat/HAOS-Truma-Levelcontrol-Integration) (GPL-3.0), Senso4s nach [senso4s_ble](https://github.com/ksanislo/senso4s_ble) (Apache-2.0) |
 | `firmware/tanklevel` | Mopeka-Dekodierung nach [mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble), SuperSense-Tanksensor nach [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) (beide MIT, eigene Umsetzung) |
 | `firmware/level` | basiert auf dem Levelsensor von [klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT) (MIT) |
 | `firmware/display` | Schriften Montserrat und Font Awesome Free (OFL), Truma-Fehlertexte (eigene Formulierung) |

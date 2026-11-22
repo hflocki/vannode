@@ -19,11 +19,13 @@ Bis ble 2.4.0 lief der battery-node mit der Firmware des [ble-node](../ble). Sei
 | Batterie: JBD / Xiaoxiang Smart-BMS (Akkus mit JBD-BMS, z. B. Supervolt, Chins, Lossigy, SBL; Dienst `FF00`) – *ungetestet* | Verbinden | MAC, Abfrageintervall |
 | Batterie: JK-BMS (Protokoll JK02, Firmware 10 bis 19) – *ungetestet* | Verbinden | MAC, Abfrageintervall |
 | Batterie: LiTime / Redodo / PowerQueen (BLE-Name `L-12…`, `R-12…`, `P-12…` u. a.) – *ungetestet* | Verbinden | MAC, Abfrageintervall |
+| Batterie: Victron Instant Readout – Batteriemonitor (SmartShunt, BMV), dazu Solarladeregler (SmartSolar/BlueSolar) und Ladebooster (Orion Smart); Typ wird erkannt – *ungetestet* | Mithören (kein Verbindungsplatz) | MAC, Schlüssel aus der VictronConnect-App |
 
 Ab Werk ist keine Batterie angelegt: unter **Geräte** einen Typ wählen und **+ Gerät hinzufügen**, MAC über **Suchen** übernehmen, danach **Jetzt neu starten**. Vom selben Typ gehen mehrere (`daly`, `daly2` …).
 
 - **Daly / Ective:** feste Verbindung, Abfrage alle *Abfrageintervall* Sekunden (5–300, Standard 10). Ladestand, Spannung, Strom, Leistung, Restkapazität, Energie, Restlaufzeit; bei Daly zusätzlich Zellspannungen, Zelldifferenz, Temperatur, Zyklen und Fehler als Text.
 - **JBD, JK-BMS, LiTime:** feste Verbindung wie Daly, mit Zellspannungen, Zelldifferenz, Temperatur, Zyklen und Fehlern als Text. Der JK-BMS sendet nach der ersten Anfrage jede Sekunde von selbst; übernommen wird ein Wert je *Abfrageintervall*. Die drei Typen sind nach den Mitschnitten aus [aiobmsble](https://github.com/patman15/aiobmsble) getestet, aber noch nicht an echten Akkus – Rückmeldungen willkommen.
+- **Victron** (nur mithören, belegt keinen der 3 Verbindungsplätze): In der VictronConnect-App beim Gerät unter *Einstellungen (Zahnrad) → ⋮ → Produktinfo* „Instant Readout via Bluetooth“ einschalten und unter „Details anzeigen“ den Schlüssel (32 Zeichen) kopieren; ihn im Plugin eintragen. Der Gerätetyp (Solarladeregler, Batteriemonitor, Ladebooster) kommt aus dem Funkpaket, Home Assistant bekommt nur die passenden Werte. Falscher Schlüssel: Status „Falscher Schlüssel“. Dekodierung nach [victron-ble](https://github.com/keshavdv/victron-ble) (Unlicense). Ein Batteriemonitor erscheint auch in der Batterieliste `camper/battery/batteries` (Display, Pocket-Node); Solarregler und Ladebooster nur mit eigenen Topics.
 - **BM2:** neuere Geräte senden ihre Werte per Funk, dann bleibt der Verbindungsplatz frei („OK (Funk)“). Ältere ohne Funkwerte werden verbunden. Zustand aus der Spannung (Normal, Schwach, Kritisch, Lädt, Erhaltungsladung).
 - Höchstens **3 Verbindungen gleichzeitig** (Grenze von NimBLE), insgesamt höchstens 6 Geräte (`MAX_PLUGINS`).
 - Solange der ESP verbunden ist, kommt die Hersteller-App meist nicht dran: **Bluetooth für App freigeben** am Gerät (endet nach 30 min von selbst).
@@ -74,7 +76,7 @@ Wer noch die alte battery-Firmware 1.x hat: Beim ersten Start wird ihre Batterie
 
 | Pfad | Inhalt |
 | --- | --- |
-| `battery_node/config.h` | Batterie-Typen (`PLUGIN_DALY`, `PLUGIN_ECTIVE`, `PLUGIN_BM2`, `PLUGIN_JBD`, `PLUGIN_JK`, `PLUGIN_LITIME`), Gerätename, Topic, Zeiten, Status-LED |
+| `battery_node/config.h` | Batterie-Typen (`PLUGIN_DALY`, `PLUGIN_ECTIVE`, `PLUGIN_BM2`, `PLUGIN_JBD`, `PLUGIN_JK`, `PLUGIN_LITIME`, `PLUGIN_VICTRON`), Gerätename, Topic, Zeiten, Status-LED |
 | `battery_node/src/plugins/` | Batterie-Plugins (`plugin_bms.cpp`) und Protokolle (`bms_proto.*`) |
 | `battery_node/src/core/`, `battery_node/web/` | Kopie des gemeinsamen BLE-Kerns aus `firmware/_common/ble` (WLAN, MQTT/HA, Webserver, Bluetooth, `main.cpp` mit `setup()`/`loop()`) und der Web-Oberfläche – **nicht hier ändern**, sondern dort, dann `python3 tools/common/sync_common.py` und `python3 tools/web/pack_web.py` |
 | `tests/` | Host-Test der Protokolle (`bash tests/run.sh`) |

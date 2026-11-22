@@ -371,6 +371,26 @@ bool BleLink::finishConnect() {
     return true;
 }
 
+int BleLink::read(const char* uuid, uint8_t* out, size_t max) {
+    if (!linkUp || !client || !uuid || !uuid[0]) return -1;
+    NimBLEUUID want(uuid);
+    NimBLERemoteCharacteristic* chr = nullptr;
+    for (NimBLERemoteService* s : client->getServices(false)) {
+        if (service[0] && !(s->getUUID() == NimBLEUUID(service))) continue;
+        chr = s->getCharacteristic(want);
+        if (chr) break;
+    }
+    if (!chr || !chr->canRead()) {
+        devlogf(tag, "Read %s: characteristic not found or not readable", uuid);
+        return -1;
+    }
+    NimBLEAttValue v = chr->readValue();
+    size_t n = v.length() < max ? v.length() : max;
+    memcpy(out, v.data(), n);
+    lastRx = millis();
+    return (int)n;
+}
+
 bool BleLink::writeAuto(const uint8_t* d, size_t n) {
     if (!writeChr) return false;
     return write(d, n, !writeChr->canWriteNoResponse());

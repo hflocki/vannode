@@ -59,7 +59,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Victron, Senso4s, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -97,6 +97,7 @@ added here, under its node, and nowhere else.
 | --- | --- | --- | --- |
 | `firmware/battery` – battery protocols `bms_proto.*` (Daly, Ective, BM2, JBD, JK-BMS JK02, LiTime/Redodo) | ported |
 | `firmware/battery/tests/bms_vectors.h` – reference frames (JBD, JK-BMS, LiTime/Redodo) | test data | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) test suite | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) | [patman15/aiobmsble](https://github.com/patman15/aiobmsble) | Apache-2.0 ([`firmware/battery/LICENSE-Apache-2.0`](firmware/battery/LICENSE-Apache-2.0)) |
+| `firmware/battery` – `victron_decode.h`, plugin `victron` – Victron Instant Readout record layouts; test vectors in `tests/victron_test.cpp` | ported | [keshavdv/victron-ble](https://github.com/keshavdv/victron-ble) | Unlicense (public domain) |
 | `firmware/battery` – BM2 battery monitor frame layout | reference | [DJBenson/bm2-esphome](https://github.com/DJBenson/bm2-esphome), [andystewart999/ha_bm2monitor](https://github.com/andystewart999/ha_bm2monitor) | MIT |
 
 ### BLE-Node (`firmware/ble`)
@@ -109,6 +110,8 @@ added here, under its node, and nowhere else.
 | `firmware/ble` – CaraWater pump, first version | protocol knowledge, own C++ implementation | Home Assistant integration "carawater_isp15" by a community member, shared in a user group; he did not answer whether and how he wants to be named and will be credited on request | – (no license stated) |
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – SuperSense tank sensors (service UUID, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
+| `firmware/_common/truma_lc_decode.h`, plugin `trumalc` – Truma LevelControl (GATT layout, key derivation, value layout) | ported | [cyclemat/HAOS-Truma-Levelcontrol-Integration](https://github.com/cyclemat/HAOS-Truma-Levelcontrol-Integration) | GPL-3.0 |
+| `firmware/ble` – `senso4s_decode.h`, plugin `senso4s` – Senso4s advertisement layout and status codes | ported | [ksanislo/senso4s_ble](https://github.com/ksanislo/senso4s_ble), Copyright 2026 Ken Sanislo | Apache-2.0 ([`firmware/ble/LICENSE-Apache-2.0`](firmware/ble/LICENSE-Apache-2.0)) |
 
 ### Tanklevel-Node (`firmware/tanklevel`)
 

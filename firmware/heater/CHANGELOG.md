@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `heater-v<v
 
 | Version | Änderungen |
 | --- | --- |
+| 1.8.4 | Neue Karte **Einstellungen sichern** unter dem Firmware-Update (gemeinsamer Baustein `firmware/_common/web/vannode-backup.js`): alle Einstellungen als Datei sichern und wieder einspielen. Passwörter und die Anmeldung sind nicht enthalten und bleiben beim Einspielen erhalten; WLAN, IP, Gerätename und MQTT-Server nur mit Häkchen. Läuft nur in der Web-Seite über die vorhandene `/api/config` (Seite steckt in der Firmware, `web_ui.h`) |
 | 1.8.3 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 1.8.2 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |
 | 1.8.1 | LIN-Sniffer mit Modus **Alle Frames (Mitschnitt)**: jeder Frame aller PIDs mit Zeitstempel, ungefiltert (Debug-Reiter oder MQTT `set/sniffer` = `ALL`). Verlorene Frames werden gemeldet, das Log-Fenster hält im Mitschnitt bis zu 5000 Zeilen. `tests/log2replay.py` wandelt solche Logs in Replay-Dateien um |

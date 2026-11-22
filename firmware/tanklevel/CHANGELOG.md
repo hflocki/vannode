@@ -6,6 +6,7 @@ Die laufende Version steht in der Web-UI im Tab **WiFi** und in Home Assistant i
 
 | Version | Änderungen |
 | --- | --- |
+| 1.11.1 | Neue Karte **Einstellungen sichern** unter dem Firmware-Update (gemeinsamer Baustein `firmware/_common/web/vannode-backup.js`): alle Einstellungen als Datei sichern und wieder einspielen. Passwörter und die Anmeldung sind nicht enthalten und bleiben beim Einspielen erhalten; WLAN, IP, Gerätename und MQTT-Server nur mit Häkchen. Läuft nur in der Web-Seite über die vorhandene `/api/config`, die Firmware selbst ist unverändert |
 | 1.11.0 | SuperSense: der Node liest jetzt die SuperSense-**Empfängerbox** (SSBT…, bis 4 Sensoren). Je Tank MAC der Box und Sensornummer 1–4 wählen; nutzen Frisch- und Grauwasser dieselbe Box, teilen sie sich eine Verbindung. Prozent aus dem Rohwert (2475 = 100 %) oder aus eingetragenen Rohwerten leer / voll, der Faktor „Liter je Rohwert-Einheit“ entfällt. Die Karte zeigt alle 4 Sensoren der Box |
 | 1.10.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 1.10.1 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |

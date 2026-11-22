@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `maxxfan-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 1.9.3 | Neue Karte **Einstellungen sichern** unter dem Firmware-Update (gemeinsamer Baustein `firmware/_common/web/vannode-backup.js`): alle Einstellungen als Datei sichern und wieder einspielen. Passwörter und die Anmeldung sind nicht enthalten und bleiben beim Einspielen erhalten; WLAN, IP, Gerätename und MQTT-Server nur mit Häkchen. Läuft nur in der Web-Seite über die vorhandene `/api/config`, die Firmware selbst ist unverändert |
 | 1.9.2 | Über-Karte kennt jetzt auch den Pocket-Node (gemeinsame Karte auf allen Geräte-Webseiten); keine sichtbare Änderung |
 | 1.9.1 | Über-Karte: keine eigene Liste fremder Teile mehr, „Hinweise und fremde Teile“ verlinkt die zentrale NOTICE.md des Projekts |
 | 1.9.0 | Optionaler Haubenkontakt: Reedkontakt an einem freien GPIO (in der Web-UI wählbar, Standard aus) meldet `…/lid` = `open`/`closed`, Anzeige im Reiter Live, HA-Fenster-Sensor „Lid“; Eintrag im Ereignis-Log, wenn die Haube 90 s nach „Schließen“ noch offen ist |

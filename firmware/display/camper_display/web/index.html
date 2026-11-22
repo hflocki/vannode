@@ -983,8 +983,8 @@ function pgSettings(){
    <div id="lnk"></div>
    <div class="row" style="gap:8px;margin-top:8px"><button class="btn" type="button" id="lnkadd">+ Link</button><button class="btn" type="button" id="lnksug">VanNode-Geräte vorschlagen</button></div></details>
   <details data-g="dev" id="fd"><summary>Topic-Finder</summary>
-   <p class="mu">Hört kurz auf einem Topic-Filter mit und zeigt, was ankommt. Aus jedem Wert lässt sich direkt eine Kachel machen.</p>
-   <div class="row"><input type="text" id="ffilter" class="grow" value="camper/zigbee/data/#" style="flex:1"><button class="btn pri" id="fstart">Start</button></div>
+   <p class="mu">Hört kurz auf einem Topic-Filter mit und zeigt, was ankommt. Aus jedem Wert lässt sich direkt eine Kachel machen. <b>Discovery</b> sucht Geräte, die sich für Home Assistant anmelden (ESPHome, Tasmota, Shelly, zigbee2mqtt …), und legt daraus fertige Kacheln an – ohne Home Assistant. VanNode-Geräte sind dort ausgeblendet.</p>
+   <div class="row"><input type="text" id="ffilter" class="grow" value="camper/zigbee/data/#" style="flex:1"><button class="btn pri" id="fstart">Start</button><button class="btn" type="button" id="fdisc">Discovery</button></div>
    <div id="flist" style="margin:10px 0 14px"></div></details>
   <details data-g="net" ${cfg&&cfg.setup?'open':''}><summary>WLAN</summary>
    <div class="row"><div class="grow">${inp('wifiSsid','SSID')}</div><button class="btn sm" id="scan" style="margin-top:28px">Suchen</button></div>
@@ -1130,6 +1130,7 @@ async function loadSettings(){
   $('#bkexp').onclick=backupExport;$('#bkimp').onclick=backupImport;
   $('#potest').onclick=async()=>{await post('/api/pushover/test');setTimeout(async()=>{try{const r=await fetch('/api/settings');const s=await r.json();$('#postat').textContent=s.poStatus?'Zuletzt: '+s.poStatus:''}catch(e){}},6000)};
   $('#fstart').onclick=()=>send({c:'finder',on:!finder.on,f:$('#ffilter').value});
+  $('#fdisc').onclick=()=>{$('#ffilter').value='homeassistant/#';send({c:'finder',on:true,f:'homeassistant/#'})};
   renderFinder();
 }
 async function post(url,body){
@@ -1387,10 +1388,26 @@ function renderFinder(){
   if(!keys.length){$('#flist').innerHTML=finder.on?'<p class="mu">Warte auf Nachrichten ... (retained Werte kommen sofort, andere erst bei der nächsten Änderung)</p>':'';return}
   $('#flist').innerHTML='<table>'+keys.map(k=>{
     let p=finder.l[k],chips='';
+    // discovery summary from the display (discovery.h): one entity of another device
+    try{const d=JSON.parse(p);if(d&&d.d===1){const kind={sensor:'Wert',binary_sensor:'Zustand',switch:'Schalter',light:'Licht (an/aus)'}[d.c]||d.c;
+      return `<tr><td><b>${esc(d.n)}</b> <span class="mu">· ${esc(kind)}${d.u?' · '+esc(d.u):''}</span><br><code>${esc(d.t)}${d.k?' → '+esc(d.k):''}</code><br><span class="chip" data-fd="${esc(k)}">+ Kachel</span></td></tr>`}}catch(e){}
     try{const j=JSON.parse(p);if(j&&typeof j==='object'&&!Array.isArray(j))chips=Object.keys(j).map(x=>`<span class="chip" data-ft="${esc(k)}" data-fk="${esc(x)}">+ ${esc(x)}</span>`).join('')}catch(e){}
     if(!chips)chips=`<span class="chip" data-ft="${esc(k)}" data-fk="">+ Kachel</span>`;
     return `<tr><td><b>${esc(k)}</b><br><code>${esc(p)}</code><br>${chips}</td></tr>`}).join('')+'</table>';
   document.querySelectorAll('[data-ft]').forEach(c=>c.onclick=()=>addFromFinder(c.dataset.ft,c.dataset.fk));
+  document.querySelectorAll('[data-fd]').forEach(c=>c.onclick=()=>{try{addFromDiscovery(JSON.parse(finder.l[c.dataset.fd]))}catch(e){}});
+}
+// tile from a discovery summary: value, state text or switch
+function addFromDiscovery(d){
+  if(!PG.pages.length)PG.pages.push({name:'Geräte'});
+  const t={name:d.n,page:PG.pages.length-1,type:0,topic:d.t,key:d.k||''};
+  if(d.u)t.unit=d.u;
+  if((d.c==='switch'||d.c==='light')&&d.ct){t.type=1;t.cmdTopic=d.ct;t.payloadOn=d.on;t.payloadOff=d.off;t.stateOn=d.so||d.on}
+  else if(d.c==='switch'||d.c==='light'||d.c==='binary_sensor'){
+    const txt={door:['offen','zu'],window:['offen','zu'],opening:['offen','zu'],garage_door:['offen','zu'],motion:['Bewegung','ruhig'],occupancy:['belegt','frei'],
+      moisture:['nass','trocken'],gas:['Gas!','ok'],smoke:['Rauch!','ok'],battery:['schwach','ok'],plug:['an','aus'],power:['an','aus']}[d.dc]||['an','aus'];
+    t.valMap=`${d.on||'ON'}=${txt[0]},${d.off||'OFF'}=${txt[1]}`}
+  PG.tiles.push(t);renderPages();toast('Kachel hinzugefügt – unter „Seiten & Kacheln“ prüfen und speichern');
 }
 function addFromFinder(topic,key){
   if(!PG.pages.length)PG.pages.push({name:'Zigbee'});

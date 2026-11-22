@@ -92,6 +92,11 @@ public:
 
     bool receive(BlePacket& p);   // Next received notification, false if none
 
+    // Reads a characteristic (in the service given to begin(), or in any service if that is
+    // empty). Blocks until the answer is there (usually < 200 ms). Returns the number of bytes
+    // copied to out, -1 if not connected, not found or not readable. Loop task only.
+    int read(const char* uuid, uint8_t* out, size_t max);
+
     void setReleased(bool r);
     bool released() const { return isReleased; }
 

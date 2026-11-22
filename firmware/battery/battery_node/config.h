@@ -20,7 +20,8 @@
 // 1 = type is compiled in, 0 = left out. Batteries are not set here: they are added in
 // the web UI (Geräte, "+ Gerät hinzufügen"), up to MAX_PLUGINS devices in total.
 // Every battery keeps a BLE connection (the BM2 only as fallback), so at most
-// MAX_BLE_LINKS (3) of them can be switched on at the same time.
+// MAX_BLE_LINKS (3) of them can be switched on at the same time. Victron only listens
+// and needs no connection slot.
 // The other Bluetooth devices (roof hatch, pump, fridge, sensors) run on the ble-node
 // (firmware/ble); both share the core in firmware/_common/ble.
 // ============================================================
@@ -42,6 +43,9 @@
 #ifndef PLUGIN_LITIME
 #define PLUGIN_LITIME         1      // Battery: LiTime / Redodo / PowerQueen, BLE connection
 #endif
+#ifndef PLUGIN_VICTRON
+#define PLUGIN_VICTRON        1      // Victron Instant Readout: battery monitor (SmartShunt, BMV), solar charger,
+#endif                               // DC-DC charger - passive BLE with the key from the VictronConnect app
 
 // At most this many connecting devices may be switched on at the same time
 // (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS = 3). Checked in the web UI, when saving
@@ -56,7 +60,7 @@
 
 // Derived switches (do not edit): which code parts of the shared core are compiled.
 // Plugins of the ble-node are not part of this firmware.
-#define CT_BLE_PASSIVE  0
+#define CT_BLE_PASSIVE  PLUGIN_VICTRON   // listen only, no connection slot
 #define CT_GAS          0
 #define CT_BMS          (PLUGIN_DALY + PLUGIN_ECTIVE + PLUGIN_BM2 + PLUGIN_JBD + PLUGIN_JK + PLUGIN_LITIME)
 #define CT_BLE_LINKS    CT_BMS
@@ -70,7 +74,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.6.0"
+#define FW_VERSION            "2.6.1"
 #define FW_DEVICE             "battery"   // device id in the firmware marker (fwcheck.h)
 #define NODE_TITLE            "Battery Node" // web page without index.html.gz, Home Assistant model, serial
 #define NODE_DIR              "battery"   // repo folder (about card)

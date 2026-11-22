@@ -19,7 +19,7 @@ const GAS_CFG = {capacity: 27.2, fill_stop_on: false, fill_stop: 80};
 const M = {
   id: 'ble',
   config: {
-    version: '2.5.2', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '2.6.0', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false, node_name: 'ble-node', debug: true},
@@ -39,6 +39,8 @@ const M = {
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
       P('mopeka_std', 'mopeka_std', 'Gas: Mopeka Standard', 1, Object.assign({name: 'Gasflasche 3', mac: MAC(11), empty_mm: 38, full_mm: 336, lpg_propane: 100}, GAS_CFG, {capacity: 14.6})),
+      P('senso4s', 'senso4s', 'Gas: Senso4s Waage', 1, Object.assign({name: 'Gaswaage', mac: MAC(16)}, GAS_CFG, {fill_stop_on: false})),
+      P('trumalc', 'trumalc', 'Gas: Truma LevelControl', 2, {name: 'Gasflasche Truma', mac: MAC(17), interval: 600}),
       P('govee', 'govee', 'Thermometer Govee', 1, {name: 'Thermometer außen', mac: MAC(12), temp_offset: 0, hum_offset: 0}),
       P('tpms', 'tpms', 'Reifendruck SuperSense TireCheck', 1, {name: 'Reifendruck', mac1: MAC(21), pos1: 0, mac2: MAC(22), pos2: 1, mac3: MAC(23), pos3: 4, mac4: MAC(24), pos4: 5,
         mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 0, p_max: 0,
@@ -113,6 +115,11 @@ const M = {
                    {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
       dimes: GAS_FIELDS,
+      senso4s: GAS_FIELDS,
+      trumalc: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name beginnt mit "T", z. B. "T…Alugas 11kg")'},
+                {k: 'interval', l: 'Messintervall', t: 'int', min: 60, max: 3600, u: 's', h: 'Wie oft gemessen wird. Jede Messung kostet Sensorbatterie, Standard 600 s'}],
+      victron: [{k: 'mac', l: 'Geräte-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                {k: 'key', l: 'Schlüssel', t: 'text', max: 33, h: '32 Zeichen aus der VictronConnect-App: Gerät → Einstellungen (Zahnrad) → ⋮ → Produktinfo → "Instant Readout" einschalten → "Details anzeigen"'}],
       mopeka: MOPEKA_FIELDS,
       mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
       tpms: [{k: 'mac1', l: 'Rad 1: Sensor-MAC', t: 'mac', h: 'Nicht zugeordnete Sensoren stehen in der Live-Ansicht, MAC von dort übernehmen. Leer = Rad nicht belegt'},
@@ -171,6 +178,8 @@ const M = {
             {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
             {type: 'supersense', name: 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
+            {type: 'senso4s', name: 'Gas: Senso4s Waage', ble: 1}, {type: 'trumalc', name: 'Gas: Truma LevelControl', ble: 2},
+
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
     max_devices: 16,
@@ -351,10 +360,18 @@ const M = {
         rows.push(['Zustand', B[2] === null ? 'Ruhe' : B[2] < 0 ? 'Entladen' : 'Laden', ''], ['Alter', 3, 's'], ['Bluetooth', -68, 'dBm']);
         return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, gauge: {v: B[0], unit: '%', label: 'Ladestand', max: 100}, rows, ctrl: [sw]};
       }
-      case 'dimes': case 'mopeka': case 'mopeka_std': {
-        const lvl = {dimes: 64.5, mopeka: 41.2, mopeka_std: 87.0}[p.type], cap = +p.cfg.capacity || 27.2;
+      case 'trumalc':
+        return {state: 'OK', ok: true, gauge: {v: 58, unit: '%', label: 'Füllstand'},
+                rows: [['Gasmenge', 6.4, 'kg'], ['Batterie', 87, '%'], ['Temperatur', 9, '°C'], ['Messqualität', 3, '/ 3'], ['Bluetooth', -74, 'dBm'], ['Alter', 212, 's']],
+                ctrl: [{t: 'buttons', k: 'action', b: [['measure', 'Jetzt messen']]}, sw], raw: '3A 40 00 57 09 00 C0'};
+      case 'victron':   // battery-node (mock/battery.js): SmartShunt
+        return {state: 'OK', ok: true, gauge: {v: 81, unit: '%', label: 'Ladestand', max: 100},
+                rows: [['Spannung', 13.21, 'V'], ['Strom', -4.6, 'A'], ['Leistung', -61, 'W'], ['Entnommen', -38.0, 'Ah'],
+                       ['Restlaufzeit', 21.3, 'h'], ['Alter', 2, 's'], ['Bluetooth', -71, 'dBm']]};
+      case 'dimes': case 'mopeka': case 'mopeka_std': case 'senso4s': {
+        const lvl = {dimes: 64.5, mopeka: 41.2, mopeka_std: 87.0, senso4s: 52.0}[p.type], cap = +p.cfg.capacity || 27.2;
         const rows = [['Inhalt', Math.round(cap * lvl / 10) / 10, 'L'], ['Rohwert', lvl, '%']];
-        if (p.type !== 'dimes') rows.push(['Füllhöhe', Math.round(38 + (366 - 38) * lvl / 100), 'mm'], ['Temperatur', 7, '°C'], ['Messqualität', 3, '/ 3']);
+        if (p.type.startsWith('mopeka')) rows.push(['Füllhöhe', Math.round(38 + (366 - 38) * lvl / 100), 'mm'], ['Temperatur', 7, '°C'], ['Messqualität', 3, '/ 3']);
         rows.push(['Batterie', p.type === 'dimes' ? 90 : 75, '%'], ['Bluetooth', -79, 'dBm'], ['Alter', 8, 's']);
         return {state: 'OK', ok: true, gauge: {v: lvl, unit: '%', label: 'Füllstand'}, rows,
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};

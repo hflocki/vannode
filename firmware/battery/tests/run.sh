@@ -9,3 +9,5 @@ cd "$(dirname "$0")"
 mkdir -p build
 ${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/bms_test bms_test.cpp ../battery_node/src/plugins/bms_proto.cpp
 ./build/bms_test
+${CXX:-g++} -std=gnu++17 -Wall -Wextra -o build/victron_test victron_test.cpp
+./build/victron_test

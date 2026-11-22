@@ -25,7 +25,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Heizung (Alde) | `camper/alde` | alde | [firmware/alde](../firmware/alde/README.md) |
 | Dachlüfter (MaxxFan) | `camper/maxxfan` | maxxfan | [firmware/maxxfan](../firmware/maxxfan/README.md) |
 | Temperaturen (Kühlschrank …) | `camper/temp` | temp | [firmware/temp](../firmware/temp/README.md) |
-| Battery-Node (Batterien: Daly, Ective, BM2, JBD, JK-BMS, LiTime) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
+| Battery-Node (Batterien: Daly, Ective, BM2, JBD, JK-BMS, LiTime, Victron) | `camper/battery` | battery | [firmware/battery](../firmware/battery/README.md) |
 | BLE-Node (ble-node: Dachhaube, Pumpe, Kühlschrank, Thermometer, optional Gas; weitere als `camper/ble2`, `camper/ble3`; bis ble 2.5.0 `camper/ble…`) | `camper/ble` | ble (Gerätename ble-node) | [firmware/ble](../firmware/ble/README.md) |
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
@@ -234,7 +234,7 @@ Gesendet wird nach jeder Messung (Intervall in der Web-UI, Standard 10 s), spät
 
 ## Batterien `camper/battery`
 
-Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die BLE-Firmware; Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2`, `jbd`, `jk`, `litime` … (bis battery-node 1.x eine frei gewählte ID).
+Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die BLE-Firmware; Gerätename `battery-node`, Topic `camper/battery`). `<id>` ist die Geräte-ID: `daly`, `daly2`, `ective`, `bm2`, `jbd`, `jk`, `litime`, `victron` … (bis battery-node 1.x eine frei gewählte ID).
 
 | Topic | Inhalt |
 | --- | --- |
@@ -244,11 +244,15 @@ Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die
 | `…/<id>/temperature`, `cycles`, `delta`, `cell_1` … | Daly, JBD, JK-BMS, LiTime |
 | `…/<id>/state` | nur BM2: `Normal`, `Schwach`, `Kritisch`, `Lädt`, `Erhaltungsladung` |
 | `…/<id>/connected`, `…/<id>/release`, `…/<id>/ble_rssi` | Bluetooth-Verbindung, für die Hersteller-App freigegeben, Signal |
-| `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` (`t` = Typ: 1 Daly, 2 Ective, 3 BM2, 4 JBD, 5 JK-BMS, 6 LiTime) |
+| `…/victron/voltage`, `current`, `state`, `ble_rssi` | Victron Instant Readout, alle Typen (Spannung = Batterie bzw. beim Ladebooster Ausgang) |
+| `…/victron/pv_power`, `yield_today`, `load`, `mode`, `error` | nur Solarladeregler: Solarleistung W, Ertrag heute Wh, Laststrom A, Zustand (Bulk, Absorption, Erhaltung …), Fehlercode |
+| `…/victron/power`, `soc`, `consumed`, `runtime`, `alarm`, `temperature`, `starter`, `midpoint` | nur Batteriemonitor: W, %, entnommene Ah, Restlaufzeit min, Alarm `ON`/`OFF`; Temperatur, Starter- oder Mittelpunktspannung je nach Hilfseingang |
+| `…/victron/input`, `off_reason`, `mode`, `error` | nur Ladebooster: Eingangsspannung, Grund für Aus (z. B. `Motor aus`), Zustand, Fehlercode |
+| `…/batteries` | alle Batterien als JSON-Liste für Displays: `[{"id","name","ok","t","soc","v","a","w","st","rt","p","pt"}, …]` (`t` = Typ: 1 Daly, 2 Ective, 3 BM2, 4 JBD, 5 JK-BMS, 6 LiTime, 7 Victron-Batteriemonitor; Victron-Solarregler und -Ladebooster stehen nicht in der Liste) |
 
 ## BLE-Node `camper/ble`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std`, `senso4s`, `trumalc` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -265,7 +269,9 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/pump/running`, `pressure`, `flow`, `voltage`, `current`, `temperature`, `daily_liters`, `total_liters` … | Wasserpumpe; Befehle `enable`, `pressure_level` |
 | `…/wipro/armed` (`ON`/`OFF`), `reason`, `open`, `contact0` … `contact7` (`ON`/`OFF`), `raw` | Alarm WiPro III (nur lesen): Scharf-Zustand, Alarmgrund (Text), offene Kontakte als Namensliste, je Kontakt ein Bit aus Byte 6, Rohdaten (Hex) Kontaktnamen im Feld „Kontaktnamen“ der Plugin-Einstellungen |
 | `…/obd/rpm`, `speed`, `coolant`, `oil_temp`, `fuel`, `fuel_rate`, `adblue`, `adblue_temp`, `adblue_conc`, `load`, `ambient`, `intake_temp`, `map`, `baro`, `maf`, `throttle`, `ecu_voltage`, `runtime`, `dist_clear`, `odometer`, `dtc_count`, `voltage`, `running` (`ON`/`OFF`), `mil` (`ON`/`OFF`), `dtc`, `protocol`, `adapter`, `raw`, `scan` | OBD2-Adapter (nur lesen): Standardwerte des Motorsteuergeräts (nur die, die das Fahrzeug meldet; `fuel_rate` in l/h, `adblue` Füllstand %, `adblue_temp` °C, `adblue_conc` Konzentration %), Bordspannung am Adapter, Motor läuft, Motorkontrollleuchte, Fehlercodes als Text. `scan` = Bericht des letzten Fahrzeug-Scans (Text, retained). Befehle `…/cmd/obd/read_dtc/set` (`PRESS`), `…/cmd/obd/scan/set` (`PRESS`, Fahrzeug scannen), `…/cmd/obd/raw/set` (Adapter-Befehl, Antwort in `raw`) |
-| `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern) |
+| `…/<gas>/level`, `content`, `battery`, `raw` | Gasflasche (optional; Füllstand %, Inhalt in Litern; DIMES, Mopeka, Senso4s) |
+| `…/trumalc/level`, `kg`, `battery`, `temperature`, `quality`, `state`, `ble_rssi` | Truma LevelControl: Füllstand %, Gasmenge kg, Sensorbatterie %, °C, Messqualität 0–3 |
+| `…/cmd/trumalc/measure/set` | Messung sofort starten (Payload beliebig) |
 | `…/supersense/s1_percent` … `s4_percent`, `sN_liters`, `sN_temperature`, `sN_raw`, `state`, `connected`, `ble_rssi` | SuperSense-Empfängerbox (nur lesen): je benutztem Sensor N (1–4) Füllstand %, Inhalt in Litern (Prozent × Tankgröße), Temperatur °C und Rohwert (2475 = 100 % ohne eigene Leer-/Voll-Werte); Status und Verbindung der Box |
 | `…/tpms/r1_pressure` … `r8_pressure`, `rN_temperature`, `rN_battery`, `rN_rssi` | Reifendruck SuperSense TireCheck (nur mithören): je belegtem Rad N (1–8, Position in den Einstellungen) Druck in bar, Reifentemperatur °C, Batterie %, Signal dBm |
 | `…/tpms/r1_alarm` … `r8_alarm` | `ON` / `OFF` je Rad: Druck unter bzw. über der Grenze seiner Achse |

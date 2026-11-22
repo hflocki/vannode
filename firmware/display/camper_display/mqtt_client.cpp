@@ -22,6 +22,7 @@
 #include <PubSubClient.h>
 #include <map>
 #include "safeguard.h"
+#include "discovery.h"
 
 namespace {
 
@@ -44,6 +45,12 @@ std::map<String, String> finderSeen;
 std::vector<mqttc::Found> finderNew;
 
 String self(const char* sub) { return settings.prefixSelf + "/" + sub; }
+
+// Topic prefixes of the VanNode devices (their discovery is left out of the finder)
+std::vector<String> ownPrefixes() {
+  return {settings.prefixTank, settings.prefixLevel, settings.prefixHeater, settings.prefixFan, settings.prefixTemp,
+          settings.prefixBattery, settings.prefixBle, settings.prefixBle2, settings.prefixBle3, settings.prefixSelf};
+}
 
 bool publish(const String& topic, const String& payload, bool retain = false) {
   if (!mqtt.connected() || topic.isEmpty()) return false;
@@ -117,10 +124,18 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
     // skip the big zigbee2mqtt bridge dumps, they are not useful as tiles
     if (strstr(topic, "/bridge/") != nullptr) return;
     String p;
-    unsigned int n = len > 300 ? 300 : len;
-    p.reserve(n + 3);
-    for (unsigned int i = 0; i < n; i++) p += (char)payload[i];
-    if (len > n) p += "...";
+    size_t tl = strlen(topic);
+    if (tl > 7 && !strcmp(topic + tl - 7, "/config")) {
+      // Home Assistant discovery of another device (ESPHome, Tasmota ...): a short summary the
+      // web page makes a ready tile from; VanNode's own devices and unusable entities are skipped
+      p = disc::summary(topic, (const char*)payload, len, ownPrefixes());
+      if (p.isEmpty()) return;
+    } else {
+      unsigned int n = len > 300 ? 300 : len;
+      p.reserve(n + 3);
+      for (unsigned int i = 0; i < n; i++) p += (char)payload[i];
+      if (len > n) p += "...";
+    }
     auto it = finderSeen.find(topic);
     if (it == finderSeen.end()) {
       if (finderSeen.size() >= FINDER_MAX) return;

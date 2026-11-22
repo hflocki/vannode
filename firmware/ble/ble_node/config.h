@@ -65,6 +65,13 @@
 #ifndef PLUGIN_SUPERSENSE
 #define PLUGIN_SUPERSENSE     1      // Tanks: SuperSense receiver box with up to 4 sensors, BLE connection
 #endif
+#ifndef PLUGIN_TRUMALC
+#define PLUGIN_TRUMALC        1      // Gas: Truma LevelControl, short BLE connection per measurement
+#endif
+#ifndef PLUGIN_SENSO4S
+#define PLUGIN_SENSO4S        1      // Gas: Senso4s scale Basic / Plus (passive BLE)
+#endif
+
 
 // At most this many connecting devices may be switched on at the same time
 // (NimBLE default CONFIG_BT_NIMBLE_MAX_CONNECTIONS = 3). Checked in the web UI, when saving
@@ -78,10 +85,10 @@
 #endif
 
 // Derived switches (do not edit): which code parts are compiled
-#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME + PLUGIN_TPMS)
-#define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD)
+#define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME + PLUGIN_TPMS + PLUGIN_SENSO4S)
+#define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_SENSO4S)
 #define CT_BMS          0      // batteries: own node (firmware/battery)
-#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + CT_BMS)
+#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + PLUGIN_TRUMALC + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
 
@@ -92,7 +99,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.5.2"
+#define FW_VERSION            "2.6.0"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial

@@ -17,7 +17,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.4.8"
+#define FW_VERSION            "1.4.9"
 #define FW_DEVICE            "temp"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID

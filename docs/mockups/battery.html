@@ -25,7 +25,7 @@ const GAS_CFG = {capacity: 27.2, fill_stop_on: false, fill_stop: 80};
 const M = {
   id: 'ble',
   config: {
-    version: '2.5.2', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
+    version: '2.6.0', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
            web_user: '', web_pass_set: false, node_name: 'ble-node', debug: true},
@@ -45,6 +45,8 @@ const M = {
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
       P('mopeka_std', 'mopeka_std', 'Gas: Mopeka Standard', 1, Object.assign({name: 'Gasflasche 3', mac: MAC(11), empty_mm: 38, full_mm: 336, lpg_propane: 100}, GAS_CFG, {capacity: 14.6})),
+      P('senso4s', 'senso4s', 'Gas: Senso4s Waage', 1, Object.assign({name: 'Gaswaage', mac: MAC(16)}, GAS_CFG, {fill_stop_on: false})),
+      P('trumalc', 'trumalc', 'Gas: Truma LevelControl', 2, {name: 'Gasflasche Truma', mac: MAC(17), interval: 600}),
       P('govee', 'govee', 'Thermometer Govee', 1, {name: 'Thermometer außen', mac: MAC(12), temp_offset: 0, hum_offset: 0}),
       P('tpms', 'tpms', 'Reifendruck SuperSense TireCheck', 1, {name: 'Reifendruck', mac1: MAC(21), pos1: 0, mac2: MAC(22), pos2: 1, mac3: MAC(23), pos3: 4, mac4: MAC(24), pos4: 5,
         mac5: '', pos5: 4, mac6: '', pos6: 5, mac7: '', pos7: 6, mac8: '', pos8: 7, p_min: 0, p_max: 0,
@@ -119,6 +121,11 @@ const M = {
                    {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
       dimes: GAS_FIELDS,
+      senso4s: GAS_FIELDS,
+      trumalc: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name beginnt mit "T", z. B. "T…Alugas 11kg")'},
+                {k: 'interval', l: 'Messintervall', t: 'int', min: 60, max: 3600, u: 's', h: 'Wie oft gemessen wird. Jede Messung kostet Sensorbatterie, Standard 600 s'}],
+      victron: [{k: 'mac', l: 'Geräte-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
+                {k: 'key', l: 'Schlüssel', t: 'text', max: 33, h: '32 Zeichen aus der VictronConnect-App: Gerät → Einstellungen (Zahnrad) → ⋮ → Produktinfo → "Instant Readout" einschalten → "Details anzeigen"'}],
       mopeka: MOPEKA_FIELDS,
       mopeka_std: MOPEKA_FIELDS.concat([{k: 'lpg_propane', l: 'Propananteil', t: 'int', min: 0, max: 100, u: '%', h: 'Rest Butan; bestimmt die Schallgeschwindigkeit im Flüssiggas'}]),
       tpms: [{k: 'mac1', l: 'Rad 1: Sensor-MAC', t: 'mac', h: 'Nicht zugeordnete Sensoren stehen in der Live-Ansicht, MAC von dort übernehmen. Leer = Rad nicht belegt'},
@@ -177,6 +184,8 @@ const M = {
             {type: 'obd', name: 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', ble: 2},
             {type: 'supersense', name: 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', ble: 2},
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
+            {type: 'senso4s', name: 'Gas: Senso4s Waage', ble: 1}, {type: 'trumalc', name: 'Gas: Truma LevelControl', ble: 2},
+
             {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
     max_devices: 16,
@@ -357,10 +366,18 @@ const M = {
         rows.push(['Zustand', B[2] === null ? 'Ruhe' : B[2] < 0 ? 'Entladen' : 'Laden', ''], ['Alter', 3, 's'], ['Bluetooth', -68, 'dBm']);
         return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, gauge: {v: B[0], unit: '%', label: 'Ladestand', max: 100}, rows, ctrl: [sw]};
       }
-      case 'dimes': case 'mopeka': case 'mopeka_std': {
-        const lvl = {dimes: 64.5, mopeka: 41.2, mopeka_std: 87.0}[p.type], cap = +p.cfg.capacity || 27.2;
+      case 'trumalc':
+        return {state: 'OK', ok: true, gauge: {v: 58, unit: '%', label: 'Füllstand'},
+                rows: [['Gasmenge', 6.4, 'kg'], ['Batterie', 87, '%'], ['Temperatur', 9, '°C'], ['Messqualität', 3, '/ 3'], ['Bluetooth', -74, 'dBm'], ['Alter', 212, 's']],
+                ctrl: [{t: 'buttons', k: 'action', b: [['measure', 'Jetzt messen']]}, sw], raw: '3A 40 00 57 09 00 C0'};
+      case 'victron':   // battery-node (mock/battery.js): SmartShunt
+        return {state: 'OK', ok: true, gauge: {v: 81, unit: '%', label: 'Ladestand', max: 100},
+                rows: [['Spannung', 13.21, 'V'], ['Strom', -4.6, 'A'], ['Leistung', -61, 'W'], ['Entnommen', -38.0, 'Ah'],
+                       ['Restlaufzeit', 21.3, 'h'], ['Alter', 2, 's'], ['Bluetooth', -71, 'dBm']]};
+      case 'dimes': case 'mopeka': case 'mopeka_std': case 'senso4s': {
+        const lvl = {dimes: 64.5, mopeka: 41.2, mopeka_std: 87.0, senso4s: 52.0}[p.type], cap = +p.cfg.capacity || 27.2;
         const rows = [['Inhalt', Math.round(cap * lvl / 10) / 10, 'L'], ['Rohwert', lvl, '%']];
-        if (p.type !== 'dimes') rows.push(['Füllhöhe', Math.round(38 + (366 - 38) * lvl / 100), 'mm'], ['Temperatur', 7, '°C'], ['Messqualität', 3, '/ 3']);
+        if (p.type.startsWith('mopeka')) rows.push(['Füllhöhe', Math.round(38 + (366 - 38) * lvl / 100), 'mm'], ['Temperatur', 7, '°C'], ['Messqualität', 3, '/ 3']);
         rows.push(['Batterie', p.type === 'dimes' ? 90 : 75, '%'], ['Bluetooth', -79, 'dBm'], ['Alter', 8, 's']);
         return {state: 'OK', ok: true, gauge: {v: lvl, unit: '%', label: 'Füllstand'}, rows,
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
@@ -420,16 +437,18 @@ M.hw = 'atoms3';
 M.chip = 'esp32s3';
 M.fw = {name: 'Battery Node', dir: 'battery'};
 Object.assign(M.config, {
-  version: '2.6.0', device: 'battery-node', ha_node: 'camper_battery',
+  version: '2.6.1', device: 'battery-node', ha_node: 'camper_battery',
   core: Object.assign({}, M.config.core, {ap_ssid: 'Battery-Node-A1B2C3', mqtt_prefix: 'camper/battery', node_name: 'battery-node'}),
   plugins: [
     P('daly', 'daly', 'Batterie: Daly BMS', 2, {name: 'Aufbaubatterie', mac: MAC(6), interval: 10}),
     P('ective', 'ective', 'Batterie: Ective BM X', 2, {name: 'Zweitbatterie', mac: MAC(7), interval: 10}),
-    P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)})],
+    P('bm2', 'bm2', 'Batterie: BM2 Batteriewächter', 2, {name: 'Starterbatterie', mac: MAC(8)}),
+    P('victron', 'victron', 'Batterie: Victron SmartShunt / BMV, Solar, DC-DC (Instant Readout)', 1, {name: 'SmartShunt', mac: MAC(18), key: '0123456789abcdef0123456789abcdef'})],
   types: [{type: 'daly', name: 'Batterie: Daly BMS', ble: 2}, {type: 'ective', name: 'Batterie: Ective BM X', ble: 2},
           {type: 'bm2', name: 'Batterie: BM2 Batteriewächter', ble: 2},
           {type: 'jbd', name: 'Batterie: JBD / Xiaoxiang BMS', ble: 2}, {type: 'jk', name: 'Batterie: JK-BMS', ble: 2},
-          {type: 'litime', name: 'Batterie: LiTime / Redodo / PowerQueen', ble: 2}],
+          {type: 'litime', name: 'Batterie: LiTime / Redodo / PowerQueen', ble: 2},
+          {type: 'victron', name: 'Batterie: Victron SmartShunt / BMV, Solar, DC-DC (Instant Readout)', ble: 1}],
   max_devices: 6,
   max_links: 3
 });
@@ -934,7 +953,7 @@ nav button .ico{display:inline-flex}
       };
       // stroke icons as in all VanNode pages (no emoji)
       const svg = (k) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVGP[k] || SVGP.plug}"/></svg>`;
-      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio", govee: "radio", bthome: "radio", daly: "plug", ective: "plug", bm2: "plug", jbd: "plug", jk: "plug", litime: "plug" };
+      const ICONS = { rvtech: "hatch", pump: "pump", fridge: "snow", dimes: "fire", mopeka: "fire", mopeka_std: "fire", blesensor: "radio", govee: "radio", bthome: "radio", daly: "plug", ective: "plug", bm2: "plug", jbd: "plug", jk: "plug", litime: "plug", trumalc: "fire", senso4s: "fire", victron: "plug" };
       function tabs() {
         // Devices share one tab ("Geräte": list, add / remove, then the settings of one device),
         // so the bar stays short however many devices there are
@@ -2453,6 +2472,197 @@ function fwHwHint() { return FWI && FWI.hw ? ` – passende Datei: …-node-${FW
   document.addEventListener('DOMContentLoaded', place);
 })();
 // vannode-about:end
+// vannode-backup:begin
+// VanNode "Einstellungen sichern / wiederherstellen" card, placed right below the firmware update
+// card of every device page (like the "Über VanNode" card). Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// Works only in the browser with the existing /api/config of the device: the backup is the
+// answer of GET /api/config without passwords, login and read-only values; restoring takes the
+// device's current settings and overwrites only the saved values, then sends them the way the
+// page itself does (JSON, or form fields on the MaxxFan and heater nodes). Network settings
+// (WiFi, IP, host name, MQTT server) are only taken over when the box is ticked.
+(function () {
+  // Keys never put into a backup (secrets, login, read-only information)
+  const SECRET = /pass|pwd|token|^wpw$|^web_user$|^wuser$/i;
+  const READONLY = ['version', 'reset_reason', 'guard', 'sensor_def', 'pins', 'pin', 'chip', 'max_sensors',
+    'tare_active', 'ci_ok', 'ci_possible', 'lin_active', 'one_uart', 'name', 'apssid', 'restart_needed', 'safe',
+    'types', 'schemas', 'max_links', 'max_devices', 'ha_node', 'device', 'values', 'status'];
+  // Network and identity: only with "auch Netzwerk übernehmen"
+  const NET = ['wifi_ssid', 'ssid', 'wifi_tx_power', 'ap_ssid', 'ap_always', 'static_ip', 'ip', 'gateway', 'gw',
+    'subnet', 'sn', 'dns', 'hostname', 'node_name', 'mqtt_server', 'mqtt_host', 'mhost', 'mqtt_port', 'mport',
+    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base'];
+  // Nodes whose /api/config takes form fields instead of JSON
+  const FORM = {maxxfan: 1, heater: 1};
+  const BLE = {ble: 1, toolbox: 1, battery: 1};
+
+  const keep = (k) => !SECRET.test(k) && READONLY.indexOf(k) < 0 && !/_set$/.test(k);
+  const strip = (o) => { const r = {}; for (const k in o) if (keep(k)) r[k] = o[k]; return r; };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function getJson(url) {
+    const r = await fetch(url, {cache: 'no-store'});
+    if (!r.ok) throw new Error(url + ': ' + r.status);
+    return r.json();
+  }
+  // POST with retries while the device is busy saving the previous request (503)
+  async function post(url, body, form) {
+    for (let i = 0; i < 15; i++) {
+      const opt = {method: 'POST'};
+      if (form) {
+        const f = new URLSearchParams();
+        for (const k in body) {
+          const v = body[k];
+          if (v === null || v === undefined || typeof v === 'object') continue;
+          f.append(k, v === true ? '1' : v === false ? '0' : String(v));
+        }
+        opt.body = f;
+      } else {
+        opt.headers = {'Content-Type': 'application/json'};
+        opt.body = JSON.stringify(body);
+      }
+      const r = await fetch(url, opt);
+      if (r.status === 503) { await sleep(400); continue; }
+      let j = {};
+      try { j = await r.json(); } catch (e) {}
+      if (!r.ok) throw new Error(j.error || j.msg || ('HTTP ' + r.status));
+      return j;
+    }
+    throw new Error('Gerät beschäftigt');
+  }
+
+  async function makeBackup(fw) {
+    const cfg = await getJson('/api/config');
+    const b = {type: 'vannode-backup', version: 1, device: fw.dev || '', fw: fw.ver || '', date: new Date().toISOString()};
+    if (BLE[fw.dev]) {
+      b.core = strip(cfg.core || {});
+      b.plugins = (cfg.plugins || []).filter((p) => !p.removed).map((p) => ({id: p.id, type: p.type, cfg: p.cfg}));
+    } else {
+      b.config = strip(cfg);
+    }
+    return b;
+  }
+
+  // All current values of the device (login name included: some nodes clear what is missing)
+  // + the allowed values of the backup
+  function merged(cur, saved, net) {
+    const out = {};
+    for (const k in cur) if (READONLY.indexOf(k) < 0 && !/_set$/.test(k)) out[k] = cur[k];
+    for (const k in saved) {
+      if (!keep(k)) continue;
+      if (!net && NET.indexOf(k) >= 0) continue;
+      out[k] = saved[k];
+    }
+    return out;
+  }
+
+  async function restoreBle(b, net, log) {
+    let cfg = await getJson('/api/config');
+    const have = {};
+    (cfg.plugins || []).forEach((p) => { if (!p.removed) have[p.id] = p; });
+    for (const p of b.plugins || []) {
+      let id = p.id;
+      if (!have[id] || have[id].type !== p.type) {
+        // not on this device: add a new one of that type, it gets the next free id
+        if (!(cfg.types || []).some((t) => t.type === p.type)) { log('Übersprungen (Typ fehlt in dieser Firmware): ' + p.id); continue; }
+        try { await post('/api/config', {add: p.type}); } catch (e) { log('Nicht angelegt: ' + p.id + ' – ' + e.message); continue; }
+        cfg = await getJson('/api/config');
+        const fresh = (cfg.plugins || []).filter((x) => x.type === p.type && !x.removed && !have[x.id]);
+        if (!fresh.length) { log('Nicht angelegt: ' + p.id); continue; }
+        id = fresh[fresh.length - 1].id;
+        have[id] = fresh[fresh.length - 1];
+      }
+      try { await post('/api/config', {plugin: id, cfg: p.cfg || {}}); log('Übernommen: ' + id); }
+      catch (e) { log('Fehler bei ' + id + ': ' + e.message); }
+    }
+    // core last: a network change restarts the node right away
+    const core = merged((await getJson('/api/config')).core || {}, b.core || {}, net);
+    return post('/api/config', {core});
+  }
+
+  function card(upd, fw) {
+    const c = document.createElement('div');
+    c.className = upd.className;
+    c.id = 'vn-backup';
+    c.style.marginTop = '12px';
+    const t = upd.firstElementChild;
+    const title = document.createElement(t ? t.tagName : 'h2');
+    if (t) title.className = t.className;
+    title.textContent = 'Einstellungen sichern';
+    const btn = upd.querySelector('button');
+    const bc = btn ? btn.className : '';
+    c.append(title);
+    c.insertAdjacentHTML('beforeend',
+      '<p style="margin:6px 0;font-size:.9em">Alle Einstellungen' + (BLE[fw.dev] ? ' und Geräte' : '') +
+      ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0">' +
+      '<button type="button" class="' + bc + '" id="vnbk-exp">Sichern</button>' +
+      '<input type="file" id="vnbk-file" accept=".json,application/json" style="flex:1;min-width:160px">' +
+      '<button type="button" class="' + bc + '" id="vnbk-imp">Einspielen</button></div>' +
+      '<label style="display:flex;gap:6px;align-items:center;font-size:.9em;margin:6px 0"><input type="checkbox" id="vnbk-net">' +
+      ' Auch WLAN, IP, Gerätename und MQTT-Server übernehmen</label>' +
+      '<p id="vnbk-msg" style="margin:6px 0;font-size:.85em;opacity:.85;white-space:pre-line"></p>');
+    upd.insertAdjacentElement('afterend', c);
+    const msg = c.querySelector('#vnbk-msg');
+    const say = (s) => { msg.textContent = s; };
+
+    c.querySelector('#vnbk-exp').onclick = async () => {
+      try {
+        const b = await makeBackup(fw);
+        const name = (fw.dev || 'vannode') + '-' + new Date().toISOString().slice(0, 10) + '.json';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(b, null, 1)], {type: 'application/json'}));
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        say('Gespeichert: ' + name);
+      } catch (e) { say('Sichern fehlgeschlagen: ' + e.message); }
+    };
+
+    c.querySelector('#vnbk-imp').onclick = async () => {
+      const f = c.querySelector('#vnbk-file').files[0];
+      if (!f) return say('Erst eine Sicherungsdatei wählen');
+      let b;
+      try { b = JSON.parse(await f.text()); } catch (e) { return say('Keine gültige Datei'); }
+      if (!b || b.type !== 'vannode-backup') return say('Keine VanNode-Sicherung');
+      const same = b.device === fw.dev || (BLE[b.device] && BLE[fw.dev] && (b.device === 'battery') === (fw.dev === 'battery'));
+      if (!same) return say('Die Sicherung gehört zu „' + b.device + '“, nicht zu diesem Gerät („' + fw.dev + '“)');
+      const net = c.querySelector('#vnbk-net').checked;
+      if (!confirm('Einstellungen aus der Sicherung vom ' + String(b.date || '').slice(0, 10) + ' übernehmen?' +
+        (net ? '\nWLAN, IP und MQTT-Server werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
+      const lines = [];
+      const log = (s) => { lines.push(s); say(lines.join('\n')); };
+      try {
+        if (BLE[fw.dev]) {
+          await restoreBle(b, net, log);
+          log('Fertig. Geänderte Geräte gelten nach einem Neustart (System → Neustart).');
+        } else {
+          const cur = await getJson('/api/config');
+          await post('/api/config', merged(cur, b.config || {}, net), !!FORM[fw.dev]);
+          log('Fertig – Seite lädt gleich neu.');
+          setTimeout(() => location.reload(), 6000);
+        }
+      } catch (e) { log('Einspielen fehlgeschlagen: ' + e.message); }
+    };
+  }
+
+  let fw = null, busy = false;
+  function place() {
+    const cur = document.getElementById('fwu-cur');
+    const upd = cur && cur.closest('.card');
+    // after the "Über VanNode" card exists, so the order is always update, backup, about
+    if (!upd || !document.getElementById('vn-about') || document.getElementById('vn-backup')) return;
+    if (fw) return card(upd, fw);
+    if (busy) return;
+    busy = true;
+    fetch('/api/system', {cache: 'no-store'}).then((r) => r.json()).then((j) => { fw = j.fw || {}; })
+      .catch(() => { fw = {}; }).finally(() => { busy = false; place(); });
+  }
+  // The update card is built by the page (sometimes only when its tab opens): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+})();
+// vannode-backup:end
 </script>
   </body>
 </html>

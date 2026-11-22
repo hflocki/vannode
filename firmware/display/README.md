@@ -52,7 +52,7 @@ Passt zu den anderen Projekten:
 - **Warnungen:** Temperatur-Alarme von temp-node, Heizungsfehler, Batterie- (mit dem Fehler des BMS im Klartext) und Wetter-Warnungen erscheinen in der Status-Kachel der Übersicht (dunkelgelb) (antippen öffnet die Seite **Warnungen** mit dem vollen Text; auf der Webseite ebenso) und als **dunkelgelbes Band mit Lauftext** in der Kopfzeile. Wer möchte, dass eine neue Warnung das Display einschaltet, setzt unter *Einstellungen → Display & Seiten* den Haken **Neue Warnung schaltet das Display ein** (Standard aus); war es dunkel, springt es dann auf die Übersicht. Optional zusätzlich als **Push-Nachricht** per Pushover
 - **Temperatur- und Batterie-Kachel frei belegbar:** unter *Einstellungen → Display & Seiten* für die Temperatur-Kachel bis zu 6 Sensoren (auch eigene Zigbee-/Bluetooth-Sensoren; mehr als 3 wechseln alle 4 s, unten steht „1 / 2“), für die Batterie-Kachel bis zu 3 Batterien aus einer Liste wählen und dahinter das Symbol (Batterie, Starterbatterie, Wohnraum, Sonne, Solarpanel, Fahrzeug, Landstrom, Strom, Thermometer, Kühlschrank, Gefrierfach, Innenraum, Außen, Schlafen, Wasser, Heizung, Bad, Stauraum). Die Kachel zeigt dann Symbol und Wert in dieser Reihenfolge. Leer = alle Temperatursensoren bzw. die ersten 3 Batterien, „Symbol automatisch“ wählt nach dem Namen (z. B. Kühlschrank 🧊, Gefrierfach ❄️, Außen 🌳, Aufbau 🏠, Solar ☀️, Starter 🚗). Meldet ein gewählter Sensor nichts, steht dort „--“
 - **Eigene Seiten und Kacheln** für beliebige MQTT-Topics: *Wert*, *Schalter*, *Taster*, *Regler* – erscheinen automatisch auf Display **und** Webseite
-- **Topic-Finder:** lauscht z. B. auf `zigbee2mqtt/#`, zeigt alle Geräte mit ihren JSON-Werten; ein Klick legt eine Kachel an (Temperatur, Luftfeuchte, Licht an/aus, Helligkeit …)
+- **Topic-Finder:** lauscht z. B. auf `zigbee2mqtt/#`, zeigt alle Geräte mit ihren JSON-Werten; ein Klick legt eine Kachel an (Temperatur, Luftfeuchte, Licht an/aus, Helligkeit …). Mit **Discovery** findet er Geräte, die sich für Home Assistant anmelden (ESPHome, Tasmota, Shelly, zigbee2mqtt …), und macht daraus fertige Wert-, Zustands- oder Schalter-Kacheln – ganz ohne Home Assistant
 - **Setup-WLAN** wie bei den anderen Projekten: ohne WLAN-Daten oder nach 1 Minute ohne Verbindung öffnet sich `Display-Node-XXXXXX`, Captive Portal unter `http://192.168.4.1`. Das Display zeigt dazu einen QR-Code zum Verbinden.
 - **Stromausfallsicher:** keine SD-Karte, kein Dateisystem. Webseite und Oberfläche stecken in der Firmware, Einstellungen im NVS. Strom an → nach ca. 1–2 s läuft alles wieder.
 - Bildschirm dimmt bzw. schaltet nach einstellbarer Zeit ab (Helligkeit gedimmt 0 = ganz aus), Berühren weckt (die erste Berührung löst nichts aus). Sofort ausschalten: **Kopfzeile lange drücken**, Knopf **Aus** auf der Systemseite oder **💤** oben auf der Webseite
@@ -82,6 +82,7 @@ docs/                      Screenshots
 | `ui.*` | Display-Oberfläche (alle Seiten) |
 | `datastore.*` | zentrale Werte aller Geräte und Kacheln, Topic-Zuordnung |
 | `mqtt_client.*` | MQTT, Befehle an die Geräte, Topic-Finder |
+| `discovery.h` | Zusammenfassung fremder Home-Assistant-Discovery-Meldungen für den Topic-Finder |
 | `web.*`, `web_ui.h`, `web/index.html` | Webserver, WebSocket, Einstellungs-API, Firmware-Update |
 | `wifi_manager.*` | WLAN, feste IP, Setup-AP, mDNS, NTP |
 | `settings.*` | Einstellungen, Seiten und Kacheln im NVS |
@@ -172,6 +173,8 @@ Unter *Einstellungen → Seiten & Kacheln* beliebig viele eigene Seiten (max. 8)
 | Dimmer | Regler 0–254 | `zigbee2mqtt/Licht Küche` | `brightness` | `{"brightness":{v}}` |
 
 Am schnellsten geht es mit dem **Topic-Finder**: Filter `zigbee2mqtt/#` starten, kurz warten (retained Werte kommen sofort, andere bei der nächsten Änderung), dann beim gewünschten Gerät auf einen Schlüssel klicken. Für `state` und `brightness` werden Schalter bzw. Regler mit den passenden Befehlen vorbelegt. Danach *Seiten speichern*. Der Finder hört höchstens 15 Minuten mit und ignoriert `zigbee2mqtt/bridge/…`.
+
+**Geräte mit Home-Assistant-Discovery** (ESPHome, Tasmota, Shelly, OpenMQTTGateway, zigbee2mqtt …): im Topic-Finder auf **Discovery** tippen. Das Display liest die Anmeldungen unter `homeassistant/…/config` (Sensor, Binärsensor, Schalter, Licht an/aus) und zeigt je Wert Name, Einheit und Topic. *+ Kachel* legt eine Kachel mit dem richtigen Status-Topic und Schlüssel an; Schalter bekommen das Befehls-Topic und die Befehle des Geräts, Binärsensoren einen deutschen Anzeigetext (z. B. `ON=offen,OFF=zu` bei Türen). Die Geräte müssen ihre Anmeldung „retained“ senden (bei ESPHome und Tasmota Standard). Eigene VanNode-Geräte erscheinen dort nicht.
 
 ### Warnung an einer Kachel (z. B. Landstrom)
 

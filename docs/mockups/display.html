@@ -1379,6 +1379,8 @@ function pgSettings(){
   <details data-g="net" ${cfg&&cfg.setup?'open':''}><summary>MQTT-Broker</summary>
    <div class="f2">${inp('mqttHost','Broker (IP/Name)','text','192.168.1.1')}${inp('mqttPort','Port','number')}${inp('mqttUser','Benutzer')}${inp('mqttPass','Passwort','password')}</div>
    <label class="chk"><input type="checkbox" id="brkOn" onchange="brkHint()"> Eigener Broker im Display (Notfall)</label>
+   <label class="chk" id="brkFbRow"><input type="checkbox" id="brkFb" onchange="brkHint()"> Nur als Ersatz-Broker (bereit, wenn der Broker oben nicht erreichbar ist)</label>
+   <p class="mu" id="brkFbHint" style="margin-top:-4px" hidden>Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter <i>Ersatz-Broker</i> die <b>IP-Adresse des Displays</b> eintragen, dann wechseln sie mit.</p>
    <p class="mu" style="margin-top:-4px">Für Camper ohne Router mit Broker oder zum Testen: Das Display ist dann selbst der MQTT-Broker (Port wie oben, Benutzer und Passwort wie oben gelten für alle Geräte, leer = ohne Anmeldung). Das Feld <i>Broker</i> wird dann nicht gebraucht. Bei den anderen Geräten als Broker die <b>IP-Adresse des Displays</b> eintragen, am besten mit fester IP (Einstellungen → WLAN). Gespeicherte Nachrichten (retained) hält das Display nur im Speicher: Nach einem Neustart senden die Geräte ihre Werte von selbst neu, das dauert ein paar Sekunden. Ab Werk aus, Änderung startet das Display neu.</p>
    <p class="mu" id="brkst" hidden></p></details>
   <details data-g="svc"><summary>Wetter</summary>
@@ -1483,7 +1485,7 @@ async function loadSettings(){
     {const l=(ST.ovTiles||OV_DEFAULT).split(',');for(let i=0;i<OVN();i++){const e=$('#ov'+i);if(e)e.value=(l[i]||'none').trim()}ovSel=-1;renderOvEd()}
     {const l=(ST.webTiles||WEB_DEFAULT).split(',');for(let i=0;i<16;i++){const e=$('#wt'+i);if(e)e.value=l[i]||'none'}}
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
-    $('#brkOn').checked=!!ST.brkOn;brkHint();
+    $('#brkOn').checked=!!ST.brkOn;$('#brkFb').checked=!!ST.brkFb;brkHint();
     $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
@@ -1511,7 +1513,8 @@ async function loadSettings(){
 }
 // own broker: status line and the broker host field (not used while it is on)
 function brkHint(){
-  const on=$('#brkOn').checked,h=$('#mqttHost'),st=$('#brkst');if(h)h.disabled=on;
+  const on=$('#brkOn').checked,fb=on&&$('#brkFb').checked,h=$('#mqttHost'),st=$('#brkst');if(h)h.disabled=on&&!fb;
+  $('#brkFbRow').hidden=!on;$('#brkFbHint').hidden=!fb;
   const b=ST.brk||{};
   if(st){st.hidden=!b.on;if(b.on)st.textContent=`Läuft auf Port ${b.port}: ${b.clients} Geräte verbunden, ${b.retained} gespeicherte Nachrichten (${b.kb} kB), ${b.msgs} Nachrichten seit dem Start.`}
 }
@@ -1757,7 +1760,7 @@ function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
-  o.brkOn=$('#brkOn').checked;
+  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;
@@ -2400,7 +2403,10 @@ vnI18nAdd('en', {
   "*: Ladezustand zu hoch (Stufe *)": "*: state of charge too high (level *)",
   "Kein Fehler": "No error",
   "Kein Alarm": "No alarm",
-  "keine": "none"
+  "keine": "none",
+  'Nur als Ersatz-Broker (bereit, wenn der Broker oben nicht erreichbar ist)': 'Fallback broker only (ready when the broker above cannot be reached)',
+  'Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter': 'The display normally connects to the broker above. If it cannot be reached for 2 minutes, the display switches to its own broker and back as soon as the broker returns. On the other devices enter under',
+  'die': 'the', 'IP-Adresse des Displays': 'IP address of the display', 'eintragen, dann wechseln sie mit.': ', then they switch along.'
 });
 // i18n-en:end
 // vannode-system:begin
@@ -2540,6 +2546,13 @@ vnI18nAdd('en', {
       const inp = $('vnc-ufile');
       if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
       showInfo();
+      // fallback MQTT broker in use (mqttfb.h)
+      const mf = $('vnc-mqfb');
+      if (mf) {
+        const m = d.mqttfb;
+        mf.style.display = m && m.on ? '' : 'none';
+        if (m && m.on) mf.innerHTML = `<span class="warn">MQTT über Ersatz-Broker ${esc(m.fb)}</span> · seit ${esc(ago(m.since || 0))}`;
+      }
       CLK = d.clock ? Object.assign({at: Date.now()}, d.clock) : null;
       showClock();
       // No valid time on the device (no internet, no NTP at the router): take the browser's once
@@ -2684,7 +2697,7 @@ vnI18nAdd('en', {
 
     if (box.dataset.log !== '0') {
       const log = card('Ereignisse');
-      log.insertAdjacentHTML('beforeend', '<div class="fwu-log">Lade …</div>' +
+      log.insertAdjacentHTML('beforeend', '<div class="vnc-cur" id="vnc-mqfb" style="display:none"></div><div class="fwu-log">Lade …</div>' +
         '<div class="vnc-hint" style="margin:8px 0 0">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>');
       box.appendChild(log);
     }
@@ -2765,7 +2778,7 @@ vnI18nAdd('en', {
   // Network and identity: only with "auch Netzwerk übernehmen"
   const NET = ['wifi_ssid', 'ssid', 'wifi_tx_power', 'ap_ssid', 'ap_always', 'static_ip', 'ip', 'gateway', 'gw',
     'subnet', 'sn', 'dns', 'hostname', 'node_name', 'mqtt_server', 'mqtt_host', 'mhost', 'mqtt_port', 'mport',
-    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base'];
+    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base', 'mqtt_fb', 'mfb'];
   // Nodes whose /api/config takes form fields instead of JSON
   const FORM = {maxxfan: 1, heater: 1};
   const BLE = {ble: 1, toolbox: 1, battery: 1};
@@ -3238,7 +3251,12 @@ vnI18nAdd('en', {
   'LittleFS nicht beschreibbar': 'LittleFS not writable', 'Schreibfehler (Speicher voll?)': 'Write error (memory full?)',
   'Update über den IDE-Netzwerkport fehlgeschlagen (Fehler *)': 'Update over the IDE network port failed (error *)',
   'Einstellungen gespeichert, Neustart': 'Settings saved, restart',
-  'vor *': '* ago', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
+  'vor *': '* ago',
+  'MQTT über Ersatz-Broker *': 'MQTT via fallback broker *', '· seit *': '· for *', 'MQTT: Broker * weg, Ersatz-Broker *': 'MQTT: broker * gone, fallback broker *',
+  'MQTT: Ersatz-Broker * weg, zurück zu *': 'MQTT: fallback broker * gone, back to *', 'MQTT: Broker * wieder da': 'MQTT: broker * back',
+  'Ersatz-Broker (optional)': 'Fallback broker (optional)', 'Ersatz-Broker': 'Fallback broker', 'IP des Displays, z. B. 192.168.1.50': 'IP of the display, e.g. 192.168.1.50',
+  'Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.':
+    'If the broker cannot be reached for 2 minutes, the device connects to the fallback broker (e.g. the display with its broker switched on) and returns as soon as the broker is back. Empty = off.', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
 });
 // vannode-i18n:end
 </script>

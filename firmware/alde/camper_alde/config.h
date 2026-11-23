@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.7.0"
+#define FW_VERSION            "0.8.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -190,6 +190,7 @@ struct AppConfig {
 
     char mqtt_server[64];
     uint16_t mqtt_port;
+    char mqtt_fb[72];        // fallback broker "host[:port]", empty = off (mqttfb.h)
     char mqtt_user[32];
     char mqtt_pass[32];
     char mqtt_prefix[32];

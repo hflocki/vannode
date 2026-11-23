@@ -11,6 +11,7 @@
 #include "registry.h"
 #include "devlog.h"
 #include "../../devinfo.h"
+#include "../../mqttfb.h"
 #if CT_BMS
 #include "../plugins/bms_plugin.h"
 #endif
@@ -397,7 +398,8 @@ void mqttInit() {
         Serial.println("[MQTT] No server configured");
         return;
     }
-    mqtt.setServer(config.mqtt_server, config.mqtt_port);
+    mqttfb::begin(config.mqtt_server, config.mqtt_port, config.mqtt_fb);
+    mqtt.setServer(mqttfb::host(), mqttfb::port());
     mqtt.setCallback(mqttCallback);
     mqtt.setBufferSize(1280);
     mqtt.setKeepAlive(30);
@@ -414,6 +416,7 @@ void mqttLoop() {
         // connect() blocks while the broker is unreachable, so retry only every 5 s
         if (millis() - lastReconnect > 5000) {
             lastReconnect = millis();
+            mqtt.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
             Serial.println("[MQTT] Connection attempt...");
 
             String clientId = String(config.node_name) + "-" + WiFi.macAddress();
@@ -427,6 +430,7 @@ void mqttLoop() {
                 connected = mqtt.connect(clientId.c_str(), NULL, NULL, willTopic.c_str(), 0, true, "offline");
             }
 
+            mqttfb::result(connected);
             if (connected) {
                 Serial.println("[MQTT] Connected!");
                 mqtt.subscribe(topic("cmd/#").c_str());
@@ -443,6 +447,7 @@ void mqttLoop() {
     }
 
     mqtt.loop();
+    if (mqttfb::backDue()) { mqtt.disconnect(); return; }   // main broker is back
     runQueuedCommands();
     if (!mqtt.connected()) return;
 

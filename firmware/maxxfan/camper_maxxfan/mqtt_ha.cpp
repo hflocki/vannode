@@ -5,6 +5,7 @@
 
 #include "mqtt_ha.h"
 #include "devinfo.h"
+#include "mqttfb.h"
 #include "config.h"
 #include "settings.h"
 #include "fan_control.h"
@@ -241,11 +242,14 @@ void connect() {
   const char* user = settings.mqttUser.isEmpty() ? nullptr : settings.mqttUser.c_str();
   const char* pass = settings.mqttUser.isEmpty() ? nullptr : settings.mqttPass.c_str();
 
-  if (!mqtt.connect(clientId.c_str(), user, pass, availTopic.c_str(), 1, true, "offline")) {
-    Serial.printf("[mqtt] connect to %s failed (state %d)\n", settings.mqttHost.c_str(), mqtt.state());
+  mqtt.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
+  bool ok = mqtt.connect(clientId.c_str(), user, pass, availTopic.c_str(), 1, true, "offline");
+  mqttfb::result(ok);
+  if (!ok) {
+    Serial.printf("[mqtt] connect to %s failed (state %d)\n", mqttfb::host(), mqtt.state());
     return;
   }
-  Serial.printf("[mqtt] connected to %s\n", settings.mqttHost.c_str());
+  Serial.printf("[mqtt] connected to %s\n", mqttfb::host());
   pub(availTopic, "online");
   mqtt.subscribe(topic("cmd/#").c_str());
   if (!lid::enabled()) mqtt.publish(topic("lid").c_str(), "", true);   // drop a retained value of a removed contact
@@ -264,7 +268,8 @@ void begin() {
   nodeId.replace(" ", "_");
   availTopic = topic("status");
 
-  mqtt.setServer(settings.mqttHost.c_str(), settings.mqttPort);
+  mqttfb::begin(settings.mqttHost.c_str(), settings.mqttPort, settings.mqttFb.c_str());
+  mqtt.setServer(mqttfb::host(), mqttfb::port());
   mqtt.setBufferSize(1024);
   mqtt.setCallback(onMessage);
   fan::onChange(markDirty);
@@ -273,6 +278,7 @@ void begin() {
 void loop() {
   if (!mqtt.connected()) { devinfoDue(false); connect(); return; }
   mqtt.loop();
+  if (mqttfb::backDue()) { mqtt.disconnect(); return; }   // main broker is back
   if (devinfoDue(true)) mqtt.publish(topic("info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 
   uint32_t now = millis();

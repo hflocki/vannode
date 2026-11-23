@@ -5,6 +5,7 @@
 
 #include "mqtt_ha.h"
 #include "devinfo.h"
+#include "mqttfb.h"
 
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
@@ -483,14 +484,18 @@ static void connect() {
   if (millis() - g_last_attempt < 10000 && g_last_attempt != 0) return;
   g_last_attempt = millis();
 
-  g_client.setServer(g_settings.mqtt_host.c_str(), g_settings.mqtt_port);
+  static bool fb_init = false;   // settings change = restart, so once is enough
+  if (!fb_init) { mqttfb::begin(g_settings.mqtt_host.c_str(), g_settings.mqtt_port, g_settings.mqtt_fb.c_str()); fb_init = true; }
+  g_client.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
   String client_id = g_node_id;
   const char *user = g_settings.mqtt_user.isEmpty() ? nullptr : g_settings.mqtt_user.c_str();
   const char *pass = g_settings.mqtt_pass.isEmpty() ? nullptr : g_settings.mqtt_pass.c_str();
   String will = status_topic();
 
-  LOGI(TAG, "Connecting to %s:%u", g_settings.mqtt_host.c_str(), g_settings.mqtt_port);
-  if (!g_client.connect(client_id.c_str(), user, pass, will.c_str(), 1, true, "offline")) {
+  LOGI(TAG, "Connecting to %s:%u", mqttfb::host(), mqttfb::port());
+  bool ok = g_client.connect(client_id.c_str(), user, pass, will.c_str(), 1, true, "offline");
+  mqttfb::result(ok);
+  if (!ok) {
     LOGW(TAG, "Connect failed, state %d", g_client.state());
     return;
   }
@@ -532,6 +537,7 @@ void loop() {
     return;
   }
   g_client.loop();
+  if (mqttfb::backDue()) { g_client.disconnect(); return; }   // main broker is back
   if (devinfoDue(true)) g_client.publish((g_settings.mqtt_base + "/info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 
   if (g_discovery_pending) {

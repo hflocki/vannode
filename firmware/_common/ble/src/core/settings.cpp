@@ -29,6 +29,7 @@ static void setCoreDefaults() {
     strlcpy(config.wifi_pass, DEFAULT_WIFI_PASSWORD, sizeof(config.wifi_pass));
     strlcpy(config.mqtt_server, DEFAULT_MQTT_SERVER, sizeof(config.mqtt_server));
     config.mqtt_port = DEFAULT_MQTT_PORT;
+    config.mqtt_fb[0] = 0;
     strlcpy(config.mqtt_user, DEFAULT_MQTT_USER, sizeof(config.mqtt_user));
     strlcpy(config.mqtt_pass, DEFAULT_MQTT_PASSWORD, sizeof(config.mqtt_pass));
     strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
@@ -74,6 +75,7 @@ static void coreFromFile(JsonDocument& doc) {
     config.debug = doc["debug"] | false;
     strlcpy(config.mqtt_server, doc["mqtt_server"] | DEFAULT_MQTT_SERVER,   sizeof(config.mqtt_server));
     config.mqtt_port = doc["mqtt_port"] | DEFAULT_MQTT_PORT;
+    strlcpy(config.mqtt_fb, doc["mqtt_fb"] | "", sizeof(config.mqtt_fb));
     strlcpy(config.mqtt_user,   doc["mqtt_user"]   | DEFAULT_MQTT_USER,     sizeof(config.mqtt_user));
     strlcpy(config.mqtt_pass,   doc["mqtt_pass"]   | DEFAULT_MQTT_PASSWORD, sizeof(config.mqtt_pass));
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
@@ -111,6 +113,7 @@ static void coreToFile(JsonDocument& doc) {
     doc["debug"] = config.debug;
     doc["mqtt_server"] = (const char*)config.mqtt_server;
     doc["mqtt_port"] = config.mqtt_port;
+    doc["mqtt_fb"] = (const char*)config.mqtt_fb;
     doc["mqtt_user"] = (const char*)config.mqtt_user;
     doc["mqtt_pass"] = (const char*)config.mqtt_pass;
     doc["mqtt_prefix"] = (const char*)config.mqtt_prefix;
@@ -129,6 +132,7 @@ void coreConfigToJson(JsonObject o) {
     o["debug"] = config.debug;
     o["mqtt_server"] = (const char*)config.mqtt_server;
     o["mqtt_port"] = config.mqtt_port;
+    o["mqtt_fb"] = (const char*)config.mqtt_fb;
     o["mqtt_user"] = (const char*)config.mqtt_user;
     o["mqtt_pass_set"] = config.mqtt_pass[0] != '\0';
     o["mqtt_prefix"] = (const char*)config.mqtt_prefix;
@@ -154,6 +158,7 @@ const char* coreConfigCheck(JsonObjectConst in, bool& restart) {
     if ((e = checkStr(in, "wifi_ssid", sizeof(config.wifi_ssid), config.wifi_ssid, ch))) return e;
     if ((e = checkStr(in, "ap_ssid", sizeof(config.ap_ssid), config.ap_ssid, ch))) return e;
     if ((e = checkStr(in, "mqtt_server", sizeof(config.mqtt_server), config.mqtt_server, ch))) return e;
+    if ((e = checkStr(in, "mqtt_fb", sizeof(config.mqtt_fb), config.mqtt_fb, ch))) return e;
     if ((e = checkStr(in, "mqtt_user", sizeof(config.mqtt_user), config.mqtt_user, ch))) return e;
     if ((e = checkStr(in, "mqtt_prefix", sizeof(config.mqtt_prefix), config.mqtt_prefix, ch))) return e;
     bool dummy = false;
@@ -202,6 +207,7 @@ void coreConfigApply(JsonObjectConst in) {
     applyStr(in, "ap_ssid", config.ap_ssid, sizeof(config.ap_ssid), true);
     applyStr(in, "ap_pass", config.ap_pass, sizeof(config.ap_pass), true);
     applyStr(in, "mqtt_server", config.mqtt_server, sizeof(config.mqtt_server), false);
+    applyStr(in, "mqtt_fb", config.mqtt_fb, sizeof(config.mqtt_fb), false);
     applyStr(in, "mqtt_user", config.mqtt_user, sizeof(config.mqtt_user), false);
     applyStr(in, "mqtt_pass", config.mqtt_pass, sizeof(config.mqtt_pass), true);
     applyStr(in, "mqtt_prefix", config.mqtt_prefix, sizeof(config.mqtt_prefix), true);

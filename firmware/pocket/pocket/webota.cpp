@@ -12,6 +12,7 @@
 #include "safeguard.h"
 #include "fwcheck.h"
 #include "evlog.h"
+#include "mqttfb.h"
 
 // Note: config.h is not included here, it defines variables and may only be included once (pocket.ino).
 
@@ -358,6 +359,7 @@ void begin(const char* host, const char* version, const char* user, const char* 
     if (!auth()) return;
     JsonDocument d;
     fwcheck::info(d["fw"].to<JsonObject>());
+    mqttfb::json(d["mqttfb"].to<JsonObject>());
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;
     String out;

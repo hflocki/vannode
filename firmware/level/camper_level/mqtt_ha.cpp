@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "mqtt_ha.h"
+#include "mqttfb.h"
 #include "devinfo.h"
 #include "sensor.h"
 #include "wifi_manager.h"
@@ -52,7 +53,8 @@ void mqttInit() {
         Serial.println("[MQTT] No server configured");
         return;
     }
-    mqtt.setServer(config.mqtt_server, config.mqtt_port);
+    mqttfb::begin(config.mqtt_server, config.mqtt_port, config.mqtt_fb);
+    mqtt.setServer(mqttfb::host(), mqttfb::port());
     mqtt.setCallback(callback);
     mqtt.setBufferSize(1024);
     mqtt.setKeepAlive(30);
@@ -71,6 +73,7 @@ void mqttLoop() {
         // connect() blocks while the broker is unreachable, so retry only every 5 s
         if (millis() - lastReconnect < 5000) return;
         lastReconnect = millis();
+        mqtt.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
 
         String clientId = "level-node-" + WiFi.macAddress();
         clientId.replace(":", "");
@@ -78,7 +81,9 @@ void mqttLoop() {
         const char* user = strlen(config.mqtt_user) ? config.mqtt_user : nullptr;
         const char* pass = strlen(config.mqtt_user) ? config.mqtt_pass : nullptr;
 
-        if (!mqtt.connect(clientId.c_str(), user, pass, will.c_str(), 1, true, "offline")) {
+        bool ok = mqtt.connect(clientId.c_str(), user, pass, will.c_str(), 1, true, "offline");
+        mqttfb::result(ok);
+        if (!ok) {
             Serial.printf("[MQTT] Failed, rc=%d\n", mqtt.state());
             return;
         }
@@ -92,6 +97,7 @@ void mqttLoop() {
     }
 
     mqtt.loop();
+    if (mqttfb::backDue()) { mqtt.disconnect(); return; }   // main broker is back
     if (devinfoDue(mqtt.connected())) mqtt.publish(topic("info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 
     if (discoveryPending) {

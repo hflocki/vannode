@@ -26,6 +26,7 @@ void settingsLoad() {
   settings.apPass     = prefs.getString("appass", DEFAULT_AP_PASSWORD);
   settings.mqttHost   = prefs.getString("mhost",  DEFAULT_MQTT_SERVER);
   settings.mqttPort   = prefs.getUShort("mport",  DEFAULT_MQTT_PORT);
+  settings.mqttFb     = prefs.getString("mfb",    "");
   settings.mqttUser   = prefs.getString("muser",  DEFAULT_MQTT_USER);
   settings.mqttPass   = prefs.getString("mpass",  DEFAULT_MQTT_PASSWORD);
   settings.mqttPrefix = prefs.getString("prefix", DEFAULT_MQTT_PREFIX);
@@ -69,6 +70,7 @@ void settingsSave() {
   prefs.putString("appass", settings.apPass);
   prefs.putString("mhost",  settings.mqttHost);
   prefs.putUShort("mport",  settings.mqttPort);
+  prefs.putString("mfb",    settings.mqttFb);
   prefs.putString("muser",  settings.mqttUser);
   prefs.putString("mpass",  settings.mqttPass);
   prefs.putString("prefix", settings.mqttPrefix);

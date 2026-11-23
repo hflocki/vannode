@@ -30,6 +30,10 @@
 #ifndef DEFAULT_MQTT_PORT
 #define DEFAULT_MQTT_PORT 1883
 #endif
+// Fallback broker "host[:port]" (usually the display with its broker on), empty = off (mqttfb.h)
+#ifndef DEFAULT_MQTT_FALLBACK
+#define DEFAULT_MQTT_FALLBACK ""
+#endif
 #ifndef DEFAULT_MQTT_USER
 #define DEFAULT_MQTT_USER ""
 #endif
@@ -85,6 +89,7 @@ const char* ssid = DEFAULT_WIFI_SSID;
 const char* password = DEFAULT_WIFI_PASSWORD;
 const char* mqtt_server = DEFAULT_MQTT_SERVER;
 const int mqtt_port = DEFAULT_MQTT_PORT;
+const char* mqtt_fallback = DEFAULT_MQTT_FALLBACK;
 const char* mqtt_user = DEFAULT_MQTT_USER;
 const char* mqtt_pass = DEFAULT_MQTT_PASSWORD;
 const char* mqtt_topic = LEVEL_TOPIC;

@@ -68,6 +68,7 @@ void load() {
   settings.mqttUser     = prefs.getString("muser",  DEFAULT_MQTT_USER);
   settings.mqttPass     = prefs.getString("mpass",  DEFAULT_MQTT_PASSWORD);
   settings.brkOn        = prefs.getBool  ("brkon",  false);
+  settings.brkFb        = prefs.getBool  ("brkfb",  false);
   settings.prefixSelf   = prefs.getString("pself",  DEFAULT_PREFIX_SELF);
   settings.prefixTank   = prefs.getString("ptank",  DEFAULT_PREFIX_TANK);
   settings.prefixLevel  = prefs.getString("plvl",   DEFAULT_PREFIX_LEVEL);
@@ -215,6 +216,7 @@ void save() {
   prefs.putString("muser",  settings.mqttUser);
   prefs.putString("mpass",  settings.mqttPass);
   prefs.putBool  ("brkon",  settings.brkOn);
+  prefs.putBool  ("brkfb",  settings.brkFb);
   prefs.putString("pself",  settings.prefixSelf);
   prefs.putString("ptank",  settings.prefixTank);
   prefs.putString("plvl",   settings.prefixLevel);

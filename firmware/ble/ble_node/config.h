@@ -107,7 +107,7 @@
 #ifndef UI_LANG
 #define UI_LANG               "de"
 #endif
-#define FW_VERSION            "2.7.0"
+#define FW_VERSION            "2.8.0"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial
@@ -557,6 +557,7 @@ struct AppConfig {
 
     char mqtt_server[64];
     uint16_t mqtt_port;
+    char mqtt_fb[72];      // fallback broker "host[:port]", empty = off (mqttfb.h)
     char mqtt_user[32];
     char mqtt_pass[32];
     char mqtt_prefix[32];

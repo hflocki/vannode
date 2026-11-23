@@ -297,6 +297,8 @@ nav button .ico{display:inline-flex}
       <div class="fg"><label>Benutzer</label><input data-cfg="mqtt_user"></div>
       <div class="fg"><label>Passwort</label><input data-cfg="mqtt_pass" type="password" placeholder="(unverändert)" autocomplete="new-password"></div>
     </div>
+    <div class="fg"><label>Ersatz-Broker (optional)</label><input data-cfg="mqtt_fb" placeholder="IP des Displays, z. B. 192.168.1.50">
+      <div class="hint">Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.</div></div>
     <div class="fg"><label>Basis-Topic</label><input data-cfg="mqtt_base"></div>
     <div class="sw"><span class="t">MQTT-Passwort löschen</span><label class="toggle"><input type="checkbox" data-cfg="clear_mqtt_pass"><span></span></label></div>
     <div class="ct" style="margin-top:16px">Home Assistant</div>
@@ -729,7 +731,7 @@ vnI18nAdd('en', {
   // Network and identity: only with "auch Netzwerk übernehmen"
   const NET = ['wifi_ssid', 'ssid', 'wifi_tx_power', 'ap_ssid', 'ap_always', 'static_ip', 'ip', 'gateway', 'gw',
     'subnet', 'sn', 'dns', 'hostname', 'node_name', 'mqtt_server', 'mqtt_host', 'mhost', 'mqtt_port', 'mport',
-    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base'];
+    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base', 'mqtt_fb', 'mfb'];
   // Nodes whose /api/config takes form fields instead of JSON
   const FORM = {maxxfan: 1, heater: 1};
   const BLE = {ble: 1, toolbox: 1, battery: 1};
@@ -1080,6 +1082,13 @@ vnI18nAdd('en', {
       const inp = $('vnc-ufile');
       if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
       showInfo();
+      // fallback MQTT broker in use (mqttfb.h)
+      const mf = $('vnc-mqfb');
+      if (mf) {
+        const m = d.mqttfb;
+        mf.style.display = m && m.on ? '' : 'none';
+        if (m && m.on) mf.innerHTML = `<span class="warn">MQTT über Ersatz-Broker ${esc(m.fb)}</span> · seit ${esc(ago(m.since || 0))}`;
+      }
       CLK = d.clock ? Object.assign({at: Date.now()}, d.clock) : null;
       showClock();
       // No valid time on the device (no internet, no NTP at the router): take the browser's once
@@ -1224,7 +1233,7 @@ vnI18nAdd('en', {
 
     if (box.dataset.log !== '0') {
       const log = card('Ereignisse');
-      log.insertAdjacentHTML('beforeend', '<div class="fwu-log">Lade …</div>' +
+      log.insertAdjacentHTML('beforeend', '<div class="vnc-cur" id="vnc-mqfb" style="display:none"></div><div class="fwu-log">Lade …</div>' +
         '<div class="vnc-hint" style="margin:8px 0 0">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>');
       box.appendChild(log);
     }
@@ -1546,7 +1555,12 @@ vnI18nAdd('en', {
   'LittleFS nicht beschreibbar': 'LittleFS not writable', 'Schreibfehler (Speicher voll?)': 'Write error (memory full?)',
   'Update über den IDE-Netzwerkport fehlgeschlagen (Fehler *)': 'Update over the IDE network port failed (error *)',
   'Einstellungen gespeichert, Neustart': 'Settings saved, restart',
-  'vor *': '* ago', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
+  'vor *': '* ago',
+  'MQTT über Ersatz-Broker *': 'MQTT via fallback broker *', '· seit *': '· for *', 'MQTT: Broker * weg, Ersatz-Broker *': 'MQTT: broker * gone, fallback broker *',
+  'MQTT: Ersatz-Broker * weg, zurück zu *': 'MQTT: fallback broker * gone, back to *', 'MQTT: Broker * wieder da': 'MQTT: broker * back',
+  'Ersatz-Broker (optional)': 'Fallback broker (optional)', 'Ersatz-Broker': 'Fallback broker', 'IP des Displays, z. B. 192.168.1.50': 'IP of the display, e.g. 192.168.1.50',
+  'Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.':
+    'If the broker cannot be reached for 2 minutes, the device connects to the fallback broker (e.g. the display with its broker switched on) and returns as soon as the broker is back. Empty = off.', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
 });
 // vannode-i18n:end
 </script>

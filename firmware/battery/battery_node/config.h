@@ -79,7 +79,7 @@
 #ifndef UI_LANG
 #define UI_LANG               "de"
 #endif
-#define FW_VERSION            "2.6.8"
+#define FW_VERSION            "2.7.0"
 #define FW_DEVICE             "battery"   // device id in the firmware marker (fwcheck.h)
 #define NODE_TITLE            "Battery Node" // web page without index.html.gz, Home Assistant model, serial
 #define NODE_DIR              "battery"   // repo folder (about card)
@@ -289,6 +289,7 @@ struct AppConfig {
 
     char mqtt_server[64];
     uint16_t mqtt_port;
+    char mqtt_fb[72];      // fallback broker "host[:port]", empty = off (mqttfb.h)
     char mqtt_user[32];
     char mqtt_pass[32];
     char mqtt_prefix[32];

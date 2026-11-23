@@ -17,6 +17,7 @@ struct Settings {
 
   String   mqttHost;
   uint16_t mqttPort = 1883;
+  String   mqttFb;          // fallback broker "host[:port]", empty = off (mqttfb.h)
   String   mqttUser;
   String   mqttPass;
   String   mqttPrefix;

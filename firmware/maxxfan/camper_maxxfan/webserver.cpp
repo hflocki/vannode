@@ -12,6 +12,7 @@
 #include "mqtt_ha.h"
 #include "system.h"
 #include "safeguard.h"
+#include "mqttfb.h"
 #include "fwcheck.h"
 #include "evlog.h"
 #include <WiFi.h>
@@ -111,6 +112,7 @@ void handleGetConfig(AsyncWebServerRequest* r) {
   d["dns"]      = settings.dns;
   d["mhost"]    = settings.mqttHost;
   d["mport"]    = settings.mqttPort;
+  d["mfb"]      = settings.mqttFb;
   d["muser"]    = settings.mqttUser;
   d["prefix"]   = settings.mqttPrefix;
   d["disc"]     = settings.discovery;
@@ -155,6 +157,7 @@ void handleSetConfig(AsyncWebServerRequest* r) {
   settings.mqttHost = param(r, "mhost"); settings.mqttHost.trim();
   settings.mqttPort = param(r, "mport", String(DEFAULT_MQTT_PORT)).toInt();
   if (settings.mqttPort == 0) settings.mqttPort = DEFAULT_MQTT_PORT;
+  settings.mqttFb = param(r, "mfb"); settings.mqttFb.trim();
   settings.mqttUser = param(r, "muser");
   keepIfEmpty("mpass", settings.mqttPass);
   if (settings.mqttUser.isEmpty()) settings.mqttPass = "";
@@ -345,6 +348,7 @@ void begin() {
     if (!auth(r)) return;
     JsonDocument d;
     fwcheck::info(d["fw"].to<JsonObject>());
+    mqttfb::json(d["mqttfb"].to<JsonObject>());
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;
     sendJson(r, d);

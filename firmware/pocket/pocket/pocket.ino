@@ -14,6 +14,7 @@
 #include "fw_id.h"
 #include "safeguard.h"
 #include "evlog.h"
+#include "mqttfb.h"
 #include "webota.h"
 #include "devinfo.h"
 #include "logo_img.h"
@@ -76,7 +77,7 @@ String levelPrefix;   // level topic without the trailing '#', e.g. "camper/leve
 // A build with real values in config_local.h stores WiFi / MQTT settings in flash (NVS). The CI build from GitHub Actions
 // has no config_local.h (empty values) and reads them back from there, so its .bin can be
 // installed over the update page without losing the connection.
-String cfgSsid, cfgPass, cfgBroker, cfgMqttUser, cfgMqttPass, cfgLevelTopic, cfgWebUser, cfgWebPass;
+String cfgSsid, cfgPass, cfgBroker, cfgMqttFb, cfgMqttUser, cfgMqttPass, cfgLevelTopic, cfgWebUser, cfgWebPass;
 int cfgPort = 1883;
 bool cfgFromFlash = false;   // true = settings came from NVS (CI build)
 
@@ -272,11 +273,12 @@ void loadCredentials() {
   Preferences p;
   p.begin("roadbuddy", false);   // NVS namespace keeps the old name, so stored credentials survive the rename
   if (!placeholder) {
-    cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port;
+    cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port; cfgMqttFb = mqtt_fallback;
     cfgMqttUser = mqtt_user; cfgMqttPass = mqtt_pass; cfgLevelTopic = mqtt_topic;
     putIfChanged(p, "ssid", cfgSsid);
     putIfChanged(p, "pass", cfgPass);
     putIfChanged(p, "broker", cfgBroker);
+    putIfChanged(p, "mfb", cfgMqttFb);
     putIfChanged(p, "muser", cfgMqttUser);
     putIfChanged(p, "mpass", cfgMqttPass);
     putIfChanged(p, "ltopic", cfgLevelTopic);
@@ -290,6 +292,7 @@ void loadCredentials() {
     cfgPass = p.getString("pass", "");
     cfgBroker = p.getString("broker", mqtt_server);
     cfgPort = p.getInt("port", mqtt_port);
+    cfgMqttFb = p.getString("mfb", mqtt_fallback);
     cfgMqttUser = p.getString("muser", "");
     cfgMqttPass = p.getString("mpass", "");
     cfgLevelTopic = p.getString("ltopic", mqtt_topic);
@@ -297,7 +300,7 @@ void loadCredentials() {
     cfgWebPass = p.getString("wpass", "");
   } else {
     // Placeholder build and nothing stored: flash once over USB with your own config_local.h
-    cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port;
+    cfgSsid = ssid; cfgPass = password; cfgBroker = mqtt_server; cfgPort = mqtt_port; cfgMqttFb = mqtt_fallback;
     cfgMqttUser = mqtt_user; cfgMqttPass = mqtt_pass; cfgLevelTopic = mqtt_topic;
     cfgWebUser = WEB_USER; cfgWebPass = WEB_PASS;
     Serial.println("No credentials: flash once over USB with your own config_local.h");
@@ -1111,7 +1114,7 @@ void drawPageSystem() {
     drawRow(y, "Mobilfunk", "--", COL_GRID);
   }
   y += step;
-  drawRow(y, "MQTT", mqttOk ? cfgBroker : String("offline"), mqttOk ? COL_OK : COL_BAD);
+  drawRow(y, "MQTT", mqttOk ? String(mqttfb::host()) + (mqttfb::active() ? " (Ersatz)" : "") : String("offline"), mqttOk ? COL_OK : COL_BAD);
   y += step;
   drawRow(y, "Akku", String(level) + "%" + (charging ? " (laedt)" : ""),
           charging ? COL_ACCENT : (level > 40 ? COL_OK : (level > 15 ? COL_WARN : COL_BAD)));
@@ -1462,8 +1465,11 @@ void mqttReconnect() {
   lastMqttAttempt = millis();
 
   String clientId = "pocket-node-" + String(random(0xffff), HEX);
-  if (client.connect(clientId.c_str(), cfgMqttUser.c_str(), cfgMqttPass.c_str(),
-                     SELF_TOPIC "/status", 1, true, "offline")) {
+  client.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
+  bool ok = client.connect(clientId.c_str(), cfgMqttUser.c_str(), cfgMqttPass.c_str(),
+                           SELF_TOPIC "/status", 1, true, "offline");
+  mqttfb::result(ok);
+  if (ok) {
     client.publish(SELF_TOPIC "/status", "online", true);
     // Retained values arrive immediately after subscribing
 #if USE_LEVEL
@@ -1520,7 +1526,8 @@ void setup() {
   canvas.createSprite(M5.Display.width(), M5.Display.height());
 
   startWifi();
-  client.setServer(cfgBroker.c_str(), cfgPort);
+  mqttfb::begin(cfgBroker.c_str(), cfgPort, cfgMqttFb.c_str());
+  client.setServer(mqttfb::host(), mqttfb::port());
   client.setBufferSize(1280);   // the temperature list with 8 long names is about 1 kB
   client.setCallback(callback);
   webota::begin("pocket-node", FW_VERSION, cfgWebUser.c_str(), cfgWebPass.c_str(), statusJson, onOtaProgress);
@@ -1535,6 +1542,7 @@ void loop() {
 
   mqttReconnect();
   client.loop();
+  if (client.connected() && mqttfb::backDue()) client.disconnect();   // main broker is back
   if (devinfoDue(client.connected())) client.publish(SELF_TOPIC "/info", devinfoJson(FW_VERSION).c_str(), true);
   webota::loop();
   guard::loop(WiFi.status() == WL_CONNECTED || cfgSsid.isEmpty());

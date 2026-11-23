@@ -15,6 +15,8 @@
 // MQTT broker
 #define DEFAULT_MQTT_SERVER    "192.168.1.10"
 #define DEFAULT_MQTT_PORT      1883
+// Fallback broker, e.g. the display with its broker switched on (empty = off)
+// #define DEFAULT_MQTT_FALLBACK  "192.168.1.50"
 #define DEFAULT_MQTT_USER      "YOUR_MQTT_USER"
 #define DEFAULT_MQTT_PASSWORD  "YOUR_MQTT_PASSWORD"
 

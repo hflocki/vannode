@@ -10,6 +10,7 @@
 #include "safeguard.h"
 #include "fwcheck.h"
 #include "evlog.h"
+#include "mqttfb.h"
 #include "wsauth.h"
 
 #if defined(ESP8266)
@@ -80,6 +81,7 @@ static void setDefaults() {
     strlcpy(config.wifi_pass, DEFAULT_WIFI_PASSWORD, sizeof(config.wifi_pass));
     strlcpy(config.mqtt_server, DEFAULT_MQTT_SERVER, sizeof(config.mqtt_server));
     config.mqtt_port = DEFAULT_MQTT_PORT;
+    config.mqtt_fb[0] = 0;
     strlcpy(config.mqtt_user, DEFAULT_MQTT_USER, sizeof(config.mqtt_user));
     strlcpy(config.mqtt_pass, DEFAULT_MQTT_PASSWORD, sizeof(config.mqtt_pass));
     strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
@@ -317,6 +319,7 @@ void webserverInit() {
         JsonDocument d;
 
         fwcheck::info(d["fw"].to<JsonObject>());
+        mqttfb::json(d["mqttfb"].to<JsonObject>());
 
         evlog::json(d["log"].to<JsonArray>());
 
@@ -466,6 +469,7 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
     doc["reset_reason"] = resetReasonString();
     doc["mqtt_server"] = (const char*)config.mqtt_server;
     doc["mqtt_port"] = config.mqtt_port;
+    doc["mqtt_fb"] = (const char*)config.mqtt_fb;
     doc["mqtt_user"] = (const char*)config.mqtt_user;
     doc["mqtt_pass_set"] = strlen(config.mqtt_pass) > 0;
     doc["mqtt_prefix"] = (const char*)config.mqtt_prefix;
@@ -570,6 +574,7 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     copyIfPresent(doc, "ap_ssid",     config.ap_ssid,     sizeof(config.ap_ssid),     true);
     copyIfPresent(doc, "ap_pass",     config.ap_pass,     sizeof(config.ap_pass),     true);
     copyIfPresent(doc, "mqtt_server", config.mqtt_server, sizeof(config.mqtt_server), false);
+    copyIfPresent(doc, "mqtt_fb",     config.mqtt_fb,     sizeof(config.mqtt_fb),     false);
     copyIfPresent(doc, "mqtt_user",   config.mqtt_user,   sizeof(config.mqtt_user),   false);
     copyIfPresent(doc, "mqtt_pass",   config.mqtt_pass,   sizeof(config.mqtt_pass),   true);
     copyIfPresent(doc, "mqtt_prefix", config.mqtt_prefix, sizeof(config.mqtt_prefix), true);
@@ -644,6 +649,7 @@ void loadConfig() {
     config.ap_always = doc["ap_always"] | DEFAULT_AP_ALWAYS;
     strlcpy(config.mqtt_server, doc["mqtt_server"] | DEFAULT_MQTT_SERVER, sizeof(config.mqtt_server));
     config.mqtt_port = doc["mqtt_port"] | DEFAULT_MQTT_PORT;
+    strlcpy(config.mqtt_fb, doc["mqtt_fb"] | "", sizeof(config.mqtt_fb));
     strlcpy(config.mqtt_user,   doc["mqtt_user"]   | DEFAULT_MQTT_USER,     sizeof(config.mqtt_user));
     strlcpy(config.mqtt_pass,   doc["mqtt_pass"]   | DEFAULT_MQTT_PASSWORD, sizeof(config.mqtt_pass));
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
@@ -681,6 +687,7 @@ void saveConfig() {
     doc["ap_always"] = config.ap_always;
     doc["mqtt_server"] = (const char*)config.mqtt_server;
     doc["mqtt_port"] = config.mqtt_port;
+    doc["mqtt_fb"] = (const char*)config.mqtt_fb;
     doc["mqtt_user"] = (const char*)config.mqtt_user;
     doc["mqtt_pass"] = (const char*)config.mqtt_pass;
     doc["mqtt_prefix"] = (const char*)config.mqtt_prefix;

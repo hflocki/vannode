@@ -134,6 +134,13 @@
       const inp = $('vnc-ufile');
       if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
       showInfo();
+      // fallback MQTT broker in use (mqttfb.h)
+      const mf = $('vnc-mqfb');
+      if (mf) {
+        const m = d.mqttfb;
+        mf.style.display = m && m.on ? '' : 'none';
+        if (m && m.on) mf.innerHTML = `<span class="warn">MQTT über Ersatz-Broker ${esc(m.fb)}</span> · seit ${esc(ago(m.since || 0))}`;
+      }
       CLK = d.clock ? Object.assign({at: Date.now()}, d.clock) : null;
       showClock();
       // No valid time on the device (no internet, no NTP at the router): take the browser's once
@@ -278,7 +285,7 @@
 
     if (box.dataset.log !== '0') {
       const log = card('Ereignisse');
-      log.insertAdjacentHTML('beforeend', '<div class="fwu-log">Lade …</div>' +
+      log.insertAdjacentHTML('beforeend', '<div class="vnc-cur" id="vnc-mqfb" style="display:none"></div><div class="fwu-log">Lade …</div>' +
         '<div class="vnc-hint" style="margin:8px 0 0">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>');
       box.appendChild(log);
     }

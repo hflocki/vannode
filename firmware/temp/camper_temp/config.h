@@ -17,7 +17,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.5.0"
+#define FW_VERSION            "1.6.0"
 #define FW_DEVICE            "temp"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID
@@ -169,6 +169,7 @@ struct AppConfig {
 
     char mqtt_server[64];
     uint16_t mqtt_port;
+    char mqtt_fb[72];        // fallback broker "host[:port]", empty = off (mqttfb.h)
     char mqtt_user[32];
     char mqtt_pass[32];
     char mqtt_prefix[32];

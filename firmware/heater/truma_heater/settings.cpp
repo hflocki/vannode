@@ -31,6 +31,7 @@ void settings_load() {
 
   g_settings.mqtt_host = p.getString("mhost", DEFAULT_MQTT_SERVER);
   g_settings.mqtt_port = p.getUShort("mport", DEFAULT_MQTT_PORT);
+  g_settings.mqtt_fb = p.getString("mfb", "");
   g_settings.mqtt_user = p.getString("muser", DEFAULT_MQTT_USER);
   g_settings.mqtt_pass = p.getString("mpass", DEFAULT_MQTT_PASSWORD);
   g_settings.mqtt_base = p.getString("mbase", DEFAULT_MQTT_BASE);
@@ -87,6 +88,7 @@ void settings_save() {
   p.putString("dns", g_settings.dns);
   p.putString("mhost", g_settings.mqtt_host);
   p.putUShort("mport", g_settings.mqtt_port);
+  p.putString("mfb", g_settings.mqtt_fb);
   p.putString("muser", g_settings.mqtt_user);
   p.putString("mpass", g_settings.mqtt_pass);
   p.putString("mbase", g_settings.mqtt_base);

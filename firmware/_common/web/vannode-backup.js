@@ -15,7 +15,7 @@
   // Network and identity: only with "auch Netzwerk übernehmen"
   const NET = ['wifi_ssid', 'ssid', 'wifi_tx_power', 'ap_ssid', 'ap_always', 'static_ip', 'ip', 'gateway', 'gw',
     'subnet', 'sn', 'dns', 'hostname', 'node_name', 'mqtt_server', 'mqtt_host', 'mhost', 'mqtt_port', 'mport',
-    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base'];
+    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base', 'mqtt_fb', 'mfb'];
   // Nodes whose /api/config takes form fields instead of JSON
   const FORM = {maxxfan: 1, heater: 1};
   const BLE = {ble: 1, toolbox: 1, battery: 1};

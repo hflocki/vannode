@@ -23,6 +23,7 @@
 #include "wifi_manager.h"
 #include "safeguard.h"
 #include "fwcheck.h"
+#include "mqttfb.h"
 #include "evlog.h"
 #include "clockset.h"
 
@@ -224,6 +225,7 @@ static void config_json(AsyncWebServerRequest *req) {
   doc["dns"] = g_settings.dns;
   doc["mqtt_host"] = g_settings.mqtt_host;
   doc["mqtt_port"] = g_settings.mqtt_port;
+  doc["mqtt_fb"] = g_settings.mqtt_fb;
   doc["mqtt_user"] = g_settings.mqtt_user;
   doc["mqtt_base"] = g_settings.mqtt_base;
   doc["ha_discovery"] = g_settings.ha_discovery;
@@ -275,6 +277,7 @@ static void config_save(AsyncWebServerRequest *req) {
   put("subnet", "mask");
   put("dns", "dns");
   put("mqtt_host", "mhost");
+  put("mqtt_fb", "mfb");
   if (req->hasParam("mqtt_port", true)) p.putUShort("mport", req->getParam("mqtt_port", true)->value().toInt());
   put("mqtt_user", "muser");
   put_secret("mqtt_pass", "mpass");
@@ -360,6 +363,7 @@ void begin() {
     if (!check_auth(req)) return;
     JsonDocument d;
     fwcheck::info(d["fw"].to<JsonObject>());
+    mqttfb::json(d["mqttfb"].to<JsonObject>());
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;
     clockset::json(d["clock"].to<JsonObject>());   // clock card (vannode-system.js)

@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "mqtt_ha.h"
+#include "mqttfb.h"
 #include "devinfo.h"
 #include "wifi_manager.h"
 #include "sensor.h"
@@ -59,7 +60,8 @@ void mqttInit() {
         Serial.println("[MQTT] No server configured");
         return;
     }
-    mqtt.setServer(config.mqtt_server, config.mqtt_port);
+    mqttfb::begin(config.mqtt_server, config.mqtt_port, config.mqtt_fb);
+    mqtt.setServer(mqttfb::host(), mqttfb::port());
     mqtt.setBufferSize(1024);
     mqtt.setKeepAlive(30);
     mqtt.setSocketTimeout(5);
@@ -75,6 +77,7 @@ void mqttLoop() {
         // connect() blocks while the broker is unreachable, so retry only every 5 s
         if (millis() - lastReconnect > 5000) {
             lastReconnect = millis();
+            mqtt.setServer(mqttfb::host(), mqttfb::port());   // main or fallback broker (mqttfb.h)
             Serial.println("[MQTT] Connection attempt...");
             String clientId = String(OTA_HOSTNAME) + "-" + WiFi.macAddress();
             clientId.replace(":", "");
@@ -86,6 +89,7 @@ void mqttLoop() {
             } else {
                 connected = mqtt.connect(clientId.c_str(), NULL, NULL, willTopic.c_str(), 1, true, "offline");
             }
+            mqttfb::result(connected);
             if (connected) {
                 Serial.println("[MQTT] Connected!");
                 mqtt.publish(willTopic.c_str(), "online", true);
@@ -100,6 +104,7 @@ void mqttLoop() {
     }
 
     mqtt.loop();
+    if (mqttfb::backDue()) { mqtt.disconnect(); return; }   // main broker is back
     if (devinfoDue(mqtt.connected())) mqtt.publish(topic("info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 
     if (!discoveryPublished) {

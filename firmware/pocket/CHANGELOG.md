@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `pocket-v<v
 
 | Version | Änderungen |
 | --- | --- |
+| 1.7.0 | **Ersatz-Broker:** `DEFAULT_MQTT_FALLBACK` in `config_local.h` (`IP` oder `IP:Port`, z. B. das Display mit eingeschaltetem Broker). Ist der Broker 2 Minuten nicht erreichbar, verbindet sich der Pocket-Node dorthin und wechselt zurück, sobald der Broker wieder da ist; die Systemseite zeigt dann „(Ersatz)“ hinter dem Broker. `/api/system` meldet `mqttfb`. |
 | 1.6.3 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |
 | 1.6.2 | **Web-Login immer an:** ab Werk Benutzer `admin`, Passwort `vannode2026`. Geräte, die bisher ohne Login liefen, bekommen ihn mit diesem Update; leere Felder behalten den gespeicherten Wert, abschalten lässt sich die Anmeldung nicht mehr. Gilt für die Update-Seite; eigene Werte weiter über `config_local.h`. |
 | 1.6.1 | Update-Seite mit der gemeinsamen Karte **Über VanNode** wie alle anderen Geräte (Logo, Urheber, Lizenz, Links auf Lizenztext und zentrale NOTICE.md) statt der eigenen Fußzeile |

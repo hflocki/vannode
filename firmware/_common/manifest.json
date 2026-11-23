@@ -73,7 +73,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/alde/camper_alde"
     ],
     "evlog.cpp": [
       "firmware/_template/camper_example",
@@ -85,7 +86,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/alde/camper_alde"
     ],
     "fwcheck.h": [
       "firmware/_template/camper_example",
@@ -152,6 +154,32 @@
       "firmware/level/camper_level",
       "firmware/alde/camper_alde",
       "firmware/display/camper_display",
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
+    ],
+    "mqttfb.h": [
+      "firmware/_template/camper_example",
+      "firmware/alde/camper_alde",
+      "firmware/display/camper_display",
+      "firmware/heater/truma_heater",
+      "firmware/level/camper_level",
+      "firmware/maxxfan/camper_maxxfan",
+      "firmware/pocket/pocket",
+      "firmware/tanklevel/camper_tanklevel",
+      "firmware/temp/camper_temp",
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
+    ],
+    "mqttfb.cpp": [
+      "firmware/_template/camper_example",
+      "firmware/alde/camper_alde",
+      "firmware/display/camper_display",
+      "firmware/heater/truma_heater",
+      "firmware/level/camper_level",
+      "firmware/maxxfan/camper_maxxfan",
+      "firmware/pocket/pocket",
+      "firmware/tanklevel/camper_tanklevel",
+      "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node"
     ]

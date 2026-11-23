@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "mqtt_client.h"
+#include "mqttfb.h"
 #include "devinfo.h"
 #include "netdev.h"
 #include "alerts.h"
@@ -182,19 +183,29 @@ void subscribeAll() {
 }
 
 void connect() {
-  // own broker (broker.h): always through the loopback, the broker host field is not used
-  const char* host = settings.brkOn ? "127.0.0.1" : settings.mqttHost.c_str();
+  // own broker (broker.h): through the loopback, the broker host field is not used.
+  // Own broker as standby (brkFb): main broker first, the loopback only while it is away (mqttfb.h).
+  const bool standby = settings.brkOn && settings.brkFb && !settings.mqttHost.isEmpty();
   if ((!settings.brkOn && settings.mqttHost.isEmpty()) || !wifimgr::staConnected()) return;
+  static bool fbInit = false;   // settings change = restart, so once is enough
+  if (!fbInit) {
+    if (standby) mqttfb::begin(settings.mqttHost.c_str(), settings.mqttPort, "127.0.0.1");
+    else mqttfb::begin(settings.brkOn ? "127.0.0.1" : settings.mqttHost.c_str(), settings.mqttPort, "");
+    fbInit = true;
+  }
+  const char* host = mqttfb::host();
   uint32_t now = millis();
   if (lastAttempt != 0 && now - lastAttempt < MQTT_RECONNECT_MS) return;
   lastAttempt = now;
 
-  mqtt.setServer(host, settings.mqttPort);
+  mqtt.setServer(host, mqttfb::port());
   String will = self("status");
   const char* user = settings.mqttUser.isEmpty() ? nullptr : settings.mqttUser.c_str();
   const char* pass = settings.mqttUser.isEmpty() ? nullptr : settings.mqttPass.c_str();
-  Serial.printf("[mqtt] connecting to %s:%u\n", host, settings.mqttPort);
-  if (mqtt.connect(clientId.c_str(), user, pass, will.c_str(), 1, true, "offline")) {
+  Serial.printf("[mqtt] connecting to %s:%u\n", host, mqttfb::port());
+  bool ok = mqtt.connect(clientId.c_str(), user, pass, will.c_str(), 1, true, "offline");
+  mqttfb::result(ok);
+  if (ok) {
     Serial.println("[mqtt] connected");
     publish(will, "online", true);
     subscribeAll();
@@ -231,6 +242,7 @@ void loop() {
   }
   wasConnected = true;
   mqtt.loop();
+  if (mqttfb::backDue()) { mqtt.disconnect(); return; }   // main broker is back
   if (devinfoDue(true)) mqtt.publish(self("info").c_str(), devinfoJson(FW_VERSION).c_str(), true);
 
   if (depart::changed() || millis() - lastSelf > SELF_PUBLISH_MS) publishSelfState();

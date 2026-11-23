@@ -28,6 +28,7 @@
 #include "clockset.h"
 #include "wsauth.h"
 #include "broker.h"
+#include "mqttfb.h"
 #include "app_icons.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -312,6 +313,7 @@ void getSettings(AsyncWebServerRequest* r) {
   d["mqttUser"] = settings.mqttUser;
   d["mqttPass"] = settings.mqttPass.isEmpty() ? "" : MASK;
   d["brkOn"] = settings.brkOn;
+  d["brkFb"] = settings.brkFb;
   broker::json(d["brk"].to<JsonObject>());
   d["prefixSelf"] = settings.prefixSelf;
   d["prefixTank"] = settings.prefixTank;
@@ -455,6 +457,10 @@ bool applySettings(JsonObject o, bool apply) {
   }
   if (o["brkOn"].is<bool>() && o["brkOn"].as<bool>() != settings.brkOn) {
     if (apply) settings.brkOn = o["brkOn"];
+    reboot = true;
+  }
+  if (o["brkFb"].is<bool>() && o["brkFb"].as<bool>() != settings.brkFb) {
+    if (apply) settings.brkFb = o["brkFb"];
     reboot = true;
   }
   str("mqttUser", settings.mqttUser, true);
@@ -913,6 +919,7 @@ void begin() {
     if (!auth(r)) return;
     JsonDocument d;
     fwcheck::info(d["fw"].to<JsonObject>());
+    mqttfb::json(d["mqttfb"].to<JsonObject>());
     d["fw"]["lang"] = UI_LANG;   // language of the page (vannode-i18n.js)
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;

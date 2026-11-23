@@ -256,5 +256,10 @@ vnI18nAdd('en', {
   'LittleFS nicht beschreibbar': 'LittleFS not writable', 'Schreibfehler (Speicher voll?)': 'Write error (memory full?)',
   'Update über den IDE-Netzwerkport fehlgeschlagen (Fehler *)': 'Update over the IDE network port failed (error *)',
   'Einstellungen gespeichert, Neustart': 'Settings saved, restart',
-  'vor *': '* ago', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
+  'vor *': '* ago',
+  'MQTT über Ersatz-Broker *': 'MQTT via fallback broker *', '· seit *': '· for *', 'MQTT: Broker * weg, Ersatz-Broker *': 'MQTT: broker * gone, fallback broker *',
+  'MQTT: Ersatz-Broker * weg, zurück zu *': 'MQTT: fallback broker * gone, back to *', 'MQTT: Broker * wieder da': 'MQTT: broker * back',
+  'Ersatz-Broker (optional)': 'Fallback broker (optional)', 'Ersatz-Broker': 'Fallback broker', 'IP des Displays, z. B. 192.168.1.50': 'IP of the display, e.g. 192.168.1.50',
+  'Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.':
+    'If the broker cannot be reached for 2 minutes, the device connects to the fallback broker (e.g. the display with its broker switched on) and returns as soon as the broker is back. Empty = off.', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
 });

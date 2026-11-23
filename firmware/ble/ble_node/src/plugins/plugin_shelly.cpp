@@ -150,7 +150,7 @@ public:
             }
             case READ: {
                 if (now - phaseAt > SHELLY_ANSWER_MS) { fail("Antwort unvollständig"); break; }
-                int n = link.read(SHELLY_DATA, resp + got, want - got);
+                int n = link.read(SHELLY_DATA, (uint8_t*)resp + got, want - got);
                 if (n <= 0) break;
                 got += n;
                 if (got >= want) {

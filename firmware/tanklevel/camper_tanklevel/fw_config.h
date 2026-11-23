@@ -32,3 +32,9 @@
 #define FW_HW "unknown"
 #endif
 #endif
+
+// UI_LANG: language of the web page, "de" (default) or "en". Set it in config_local.h before
+// the first flash; the page then translates itself in the browser (fw.lang, vannode-i18n.js).
+#ifndef UI_LANG
+#define UI_LANG "de"
+#endif

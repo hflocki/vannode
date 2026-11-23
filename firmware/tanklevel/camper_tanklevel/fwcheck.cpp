@@ -138,6 +138,7 @@ void info(JsonObject o) {
     o["hw"] = FW_HW;
     o["max"] = (uint32_t)maxSize();
     o["id"] = id();
+    o["lang"] = UI_LANG;   // language of the web page (vannode-i18n.js)
 }
 
 void begin(size_t total, bool forceIt) {

@@ -27,3 +27,7 @@
 // #define GAS_ENABLED          1
 // #define DEFAULT_TANK_SIZE    100.0f   // fresh water tank in liters
 // #define DEFAULT_GREY_SIZE    90.0f
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

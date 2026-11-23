@@ -24,3 +24,7 @@
 // #define DEFAULT_MQTT_PREFIX  "camper/example"
 // #define SENSOR_PIN           2
 // #define DEFAULT_INTERVAL_S   10
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

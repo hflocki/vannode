@@ -29,3 +29,7 @@
 // #define CI_SLP_PIN           -1      // panel bus SLP/NSLP GPIO, -1 = tied high on the module
 // #define DEFAULT_LIN_ENABLED  false   // only the panel bus transceiver is fitted
 // #define DEFAULT_EL_MAX       2       // highest heating element step a command may set (kW)
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

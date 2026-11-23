@@ -3193,6 +3193,53 @@ vnI18nAdd('en', {
   "nicht": "not",
   "läuft": "running"
 });
+// Network, MQTT and login cards of the node pages (temp, tanklevel, level, maxxfan, heater, alde, template).
+vnI18nAdd('en', {
+  'MQTT Settings (Home Assistant)': 'MQTT settings (Home Assistant)', 'MQTT-Broker': 'MQTT broker', 'Topic-Prefix': 'Topic prefix', 'Basis-Topic': 'Base topic',
+  'Werte unter': 'Values under', ', Status unter': ', status under', '…, Status unter': '…, status under', 'Status unter': 'Status under', 'Befehle unter': 'Commands under',
+  'Home-Assistant-Discovery': 'Home Assistant discovery', 'Auto-Discovery': 'Auto discovery', 'Discovery-Prefix': 'Discovery prefix', 'MQTT-Passwort löschen': 'Delete MQTT password',
+  'Web-Oberfläche Login': 'Web interface login', 'Die Anmeldung ist immer an (ab Werk': 'The login is always on (factory default',
+  '). Leere Felder behalten den gespeicherten Wert.': '). Empty fields keep the saved value.',
+  '). Leere Felder behalten den gespeicherten Wert. Login vergessen: über USB den Befehl': '). Empty fields keep the saved value. Forgot the login: send the command',
+  'im seriellen Monitor senden, dann gilt wieder der Werks-Login.': 'over USB in the serial monitor, then the factory login applies again.',
+  'Web-Benutzer (leer = bleibt)': 'Web user (empty = kept)', 'Web-Passwort': 'Web password', 'Web-Login auf Werks-Login zurücksetzen': 'Reset web login to the factory login',
+  '💾 Speichern': '💾 Save', '💾 Speichern & Verbinden': '💾 Save & connect', '💾 Speichern & Neustart': '💾 Save & restart', '🔄 Neustart': '🔄 Restart',
+  'Verbindungsstatus': 'Connection status', 'Letzter Abbruchgrund': 'Last disconnect reason', 'Absicherung': 'Security', 'WLAN-Verbindung': 'WiFi connection',
+  'Gerätename (Hostname)': 'Device name (hostname)', 'Feste IP-Adresse': 'Static IP address', 'Feste IP (optional, leer = DHCP)': 'Static IP (optional, empty = DHCP)',
+  'Subnetz': 'Subnet', 'DNS (leer = Gateway)': 'DNS (empty = gateway)',
+  '8,5 dBm': '8.5 dBm', '17,5 dBm (Standard)': '17.5 dBm (default)', '19,5 dBm (Maximum)': '19.5 dBm (maximum)',
+  'Bricht die Verbindung oft ab, zuerst eine niedrigere Stufe probieren.': 'If the connection drops often, try a lower level first.',
+  'Bricht die Verbindung oft ab, zuerst 8,5 dBm probieren. Manche Boards (z. B. ESP32-C3 Super Mini) laufen mit weniger Leistung stabiler.':
+    'If the connection drops often, try 8.5 dBm first. Some boards (e.g. ESP32-C3 Super Mini) run more stably with less power.',
+  'Bricht die Verbindung oft ab, zuerst 8,5 dBm probieren. Der ESP32-C3 Super Mini läuft mit weniger Leistung stabiler. Nur 2,4-GHz-WLAN.':
+    'If the connection drops often, try 8.5 dBm first. The ESP32-C3 Super Mini runs more stably with less power. 2.4 GHz WiFi only.',
+  'Passwort (min. 8 Zeichen)': 'Password (min. 8 characters)', '(unverändert)': '(unchanged)', '(unverändert) AP:': '(unchanged) AP:', 'unverändert': 'unchanged',
+  'Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Das Gerät ist dann über seine IP im WLAN oder':
+    'Off = AP only as an emergency fallback when the WiFi cannot be reached for 60 s. The device can then be reached via its IP in the WiFi or',
+  'Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Stabilere WLAN-Verbindung; das Gerät ist dann über seine IP im WLAN oder':
+    'Off = AP only as an emergency fallback when the WiFi cannot be reached for 60 s. More stable WiFi connection; the device can then be reached via its IP in the WiFi or',
+  'erreichbar.': '.', 'Zeit & Zugriff': 'Time & access', 'NTP-Server': 'NTP server', 'Zeitzone (POSIX)': 'Time zone (POSIX)',
+  'Fehler beim Laden der Einstellungen': 'Error loading the settings', 'Fehler beim Laden': 'Error loading', 'Fehler beim Speichern': 'Error saving',
+  'Neustart... Seite lädt in 10 s neu': 'Restarting... page reloads in 10 s', 'Gespeichert – Neustart...': 'Saved – restarting...', 'Gespeichert – Neustart …': 'Saved – restarting …',
+  'Gespeichert – Neustart': 'Saved – restarting', '✓ Gespeichert – Gerät startet neu': '✓ Saved – device restarts', 'Gerät startet neu...': 'Device restarts...', 'Neustart …': 'Restarting …',
+  'Wirklich neu starten? Nochmal tippen': 'Really restart? Tap again', '? Das Gerät startet neu.': '? The device restarts.',
+  'Keine Verbindung': 'No connection', 'Befehl abgelehnt': 'Command refused', 'Befehl fehlgeschlagen': 'Command failed', 'Befehl gesendet': 'Command sent',
+  'noch kein Wert': 'no value yet', 'nicht gefunden': 'not found', 'nicht verbunden': 'not connected', 'nicht vorhanden': 'not present', 'Übernehmen': 'Apply',
+  'Setzen': 'Set', 'Starten': 'Start', 'Leeren': 'Clear', 'Herunterladen': 'Download', 'Zurücksetzen': 'Reset', 'Zurückgesetzt': 'Reset done', 'Suchen': 'Search',
+  'Aktualisieren': 'Refresh', 'Aus': 'Off', 'An': 'On', 'Ja': 'Yes', 'Nein': 'No', 'Verbunden': 'Connected', 'Getrennt': 'Disconnected', 'Sensor': 'Sensor',
+  'Temperatur': 'Temperature', 'Spannung': 'Voltage', 'Messung': 'Measurement', 'Intervall (Sekunden)': 'Interval (seconds)', 'Intervall 1-600 s': 'Interval 1-600 s',
+  'Rohwert': 'Raw value', 'Rohdaten': 'Raw data', 'Glättungsfilter': 'Smoothing filter', 'Anzeige': 'Display', 'Modus': 'Mode', 'Modell': 'Model', 'Dauer': 'Duration',
+  'Debug an': 'Debug on', 'Debug aus': 'Debug off', 'Log geleert': 'Log cleared', 'Download fehlgeschlagen': 'Download failed', 'Warnung': 'Warning',
+  'Automatisch aktualisieren (alle 3 s)': 'Refresh automatically (every 3 s)',
+  // texts the classic nodes send (event log, errors)
+  'Web-Oberfläche nicht gespeichert (LittleFS voll oder nicht bereit)': 'Web interface not saved (LittleFS full or not ready)',
+  'Web-Oberfläche nicht gespeichert': 'Web interface not saved', 'Web-Oberfläche nicht gespeichert: *': 'Web interface not saved: *',
+  'Web-Oberfläche ersetzt (* kB)': 'Web interface replaced (* kB)', 'Dateisystem-Abbild geschrieben (* kB), Neustart': 'File system image written (* kB), restart',
+  'LittleFS nicht beschreibbar': 'LittleFS not writable', 'Schreibfehler (Speicher voll?)': 'Write error (memory full?)',
+  'Update über den IDE-Netzwerkport fehlgeschlagen (Fehler *)': 'Update over the IDE network port failed (error *)',
+  'Einstellungen gespeichert, Neustart': 'Settings saved, restart',
+  'vor *': '* ago', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
+});
 // vannode-i18n:end
 </script>
 </body>

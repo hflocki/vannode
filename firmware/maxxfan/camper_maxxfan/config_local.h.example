@@ -25,3 +25,7 @@
 // #define DEFAULT_PORT0_ENABLED  0   // RJ11
 // #define DEFAULT_PORT1_ENABLED  1   // RJ45
 // #define DEFAULT_PULSE_MS       150
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

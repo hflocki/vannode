@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `alde-v<ver
 
 | Version | Änderungen |
 |---|---|
+| 0.7.0 | **Webseite auf Englisch:** `#define UI_LANG "en"` in `config_local.h` (vor dem Flashen) zeigt die Seite auf Englisch, auch die Texte, die das Gerät schickt (auch die Namen der Messwerte); ohne Eintrag bleibt alles Deutsch (die Release-.bin ist Deutsch). Lizenz- und Haftungstext der Über-Karte bleiben im deutschen Original. `/api/system` meldet die Sprache als `fw.lang`. |
 | 0.6.9 | **Behoben: Seite blieb auf iPhone/iPad (Safari) nach dem Login leer bzw. ohne Live-Werte.** Safari schickt die Anmeldung beim WebSocket nicht mit. Die Seite holt sich jetzt nach dem Login einen Schlüssel (`/api/wstoken`, gemeinsamer Baustein `wsauth.h`) und öffnet den WebSocket damit; andere Browser gehen wie bisher. |
 | 0.6.8 | Gemeinsame System-Karten aktualisiert (Uhrzeit-Karte für Geräte mit Uhr, hier ohne Wirkung). |
 | 0.6.7 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |

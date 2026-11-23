@@ -29,3 +29,7 @@
 // #define DEFAULT_TRACK_WIDTH  180.0f   // cm
 // #define DEFAULT_WHEELBASE    350.0f   // cm
 // #define DEFAULT_TOLERANCE    0.5f     // degrees
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `ble-v<vers
 
 | Version | Änderungen |
 | --- | --- |
+| 2.6.6 | **Behoben: Seite blieb auf iPhone/iPad (Safari) nach dem Login leer bzw. ohne Live-Werte.** Safari schickt die Anmeldung beim WebSocket nicht mit. Die Seite holt sich jetzt nach dem Login einen Schlüssel (`/api/wstoken`, gemeinsamer Baustein `wsauth.h`) und öffnet den WebSocket damit; andere Browser gehen wie bisher. |
 | 2.6.5 | **Uhrzeit ohne Internet:** neue Karte *Uhrzeit* bei den System-Karten: zeigt die Gerätezeit und woher sie kommt, *Uhrzeit vom Handy übernehmen* und *Von Hand setzen*. Hat das Gerät keine gültige Zeit, übernimmt die Webseite beim Öffnen automatisch die Zeit des Browsers (`POST /api/time`, gemeinsamer Baustein `clockset`). Ein späterer NTP-Abgleich ersetzt sie; bei einem Neustart bleibt sie, bei Stromausfall nicht. Zusätzlich wird der Router (Gateway) als NTP-Server gefragt. |
 | 2.6.4 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |
 | 2.6.3 | **Web-Login immer an:** ab Werk Benutzer `admin`, Passwort `vannode2026`. Geräte, die bisher ohne Login liefen, bekommen ihn mit diesem Update; leere Felder behalten den gespeicherten Wert, abschalten lässt sich die Anmeldung nicht mehr. USB-Befehl `noauth` setzt auf den Werks-Login zurück (statt ihn zu löschen). |

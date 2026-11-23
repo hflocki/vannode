@@ -26,6 +26,7 @@
 #include "fwcheck.h"
 #include "evlog.h"
 #include "clockset.h"
+#include "wsauth.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncJson.h>
@@ -811,11 +812,16 @@ void begin() {
   queue = xQueueCreate(24, sizeof(Cmd));
 
   ws.onEvent(onWsEvent);
-  // The page's WebSocket also takes commands: only with the web login (the browser sends it along)
+  // The page's WebSocket also takes commands: only with the web login. Most browsers send it along
+  // with the upgrade, Safari does not: the page then opens /ws?t=<token from /api/wstoken> (wsauth.h)
   ws.handleHandshake([](AsyncWebServerRequest* r) {
-    return r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
+    return r->authenticate(settings.webUser.c_str(), settings.webPass.c_str()) || wsauth::tokenOk(r);
   });
   server.addHandler(&ws);
+  server.on("/api/wstoken", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
+    wsauth::send(r);
+  });
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) {
     if (!auth(r)) return;

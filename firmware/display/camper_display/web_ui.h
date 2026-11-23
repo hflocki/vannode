@@ -311,8 +311,15 @@ function fmt(v,d,u){const n=num(v,d);if(n===null)return(v&&v!=='')?esc(v)+(u?' '
 function online(dev){return V[dev+'_status']==='online'}
 
 // ---------- connection ----------
+// WebSocket with the login: Safari does not send the page login along with the WebSocket, so the
+// page fetches a token first (/api/wstoken) and passes it as ?t= (wsauth.h on the device)
+function wsOpen(cb) {
+    fetch('/api/wstoken', {cache: 'no-store'}).then((r) => r.ok ? r.json() : {}).catch(() => ({})).then((j) =>
+        cb(new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (j && j.t ? '?t=' + encodeURIComponent(j.t) : ''))));
+}
 function connect(){
-  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
+    wsOpen((s) => {
+  ws=s;
   ws.onopen=()=>$('#dot').classList.add('ok');
   ws.onclose=()=>{$('#dot').classList.remove('ok');$('#conn_t').textContent='Keine Verbindung';setTimeout(connect,2000)};
   ws.onmessage=e=>{
@@ -323,6 +330,7 @@ function connect(){
     else if(m.t==='err')toast(m.msg);
     else if(m.t==='wx'){WX=m.w||{};update()}
   };
+    });
 }
 
 // ---------- pages ----------

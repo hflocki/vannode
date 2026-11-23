@@ -676,10 +676,18 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 ['tare-pitch', 'tare-roll'].forEach(id => $(id).addEventListener('input', () => tareEdited = true));
 
+// WebSocket with the login: Safari does not send the page login along with the WebSocket, so the
+// page fetches a token first (/api/wstoken) and passes it as ?t= (wsauth.h on the device)
+function wsOpen(cb) {
+    fetch('/api/wstoken', {cache: 'no-store'}).then((r) => r.ok ? r.json() : {}).catch(() => ({})).then((j) =>
+        cb(new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (j && j.t ? '?t=' + encodeURIComponent(j.t) : ''))));
+}
 function connectWS() {
-    const ws = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws');
+    wsOpen((s) => {
+    const ws = s;
     ws.onmessage = (evt) => { try { update(JSON.parse(evt.data)); } catch (e) {} };
     ws.onclose = () => { setDots(false); setTimeout(connectWS, 3000); };
+    });
 }
 
 const fmt = (v, d = 1) => (v === null || v === undefined) ? '--' : Number(v).toFixed(d).replace('.', ',');

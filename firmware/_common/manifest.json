@@ -141,6 +141,16 @@
       "firmware/heater/truma_heater",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node"
+    ],
+    "wsauth.h": [
+      "firmware/_template/camper_example",
+      "firmware/tanklevel/camper_tanklevel",
+      "firmware/temp/camper_temp",
+      "firmware/level/camper_level",
+      "firmware/alde/camper_alde",
+      "firmware/display/camper_display",
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ]
   },
   "blocks": {

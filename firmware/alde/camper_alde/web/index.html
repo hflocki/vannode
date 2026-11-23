@@ -495,11 +495,18 @@ document.querySelectorAll('.tab').forEach(tab => {
     });
 });
 
+// WebSocket with the login: Safari does not send the page login along with the WebSocket, so the
+// page fetches a token first (/api/wstoken) and passes it as ?t= (wsauth.h on the device)
+function wsOpen(cb) {
+    fetch('/api/wstoken', {cache: 'no-store'}).then((r) => r.ok ? r.json() : {}).catch(() => ({})).then((j) =>
+        cb(new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (j && j.t ? '?t=' + encodeURIComponent(j.t) : ''))));
+}
 function connectWS() {
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(proto + '//' + location.host + '/ws');
+    wsOpen((s) => {
+    ws = s;
     ws.onmessage = (evt) => { try { updateLiveData(JSON.parse(evt.data)); } catch (e) {} };
     ws.onclose = () => { setTimeout(connectWS, 3000); };
+    });
 }
 
 function formatUptime(s) {

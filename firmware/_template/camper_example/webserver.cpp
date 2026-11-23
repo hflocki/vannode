@@ -10,6 +10,7 @@
 #include "safeguard.h"
 #include "fwcheck.h"
 #include "evlog.h"
+#include "wsauth.h"
 
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -116,9 +117,14 @@ void webserverInit() {
     loadConfig();
 
     ws.onEvent(onWsEvent);
-    // Browsers send the basic auth credentials of the page along with the WebSocket upgrade
-    ws.handleHandshake([](AsyncWebServerRequest* request) { return authOk(request); });
+    // Most browsers send the page's basic auth along with the WebSocket upgrade, Safari does not:
+    // the page then opens /ws?t=<token from /api/wstoken> (wsauth.h)
+    ws.handleHandshake([](AsyncWebServerRequest* request) { return authOk(request) || wsauth::tokenOk(request); });
     server.addHandler(&ws);
+    server.on("/api/wstoken", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        wsauth::send(request);
+    });
 
     // Serve ONLY index.html. Serving the whole filesystem would expose /config.json
     // (WiFi and MQTT credentials) to everybody in the network.

@@ -27,6 +27,7 @@
 #include "evlog.h"
 #include "clockset.h"
 #include "wsauth.h"
+#include "app_icons.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncJson.h>
@@ -829,6 +830,39 @@ void begin() {
     res->addHeader("Cache-Control", "no-cache");
     r->send(res);
   });
+  // Web page as an app on the phone ("Zum Home-Bildschirm"). Browsers load the manifest and the
+  // icons without the login, so these stay open: they hold only the name and the logo.
+  server.on("/manifest.webmanifest", HTTP_GET, [](AsyncWebServerRequest* r) {
+    JsonDocument d;
+    d["name"] = settings.displayName.length() ? "VanNode " + settings.displayName : String("VanNode");
+    d["short_name"] = "VanNode";
+    d["start_url"] = "/";
+    d["scope"] = "/";
+    d["display"] = "standalone";
+    d["background_color"] = "#0D1115";
+    d["theme_color"] = "#0D1115";
+    JsonArray ic = d["icons"].to<JsonArray>();
+    for (int sz : {192, 512}) {
+      JsonObject o = ic.add<JsonObject>();
+      o["src"] = "/icon-" + String(sz) + ".png";
+      o["sizes"] = String(sz) + "x" + String(sz);
+      o["type"] = "image/png";
+      o["purpose"] = "any maskable";
+    }
+    String out;
+    serializeJson(d, out);
+    r->send(200, "application/manifest+json", out);
+  });
+  auto icon = [](const char* path, const uint8_t* png, size_t len) {
+    server.on(path, HTTP_GET, [png, len](AsyncWebServerRequest* r) {
+      AsyncWebServerResponse* res = r->beginResponse(200, "image/png", png, len);
+      res->addHeader("Cache-Control", "max-age=604800");
+      r->send(res);
+    });
+  };
+  icon("/icon-180.png", APP_ICON_180, APP_ICON_180_LEN);
+  icon("/icon-192.png", APP_ICON_192, APP_ICON_192_LEN);
+  icon("/icon-512.png", APP_ICON_512, APP_ICON_512_LEN);
   server.on("/api/settings", HTTP_GET, getSettings);
   server.on("/api/pages", HTTP_GET, getPages);
   server.on("/api/scan", HTTP_GET, getScan);
@@ -845,19 +879,20 @@ void begin() {
     rebootAt = millis() + 1000;
   });
   server.on("/update", HTTP_POST, otaDone, otaUpload);
-  server.on("/api/sensors", HTTP_GET, [](AsyncWebServerRequest* r) {
-    if (!auth(r)) return;
-    r->send(200, "application/json", sensors::toJson());
-  });
+  // "/api/x" also matches "/api/x/..." (AsyncWebServer): the longer paths go first
   server.on("/api/sensors/unknown", HTTP_GET, [](AsyncWebServerRequest* r) {
     if (!auth(r)) return;
     r->send(200, "application/json", sensors::unknownJson());
   });
-  server.on("/api/rules", HTTP_GET, getRules);
+  server.on("/api/sensors", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
+    r->send(200, "application/json", sensors::toJson());
+  });
   server.on("/api/rules/state", HTTP_GET, [](AsyncWebServerRequest* r) {
     if (!auth(r)) return;
     r->send(200, "application/json", rules::statusJson());
   });
+  server.on("/api/rules", HTTP_GET, getRules);
   // Firmware info for the update check in the browser, and the event log
   server.on("/api/system", HTTP_GET, [](AsyncWebServerRequest* r) {
     if (!auth(r)) return;

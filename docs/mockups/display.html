@@ -309,7 +309,15 @@ const M = {
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0D1115">
+<meta name="theme-color" content="#0D1115" media="(prefers-color-scheme:dark)">
+<meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme:light)">
+<!-- as an app on the phone: home screen icon, own window without browser bar (manifest + icons need no login) -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="VanNode">
 <title>Display Node</title>
 <style>
 /* VanNode design: calm, technical; colour means state, blue means control */
@@ -618,12 +626,22 @@ function wsOpen(cb) {
     fetch('/api/wstoken', {cache: 'no-store'}).then((r) => r.ok ? r.json() : {}).catch(() => ({})).then((j) =>
         cb(new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (j && j.t ? '?t=' + encodeURIComponent(j.t) : ''))));
 }
+// The display sends at least every 2 s. A phone that was asleep (app in the background) often keeps a
+// dead connection without onclose: reconnect when the page comes back or nothing arrived for 15 s.
+let wsLast=0;
+function wsCheck(back){
+  if(!ws||ws.readyState!==1)return;
+  if(Date.now()-wsLast>(back?6000:15000)){ws.onclose=null;try{ws.close()}catch(e){}$('#dot').classList.remove('ok');connect()}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wsCheck(true)});
+setInterval(()=>{if(document.visibilityState==='visible')wsCheck(false)},5000);
 function connect(){
     wsOpen((s) => {
   ws=s;
-  ws.onopen=()=>$('#dot').classList.add('ok');
+  ws.onopen=()=>{wsLast=Date.now();$('#dot').classList.add('ok')};
   ws.onclose=()=>{$('#dot').classList.remove('ok');$('#conn_t').textContent='Keine Verbindung';setTimeout(connect,2000)};
   ws.onmessage=e=>{
+    wsLast=Date.now();
     const m=JSON.parse(e.data);
     if(m.t==='cfg'){cfg=m;buildNav();if(page==='rules'){page='settings';setGroup='rules';setSec=''}if(!pages().some(p=>p.id===page))page=cfg.setup?'settings':pages()[0].id;render()}
     else if(m.t==='v'){Object.assign(V,m.d||{});if(m.s)Object.assign(S,m.s);update()}

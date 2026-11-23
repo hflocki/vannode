@@ -176,6 +176,16 @@ Am schnellsten geht es mit dem **Topic-Finder**: Filter `zigbee2mqtt/#` starten,
 
 **Geräte mit Home-Assistant-Discovery** (ESPHome, Tasmota, Shelly, OpenMQTTGateway, zigbee2mqtt …): im Topic-Finder auf **Discovery** tippen. Das Display liest die Anmeldungen unter `homeassistant/…/config` (Sensor, Binärsensor, Schalter, Licht an/aus) und zeigt je Wert Name, Einheit und Topic. *+ Kachel* legt eine Kachel mit dem richtigen Status-Topic und Schlüssel an; Schalter bekommen das Befehls-Topic und die Befehle des Geräts, Binärsensoren einen deutschen Anzeigetext (z. B. `ON=offen,OFF=zu` bei Türen). Die Geräte müssen ihre Anmeldung „retained“ senden (bei ESPHome und Tasmota Standard). Eigene VanNode-Geräte erscheinen dort nicht.
 
+### Als App aufs Handy
+
+Die Webseite des Displays lässt sich wie eine App auf den Startbildschirm legen: VanNode-Symbol, eigenes Fenster ohne Adressleiste.
+
+- **iPhone/iPad (Safari):** Seite öffnen → Teilen → *Zum Home-Bildschirm*. Startet danach im eigenen Fenster.
+- **Android (Chrome):** Seite öffnen → Menü ⋮ → *Zum Startbildschirm hinzufügen*. Über `http://` legt Chrome nur eine Verknüpfung an, die im Browser öffnet; ein eigenes App-Fenster gibt es bei Chrome nur über `https://`.
+- Unterwegs geht das über Tailscale genauso (Adresse des Displays im Tailnet statt der lokalen).
+- Der Login bleibt: Beim ersten Start fragt die App nach Benutzer und Passwort der Webseite. Ohne Netz zeigt sie nichts an, es gibt keine Offline-Kopie.
+- Kommt das Handy aus dem Ruhezustand zurück, baut die Seite die Verbindung von selbst neu auf (keine alten Werte mehr nach dem Aufwachen).
+
 ### Warnung an einer Kachel (z. B. Landstrom)
 
 Kacheln vom Typ *Wert* und *Schalter* können eine Warnung auslösen. Sie erscheint wie die anderen Warnungen in der Status-Kachel, im gelben Band und per Pushover.

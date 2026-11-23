@@ -129,6 +129,18 @@
     ],
     "truma_lc_decode.h": [
       "firmware/ble/ble_node/src/plugins"
+    ],
+    "clockset.h": [
+      "firmware/display/camper_display",
+      "firmware/heater/truma_heater",
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
+    ],
+    "clockset.cpp": [
+      "firmware/display/camper_display",
+      "firmware/heater/truma_heater",
+      "firmware/ble/ble_node",
+      "firmware/battery/battery_node"
     ]
   },
   "blocks": {

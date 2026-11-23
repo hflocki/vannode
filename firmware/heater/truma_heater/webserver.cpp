@@ -24,6 +24,7 @@
 #include "safeguard.h"
 #include "fwcheck.h"
 #include "evlog.h"
+#include "clockset.h"
 
 using namespace truma;
 
@@ -361,9 +362,22 @@ void begin() {
     fwcheck::info(d["fw"].to<JsonObject>());
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;
+    clockset::json(d["clock"].to<JsonObject>());   // clock card (vannode-system.js)
     String out;
     serializeJson(d, out);
     req->send(200, "application/json", out);
+  });
+
+  // Set the clock without internet: /api/time?t=<unix seconds>[&m=1] (clockset.h), then
+  // pass it on to the CP Plus
+  g_server.on("/api/time", HTTP_POST, [](AsyncWebServerRequest *req) {
+    if (!check_auth(req)) return;
+    if (!req->hasParam("t")) { req->send(400, "application/json", "{\"error\":\"t fehlt\"}"); return; }
+    int64_t t = atoll(req->getParam("t")->value().c_str());
+    bool manual = req->hasParam("m") && req->getParam("m")->value() == "1";
+    if (!clockset::set(t, manual)) { req->send(400, "application/json", "{\"error\":\"Ungültige Zeit\"}"); return; }
+    heater::sync_clock();   // queued: the CP Plus gets the new time right away
+    req->send(200, "application/json", "{\"ok\":true}");
   });
 
   g_server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *req) {

@@ -125,6 +125,7 @@ Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant s
 | Web-Oberfläche | Gleiche Optik auf allen Geräten, Login immer an (HTTP Basic Auth, ab Werk `admin` / `admin`); Login vergessen → `noauth` im seriellen Monitor (Heizung, MaxxFan: Erase All Flash) |
 | Updates | Im Browser, mit Prüfung (falsches Gerät, `.merged.bin`, zu groß), Ereignis-Log und Rückfall auf die vorherige Firmware |
 | Update, Sicherung, Neustart | Auf allen Geräte-Webseiten dieselben Karten in derselben Reihenfolge: *Firmware- & Web-Update*, *Einstellungen sichern* (JSON-Datei ohne Passwörter und Anmeldung; WLAN/MQTT-Server nur auf Wunsch; beim Display mit Seiten, Kacheln, Automationen und Sensoren), *Ereignisse*, *Gerät* (Neustart, Werkseinstellungen) und *Über VanNode* – gemeinsame Bausteine `firmware/_common/web/vannode-system.js` und `vannode-backup.js` |
+| Uhrzeit | Geräte mit Uhr (Display, Heizung, ble, battery) fragen NTP und den Router; ohne Internet übernimmt die Webseite die Zeit vom Handy (Karte *Uhrzeit*, auch von Hand setzbar) |
 | Firmware-Version | `FW_VERSION` in der `config.h` des Geräts, sichtbar im Web-UI und in HA |
 
 ## Eigene Einstellungen (`config_local.h`)

@@ -16,6 +16,7 @@
 #include "../../fwcheck.h"
 #include "../../evlog.h"
 #include "../../safeguard.h"
+#include "../../clockset.h"
 
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -408,9 +409,26 @@ void webserverInit() {
         fw["dir"] = NODE_DIR;
         evlog::json(d["log"].to<JsonArray>());
         d["up"] = millis() / 1000;
+        clockset::json(d["clock"].to<JsonObject>());   // clock card (vannode-system.js)
         String out;
         serializeJson(d, out);
         request->send(200, "application/json", out);
+    });
+
+    // Set the clock without internet: /api/time?t=<unix seconds>[&m=1] (clockset.h)
+    server.on("/api/time", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        if (!request->hasParam("t")) {
+            sendError(request, 400, "t fehlt");
+            return;
+        }
+        int64_t t = atoll(request->getParam("t")->value().c_str());
+        bool manual = request->hasParam("m") && request->getParam("m")->value() == "1";
+        if (!clockset::set(t, manual)) {
+            sendError(request, 400, "Ungültige Zeit");
+            return;
+        }
+        request->send(200, "application/json", "{\"ok\":true}");
     });
 
     // Firmware (.bin) or web page (.gz) upload; the file name decides

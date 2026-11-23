@@ -11,6 +11,7 @@
 #include <ESPmDNS.h>
 #include <time.h>
 #include "mqtt_client.h"
+#include "clockset.h"
 
 // Same behaviour as the other camper projects:
 //  - no WiFi configured  -> setup AP only
@@ -58,6 +59,7 @@ void begin() {
   WiFi.setHostname(settings.hostname.c_str());
 
   configTzTime(settings.tz.c_str(), settings.ntpServer.c_str(), "pool.ntp.org");
+  clockset::begin();   // without NTP the web page sets the clock from the browser
 
   if (settings.wifiSsid.isEmpty()) {   // first start: AP only
     startAp();
@@ -95,6 +97,10 @@ void loop() {
     lastConnected = now;
     if (!wasConnected) {
       Serial.printf("[wifi] connected, IP %s\n", WiFi.localIP().toString().c_str());
+      // Gateway as NTP server too: camper routers often run one that works without internet
+      static String gw;   // configTzTime keeps the pointer
+      gw = WiFi.gatewayIP().toString();
+      if (gw != "0.0.0.0") configTzTime(settings.tz.c_str(), settings.ntpServer.c_str(), gw.c_str(), "pool.ntp.org");
       if (!mdnsStarted && MDNS.begin(settings.hostname.c_str())) {
         MDNS.addService("http", "tcp", 80);
         mdnsStarted = true;

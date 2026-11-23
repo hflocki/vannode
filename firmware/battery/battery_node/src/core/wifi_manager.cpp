@@ -7,6 +7,7 @@
 // tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
 
 #include "wifi_manager.h"
+#include "../../clockset.h"
 #include <WiFi.h>
 #include <esp_mac.h>
 #include <esp_system.h>
@@ -142,19 +143,22 @@ static bool blockingConnect() {
     return false;
 }
 
-// Clock via NTP once WiFi is up (devices that need the time of day, e.g. the pump).
-// Without internet the clock simply stays unset; timeValid() then returns false.
+// Clock via NTP once WiFi is up (devices that need the time of day, e.g. the pump). The
+// gateway is asked too: camper routers often run an NTP server that works without internet.
+// Without any of them the web page sets the clock from the browser (clockset.h).
 static void startClock() {
     static bool started = false;
     if (started || wifiState != WIFI_STATE_CONNECTED || WiFi.status() != WL_CONNECTED) return;
     started = true;
-    configTzTime(TIME_ZONE, NTP_SERVER);
-    Serial.printf("[Time] NTP %s, zone %s\n", NTP_SERVER, TIME_ZONE);
+    static String gw;   // configTzTime keeps the pointer
+    gw = WiFi.gatewayIP().toString();
+    configTzTime(TIME_ZONE, NTP_SERVER, gw == "0.0.0.0" ? nullptr : gw.c_str());
+    clockset::begin();
+    Serial.printf("[Time] NTP %s and gateway %s, zone %s\n", NTP_SERVER, gw.c_str(), TIME_ZONE);
 }
 
 bool timeValid() {
-    time_t now = time(nullptr);
-    return now > 1700000000;   // After 2023: synchronised at least once
+    return clockset::valid();   // after 2023: set at least once (NTP or web page)
 }
 
 void wifiManagerLoop() {

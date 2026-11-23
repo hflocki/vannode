@@ -60,7 +60,7 @@ Spätere Updates gehen ohne USB über die Weboberfläche unter **System → Firm
 4. **Am CP Plus anmelden** (einmalig): Einstellungen → **RESET** → **PR SET** bestätigen. Das Display zeigt „INIT…“ und startet neu. Unter **INDEX** steht danach ein dritter Eintrag **T23.70.0**.
    - War vorher eine echte iNet Box angemeldet: zuerst ohne iNet Box einmal INIT ausführen, dann mit diesem Gerät.
 5. Im Reiter **System** unter **Heizung** das Modell wählen (siehe [Heizungsmodell](#heizungsmodell)).
-6. In der Weboberfläche muss **„CP Plus verbunden“** grün sein. Nach ca. 30 s kommt der erste Heizungsstatus; die Uhrzeit wird dann automatisch per NTP ans CP Plus übertragen (und einmal täglich).
+6. In der Weboberfläche muss **„CP Plus verbunden“** grün sein. Nach ca. 30 s kommt der erste Heizungsstatus; die Uhrzeit wird dann automatisch per NTP ans CP Plus übertragen (und einmal täglich). Ohne Internet und ohne NTP am Router übernimmt die Webseite die Zeit vom Handy (System → Karte *Uhrzeit*, auch von Hand setzbar) und schickt sie gleich ans CP Plus.
 
 ## Weboberfläche
 

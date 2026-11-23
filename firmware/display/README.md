@@ -59,7 +59,7 @@ Passt zu den anderen Projekten:
 - **Ruhebild:** Gedimmt (nicht ganz aus) zeigt das Display statt der Seite das VanNode-Logo, groß Uhrzeit und Datum und darunter aktive Warnungen in Gelb auf Schwarz. Alles wandert jede Minute ein paar Pixel, damit nichts einbrennt. Abschalten unter *Einstellungen → Display* mit dem Haken **Gedimmt Ruhebild zeigen** (Standard an); dann bleibt wie bisher die Seite gedimmt stehen
 - **Info:** *Einstellungen → Info* zeigt Logo, Version, Urheber, Lizenz (GPL-3.0 mit Zusatzbedingungen) und die fremden Teile und verwendete Software. Auf dem Wandpanel steht der Vermerk auf der Logo-Karte der Systemseite
 - **Startbild:** Beim Einschalten zeigt das Display das VanNode-Logo mit Version und dem aktuellen Schritt (WLAN, Oberfläche), bis die Oberfläche fertig ist (mindestens 1,5 s). Oben auf der Systemseite steht das Logo mit Gerätename und Version
-- Uhrzeit per NTP, Firmware-Update über die Webseite (`.bin`-Datei, mit Fortschrittsbalken) oder Arduino-IDE-Netzwerkport
+- Uhrzeit per NTP (eingestellter Server, Router, pool.ntp.org); ohne Internet übernimmt die Webseite die Zeit vom Handy (Karte *Uhrzeit*, auch von Hand setzbar), Firmware-Update über die Webseite (`.bin`-Datei, mit Fortschrittsbalken) oder Arduino-IDE-Netzwerkport
 - **Einstellungen sichern und wiederherstellen** als JSON-Datei (ohne Passwörter)
 - **Verlauf der letzten 24 h** als Kurven auf der Webseite: Temperaturen, Ladestand bzw. Spannung der Batterien
 - **Warnungen für eigene Kacheln**, z. B. Landstrom über eine Zigbee-Messzange: Wert unter/über einer Grenze oder keine Daten mehr

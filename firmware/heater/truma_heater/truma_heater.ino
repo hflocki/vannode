@@ -19,6 +19,7 @@
 #include "config.h"
 #include "safeguard.h"
 #include "evlog.h"
+#include "clockset.h"
 #include <Preferences.h>
 #include "heater_control.h"
 #include "inetbox.h"
@@ -61,8 +62,11 @@ static void leds_loop() {
 
 static void time_begin() {
   // Gateway as second NTP server: camper routers often run one and work without internet.
-  String gw = WiFi.gatewayIP().toString();
+  // Without any NTP the web page sets the clock from the browser (clockset.h).
+  static String gw;   // static: the SNTP client keeps the pointer to the server name
+  gw = WiFi.gatewayIP().toString();
   configTzTime(g_settings.tz.c_str(), g_settings.ntp_server.c_str(), gw == "0.0.0.0" ? nullptr : gw.c_str());
+  clockset::begin();
 }
 
 // A changed WiFi (saved in the web UI while connected) that does not connect within

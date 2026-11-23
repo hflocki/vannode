@@ -501,13 +501,16 @@ Object.assign(M.config, {
     const r = M.route ? M.route(u.pathname, method, body, u.searchParams) : undefined;
     if (r !== undefined) return json(r);
     // firmware info and event log (fwcheck / evlog), the same example for every device
+    if (u.pathname === '/api/time' && method === 'POST') return json({ok: true});
     if (u.pathname === '/api/system' && method === 'GET') {
       const S3 = M.id === 'level' || M.id === 'display';
       const chip = M.chip || (S3 ? 'esp32s3' : 'esp32c3');   // M.chip: device script may set its chip
       const chipId = {esp32: 0, esp32s3: 9, esp32c3: 5}[chip] ?? 5;
       // M.fw: device script may add fields, e.g. name and dir for the about card (battery-node)
+      // clock card: only the devices with a clock (clockset.h), here set from the browser
+      const clock = ['display', 'heater', 'ble', 'battery'].includes(M.id) ? {t: Math.floor(Date.now() / 1000), ok: true, src: 'browser'} : undefined;
       return json({fw: Object.assign({dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: M.hw || chip, max: 1966080}, M.fw || {}),
-                   up: 5400, log: [
+                   clock, up: 5400, log: [
         {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
         {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},
         {b: 0, t: 3598, m: 'Firmware-Upload gestartet (1340 kB)'}, {b: 0, t: 3, m: 'MQTT verbunden'},
@@ -2659,8 +2662,9 @@ nav button .ico{display:inline-flex}
 })();
 // vannode-backup:end
 // vannode-system:begin
-// VanNode system cards, the same on every device page: "Firmware- & Web-Update", "Ereignisse"
-// and "Gerät" (restart, factory reset). Shared copy from firmware/_common/web
+// VanNode system cards, the same on every device page: "Firmware- & Web-Update", "Ereignisse",
+// "Uhrzeit" (only devices whose /api/system has "clock", see clockset.h) and "Gerät" (restart,
+// factory reset). Shared copy from firmware/_common/web
 // (tools/common/sync_common.py) - edit it there.
 // The page only puts <div id="vn-system"></div> where the cards belong (data-log="0": no event
 // card, the page shows the log elsewhere). The "Einstellungen sichern" card (vannode-backup.js)
@@ -2717,9 +2721,10 @@ nav button .ico{display:inline-flex}
 .vnc .fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
 .vnc .fwu-ev{padding:4px 0;border-bottom:1px solid var(--line,var(--border,#222B34))}
 .vnc .fwu-ev span{color:var(--mu,var(--text-muted,#8B98A5));margin-right:8px}
-.vnc .fwu-ev.bad{color:#E5534B}`;
+.vnc .fwu-ev.bad{color:#E5534B}
+.vnc .vnc-in{flex:1 1 180px;min-width:0;min-height:44px;padding:0 12px;border-radius:10px;font:inherit;font-size:.95rem;background:var(--bg-input,var(--bg,#0D1115));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45));color-scheme:dark}`;
 
-  let FWI = null, LOG = null, UP = 0, cfg = DEF, pick = null;
+  let FWI = null, LOG = null, UP = 0, cfg = DEF, pick = null, CLK = null, clkAuto = false;
   const $ = (id) => document.getElementById(id);
 
   function verCmp(a, b) {
@@ -2793,7 +2798,51 @@ nav button .ico{display:inline-flex}
       const inp = $('vnc-ufile');
       if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
       showInfo();
+      CLK = d.clock ? Object.assign({at: Date.now()}, d.clock) : null;
+      showClock();
+      // No valid time on the device (no internet, no NTP at the router): take the browser's once
+      if (CLK && !CLK.ok && !clkAuto) {
+        clkAuto = true;
+        setClock(Date.now(), false, 'Uhrzeit automatisch vom Browser übernommen (das Gerät hatte keine).');
+      }
     } catch (e) {}
+  }
+
+  // ---- Clock card ----
+  const SRC = {ntp: 'über das Internet (NTP)', browser: 'vom Browser übernommen', manual: 'von Hand gesetzt'};
+  const two = (n) => String(n).padStart(2, '0');
+  const fmtTime = (d) => ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + two(d.getDate()) + '.' + two(d.getMonth() + 1) + '.' +
+    d.getFullYear() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+  function showClock() {
+    const c = $('vn-clock');
+    if (!c) return;
+    c.style.display = CLK ? '' : 'none';
+    if (!CLK) return;
+    const cur = $('vnc-ccur');
+    if (!CLK.ok) {
+      cur.innerHTML = '<span class="warn">Keine Uhrzeit gesetzt</span>';
+    } else {
+      const dev = new Date((CLK.t * 1000) + (Date.now() - CLK.at));
+      const off = Math.round((dev.getTime() - Date.now()) / 60000);
+      cur.innerHTML = 'Gerät: <b>' + fmtTime(dev) + '</b> · ' + esc(SRC[CLK.src] || 'Quelle unbekannt') +
+        (Math.abs(off) >= 2 ? ' · <span class="warn">weicht ' + Math.abs(off) + ' min vom Browser ab</span>' : '');
+    }
+    const inp = $('vnc-cin');
+    if (inp && !inp.value) {
+      const n = new Date();
+      inp.value = n.getFullYear() + '-' + two(n.getMonth() + 1) + '-' + two(n.getDate()) + 'T' + two(n.getHours()) + ':' + two(n.getMinutes());
+    }
+  }
+  async function setClock(ms, manual, okText) {
+    const out = $('vnc-cmsg');
+    try {
+      const r = await fetch('/api/time?t=' + Math.round(ms / 1000) + (manual ? '&m=1' : ''), {method: 'POST'});
+      let j = {};
+      try { j = await r.json(); } catch (e) {}
+      if (!r.ok || j.ok === false) throw new Error(j.error || j.msg || ('HTTP ' + r.status));
+      if (out) out.textContent = okText;
+      load();
+    } catch (e) { if (out) out.textContent = 'Nicht gesetzt: ' + e.message; }
   }
 
   function setChk(text, cls) {
@@ -2898,6 +2947,19 @@ nav button .ico{display:inline-flex}
       box.appendChild(log);
     }
 
+    const clk = card('Uhrzeit');
+    clk.id = 'vn-clock';
+    clk.style.display = 'none';
+    clk.insertAdjacentHTML('beforeend',
+      '<div class="vnc-cur" id="vnc-ccur">…</div>' +
+      '<div class="vnc-hint">Ohne Internet übernimmt diese Seite die Uhrzeit automatisch vom Handy bzw. Rechner, sobald das Gerät keine hat. ' +
+      'Die Zeit bleibt bei einem Neustart erhalten, nicht bei Stromausfall; ein späterer Abgleich über das Internet ersetzt sie.</div>' +
+      '<div class="vnc-row" style="margin-bottom:10px"><button type="button" class="vnc-b p" id="vnc-cnow">Uhrzeit vom Handy übernehmen</button></div>' +
+      '<div class="vnc-row"><input type="datetime-local" class="vnc-in" id="vnc-cin">' +
+      '<button type="button" class="vnc-b" id="vnc-cset" style="flex:0 1 auto">Von Hand setzen</button></div>' +
+      '<div class="vnc-msg" id="vnc-cmsg"></div>');
+    box.appendChild(clk);
+
     const dev = card('Gerät');
     dev.insertAdjacentHTML('beforeend',
       '<div class="vnc-row"><button type="button" class="vnc-b" id="vnc-restart">' + ICON.restart + 'Neustart</button>' +
@@ -2910,6 +2972,12 @@ nav button .ico{display:inline-flex}
       $('fwu-btn').disabled = !(pick && (pick.ok || (pick.force && $('vnc-uforce').checked)));
     });
     $('fwu-btn').addEventListener('click', upload);
+    $('vnc-cnow').addEventListener('click', () => setClock(Date.now(), false, 'Uhrzeit vom Browser übernommen.'));
+    $('vnc-cset').addEventListener('click', () => {
+      const v = $('vnc-cin').value, t = v ? new Date(v).getTime() : NaN;
+      if (isNaN(t)) { $('vnc-cmsg').textContent = 'Erst Datum und Uhrzeit eintragen'; return; }
+      setClock(t, true, 'Uhrzeit gesetzt.');
+    });
     $('vnc-restart').addEventListener('click', () => devAction(cfg.restart, 'Gerät neu starten?', 'Startet neu – die Seite lädt gleich neu …'));
     $('vnc-factory').addEventListener('click', () => devAction(cfg.factory,
       'Alle Einstellungen löschen?\nDas Gerät startet danach mit den Werkseinstellungen und öffnet sein Setup-WLAN.',
@@ -2932,6 +3000,8 @@ nav button .ico{display:inline-flex}
   // The page may build the container later or again (tabs): watch for it
   new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
   document.addEventListener('DOMContentLoaded', place);
+  // Once at the start on every tab: a device without a valid clock gets the browser's (see load)
+  setTimeout(() => { if (FWI === null) load(); }, 1500);
   setInterval(() => { if ($('vn-system') || document.querySelector('.fwu-log')) load(); }, 15000);
 })();
 // vannode-system:end

@@ -221,7 +221,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .about p{margin:6px 0}.about pre{white-space:pre-wrap;font-size:12px;line-height:1.45;color:var(--tx2);margin:6px 0 0}
 .about table{border-collapse:collapse;font-size:13px}.about td{padding:2px 14px 2px 0;vertical-align:top}
 /* "Home am Display": 3 x 3 tile editor (tap = choose, hold and drag = swap) */
-.oved{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:6px 0 10px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.ovwrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin:6px 0 10px}
+.ovpal{flex:1 1 170px;min-width:170px;border:1px solid var(--line2);border-radius:12px;padding:8px;background:var(--side)}
+.ovpal .ovpl{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));max-height:380px;overflow:auto}
+.ovpal .ovc{min-height:34px;padding:6px 8px}
+.ovc.used{opacity:.55}
+.oved{display:grid;grid-template-columns:repeat(var(--ovc,3),1fr);gap:6px;flex:0 1 270px;min-width:200px;margin:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .ovt{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;border-radius:12px;background:var(--card);border:1px solid var(--line2);color:var(--tx);font:inherit;font-size:12px;line-height:1.2;cursor:grab;position:relative;min-width:0;touch-action:manipulation}
 .ovt .ovn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ovt .ovk{position:absolute;top:5px;right:7px;font-size:9px;color:var(--mu)}
@@ -231,7 +236,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .ovt.drag{opacity:.3}
 .ovt.over{border-color:var(--ac);background:var(--hi)}
 .ovghost{position:fixed;z-index:999;pointer-events:none;margin:0;opacity:1;transform:scale(1.06);border-color:var(--ac);background:var(--card);box-shadow:0 10px 28px rgba(0,0,0,.55)}
-.ovpick{border:1px solid var(--line2);border-radius:12px;padding:10px;margin:0 0 10px;background:var(--side)}
 .ovph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .ovpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
 .ovc{display:flex;align-items:center;gap:8px;padding:8px;min-height:40px;border-radius:8px;background:var(--hi);border:1px solid var(--line2);color:var(--tx);font:inherit;font-size:13px;text-align:left;cursor:pointer}
@@ -307,7 +311,8 @@ const webChoices=()=>ovChoices().filter(c=>c[0]!=='status'&&c[0]!=='clock');
 function ovChoices(){
   const c=[['water','Frischwasser'],['grey','Grauwasser'],['gas','Gas'],['heater',ptitle(1)],['level',ptitle(3)],['fan',ptitle(2)],['heki',ptitle(13)],
     ['temp',ptitle(4)],['bat',ptitle(5)+' (alle)'],['bat1','Batterie 1 (einzeln)'],['bat2','Batterie 2 (einzeln)'],['bat3','Batterie 3 (einzeln)'],
-    ['status','Status / Warnungen'],['weather',ptitle(6)],['actors','Offene Fenster/Türen'],['lights',ptitle(9)+' (was an ist)'],['switches',ptitle(10)+' (was an ist)'],['clock','Uhr / Datum'],['none','(leer)']];
+    ['status','Status / Warnungen'],['weather',ptitle(6)],['actors','Offene Fenster/Türen'],['lights',ptitle(9)+' (was an ist)'],['switches',ptitle(10)+' (was an ist)'],['clock','Uhr / Datum'],
+    ['alarm','Alarm (WiPro)'],['fridge','Kühlschrank'],['pump','Wasserpumpe'],['shelly','Shelly (Bluetooth)'],['tpms','Reifendruck'],['vehicle','Fahrzeug (OBD2)'],['none','(leer)']];
   ((cfg&&cfg.tiles)||[]).forEach((t,i)=>c.push(['t'+i,'Kachel: '+t.n]));
   return c;
 }
@@ -436,7 +441,30 @@ function ovTile(t){
   if(t==='lights')return `<div class="card tile click" data-go="light">${th(PICON_DEF[9],'#E5C24B',esc(ptitle(9)))}<div class="big" id="oli_v" style="font-size:20px">--</div><div class="mu" id="oli_s"></div></div>`;
   if(t==='switches')return `<div class="card tile click" data-go="switch">${th(PICON_DEF[10],'var(--grey)',esc(ptitle(10)))}<div class="big" id="osw_v" style="font-size:20px">--</div><div class="mu" id="osw_s"></div></div>`;
   if(t==='actors')return `<div class="card tile click" data-go="actors">${th(PICON_DEF[7],'var(--grey)',esc(ptitle(7)))}<div class="big" id="oa_v" style="font-size:20px">--</div><div class="mu" id="oa_s"></div></div>`;
+  // further BLE plugins: value tiles without a page of their own
+  const BT={alarm:['warn','var(--grey)','Alarm'],fridge:['therm','var(--water)','Kühlschrank'],pump:['water','var(--water)','Wasserpumpe'],
+    shelly:['plug','#E5C24B','Shelly'],tpms:['ok','var(--grey)','Reifendruck'],vehicle:['fire','#D9893A','Fahrzeug']};
+  if(BT[t]){const [k,c,n]=BT[t];return `<div class="card tile">${th(k,c,n,'','bt_'+t)}<div class="big" id="bt_${t}_v">--</div><div class="mu" id="bt_${t}_s"></div></div>`}
   return '';   // status (banner above), clock (header), none
+}
+// values of the further BLE plugin tiles (same texts as on the panel)
+function updBleTiles(){
+  if(!document.querySelector('[id^="bt_"]'))return;
+  const on=online('tb'),n=(v,d,u)=>num(v)===null?'':String(num(v,d)).replace('.',',')+(u?' '+u:'');
+  const st=(conn,has)=>!on?'offline':V[conn]==='OFF'?'Bluetooth getrennt':has?'':'keine Daten';
+  const put=(t,v,s,cls)=>{if(!$('#bt_'+t+'_v'))return;set('bt_'+t+'_v',v?`<span class="${cls||''}">${esc(v)}</span>`:'--');set('bt_'+t+'_s',esc(s||''));
+    const d=$('#bt_'+t+'_d');if(d)d.style.background=on?'var(--ok)':'var(--line2)'};
+  {const a=V.wp_armed||'',r=V.wp_reason||'',o=V.wp_open||'',al=r&&r!=='Kein Alarm'&&r!=='-',s=st('wp_conn',a);
+   put('alarm',!a?'':al?'ALARM':a==='ON'?'Scharf':'Unscharf',s||(al?r:o&&o!=='-'&&o!=='keine'?'offen: '+o:'alles zu'),al?'err':a==='ON'?'okc':'')}
+  {const t1=n(V.fr_t1,1,'°C'),t2=n(V.fr_t2,1,'°C'),e=V.fr_err||'',bad=e&&e!=='Kein Fehler'&&e!=='-'&&e!=='0',s=st('fr_conn',t1);
+   put('fridge',t1,s||(bad?'Fehler '+e:t2?'Zone 2: '+t2:'Soll '+n(V.fr_s1,0,'°C')),bad?'err':'')}
+  {const r=V.pu_run||'',e=V.pu_en||'',v=!r&&!e?'':r==='ON'?'läuft':e==='OFF'?'aus':'bereit',s=st('pu_conn',v);
+   put('pump',v,s||n(V.pu_pres,1,'bar'))}
+  {const o=V.sh_out||'',s=st('sh_conn',o);put('shelly',!o?'':o==='ON'?'An':'Aus',s||n(V.sh_pow,0,'W'))}
+  {const w=V.tp_warn||'',bad=w==='ON',s=!on?'offline':w?'':'keine Daten';
+   put('tpms',!w?'':bad?'Warnung':'OK',s||(bad?V.tp_text||'':'alle Räder ok'),bad?'err':'okc')}
+  {const f=n(V.ob_fuel,0,'%'),run=V.ob_run==='ON',ad=n(V.ob_adb,0,'%'),s=st('ob_conn',f||V.ob_run);
+   put('vehicle',f,s||(run?'Motor läuft':'Motor aus')+(ad?' • AdBlue '+ad:''))}
 }
 function pgOverview(){
   // the web page has its own layout (Einstellungen → Home auf der Webseite): groups with fixed slots,
@@ -846,6 +874,7 @@ function update(){
    if($('#k_v')){set('k_v',col(st));set('k_s',!on?'BLE-Node offline':!bt?'Bluetooth zur Dachhaube getrennt':!kn?'Noch keine Meldung der Dachhaube':'Bluetooth verbunden');
     document.querySelectorAll('[data-heki]').forEach((b,i)=>b.classList.toggle('on',i===pr&&!mv));
     const kp=$('#k_pos');if(kp&&V.heki_pos!==undefined&&document.activeElement!==kp&&Date.now()>hekiHold){kp.value=V.heki_pos;set('k_pv',esc(V.heki_pos))}}}
+  updBleTiles();
   set('of_v',online('fan')?'Bereit':'--');set('of_s',online('fan')?(V.fan_hold==='ON'?'Auto-Hold aktiv':'Tippen zum Steuern'):'offline');
   // warnings + temperatures
   const warn=warnings();
@@ -999,10 +1028,10 @@ function pgSettings(){
    <p class="mu" style="margin-top:4px">Seiten ohne Symbol erreichst du über ihre Kachel auf Home oder durch Wischen.</p>
 </details>
   <details data-g="view" id="dsd" ontoggle="if(this.open){renderSlots();renderOvEd()}"><summary>Home am Display</summary>
-   <label>Kacheln am Display (3 × 3 wie am Panel)</label>
-   <p class="mu" style="margin:0 0 4px">Antippen: festlegen, was auf dem Platz steht. Gedrückt halten und ziehen (am Rechner einfach ziehen): mit einem anderen Platz tauschen. Danach speichern.</p>
-   <div id="oved" class="oved"></div><div id="ovpick" class="ovpick" hidden></div>
-   ${[0,1,2,3,4,5,6,7,8].map(i=>`<input type="hidden" id="ov${i}" value="none">`).join('')}
+   <label>Kacheln am Display (${OVC()} × ${OVN()/OVC()} wie am Panel)</label>
+   <p class="mu" style="margin:0 0 4px">Rechts stehen alle Kacheln zur Auswahl: antippen setzt sie auf den markierten Platz (sonst auf den ersten freien), oder direkt auf einen Platz ziehen. Einen Platz gedrückt halten und ziehen (am Rechner einfach ziehen): mit einem anderen Platz tauschen. Danach speichern.</p>
+   <div class="ovwrap"><div id="oved" class="oved" style="--ovc:${OVC()}"></div><div id="ovpal" class="ovpal"></div></div>
+   ${[...Array(OVN()).keys()].map(i=>`<input type="hidden" id="ov${i}" value="none">`).join('')}
    <label>Temperatur-Kachel: bis zu ${SLOTS_T} Sensoren mit Symbol (leer = alle). Der erste wird groß angezeigt, bis zu 4 weitere klein darunter. Alle stehen auf der Seite Temperatur.</label><div id="slt"></div>
    <label>Batterie-Kachel: Die erste Batterie wird groß mit Segmentanzeige gezeigt, die anderen klein darunter.</label><div id="slb"></div>
    <p class="mu" style="margin-top:4px">Die Auswahl für Temperatur- und Batterie-Kachel gilt auch auf der Webseite.</p></details>
@@ -1144,7 +1173,7 @@ async function loadSettings(){
     $('#heaterSrc').value=String(ST.heaterSrc||0);renderNavSel();
     BUILTIN.forEach((b,i)=>$('#bp'+i).checked=ST.builtin[i]);
     for(let i=0;i<=BUILTIN.length;i++){const e=$('#pn'+i);if(e)e.value=(ST.pageNames||[])[i]||'';const ic=$('#pi'+i);if(ic)ic.value=(ST.pageIcons||[])[i]||''}
-    {const l=(ST.ovTiles||OV_DEFAULT).split(',');for(let i=0;i<9;i++){const e=$('#ov'+i);if(e)e.value=(l[i]||'none').trim()}ovSel=-1;renderOvEd()}
+    {const l=(ST.ovTiles||OV_DEFAULT).split(',');for(let i=0;i<OVN();i++){const e=$('#ov'+i);if(e)e.value=(l[i]||'none').trim()}ovSel=-1;renderOvEd()}
     {const l=(ST.webTiles||WEB_DEFAULT).split(',');for(let i=0;i<16;i++){const e=$('#wt'+i);if(e)e.value=l[i]||'none'}}
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
     $('#brkOn').checked=!!ST.brkOn;brkHint();
@@ -1199,18 +1228,21 @@ function readLinks(){
   document.querySelectorAll('[data-lu]').forEach(e=>{const i=+e.dataset.lu;if(LINKS[i])LINKS[i].u=e.value.trim()});
 }
 // three rows per tile: sensor/battery + icon; names from the live data and the saved choice
-// ---- "Home am Display": 3 x 3 tiles like on the panel. The values stay in the hidden inputs
-// #ov0 .. #ov8 (loaded and saved as before). Tap = choose for that slot, hold and drag (mouse: drag)
-// = swap two slots. A tile can only be on one slot (the panel builds each one once): choosing one
-// that is already placed swaps the two.
+// ---- "Home am Display": the grid of the panel (cfg.ovCols x rows, cfg.ovSlots places). The values
+// stay in the hidden inputs #ov0 .. (loaded and saved as before). Beside it a palette of all tiles:
+// tap = put on the marked place (else the first free one), drag onto a place = put it there.
+// Hold and drag a place (mouse: drag) = swap two places. A tile can only be on one place (the panel
+// builds each one once): choosing one that is already placed swaps the two.
+const OVN=()=>(cfg&&cfg.ovSlots)||9,OVC=()=>(cfg&&cfg.ovCols)||3;
 const OVI={water:['water','var(--water)'],grey:['grey','var(--grey)'],gas:['fire','#D9893A'],heater:['fire','var(--heat)'],
   level:['level','var(--grey)'],fan:['fan','var(--water)'],heki:['hatch','var(--grey)'],temp:['therm','var(--klima)'],
   bat:['bat','var(--ok)'],bat1:['bat','var(--ok)'],bat2:['bat','var(--ok)'],bat3:['bat','var(--ok)'],status:['ok','var(--ok)'],
-  weather:['cloud','#E5C24B'],actors:['door','var(--grey)'],lights:['light','#E5C24B'],switches:['plug','var(--grey)'],clock:['clock','var(--ac)']};
+  weather:['cloud','#E5C24B'],actors:['door','var(--grey)'],lights:['light','#E5C24B'],switches:['plug','var(--grey)'],clock:['clock','var(--ac)'],
+  alarm:['warn','var(--grey)'],fridge:['therm','var(--water)'],pump:['water','var(--water)'],shelly:['plug','#E5C24B'],tpms:['ok','var(--grey)'],vehicle:['fire','#D9893A']};
 const ovIcon=t=>OVI[t]||(/^t\d+$/.test(t)?['chart','var(--ac)']:['box','var(--mu)']);
 const ovName=t=>{const c=ovChoices().find(x=>x[0]===t);return c?c[1].replace(/^Kachel: /,''):t};
 let ovSel=-1,ovDrag=null,ovNoClick=false;
-const ovGet=()=>[...Array(9).keys()].map(i=>{const e=$('#ov'+i);return(e&&e.value)||'none'});
+const ovGet=()=>[...Array(OVN()).keys()].map(i=>{const e=$('#ov'+i);return(e&&e.value)||'none'});
 function ovSet(l){
   l.forEach((v,i)=>{const e=$('#ov'+i);if(e)e.value=v});
   const e=$('#ov0');if(e)e.dispatchEvent(new Event('change',{bubbles:true}));   // marks the page as changed
@@ -1228,22 +1260,28 @@ function renderOvEd(){
   if(!g.dataset.bound){g.dataset.bound='1';bindOvEd(g)}
   renderOvPick();
 }
+// palette of all tiles beside the grid; placed ones show their place
 function renderOvPick(){
-  const p=$('#ovpick');if(!p)return;
-  if(ovSel<0){p.hidden=true;p.innerHTML='';return}
-  const l=ovGet(),cur=l[ovSel];
-  p.hidden=false;
-  p.innerHTML=`<div class="ovph"><b>Platz ${ovSel+1}: was soll hier stehen?</b><button type="button" class="btn" data-ovx>Fertig</button></div><div class="ovpl">`+
-    ovChoices().map(([v,n])=>{const at=l.indexOf(v),[k,c]=v==='none'?['x','var(--mu)']:ovIcon(v);
-      return `<button type="button" class="ovc${v===cur?' on':''}" data-ovv="${esc(v)}"><span style="color:${c};display:inline-flex">${svg(k,18)}</span><span>${esc(n)}</span>${v!=='none'&&at>=0&&at!==ovSel?`<small>Platz ${at+1}</small>`:''}</button>`}).join('')+
+  const p=$('#ovpal');if(!p)return;
+  const l=ovGet(),cur=ovSel>=0?l[ovSel]:null;
+  const head=ovSel>=0?`<b>Platz ${ovSel+1}: was soll hier stehen?</b><button type="button" class="btn sm" data-ovx>Fertig</button>`
+                     :`<b>Kacheln zur Auswahl</b>`;
+  p.innerHTML=`<div class="ovph">${head}</div><div class="ovpl">`+
+    ovChoices().filter(([v])=>v!=='none'||ovSel>=0).map(([v,n])=>{const at=l.indexOf(v),[k,c]=v==='none'?['x','var(--mu)']:ovIcon(v);
+      const used=v!=='none'&&at>=0;
+      return `<button type="button" class="ovc${v===cur?' on':used?' used':''}" data-ovv="${esc(v)}"><span style="color:${c};display:inline-flex">${svg(k,18)}</span><span>${esc(n)}</span>${used&&at!==ovSel?`<small>Platz ${at+1}</small>`:''}</button>`}).join('')+
     `</div><p class="mu" style="margin:8px 0 0">Steht die Kachel schon auf einem anderen Platz, tauschen die beiden.</p>`;
-  p.querySelectorAll('[data-ovv]').forEach(b=>b.onclick=()=>ovChoose(b.dataset.ovv));
-  p.querySelector('[data-ovx]').onclick=()=>{ovSel=-1;renderOvEd()};
+  const x=p.querySelector('[data-ovx]');if(x)x.onclick=()=>{ovSel=-1;renderOvEd()};
 }
-function ovChoose(v){
-  const l=ovGet(),at=l.indexOf(v);
-  if(v!=='none'&&at>=0&&at!==ovSel)l[at]=l[ovSel];
-  l[ovSel]=v;
+// put tile v on place `to` (default: marked place, else the first free one)
+function ovChoose(v,to){
+  const l=ovGet();
+  if(to===undefined)to=ovSel>=0?ovSel:l.indexOf('none');
+  if(to<0){toast('Kein Platz frei – erst einen Platz antippen');return}
+  const at=l.indexOf(v);
+  if(v!=='none'&&at>=0&&at!==to)l[at]=l[to];
+  l[to]=v;
+  if(ovSel>=0&&ovSel===to)ovSel=-1;
   ovSet(l);
 }
 function ovSwap(a,b){
@@ -1253,6 +1291,7 @@ function ovSwap(a,b){
   ovSet(l);
 }
 function bindOvEd(g){
+  const pal=$('#ovpal');
   const slotAt=(x,y)=>{const e=document.elementFromPoint(x,y);const t=e&&e.closest('#oved .ovt');return t?+t.dataset.ov:-1};
   const start=()=>{
     const d=ovDrag,r=d.el.getBoundingClientRect(),gh=d.el.cloneNode(true);
@@ -1269,6 +1308,8 @@ function bindOvEd(g){
     ovNoClick=true;setTimeout(()=>ovNoClick=false,50);
     d.ghost.remove();
     g.querySelectorAll('.ovt').forEach(t=>t.classList.remove('drag','over'));
+    d.el.classList.remove('drag');
+    if(d.tile){if(d.to>=0)ovChoose(d.tile,d.to);return}
     if(d.to>=0&&d.to!==d.from)ovSwap(d.from,d.to);
   };
   g.addEventListener('pointerdown',e=>{
@@ -1278,6 +1319,20 @@ function bindOvEd(g){
     // finger: hold to pick up (a quick swipe still scrolls the page); mouse: drag right away
     if(ovDrag.touch)ovDrag.timer=setTimeout(()=>{if(ovDrag&&!ovDrag.active)start()},350);
   });
+  // palette: drag a tile onto a place (finger: hold first, so the list still scrolls); a tap chooses it
+  if(pal){
+    pal.addEventListener('pointerdown',e=>{
+      const b=e.target.closest('[data-ovv]');if(!b||e.button>0||b.dataset.ovv==='none')return;
+      ovDrag={from:-1,tile:b.dataset.ovv,to:-1,el:b,x0:e.clientX,y0:e.clientY,active:false,touch:e.pointerType!=='mouse'};
+      if(ovDrag.touch)ovDrag.timer=setTimeout(()=>{if(ovDrag&&!ovDrag.active)start()},350);
+    });
+    pal.addEventListener('touchmove',e=>{if(ovDrag&&ovDrag.active)e.preventDefault()},{passive:false});
+    pal.addEventListener('contextmenu',e=>{if(ovDrag)e.preventDefault()});
+    pal.addEventListener('click',e=>{
+      if(ovNoClick)return;
+      const b=e.target.closest('[data-ovv]');if(b)ovChoose(b.dataset.ovv);
+    });
+  }
   window.addEventListener('pointermove',e=>{
     const d=ovDrag;if(!d)return;
     const mv=Math.hypot(e.clientX-d.x0,e.clientY-d.y0);
@@ -1402,7 +1457,7 @@ function saveSettings(){
   o.navSel=[...Array(NAV_FREE).keys()].map(i=>$('#nv'+i).value).filter(x=>x).filter((x,i,a)=>a.indexOf(x)===i).join(',');
   o.staticIp=$('#staticIp').checked;o.fanPort=+$('#fanPort').value;o.brightness=+$('#brightness').value;
   o.builtin=BUILTIN.map((b,i)=>$('#bp'+i).checked);
-  o.ovTiles=[0,1,2,3,4,5,6,7,8].map(i=>$('#ov'+i).value).join(',').replace(/(,none)+$/,'');
+  o.ovTiles=[...Array(OVN()).keys()].map(i=>$('#ov'+i).value).join(',').replace(/(,none)+$/,'');
   o.webTiles=Array.from({length:16},(x,i)=>$('#wt'+i).value).join(',');
   o.pageNames=[...BUILTIN.map((b,i)=>$('#pn'+i).value.trim()),$('#pn'+BUILTIN.length).value.trim()];
   o.pageIcons=[...BUILTIN.keys(),BUILTIN.length].map(i=>$('#pi'+i).value);
@@ -1532,6 +1587,515 @@ $('#wake').onclick=()=>{send({c:'screen',v:'on'});S.awake=true;$('#wake').hidden
 $('#sleep').onclick=()=>{send({c:'screen',v:'off'});S.awake=false;$('#sleep').hidden=true;$('#wake').hidden=false};
 setInterval(()=>{const d=new Date();$('#clock').textContent=d.toTimeString().slice(0,5)},10000);
 connect();
+// i18n-en:begin
+// English words of this page (vannode-i18n.js). UI_LANG "en" in config_local.h switches the
+// page to English; German stays the original. The panel itself stays German.
+vnI18nAdd('en', {
+  "1 Warnung": "1 warning",
+  "* Warnungen": "* warnings",
+  "Frischwasser": "Fresh water",
+  "Grauwasser": "Grey water",
+  "Gas": "Gas",
+  "bereit": "ready",
+  "Bereit": "Ready",
+  "An, Soll *": "On, target *",
+  "An, Soll": "On, target",
+  "Tippen zum Steuern": "Tap to control",
+  "Dachhaube": "Roof hatch",
+  "Wetter": "Weather",
+  "Außen *": "Outside *",
+  "Außen": "Outside",
+  "außen": "outside",
+  "draußen": "outdoors",
+  "(Außen)": "(outside)",
+  "Außen (Sensor)": "Outside (sensor)",
+  "Temperatur": "Temperature",
+  "Kühlschrank": "Fridge",
+  "Batterie": "Battery",
+  "Aufbau lädt *": "Living area charging *",
+  "Aufbau": "Living area",
+  "Fahrzeug": "Vehicle",
+  "Fahrzeug (OBD2)": "Vehicle (OBD2)",
+  "Schief": "Not level",
+  "Eben": "Level",
+  "Sensoren": "Sensors",
+  "* offen": "* open",
+  "Licht": "Lights",
+  "* an": "* on",
+  "Schalter": "Switches",
+  "Eigene Kacheln": "Own tiles",
+  "Warnungen": "Warnings",
+  "Warnung": "Warning",
+  "Steuern": "Control",
+  "Ansehen": "View",
+  "Eigene Seiten": "Own pages",
+  "Geräte": "Devices",
+  "Gerät": "Device",
+  "Einstellungen": "Settings",
+  "Display ist dunkel – einschalten": "Display is dark – switch on",
+  "Tür": "Door",
+  "Wasser *": "Water *",
+  "⏻ An": "⏻ On",
+  "⏻ Aus": "⏻ Off",
+  "Gebläse": "Fan",
+  "Aus": "Off",
+  "An": "On",
+  "Zu": "Closed",
+  "Offen": "Open",
+  "Offen *": "Open *",
+  "⏻ Ein / Öffnen": "⏻ On / open",
+  "⏬ Schließen": "⏬ Close",
+  "Stufe": "Level",
+  "⏏ Dachhaube": "⏏ Roof hatch",
+  "Bluetooth verbunden": "Bluetooth connected",
+  "Bluetooth getrennt": "Bluetooth disconnected",
+  "Bluetooth zur Dachhaube getrennt": "Bluetooth to the roof hatch disconnected",
+  "BLE-Node offline": "BLE node offline",
+  "Noch keine Meldung der Dachhaube": "No message from the roof hatch yet",
+  "fährt …": "moving …",
+  "Öffnet": "Opening",
+  "Schließt": "Closing",
+  "▼ Zu": "▼ Closed",
+  "Lüften": "Vent",
+  "Regen": "Rain",
+  "Wind": "Wind",
+  "Böen": "Gusts",
+  "W · Böen *": "W · gusts *",
+  "* · Böen *": "* · gusts *",
+  "Böen *": "Gusts *",
+  "Luftfeuchte": "Humidity",
+  "Nächste Stunde": "Next hour",
+  "Regen heute": "Rain today",
+  "Morgen": "Tomorrow",
+  "Heute": "Today",
+  "Gefühlt": "Feels like",
+  "Gefühlt *": "Feels like *",
+  "Quelle: fester Ort": "Source: fixed place",
+  "Quelle: *": "Source: *",
+  "Fester Ort": "Fixed place",
+  "Außen · Außen": "Outside · Outside",
+  "Stand * · Daten: Open-Meteo": "As of * · data: Open-Meteo",
+  "Von Hand setzen, solange es keinen Kontakt gibt. Bei Böen über der Grenze kommt eine Warnung.": "Set manually as long as there is no contact. Gusts above the limit give a warning.",
+  "Set manually, solange es keinen Kontakt gibt. Bei Böen über der Grenze kommt eine Warnung.": "Set manually as long as there is no contact. Gusts above the limit give a warning.",
+  "Zustand vom Kontakt-Sensor.": "State from the contact sensor.",
+  "Unter Einstellungen → Wetter einrichten": "Set up under Settings → Weather",
+  "Wetter aus": "Weather off",
+  "Ohne Gewähr.": "No guarantee.",
+  "kein GPS": "no GPS",
+  "Kühlschrank *": "Fridge *",
+  "⚠ BMS-Fehler": "⚠ BMS error",
+  "BMS-Fehler": "BMS error",
+  "Ladezustand zu hoch (Stufe *)": "State of charge too high (level *)",
+  "* (geschätzt)": "* (estimated)",
+  "% (geschätzt)": "% (estimated)",
+  "Sensor-Batterien": "Sensor batteries",
+  "LÄNGS": "LENGTH",
+  "QUER": "WIDTH",
+  "Eigene Farbe": "Own colour",
+  "Warm": "Warm",
+  "Kalt": "Cold",
+  "Alle aus": "All off",
+  "Alles zu": "All closed",
+  "alle Räder ok": "all wheels ok",
+  "Motor aus": "Engine off",
+  "Motor läuft": "Engine running",
+  "Wasserpumpe": "Water pump",
+  "Reifendruck": "Tyre pressure",
+  "Alarm": "Alarm",
+  "Alarm (WiPro)": "Alarm (WiPro)",
+  "Shelly (Bluetooth)": "Shelly (Bluetooth)",
+  "Scharf": "Armed",
+  "Unscharf": "Disarmed",
+  "offen: *": "open: *",
+  "alles zu": "all closed",
+  "Zone 2: *": "Zone 2: *",
+  "Soll *": "Target *",
+  "Fehler *": "Error *",
+  "Fehler": "Error",
+  "Fehler, bitte prüfen": "Error, please check",
+  "läuft": "running",
+  "aus": "off",
+  "an": "on",
+  "lädt": "charging",
+  "lädt *": "charging *",
+  "kühl": "cool",
+  "keine Daten": "no data",
+  "Keine Daten": "No data",
+  "keine Info": "no info",
+  "keine Kontakte": "no contacts",
+  "keine Lichter": "no lights",
+  "keine Schalter": "no switches",
+  "keine Batterie": "no battery",
+  "keine Verbindung": "no connection",
+  "Keine Verbindung": "No connection",
+  "Verbindung": "Connection",
+  "verbunden": "connected",
+  "getrennt": "disconnected",
+  "MQTT getrennt": "MQTT disconnected",
+  "MQTT verbunden": "MQTT connected",
+  "Heizung offline": "Heater offline",
+  "Heizung": "Heater",
+  "Heizung: *": "Heater: *",
+  "CP Plus nicht verbunden": "CP Plus not connected",
+  "Keine Warnungen": "No warnings",
+  "Keine Batterien gemeldet": "No batteries reported",
+  "Keine Sensoren gemeldet": "No sensors reported",
+  "Keine Keilwerte vom Levelsensor": "No ramp values from the level sensor",
+  "Noch keine Werte vom Levelsensor": "No values from the level sensor yet",
+  "Fast eben, kein Keil nötig": "Almost level, no ramp needed",
+  "Steht eben, nichts unterlegen": "Standing level, nothing to put under",
+  "Noch kein Wert empfangen": "No value received yet",
+  "Nichts zu prüfen": "Nothing to check",
+  "Noch keine Geräte-Links. Unter Einstellungen → Geräte-Links eintragen.": "No device links yet. Add them under Settings → Device links.",
+  "Noch keine Links.": "No links yet.",
+  "Noch nichts auf dieser Seite. Unter Einstellungen → Sensoren bei einem Sensor „*“ wählen.": "Nothing on this page yet. Under Settings → Sensors choose „*“ for a sensor.",
+  "Zuerst eine Seite anlegen.": "Create a page first.",
+  "Keine Netze gefunden": "No networks found",
+  "Geräte im Netz": "Devices in the network",
+  "Geräteliste nicht erreichbar": "Device list not reachable",
+  "Einstellungen konnten nicht geladen werden": "Settings could not be loaded",
+  "Keine gültige JSON-Datei": "Not a valid JSON file",
+  "Läuft auf Port *": "Running on port *",
+  "* Geräte verbunden, * Nachrichten seit dem Start.": "* devices connected, * messages since start.",
+  "Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.": "Kept across restart, crash and update, not across power loss.",
+  "Teil von VanNode – Camper-Elektronik über MQTT": "Part of VanNode – camper electronics over MQTT",
+  "Über VanNode": "About VanNode",
+  "Änderungen nicht gespeichert": "Changes not saved",
+  "Alles gespeichert": "All saved",
+  "Speichern": "Save",
+  "Übernommen – bitte speichern.": "Applied – please save.",
+  "Sensoren übernommen – noch speichern": "Sensors applied – still save",
+  "Kachel hinzugefügt – unter „Seiten & Kacheln“ prüfen und speichern": "Tile added – check and save under „Pages & tiles“",
+  "Kachel(n) löschen?": "Delete tile(s)?",
+  "* Kachel(n) löschen?": "Delete * tile(s)?",
+  "Regel löschen?": "Delete rule?",
+  "Sensor entfernen?": "Remove sensor?",
+  "Kein Platz frei – erst einen Platz antippen": "No free place – tap a place first",
+  "Warte auf Nachrichten ... (retained Werte kommen sofort, andere erst bei der nächsten Änderung)": "Waiting for messages ... (retained values arrive at once, others with the next change)",
+  "Noch keine Automationen. „+ Vorlage Eingangslicht“ legt ein Beispiel an.": "No automations yet. „+ Template entry light“ adds an example.",
+  "Noch keine Sensoren.": "No sensors yet.",
+  "Noch keine Meldung. Geräte ab dieser Firmware-Version senden *": "No message yet. Devices from this firmware version on send *",
+  "Suche geht nur mit Internet am Handy/PC. Breiten- und Längengrad sonst von Hand eintragen.": "Search needs internet on the phone/PC. Otherwise enter latitude and longitude by hand.",
+  "Tür / Fenster offen": "Door / window open",
+  "Licht (an/aus)": "Light (on/off)",
+  "○ nicht erfüllt": "○ not met",
+  "● erfüllt": "● met",
+  "· aus in *": "· off in *",
+  "· außerhalb des Zeitraums": "· outside the time window",
+  "· letzter Neustart: *": "· last restart: *",
+  "größer als": "greater than",
+  "> größer als": "> greater than",
+  "< kleiner als": "< less than",
+  "= gleich": "= equal",
+  "≠ ungleich": "≠ not equal",
+  "Regel": "Rule",
+  "Seite mit *": "Page with *",
+  "✕ löscht einen alten Eintrag (Status und Info) vom Broker, z. B. nach einem Wechsel des Topics. Ein Gerät, das noch läuft, meldet sich danach von selbst wieder.": "✕ deletes an old entry (status and info) from the broker, e.g. after a change of the topic. A device that is still running reports itself again afterwards.",
+  "* (*/status und */info) vom Broker löschen?": "Delete * (*/status and */info) from the broker?",
+  "Klar": "Clear",
+  "Überwiegend klar": "Mainly clear",
+  "Teils bewölkt": "Partly cloudy",
+  "Bewölkt": "Cloudy",
+  "Nebel": "Fog",
+  "Nieselregen": "Drizzle",
+  "Gefrierender Niesel": "Freezing drizzle",
+  "Leichter Regen": "Light rain",
+  "Starker Regen": "Heavy rain",
+  "Gefrierender Regen": "Freezing rain",
+  "Leichter Schnee": "Light snow",
+  "Schnee": "Snow",
+  "Starker Schnee": "Heavy snow",
+  "Schneegriesel": "Snow grains",
+  "Regenschauer": "Rain showers",
+  "Kräftige Schauer": "Strong showers",
+  "Heftige Schauer": "Violent showers",
+  "Schneeschauer": "Snow showers",
+  "Gewitter": "Thunderstorm",
+  "Gewitter mit Hagel": "Thunderstorm with hail",
+  "Wind: Böen bis * km/h": "Wind: gusts up to * km/h",
+  "Frischwasser niedrig: *": "Fresh water low: *",
+  "Gas niedrig: *": "Gas low: *",
+  "Frostgefahr: *": "Frost risk: *",
+  "Frostwächter: * °C am Boiler – Ventil öffnet bald, Wasser läuft ab": "Frost guard: * °C at the boiler – valve opens soon, water drains",
+  "Frostwächter: Sensor * liefert keine Werte": "Frost guard: sensor * sends no values",
+  "Markise einfahren: Böen bis * km/h": "Retract the awning: gusts up to * km/h",
+  "Anzeige": "Display",
+  "Display": "Display",
+  "Seiten & Symbolleiste": "Pages & toolbar",
+  "Home am Display": "Home on the display",
+  "Home auf der Webseite": "Home on the web page",
+  "Eigene Seiten & MQTT-Kacheln": "Own pages & MQTT tiles",
+  "Sensoren & Geräte": "Sensors & devices",
+  "Sensoren (Zigbee & Bluetooth)": "Sensors (Zigbee & Bluetooth)",
+  "Topics der Geräte": "Topics of the devices",
+  "Geräte-Links": "Device links",
+  "Topic-Finder": "Topic finder",
+  "Automationen": "Automations",
+  "Automationen speichern": "Save automations",
+  "Einstellung suchen": "Search settings",
+  "Helligkeit": "Brightness",
+  "Helligkeit gedimmt (%, 0 = aus)": "Dimmed brightness (%, 0 = off)",
+  "Dimmen nach (s, 0 = nie)": "Dim after (s, 0 = never)",
+  "Gedimmt Ruhebild zeigen (Logo, Uhrzeit, Warnungen) statt der Seite": "When dimmed show a rest screen (logo, time, warnings) instead of the page",
+  "Neue Warnung schaltet das Display ein": "A new warning switches the display on",
+  "Aus: Das Display geht immer nach der eingestellten Zeit aus und nur Berühren weckt es. Zum sofortigen Ausschalten: Kopfzeile am Display lange drücken, Knopf auf der Systemseite oder der Aus-Knopf oben auf der Webseite.": "Off: the display always goes off after the set time and only a touch wakes it. To switch off at once: long press the header on the display, the button on the system page or the off button at the top of the web page.",
+  "Aus. Einschalten unter Einstellungen → Warnungen.": "Off. Switch on under Settings → Warnings.",
+  "Anzeigename (oben in der Mitte, z. B. Wohnraum)": "Display name (top centre, e.g. living room)",
+  "Feste Seiten: Haken = anzeigen, dazu Symbol und Name frei wählbar": "Fixed pages: tick = show, icon and name freely selectable",
+  "„Energie“ und „Extra“ sind freie Seiten für später: einschalten, umbenennen, Symbol wählen und unter Sensoren Geräte zuordnen.": "„Energie“ and „Extra“ are free pages for later: switch on, rename, choose an icon and assign devices under Sensors.",
+  "Symbolleiste unten am Display: Home und System sind immer da, dazu bis zu * Seiten (leer = die ersten *)": "Toolbar at the bottom of the display: Home and System are always there, plus up to * pages (empty = the first *)",
+  "Seiten ohne Symbol erreichst du über ihre Kachel auf Home oder durch Wischen.": "Pages without an icon are reached through their tile on Home or by swiping.",
+  "Kacheln am Display (* × * wie am Panel)": "Tiles on the display (* × * as on the panel)",
+  "Rechts stehen alle Kacheln zur Auswahl: antippen setzt sie auf den markierten Platz (sonst auf den ersten freien), oder direkt auf einen Platz ziehen. Einen Platz gedrückt halten und ziehen (am Rechner einfach ziehen): mit einem anderen Platz tauschen. Danach speichern.": "On the right are all tiles to choose from: tap to put one on the marked place (otherwise on the first free one), or drag it straight onto a place. Hold a place and drag it (on a computer just drag): swaps it with another place. Save afterwards.",
+  "Kacheln zur Auswahl": "Tiles to choose from",
+  "Platz *": "Place *",
+  "Platz": "Place",
+  "was soll hier stehen?": "what should go here?",
+  "Fertig": "Done",
+  "Steht die Kachel schon auf einem anderen Platz, tauschen die beiden.": "If the tile is already on another place, the two swap.",
+  "Licht (was an ist)": "Lights (what is on)",
+  "Schalter (was an ist)": "Switches (what is on)",
+  "(was an ist)": "(what is on)",
+  "Batterie (alle)": "Battery (all)",
+  "(alle)": "(all)",
+  "Batterie * (einzeln)": "Battery * (single)",
+  "Status / Warnungen": "Status / warnings",
+  "Offene Fenster/Türen": "Open windows/doors",
+  "Uhr / Datum": "Clock / date",
+  "Kachel: *": "Tile: *",
+  "Kachel:": "Tile:",
+  "(leer)": "(empty)",
+  "– leer –": "– empty –",
+  "Temperatur-Kachel: bis zu * Sensoren mit Symbol (leer = alle). Der erste wird groß angezeigt, bis zu 4 weitere klein darunter. Alle stehen auf der Seite Temperatur.": "Temperature tile: up to * sensors with an icon (empty = all). The first is shown large, up to 4 more small below it. All are on the Temperature page.",
+  "groß": "large",
+  "klein": "small",
+  "Symbol automatisch": "Icon automatic",
+  "🔋 Batterie": "🔋 Battery",
+  "☀️ Sonne": "☀️ Sun",
+  "🚗 Fahrzeug": "🚗 Vehicle",
+  "🧊 Kühlschrank": "🧊 Fridge",
+  "🌳 Außen": "🌳 Outside",
+  "💧 Wasser": "💧 Water",
+  "🔥 Heizung": "🔥 Heater",
+  "🚪 Tür / Fenster offen": "🚪 Door / window open",
+  "💡 Licht": "💡 Light",
+  "🔓 Schloss offen": "🔓 Lock open",
+  "Batterie-Kachel: Die erste Batterie wird groß mit Segmentanzeige gezeigt, die anderen klein darunter.": "Battery tile: the first battery is shown large with a segment bar, the others small below it.",
+  "Die Auswahl für Temperatur- und Batterie-Kachel gilt auch auf der Webseite.": "The choice for the temperature and battery tile also applies to the web page.",
+  "Die Webseite hat Platz für mehr Kacheln als das Display und eine eigene Auswahl. Je Gruppe feste Plätze; „(leer)“ lässt den Platz frei, eine Gruppe ganz ohne Kacheln verschwindet. MQTT-Kacheln, die hier keinen Platz haben, stehen darunter unter „Eigene Kacheln“.": "The web page has room for more tiles than the display and its own choice. Fixed places per group; „(empty)“ leaves the place free, a group without any tiles disappears. MQTT tiles without a place here are shown below under „Own tiles“.",
+  "Tanks": "Tanks",
+  "Klima": "Climate",
+  "Energie": "Energy",
+  "Extra": "Extra",
+  "· eigener Speichern-Knopf": "· own save button",
+  "Für Werte, die keine Sensoren sind, z. B. ein beliebiges MQTT-Topic, Landstrom-Messzange, Router-Daten.": "For values that are not sensors, e.g. any MQTT topic, a shore power clamp, router data.",
+  "Seiten": "Pages",
+  "Seite": "Page",
+  "+ Seite": "+ Page",
+  "Kacheln": "Tiles",
+  "Kachel": "Tile",
+  "+ Kachel": "+ Tile",
+  "Name": "Name",
+  "Typ": "Type",
+  "Wert": "Value",
+  "Einheit": "Unit",
+  "Status-Topic": "State topic",
+  "JSON-Schlüssel (leer = ganzer Wert)": "JSON key (empty = whole value)",
+  "Nachkommastellen": "Decimals",
+  "Befehls-Topic (leer = Status-Topic + /set)": "Command topic (empty = state topic + /set)",
+  "Befehls-Topic (leer = nur Anzeige)": "Command topic (empty = display only)",
+  "Wert für „an“": "Value for „on“",
+  "Wert für „aus“": "Value for „off“",
+  "Warnung (Status-Kachel, Kopfzeile, Pushover)": "Warning (status tile, header, Pushover)",
+  "wenn Wert unter …": "if value below …",
+  "wenn Wert über …": "if value above …",
+  "wenn Wert gleich …": "if value equals …",
+  "Warnen, wenn keine Daten seit (min, 0 = aus)": "Warn if no data for (min, 0 = off)",
+  "Warntext (leer = Name + „zu niedrig/hoch“)": "Warning text (empty = name + „too low/high“)",
+  "Payload (mit {v})": "Payload (with {v})",
+  "Anzeige umbenennen (optional, z. B.": "Rename the display (optional, e.g.",
+  "Seiten speichern": "Save pages",
+  "Schieber": "Slider",
+  "Taste": "Button",
+  "Eigene Sensoren direkt per MQTT: Zigbee-Gateway mit Cluster-Topics (z. B. SMLIGHT:": "Own sensors directly over MQTT: Zigbee gateway with cluster topics (e.g. SMLIGHT:",
+  ") und Bluetooth über OpenMQTTGateway (": ") and Bluetooth over OpenMQTTGateway (",
+  ", Govee, Ruuvi, Xiaomi …). Je Sensor wählst du, auf welchen Seiten er erscheint. Offene Kontakte auf den Geräteseiten werden auf Home in der Status-Kachel gezählt.": ", Govee, Ruuvi, Xiaomi …). For each sensor you choose on which pages it appears. Open contacts on the device pages are counted on Home in the status tile.",
+  "Zigbee-Basis-Topic": "Zigbee base topic",
+  "Bluetooth-Basis-Topic (OMG)": "Bluetooth base topic (OMG)",
+  "Zigbee-Temperatur geteilt durch (nur Rohwerte, „report_raw“)": "Zigbee temperature divided by (raw values only, „report_raw“)",
+  "Zigbee-Luftfeuchte geteilt durch": "Zigbee humidity divided by",
+  "vor *": "* ago",
+  "Funk / Typ": "Radio / type",
+  "Zigbee · Tür-/Fensterkontakt": "Zigbee · door/window contact",
+  "Zigbee · Klima (Temp./Feuchte)": "Zigbee · climate (temp./humidity)",
+  "Zigbee · Licht / LED-Leiste": "Zigbee · light / LED strip",
+  "Zigbee · Schalter / Steckdose": "Zigbee · switch / plug",
+  "Bluetooth · Klima (Govee, Ruuvi …)": "Bluetooth · climate (Govee, Ruuvi …)",
+  "Adresse (IEEE oder Short-ID)": "Address (IEEE or short ID)",
+  "Warnung über °C (leer = aus)": "Warning above °C (empty = off)",
+  "Anzeigen auf": "Show on",
+  "(Seite aus)": "(page off)",
+  "Wetter (Außen)": "Weather (outside)",
+  "Symbol, wenn offen": "Icon when open",
+  "kein Symbol": "no icon",
+  "Warnung, wenn offen": "Warning when open",
+  "umgekehrt (1 = zu)": "inverted (1 = closed)",
+  "IEEE-Adresse (zum Schalten nötig)": "IEEE address (needed for switching)",
+  "+ Sensor": "+ Sensor",
+  "Gefunden, aber noch nicht eingetragen": "Found but not added yet",
+  "+ übernehmen": "+ add",
+  "Sensoren speichern": "Save sensors",
+  "z. B. 8 beim Kühlschrank": "e.g. 8 for the fridge",
+  "0x00158d… oder 9c68": "0x00158d… or 9c68",
+  "zigbee2mqtt/Gerät": "zigbee2mqtt/device",
+  "Basis-Topic je Gerät. Leer lassen, wenn das Gerät nicht vorhanden ist.": "Base topic per device. Leave empty if the device is not there.",
+  "Tanks (Wasser/Gas)": "Tanks (water/gas)",
+  "Heizung: Steuerung über": "Heater: control over",
+  "Heizung: Basis-Topic": "Heater: base topic",
+  "CampMatic: Basis-Topic": "CampMatic: base topic",
+  "CampMatic-Box": "CampMatic box",
+  ". Die Box muss per Bridge auf deinem Broker ankommen (siehe README). Freibrennen gibt es dort nicht.": ". The box must reach your broker through a bridge (see README). Decoking is not available there.",
+  "BLE-Node (Dachhaube …)": "BLE node (roof hatch …)",
+  "Die Dachhaube wird auf jedem der BLE-Nodes 1, 2 und 3 gefunden. Leer = kein solcher Node.": "The roof hatch is found on each of the BLE nodes 1, 2 and 3. Empty = no such node.",
+  "Eigenes Topic (Display)": "Own topic (display)",
+  "Buttons auf der Seite „Geräte“, die die Web-Oberfläche des jeweiligen Geräts öffnen. Adresse z. B.": "Buttons on the „Devices“ page that open the web interface of each device. Address e.g.",
+  "oder": "or",
+  "und": "and",
+  "+ Link": "+ Link",
+  "VanNode-Geräte vorschlagen": "Suggest VanNode devices",
+  "Hört kurz auf einem Topic-Filter mit und zeigt, was ankommt. Aus jedem Wert lässt sich direkt eine Kachel machen.": "Listens on a topic filter for a short time and shows what arrives. Every value can be turned into a tile directly.",
+  "sucht Geräte, die sich für Home Assistant anmelden (ESPHome, Tasmota, Shelly, zigbee2mqtt …), und legt daraus fertige Kacheln an – ohne Home Assistant. VanNode-Geräte sind dort ausgeblendet.": "looks for devices that announce themselves for Home Assistant (ESPHome, Tasmota, Shelly, zigbee2mqtt …) and creates ready tiles from them – without Home Assistant. VanNode devices are hidden there.",
+  "Broker": "Broker",
+  "Broker (IP/Name)": "Broker (IP/name)",
+  "Eigener Broker im Display (Notfall)": "Own broker in the display (emergency)",
+  "Für Camper ohne Router mit Broker oder zum Testen: Das Display ist dann selbst der MQTT-Broker (Port wie oben, Benutzer und Passwort wie oben gelten für alle Geräte, leer = ohne Anmeldung). Das Feld": "For campers without a router with a broker, or for testing: the display is then the MQTT broker itself (port as above, user and password as above apply to all devices, empty = no login). The field",
+  "wird dann nicht gebraucht. Bei den anderen Geräten als Broker die": "is then not needed. On the other devices enter the",
+  "IP-Adresse des Displays": "IP address of the display",
+  "eintragen, am besten mit fester IP (Einstellungen → WLAN). Gespeicherte Nachrichten (retained) hält das Display nur im Speicher: Nach einem Neustart senden die Geräte ihre Werte von selbst neu, das dauert ein paar Sekunden. Ab Werk aus, Änderung startet das Display neu.": "as broker, best with a static IP (Settings → WiFi). The display keeps stored messages (retained) in memory only: after a restart the devices send their values again by themselves, which takes a few seconds. Off by default, a change restarts the display.",
+  "Wetter von": "Weather from",
+  "(kostenlos, ohne Anmeldung). Das Display braucht dafür Internet über den Router. Warnungen (Böen, Gewitter) erscheinen oben im Display und gehen auch per Pushover raus.": "(free, no sign-up). The display needs internet through the router for it. Warnings (gusts, thunderstorms) appear at the top of the display and are also sent by Pushover.",
+  "Wetter abrufen": "Fetch weather",
+  "Ort suchen": "Search place",
+  "Breitengrad": "Latitude",
+  "Längengrad": "Longitude",
+  "Ortsname (Anzeige)": "Place name (display)",
+  "GPS per MQTT (optional, z. B. Topic des Routers)": "GPS over MQTT (optional, e.g. topic of the router)",
+  "Mobilfunk-Signal per MQTT (Balken in der Kopfzeile, leer = WLAN-Signal)": "Mobile signal over MQTT (bars in the header, empty = WiFi signal)",
+  "Mit Topic folgt das Wetter dem Fahrzeug. Inhalt: JSON mit": "With a topic the weather follows the vehicle. Content: JSON with",
+  ", auch verschachtelt wie beim RUT956) oder": ", also nested as with the RUT956) or",
+  ". Ohne Position gilt der feste Ort oben.": ". Without a position the fixed place above applies.",
+  "Warnung ab Böen (km/h, 0 = aus)": "Warning from gusts (km/h, 0 = off)",
+  "alle 15 min": "every 15 min",
+  "alle 30 min": "every 30 min",
+  "stündlich": "hourly",
+  "alle 2 h": "every 2 h",
+  "Abruf": "Fetch",
+  "Schickt die Warnungen der Übersicht (Temperatur-Alarme, Heizungsfehler, Batterie, Tanks, Frost, Wetter) als Push-Nachricht aufs Handy. Token einer eigenen Pushover-Anwendung und User-Key von": "Sends the warnings of the overview (temperature alarms, heater errors, battery, tanks, frost, weather) as a push message to the phone. Token of your own Pushover application and user key from",
+  ". Eine Warnung wird gesendet, wenn sie 30 s besteht.": ". A warning is sent when it lasts 30 s.",
+  "Warnungen senden": "Send warnings",
+  "Nachricht, wenn eine Warnung vorbei ist": "Message when a warning is over",
+  "Priorität (Standard)": "Priority (default)",
+  "Priorität": "Priority",
+  "Kühlschrank / Temperatur": "Fridge / temperature",
+  "Frost": "Frost",
+  "Wetter / Markise": "Weather / awning",
+  "Regeln": "Rules",
+  "Notfall: wiederholen alle (s)": "Emergency: repeat every (s)",
+  "Notfall: höchstens für (s)": "Emergency: at most for (s)",
+  "ohne Ton,": "silent,",
+  "klingelt auch in den Pushover-Ruhezeiten,": "rings also during the Pushover quiet hours,",
+  "klingelt in der Pushover-App so lange wieder, bis du ihn bestätigst (Wiederholung mindestens 30 s, höchstens 3 h). Ist die Warnung vorbei, stoppt das Display die Wiederholung selbst.": "rings again in the Pushover app until you acknowledge it (repeat at least 30 s, at most 3 h). When the warning is over, the display stops the repeat itself.",
+  "zeigt die Warnung nur am Display.": "shows the warning on the display only.",
+  "Erst speichern, dann testen.": "Save first, then test.",
+  "Test senden": "Send test",
+  "Niedrig": "Low",
+  "Normal": "Normal",
+  "Hoch": "High",
+  "Notfall": "Emergency",
+  "Nur Display": "Display only",
+  "Leise": "Quiet",
+  "Grenzwerte für die eingebauten Warnungen. Sie erscheinen oben im Display und gehen per Pushover raus. 0 schaltet eine Warnung ab. Die Hysterese verhindert, dass eine Warnung bei einem Wert knapp an der Grenze ständig kommt und geht. Kühl- und Gefrierschrank stellst du beim jeweiligen Sensor ein (Sensoren, „Warnung über °C“) bzw. im temp-node.": "Limits for the built-in warnings. They appear at the top of the display and are sent by Pushover. 0 switches a warning off. The hysteresis stops a warning from coming and going all the time with a value close to the limit. Fridge and freezer are set at the sensor (Sensors, „Warning above °C“) or in the temp-node.",
+  "Frischwasser unter (%)": "Fresh water below (%)",
+  "Gas unter (%)": "Gas below (%)",
+  "Batterie unter (% Ladung)": "Battery below (% charge)",
+  "Hysterese Füllstände/Batterie (%)": "Hysteresis levels/battery (%)",
+  "Sensor für die Außentemperatur (Wetter-Seite, Frost)": "Sensor for the outside temperature (weather page, frost)",
+  "automatisch (erster Sensor mit Haken „Wetter“)": "automatic (first sensor with „Weather“ ticked)",
+  "Kühlschrank (temp-node)": "Fridge (temp-node)",
+  "Frostwarnung (Außensensor, sonst Wetter)": "Frost warning (outside sensor, else weather)",
+  "Frost unter (°C)": "Frost below (°C)",
+  "Frostwächter (Truma-Boiler)": "Frost guard (Truma boiler)",
+  "Sensor am Frostwächter-Ventil": "Sensor at the frost guard valve",
+  "aus (kein Sensor gewählt)": "off (no sensor chosen)",
+  "Warnung unter (°C)": "Warning below (°C)",
+  "Das FrostControl-Ventil öffnet bei etwa 3 °C und lässt den Boiler leer laufen. Mit gewähltem Sensor kommt eine Warnung (Display und Pushover, Kategorie Frost), wenn es dort kälter als die Grenze wird, und ebenso, wenn der Sensor 2 Stunden keine Werte liefert. Ohne Sensor ist die Warnung aus.": "The FrostControl valve opens at about 3 °C and drains the boiler. With a sensor chosen, a warning comes (display and Pushover, category frost) when it gets colder there than the limit, and also when the sensor sends no values for 2 hours. Without a sensor the warning is off.",
+  "Hysterese Böen (km/h)": "Hysteresis gusts (km/h)",
+  "Ruhezeit: Kommt eine Warnung innerhalb dieser Zeit wieder, wird sie nicht noch einmal gesendet. Die Böen-Grenze selbst steht unter Wetter.": "Quiet time: if a warning comes back within this time, it is not sent again. The gust limit itself is under Weather.",
+  "Ruhezeit (min)": "Quiet time (min)",
+  "Markise": "Awning",
+  "Zustand kommt von": "State comes from",
+  "Schalter von Hand": "Manual switch",
+  "Warnung bei ausgefahrener Markise ab Böen (km/h, 0 = aus)": "Warning with the awning out from gusts (km/h, 0 = off)",
+  "Ohne Kontakt setzt du den Zustand von Hand auf der Wetter-Seite (Display und Webseite) oder per MQTT": "Without a contact you set the state by hand on the weather page (display and web page) or over MQTT",
+  ". Braucht das Wetter (Böen von Open-Meteo).": ". Needs the weather (gusts from Open-Meteo).",
+  "Abfahrtscheck": "Departure check",
+  "Warnen, wenn beim Losfahren etwas offen ist": "Warn if something is open when driving off",
+  "GPS des Routers (JSON mit speed und fix_status)": "GPS of the router (JSON with speed and fix_status)",
+  "Tür (Topic, leer = keine)": "Door (topic, empty = none)",
+  "… für (Sekunden)": "… for (seconds)",
+  "Tür-Topic umkehren (meldet „open“ bei geschlossener Tür)": "Invert the door topic (reports „open“ with the door closed)",
+  "Eigene Kontakte prüfen (Fenster, Dachhauben aus Sensoren)": "Check own contacts (windows, roof hatches from Sensors)",
+  "Geprüft werden Tür, Markise und die Kontakte. Fährt der Camper schneller als die Grenze, kommt für jedes offene Teil eine Warnung (Display und Pushover). Die Fahrt endet nach 2 Minuten Stillstand oder ohne GPS. Die Liste steht auf der Seite Warnungen. Per MQTT:": "Door, awning and the contacts are checked. If the camper drives faster than the limit, a warning comes for each open part (display and Pushover). The drive ends after 2 minutes standstill or without GPS. The list is on the Warnings page. Over MQTT:",
+  "oder die offenen Teile.": "or the open parts.",
+  "Geschwindigkeit ab (km/h)": "Speed from (km/h)",
+  "Eine Regel reagiert nur, wenn sich der Zustand ändert. Licht lässt sich daher weiter von Hand schalten. Mit „nur ausschalten, was diese Regel eingeschaltet hat“ bleibt ein von Hand eingeschaltetes Licht an. Topics und Schlüssel findest du im Topic-Finder unter Sensoren & Geräte.": "A rule only reacts when the state changes, so lights can still be switched by hand. With „only switch off what this rule switched on“ a light switched on by hand stays on. Topics and keys are in the topic finder under Sensors & devices.",
+  "+ Regel": "+ Rule",
+  "+ Vorlage Eingangslicht (Tür)": "+ Template entry light (door)",
+  "Topic": "Topic",
+  "Bedingung": "Condition",
+  "Dann senden": "Then send",
+  "Wenn nicht mehr erfüllt: Payload (leer = nichts)": "When no longer met: payload (empty = nothing)",
+  "… nach Sekunden": "… after seconds",
+  "Payload-Vorlage:": "Payload template:",
+  "Zigbee an/aus": "Zigbee on/off",
+  "Nur ausschalten, was diese Regel eingeschaltet hat": "Only switch off what this rule switched on",
+  "Zeitraum für das Einschalten": "Time window for switching on",
+  "immer": "always",
+  "nur von … bis … Uhr": "only from … to … o'clock",
+  "nur wenn dunkel (Sonnenuntergang bis -aufgang)": "only when dark (sunset to sunrise)",
+  "bis": "to",
+  "Anzeige, solange erfüllt": "Display while met",
+  "auch als Warnung (Pushover)": "also as a warning (Pushover)",
+  "Name, z. B. Eingangslicht": "Name, e.g. entry light",
+  "Löschen": "Delete",
+  "Aktiv": "Active",
+  "Gerätename (Hostname)": "Device name (hostname)",
+  "Web-Benutzer (leer = bleibt)": "Web user (empty = kept)",
+  "Web-Passwort (leer = bleibt)": "Web password (empty = kept)",
+  "Die Anmeldung ist immer an (ab Werk admin / admin). Login vergessen: über USB den Befehl": "The login is always on (factory admin / admin). Forgot the login: send the command",
+  "im seriellen Monitor senden, dann gilt wieder der Werks-Login.": "over USB in the serial monitor, then the factory login applies again.",
+  "· ESP32-S3 · Platz * kB": "· ESP32-S3 · space * kB",
+  "Also WiFi, IP and device name übernehmen": "Also restore WiFi, IP and device name",
+  "Auch WLAN, IP und Gerätename übernehmen": "Also restore WiFi, IP and device name",
+  "), then restart. Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.": "), then restart. The file is checked before uploading; the settings are kept.",
+  "Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.": "The file is checked before uploading; the settings are kept.",
+  "Mockup mit Beispieldaten – keine Verbindung zu einem Gerät": "Mockup with sample data – no connection to a device",
+  "* · * · vor *": "* · * · * ago",
+  "* · vor *": "* · * ago",
+  "○ nicht erfüllt · zuletzt: aus *": "○ not met · last: off *",
+  "○ nicht erfüllt · zuletzt: an *": "○ not met · last: on *",
+  "● erfüllt · zuletzt: aus *": "● met · last: off *",
+  "● erfüllt · zuletzt: an *": "● met · last: on *",
+  "Batterie 1 (einzeln)": "Battery 1 (single)",
+  "Batterie 2 (einzeln)": "Battery 2 (single)",
+  "Batterie 3 (einzeln)": "Battery 3 (single)",
+  "Nick * · Roll *": "Pitch * · Roll *",
+  "*: Ladezustand zu hoch (Stufe *)": "*: state of charge too high (level *)",
+  "Kein Fehler": "No error",
+  "Kein Alarm": "No alarm",
+  "keine": "none"
+});
+// i18n-en:end
 // vannode-system:begin
 // VanNode system cards, the same on every device page: "Firmware- & Web-Update", "Ereignisse",
 // "Uhrzeit" (only devices whose /api/system has "clock", see clockset.h) and "Gerät" (restart,
@@ -2108,6 +2672,221 @@ connect();
   document.addEventListener('DOMContentLoaded', place);
 })();
 // vannode-backup:end
+// vannode-i18n:begin
+// Language of the device web pages (shared copy from firmware/_common/web, see sync_common.py).
+// The pages are written in German. When the firmware reports another language in
+// /api/system (fw.lang, set with UI_LANG in config_local.h), this block replaces the German
+// texts in the browser, also texts that arrive later (live values, messages from the device).
+// Lookup: whole text, then each part around " · " / ": " / " – ", then longer phrases inside
+// the text, then patterns with * (any text). Not found = stays German. Nothing is sent back to
+// the device, so settings and MQTT stay as they are.
+// Each page adds its own words with vnI18nAdd('en', {...}); the shared cards are below.
+var VN_I18N = VN_I18N || {};
+function vnI18nAdd(lang, words) {
+  if (!VN_I18N) VN_I18N = {};   // called by a page before this block ran
+  var d = VN_I18N[lang] || (VN_I18N[lang] = {});
+  for (var k in words) d[k] = words[k];
+}
+var vnLang = (function () {
+  var lang = 'de', dict = null, phrases = [], patterns = [], busy = false;
+  try { lang = localStorage.getItem('vnLang') || 'de'; } catch (e) {}
+  var SKIP = {SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1};
+  var ATTRS = ['placeholder', 'title', 'aria-label'];
+
+  function prepare() {
+    dict = VN_I18N[lang] || null;
+    phrases = []; patterns = [];
+    if (!dict) return;
+    for (var k in dict) {
+      if (k.indexOf('*') >= 0) {
+        var re = '^' + k.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '(.+?)') + '$';
+        patterns.push([new RegExp(re), dict[k]]);
+      } else if (k.length >= 12 && k.indexOf(' ') > 0) {
+        phrases.push(k);
+      }
+    }
+    phrases.sort(function (a, b) { return b.length - a.length; });
+  }
+  function word(t) {
+    if (Object.prototype.hasOwnProperty.call(dict, t)) return dict[t];
+    var c = t.replace(/[:…]+$/, '');   // "Label:" / "Lade …"
+    if (c !== t && Object.prototype.hasOwnProperty.call(dict, c.trim())) return dict[c.trim()] + t.slice(c.length);
+    return null;
+  }
+  function tr(s) {
+    if (!dict || !s) return s;
+    var t = s.trim();
+    if (!t || !/[A-Za-zÄÖÜäöüß]/.test(t)) return s;
+    var lead = s.slice(0, s.indexOf(t)), trail = s.slice(s.indexOf(t) + t.length);
+    var w = word(t);
+    if (w === null) {
+      for (var i = 0; i < patterns.length; i++) {
+        var m = patterns[i][0].exec(t);
+        if (m) { var n = 1, out = patterns[i][1]; w = out.replace(/\*/g, function () { return tr(m[n++] || ''); }); break; }
+      }
+    }
+    if (w === null && /( · | – |: |\|)/.test(t)) {
+      var parts = t.split(/( · | – |: |\|)/), changed = false;
+      for (var j = 0; j < parts.length; j += 2) {
+        var p = word(parts[j].trim());
+        if (p !== null) { parts[j] = parts[j].replace(parts[j].trim(), p); changed = true; }
+      }
+      if (changed) w = parts.join('');
+    }
+    if (w === null) {
+      var x = t, hit = false;
+      for (var k = 0; k < phrases.length; k++) {
+        if (x.indexOf(phrases[k]) >= 0) { x = x.split(phrases[k]).join(dict[phrases[k]]); hit = true; }
+      }
+      if (hit) w = x;
+    }
+    return w === null ? s : lead + w + trail;
+  }
+  function walk(node) {
+    if (node.nodeType === 3) {
+      var p = node.parentNode;
+      if (p && !SKIP[p.nodeName] && !(p.closest && p.closest('[translate=no]'))) {
+        var v = tr(node.nodeValue);
+        if (v !== node.nodeValue) node.nodeValue = v;
+      }
+      return;
+    }
+    if (node.nodeType !== 1 || SKIP[node.nodeName] || node.getAttribute('translate') === 'no') return;
+    for (var a = 0; a < ATTRS.length; a++) {
+      var at = node.getAttribute(ATTRS[a]);
+      if (at) { var t = tr(at); if (t !== at) node.setAttribute(ATTRS[a], t); }
+    }
+    if (node.nodeName === 'INPUT' && (node.type === 'button' || node.type === 'submit') && node.value) {
+      var bv = tr(node.value); if (bv !== node.value) node.value = bv;
+    }
+    for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  function start() {
+    prepare();
+    if (!dict) return;
+    document.documentElement.lang = lang;
+    walk(document.body);
+    new MutationObserver(function (list) {
+      if (busy) return;
+      busy = true;
+      try {
+        list.forEach(function (m) {
+          if (m.type === 'characterData') walk(m.target);
+          else if (m.type === 'attributes') walk(m.target);
+          else m.addedNodes.forEach(walk);
+        });
+      } finally { busy = false; }
+    }).observe(document.body, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS});
+    ['alert', 'confirm', 'prompt'].forEach(function (f) {
+      var orig = window[f];
+      window[f] = function (msg) { var a = [].slice.call(arguments); a[0] = tr(String(msg == null ? '' : msg)); return orig.apply(window, a); };
+    });
+  }
+  function set(l) {
+    l = l || 'de';
+    var old = lang;
+    lang = l;
+    try { localStorage.setItem('vnLang', l); } catch (e) {}
+    if (l !== old) location.reload();   // back to German or another language: start clean
+  }
+  // Language from the device (cached, so the next load translates right away)
+  function init() {
+    if (lang !== 'de') start();
+    fetch('/api/system', {cache: 'no-store'}).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.fw) set(d.fw.lang || 'de'); }).catch(function () {});
+  }
+  // after all scripts of the page (their words are added further down)
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else setTimeout(init, 0);
+  return {t: tr, lang: function () { return lang; }};
+})();
+// Shared cards: update, backup, events, device, clock, about (vannode-system.js, -backup.js, -about.js).
+// The license and liability texts of the about card stay German on purpose (original wording).
+vnI18nAdd('en', {
+  'Firmware- & Web-Update': 'Firmware & web update', 'Firmware': 'Firmware', 'Hochladen': 'Upload', 'Durchsuchen': 'Browse',
+  'Datei wählen …': 'Choose file …', '.bin wählen …': 'Choose .bin …', '.bin oder .html.gz wählen …': 'Choose .bin or .html.gz …',
+  'Die Datei wird vor dem Hochladen geprüft.': 'The file is checked before uploading.',
+  'Nur .bin (Firmware)': 'Only .bin (firmware)', 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)': 'Only .bin (firmware) or .gz (web interface)',
+  'Installiert': 'Installed', 'Installiert: …': 'Installed: …', 'Prüfe …': 'Checking …', 'Übertrage …': 'Transferring …', 'Wird geschrieben …': 'Writing …',
+  'Keine ESP-Firmware': 'Not an ESP firmware', 'Keine gültige Datei': 'Not a valid file', 'Erst eine Datei wählen': 'Choose a file first',
+  'Ohne Kennung hochladen': 'Upload without ID', 'Gerät beschäftigt': 'Device busy', 'Keine Verbindung zum Gerät': 'No connection to the device',
+  'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.':
+    'No device ID in the file: foreign firmware or a version from before the ID. Only upload it if you are sure it is for this device.',
+  'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.': 'This is the .merged.bin (complete flash image for USB). Please take the .bin without "merged".',
+  'Die Web-Oberfläche steckt bei diesem Gerät in der Firmware – nur die .bin hochladen': 'On this device the web interface is part of the firmware – only upload the .bin',
+  'Ein LittleFS-Abbild (Dateiname mit „littlefs“) wird ebenfalls erkannt.': 'A LittleFS image (file name with "littlefs") is recognized as well.',
+  'gleiche Version wie installiert': 'same version as installed', 'ÄLTER als die installierte (Downgrade)': 'OLDER than the installed one (downgrade)',
+  'Trotzdem installieren?': 'Install anyway?', 'Das Gerät startet danach eventuell neu.': 'The device may restart afterwards.',
+  '✓ Update ok – das Gerät startet neu, die Seite lädt gleich neu …': '✓ Update ok – the device restarts, the page reloads in a moment …',
+  '✓ Web-Oberfläche ersetzt – Seite lädt neu …': '✓ Web interface replaced – page reloads …', '✕ Verbindung abgebrochen': '✕ Connection lost',
+  'Fehler HTTP': 'HTTP error', 'Fehler bei': 'Error at', 'Datei zu groß': 'File too big', 'Firmware für': 'Firmware for',
+  'aus dem Release oder aus der Arduino IDE': 'from the release or from the Arduino IDE', 'aus dem Release oder': 'from the release or',
+  'Sketch → Kompilierte Binärdatei exportieren →': 'Sketch → Export compiled binary →', 'ersetzt nur die Seite, ohne Neustart': 'replaces only the page, no restart',
+  'ersetzt die Web-Oberfläche, danach Neustart': 'replaces the web interface, then restart', 'danach Neustart.': 'then restart.',
+  'Web-Oberfläche': 'Web interface', 'Firmware: die': 'Firmware: the', 'Web-Oberfläche: die': 'Web interface: the', 'Dateisystem-Abbild': 'File system image',
+  'passende Datei': 'matching file', 'dieses Gerät ist ein': 'this device is a', 'Quelle unbekannt': 'Source unknown',
+  'Einstellungen sichern': 'Back up settings', 'Sichern': 'Back up', 'Einspielen': 'Restore', 'Sicherung zum Einspielen wählen …': 'Choose a backup to restore …',
+  'Erst eine Sicherungsdatei wählen': 'Choose a backup file first', 'Keine VanNode-Sicherung': 'Not a VanNode backup',
+  'auch Netzwerk übernehmen': 'also restore network', 'Auch WLAN, IP und Gerätename': 'Also WiFi, IP and device name', 'sowie MQTT-Server': 'and MQTT server',
+  'Alle Einstellungen und Geräte': 'All settings and devices', 'Alle Einstellungen': 'All settings',
+  'Alle Einstellungen, Seiten, Kacheln, Automationen und Sensoren': 'All settings, pages, tiles, automations and sensors',
+  'als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.': 'as a file. Passwords and the login are not included; the existing ones are kept when restoring.',
+  'Einstellungen aus der Sicherung vom': 'Settings from the backup of', 'übernehmen?': 'restore?', 'übernehmen': 'restore',
+  'WLAN, IP und Gerätename werden mit übernommen.': 'WiFi, IP and device name are restored too.', 'Die Sicherung gehört zu „': 'The backup belongs to "',
+  'Einstellungen übernommen': 'Settings restored', 'Seiten und Kacheln übernommen': 'Pages and tiles restored', 'Automationen übernommen': 'Automations restored',
+  'Sensoren übernommen': 'Sensors restored', 'Übernommen:': 'Restored:', 'Nicht angelegt:': 'Not created:', 'Nicht gesetzt:': 'Not set:',
+  'Übersprungen (Typ fehlt in dieser Firmware):': 'Skipped (type missing in this firmware):',
+  'Fertig. Geänderte Geräte gelten nach einem Neustart (Karte Gerät → Neustart).': 'Done. Changed devices apply after a restart (card Device → Restart).',
+  'Fertig – Seite lädt gleich neu.': 'Done – page reloads in a moment.', 'Sichern fehlgeschlagen:': 'Backup failed:', 'Einspielen fehlgeschlagen:': 'Restore failed:',
+  'Ereignisse': 'Events', 'Noch keine Einträge.': 'No entries yet.', 'Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.': 'Kept across restarts, crashes and updates, not across power loss.',
+  'vorheriger Start': 'previous start', 'Starts zuvor': 'starts before',
+  'Gerät': 'Device', 'Neustart': 'Restart', 'Werkseinstellungen': 'Factory reset', 'Gerät neu starten?': 'Restart the device?',
+  'Alle Einstellungen löschen?\nDas Gerät startet danach mit den Werkseinstellungen und öffnet sein Setup-WLAN.': 'Delete all settings?\nThe device then starts with factory settings and opens its setup WiFi.',
+  'Startet neu – die Seite lädt gleich neu …': 'Restarting – the page reloads in a moment …', 'Zurückgesetzt – das Gerät startet neu und öffnet sein Setup-WLAN.': 'Reset – the device restarts and opens its setup WiFi.',
+  'Uhrzeit': 'Clock', 'Keine Uhrzeit gesetzt': 'No time set', 'Uhrzeit vom Handy übernehmen': 'Take time from the phone', 'Von Hand setzen': 'Set manually',
+  'Erst Datum und Uhrzeit eintragen': 'Enter date and time first', 'Uhrzeit gesetzt.': 'Time set.', 'Uhrzeit vom Browser übernommen.': 'Time taken from the browser.',
+  'Uhrzeit automatisch vom Browser übernommen (das Gerät hatte keine).': 'Time taken from the browser automatically (the device had none).',
+  'Ohne Internet übernimmt diese Seite die Uhrzeit automatisch vom Handy bzw. Rechner, sobald das Gerät keine hat.': 'Without internet this page takes the time from the phone or computer as soon as the device has none.',
+  'über das Internet (NTP)': 'from the internet (NTP)', 'vom Browser übernommen': 'taken from the browser', 'von Hand gesetzt': 'set manually', 'min vom Browser ab': 'min off the browser',
+  'Über VanNode': 'About VanNode', 'Über': 'About', 'Teil von VanNode – Camper-Elektronik über MQTT': 'Part of VanNode – camper electronics over MQTT',
+  'Lizenz:': 'License:', 'Lizenztext (GPL-3.0)': 'License text (GPL-3.0)', 'Hinweise und fremde Teile': 'Notices and third-party parts', 'Ohne Gewähr.': 'No warranty.',
+  'Platz': 'Space', 'Vorlage': 'Template', 'Lade …': 'Loading …', 'Gespeichert:': 'Saved:',
+  // node page basics shared by all nodes
+  'Speichern': 'Save', 'Gespeichert': 'Saved', 'Fehler': 'Error', 'Fehler:': 'Error:', 'Einstellungen': 'Settings', 'System': 'System', 'Live': 'Live',
+  'Benutzer': 'User', 'Passwort': 'Password', 'Web-Login': 'Web login', 'Gerätename': 'Device name', 'Laufzeit': 'Uptime', 'Freier Speicher': 'Free memory',
+  'WLAN-Name (SSID)': 'WiFi name (SSID)', 'WLAN-Passwort': 'WiFi password', 'WLAN-Signal': 'WiFi signal', 'WLAN-Abbrüche': 'WiFi drops',
+  'Eigener Access Point': 'Own access point', 'Access Point immer an': 'Access point always on', 'AP-Passwort': 'AP password', 'Sendeleistung': 'Transmit power',
+  'MQTT verbunden': 'MQTT connected', 'MQTT getrennt': 'MQTT disconnected', 'Topic-Präfix': 'Topic prefix', 'Letzter Neustart': 'Last restart',
+  'Gesetzt – leer lassen zum Beibehalten': 'Set – leave empty to keep', 'Jetzt neu starten': 'Restart now', 'Neustart…': 'Restarting…', 'Seite neu laden': 'Reload page',
+  'Start v*, Grund: *': 'Start v*, reason: *', 'WLAN verbunden (*)': 'WiFi connected (*)', 'WLAN getrennt': 'WiFi disconnected',
+  'Neustart über die Web-Oberfläche': 'Restart from the web interface', 'Werkseinstellungen über die Web-Oberfläche': 'Factory reset from the web interface',
+  'Neustart (Software)': 'Restart (software)', 'Absturz': 'Crash', 'Brownout (Spannung zu niedrig)': 'Brownout (voltage too low)', 'Deep Sleep': 'Deep sleep',
+  'Watchdog (Hardware)': 'Watchdog (hardware)', 'Watchdog (Interrupt)': 'Watchdog (interrupt)', 'Watchdog (Software)': 'Watchdog (software)', 'Watchdog (Task)': 'Watchdog (task)',
+  'Einstellungen gespeichert': 'Settings saved', 'Web-Login über USB auf Werks-Login zurückgesetzt': 'Web login reset to the factory login over USB',
+  'Update über den IDE-Netzwerkport ok, Neustart': 'Update over the IDE network port ok, restart', 'Update abgelehnt:': 'Update refused:',
+  'Wenig Speicher: frei *, größter Block *, Minimum * Bytes': 'Low memory: free *, largest block *, minimum * bytes',
+  "Die Zeit bleibt bei einem Neustart erhalten, nicht bei Stromausfall; ein späterer Abgleich über das Internet ersetzt sie.": "The time is kept across a restart, not across power loss; a later sync over the internet replaces it.",
+  "Auch WLAN, IP und Gerätename sowie MQTT-Server übernehmen": "Also restore WiFi, IP, device name and MQTT server",
+  "ohne Neustart. Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.": "no restart. The file is checked before uploading; the settings are kept.",
+  "das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen": "this is the .merged.bin (complete flash image for USB) – please take the .bin without \"merged\"",
+  "Update auf v* ok (* kB), Neustart": "Update to v* ok (* kB), restart",
+  "Firmware-Upload gestartet (* kB)": "Firmware upload started (* kB)",
+  "Einschalten": "Power on",
+  "Mindestens 8 Zeichen, leer = unverändert": "At least 8 characters, empty = unchanged",
+  "Die Anmeldung ist immer an (ab Werk admin / admin). Leer lassen = bleibt. Login vergessen: über USB den Befehl noauth senden, dann gilt wieder der Werks-Login.": "The login is always on (factory admin / admin). Leave empty = kept. Forgot the login: send the command noauth over USB, then the factory login applies again.",
+  "Aus = AP nur als Rückfall, wenn das WLAN fehlt": "Off = AP only as a fallback when WiFi is missing",
+  "aus": "off",
+  "an": "on",
+  "zu": "closed",
+  "offen": "open",
+  "ja": "yes",
+  "nein": "no",
+  "keine": "none",
+  "nichts": "nothing",
+  "nicht": "not",
+  "läuft": "running"
+});
+// vannode-i18n:end
 </script>
 </body>
 </html>

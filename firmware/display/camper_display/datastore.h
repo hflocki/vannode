@@ -31,6 +31,13 @@ enum DpId : uint8_t {
   DP_BAT_STATUS, DP_BAT_LIST,
   // ble-node: roof hatch (plugin rvtech)
   DP_TB_STATUS, DP_HEKI_COVER, DP_HEKI_POS, DP_HEKI_REP, DP_HEKI_CONN,
+  // further plugins of the BLE nodes for home tiles (taken from ble, ble2 or ble3)
+  DP_WP_ARMED, DP_WP_REASON, DP_WP_OPEN, DP_WP_CONN,
+  DP_FR_T1, DP_FR_T2, DP_FR_S1, DP_FR_S2, DP_FR_ERR, DP_FR_CONN,
+  DP_PU_RUN, DP_PU_EN, DP_PU_PRES, DP_PU_CONN,
+  DP_SH_OUT, DP_SH_POW, DP_SH_CONN,
+  DP_TP_WARN, DP_TP_TEXT,
+  DP_OB_RUN, DP_OB_FUEL, DP_OB_ADB, DP_OB_SPEED, DP_OB_CONN,
   DP_COUNT
 };
 

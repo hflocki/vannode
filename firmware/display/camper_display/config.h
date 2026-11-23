@@ -16,7 +16,13 @@
 // =====================================================================
 
 #define FW_NAME                 "display-node"
-#define FW_VERSION              "2.24.0"
+// Language of the web page: "de" (default) or "en". Set it in config_local.h before the
+// first flash; the browser then shows the page in that language (vannode-i18n.js).
+// The panel itself stays German.
+#ifndef UI_LANG
+#define UI_LANG                 "de"
+#endif
+#define FW_VERSION              "2.25.0"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -33,6 +39,15 @@
 // home of the web page: fixed slots per group (Tanks 4, Klima 4, Temperatur 2, Energie 2, Fahrzeug 4), "none" = empty
 #define DEFAULT_WEB_TILES       "water,grey,gas,none,heater,fan,heki,weather,temp,none,bat,none,level,actors,lights,switches"
 #endif
+// Home grid of the panel: columns x rows (4" panel: 3 x 3; a larger display may use more)
+#ifndef OV_COLS
+#define OV_COLS                 3
+#endif
+#ifndef OV_ROWS
+#define OV_ROWS                 3
+#endif
+#define OV_SLOTS                (OV_COLS * OV_ROWS)
+
 #ifndef DEFAULT_OV_TILES
 #define DEFAULT_OV_TILES        "water,grey,gas,heater,level,fan,temp,bat,status"   // overview tiles in order
 #endif

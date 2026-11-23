@@ -13,6 +13,7 @@ struct DpDef {
   const char* key;   // short key for the web page
   Dev         dev;
   const char* sub;   // topic below the device prefix; '#' is replaced by the fan port
+  bool        any;   // DEV_BLE only: from any BLE node (ble, ble2, ble3), not just the hatch's
 };
 
 // Must match the order of DpId
@@ -68,6 +69,32 @@ const DpDef DEFS[DP_COUNT] = {
   {"heki_pos",    DEV_BLE, "rvtech/cover_position"},   // 0 .. 100 %
   {"heki_rep",    DEV_BLE, "rvtech/reported"},         // raw value, 102 = ventilation
   {"heki_conn",   DEV_BLE, "rvtech/connected"},        // Bluetooth link ON / OFF
+
+  // home tiles of further BLE plugins (first instance of each plugin, docs/TOPICS.md)
+  {"wp_armed",    DEV_BLE, "wipro/armed", true},         // alarm WiPro III: ON / OFF
+  {"wp_reason",   DEV_BLE, "wipro/reason", true},        // alarm reason text
+  {"wp_open",     DEV_BLE, "wipro/open", true},          // open contacts (names)
+  {"wp_conn",     DEV_BLE, "wipro/connected", true},
+  {"fr_t1",       DEV_BLE, "fridge/temp1", true},        // fridge WCS: zone 1 / 2 temperature
+  {"fr_t2",       DEV_BLE, "fridge/temp2", true},
+  {"fr_s1",       DEV_BLE, "fridge/set1", true},
+  {"fr_s2",       DEV_BLE, "fridge/set2", true},
+  {"fr_err",      DEV_BLE, "fridge/error", true},
+  {"fr_conn",     DEV_BLE, "fridge/connected", true},
+  {"pu_run",      DEV_BLE, "pump/running", true},        // water pump CaraWater
+  {"pu_en",       DEV_BLE, "pump/enable", true},
+  {"pu_pres",     DEV_BLE, "pump/pressure", true},
+  {"pu_conn",     DEV_BLE, "pump/connected", true},
+  {"sh_out",      DEV_BLE, "shelly/output", true},       // Shelly over Bluetooth
+  {"sh_pow",      DEV_BLE, "shelly/power", true},
+  {"sh_conn",     DEV_BLE, "shelly/connected", true},
+  {"tp_warn",     DEV_BLE, "tpms/warning", true},        // tyre pressure: ON / OFF
+  {"tp_text",     DEV_BLE, "tpms/warning_text", true},
+  {"ob_run",      DEV_BLE, "obd/running", true},         // vehicle (OBD2): engine running
+  {"ob_fuel",     DEV_BLE, "obd/fuel", true},            // fuel level %
+  {"ob_adb",      DEV_BLE, "obd/adblue", true},          // AdBlue %
+  {"ob_speed",    DEV_BLE, "obd/speed", true},           // km/h
+  {"ob_conn",     DEV_BLE, "obd/connected", true},
 };
 
 // CampMatic box (ESPHome style climate topics below <heater prefix>), used instead of the
@@ -227,7 +254,7 @@ bool onMessage(const char* topic, const char* payload, unsigned int len) {
       if (strncmp(topic, hatch.c_str(), hatch.length()) == 0) {
         bleActive = *p;
         for (int i = 0; i < DP_COUNT; i++) {   // only the BLE datapoints (tiles keep their values)
-          if (DEFS[i].dev != DEV_BLE) continue;
+          if (DEFS[i].dev != DEV_BLE || DEFS[i].any) continue;
           String t = blePrefixNow() + "/" + DEFS[i].sub;
           if (t != topics[i]) setDp(i, "");
           topics[i] = t;
@@ -236,8 +263,19 @@ bool onMessage(const char* topic, const char* payload, unsigned int len) {
       }
     }
   }
+  // "<ble prefix>/..." of any BLE node: rest of the topic for the plugins read from every node
+  const char* bleRest = nullptr;
+  {
+    const String* all[] = {&settings.prefixBle, &settings.prefixBle2, &settings.prefixBle3};
+    for (auto p : all) {
+      size_t n = p->length();
+      if (n && strncmp(topic, p->c_str(), n) == 0 && topic[n] == '/') { bleRest = topic + n + 1; break; }
+    }
+  }
   for (int i = 0; i < DP_COUNT; i++) {
-    if (topics[i].length() && topics[i] == topic) {
+    bool hit = DEFS[i].any ? (bleRest && strcmp(bleRest, DEFS[i].sub) == 0)
+                           : (topics[i].length() && topics[i] == topic);
+    if (hit) {
       String v = formatRaw(payload, len, -1);
       // "nan" = no value (CampMatic sends it as setpoint while heating or water is off)
       if (v.equalsIgnoreCase("nan") || v.equalsIgnoreCase("inf") || v.equalsIgnoreCase("-inf")) v = "";

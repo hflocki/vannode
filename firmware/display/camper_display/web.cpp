@@ -38,6 +38,15 @@
 
 namespace {
 
+// Home tiles shown on the panel and the web page (panel only in addition: status, clock, none)
+bool knownTile(const String& t) {
+  static const char* const known[] = {"water", "grey", "gas", "heater", "level", "fan", "heki", "temp", "bat",
+                                      "bat1", "bat2", "bat3", "weather", "actors", "lights", "switches",
+                                      "alarm", "fridge", "pump", "shelly", "tpms", "vehicle"};
+  for (const char* k : known) if (t == k) return true;
+  return false;
+}
+
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
@@ -127,6 +136,8 @@ void buildCfg(JsonDocument& d) {
   JsonArray b = d["builtin"].to<JsonArray>();
   for (int i = 0; i < BP_COUNT; i++) b.add(settings.builtin[i]);
   d["ovTiles"] = settings.ovTiles.length() ? settings.ovTiles : String(DEFAULT_OV_TILES);
+  d["ovCols"] = OV_COLS;
+  d["ovSlots"] = OV_SLOTS;
   d["webTiles"] = settings.webTiles.length() ? settings.webTiles : String(DEFAULT_WEB_TILES);
   d["ovTempSel"] = settings.ovTempSel;
   d["ovBatSel"] = settings.ovBatSel;
@@ -369,6 +380,8 @@ void getSettings(AsyncWebServerRequest* r) {
   JsonArray pi = d["pageIcons"].to<JsonArray>();
   for (int i = 0; i <= BP_COUNT; i++) pi.add(settings.pageIcon[i]);
   d["ovTiles"] = settings.ovTiles.length() ? settings.ovTiles : String(DEFAULT_OV_TILES);
+  d["ovCols"] = OV_COLS;
+  d["ovSlots"] = OV_SLOTS;
   d["webTiles"] = settings.webTiles.length() ? settings.webTiles : String(DEFAULT_WEB_TILES);
   d["ovTempSel"] = settings.ovTempSel;
   d["ovBatSel"] = settings.ovBatSel;
@@ -572,17 +585,14 @@ bool applySettings(JsonObject o, bool apply) {
     if (apply) settings.navSel = out;
   }
   if (o["ovTiles"].is<const char*>()) {
-    // keep only known tokens, at most 9
+    // keep only known tokens, at most one per slot of the grid
     String in = o["ovTiles"].as<const char*>(), out;
     int n = 0, start = 0;
-    while (start <= (int)in.length() && n < 9) {
+    while (start <= (int)in.length() && n < OV_SLOTS) {
       int c = in.indexOf(',', start);
       String t = in.substring(start, c < 0 ? in.length() : c);
       t.trim();
-      static const char* const known[] = {"water", "grey", "gas", "heater", "level", "fan", "heki", "temp", "bat",
-                                          "status", "bat1", "bat2", "bat3", "clock", "weather", "actors", "lights", "switches", "none"};
-      bool ok = false;
-      for (const char* k : known) if (t == k) ok = true;
+      bool ok = t == "status" || t == "clock" || t == "none" || knownTile(t);
       if (t.length() > 1 && t[0] == 't' && isdigit(t[1]) && t.substring(1).toInt() < (int)settings.tiles.size()) ok = true;
       if (ok) { if (out.length()) out += ','; out += t; n++; }
       if (c < 0) break;
@@ -604,10 +614,7 @@ bool applySettings(JsonObject o, bool apply) {
         start = c < 0 ? in.length() + 1 : c + 1;
       }
       t.trim();
-      static const char* const known[] = {"water", "grey", "gas", "heater", "level", "fan", "heki", "temp", "bat",
-                                          "bat1", "bat2", "bat3", "weather", "actors", "lights", "switches"};
-      bool ok = false;
-      for (const char* k : known) if (t == k) ok = true;
+      bool ok = knownTile(t);
       if (t.length() > 1 && t[0] == 't' && isdigit(t[1]) && t.substring(1).toInt() < (int)settings.tiles.size()) ok = true;
       if (n) out += ',';
       out += ok ? t : String("none");
@@ -906,6 +913,7 @@ void begin() {
     if (!auth(r)) return;
     JsonDocument d;
     fwcheck::info(d["fw"].to<JsonObject>());
+    d["fw"]["lang"] = UI_LANG;   // language of the page (vannode-i18n.js)
     evlog::json(d["log"].to<JsonArray>());
     d["up"] = millis() / 1000;
     clockset::json(d["clock"].to<JsonObject>());   // clock card (vannode-system.js)

@@ -139,6 +139,9 @@ lv_obj_t *fStatus, *fSpeed, *fSpeedLbl;
 // roof hatch (ble-node, plugin rvtech): page and overview tile
 lv_obj_t *kState, *kSub, *kPos, *kPosLbl, *kPreset[4];
 lv_obj_t *ovHekiVal = nullptr, *ovHekiSub = nullptr, *ovHekiIcon = nullptr;
+// home tiles of further BLE plugins (alarm, fridge, pump, Shelly, tyre pressure, vehicle)
+struct BleTileW { lv_obj_t *val = nullptr, *sub = nullptr, *icon = nullptr; };
+BleTileW ovAlarm, ovFridge, ovPump, ovShelly, ovTpms, ovCar;
 uint32_t kPosHold = 0;   // millis() of the last slider command: do not jump back while the hatch moves
 // level page: van seen from above, wedge per wheel, dot in the middle moves to the low side
 lv_obj_t *lvVan, *lvDot, *lvRoll, *lvPitch, *lvState, *lvHint, *lvWheel[4], *lvWedge[4];
@@ -687,12 +690,12 @@ String warnings(std::vector<uint8_t>* cats = nullptr) {
 }
 
 // ---- page builders ---------------------------------------------------------------
-// Overview: 3 x 3 tiles that fit on the screen without scrolling
-// (480 px - 2 x 10 padding - 2 x 8 gap) / 3 = 148 px wide, (384 - 20 - 16) / 3 = 116 px high
+// Overview: OV_COLS x OV_ROWS tiles that fit on the screen without scrolling
+// 4" panel, 3 x 3: (480 px - 2 x 10 padding - 2 x 8 gap) / 3 = 148 px wide, (384 - 20 - 16) / 3 = 116 px high
 const int TILE_GAP = 8;
 const int TILE_PAD = 8;
-const int TILE_W = (PAGE_W - 20 - 2 * TILE_GAP) / 3;
-const int TILE_H = (PAGE_H - 20 - 2 * TILE_GAP) / 3;
+const int TILE_W = (PAGE_W - 20 - (OV_COLS - 1) * TILE_GAP) / OV_COLS;
+const int TILE_H = (PAGE_H - 20 - (OV_ROWS - 1) * TILE_GAP) / OV_ROWS;
 const int TILE_IN = TILE_W - 2 * TILE_PAD;   // usable width inside a tile
 
 // Plain shape for the tank drawings: not clickable (taps go to the tile), no scrolling
@@ -981,7 +984,7 @@ void buildOverview(lv_obj_t* tab) {
   // Tiles in the order set on the web page (Einstellungen -> Display & Seiten)
   String list = settings.ovTiles.length() ? settings.ovTiles : String(DEFAULT_OV_TILES);
   int start = 0, count = 0;
-  while (start <= (int)list.length() && count < 9) {
+  while (start <= (int)list.length() && count < OV_SLOTS) {
     int c = list.indexOf(',', start);
     String t = list.substring(start, c < 0 ? list.length() : c);
     t.trim();
@@ -1020,6 +1023,30 @@ void buildOverview(lv_obj_t* tab) {
     else if (t == "heki") {
       lv_obj_t* c = infoCard(tab, LV_SYMBOL_EJECT, pageTitle(BP_HEKI).c_str(), ovHekiVal, ovHekiSub, BP_HEKI, C_SLATE);
       ovHekiIcon = badge(c, LV_SYMBOL_EJECT, C_SLATE);
+    }
+    else if (t == "alarm") {
+      lv_obj_t* c = infoCard(tab, LV_SYMBOL_WARNING, "Alarm", ovAlarm.val, ovAlarm.sub, -1, C_SLATE);
+      ovAlarm.icon = badge(c, LV_SYMBOL_WARNING, C_SLATE);
+    }
+    else if (t == "fridge") {
+      lv_obj_t* c = infoCard(tab, ICON_THERMOMETER, "K\xC3\xBChlschrank", ovFridge.val, ovFridge.sub, -1, C_WATER);
+      ovFridge.icon = badge(c, ICON_THERMOMETER, C_WATER);
+    }
+    else if (t == "pump") {
+      lv_obj_t* c = infoCard(tab, ICON_TINT, "Wasserpumpe", ovPump.val, ovPump.sub, -1, C_WATER);
+      ovPump.icon = badge(c, ICON_TINT, C_WATER);
+    }
+    else if (t == "shelly") {
+      lv_obj_t* c = infoCard(tab, LV_SYMBOL_POWER, "Shelly", ovShelly.val, ovShelly.sub, -1, C_YELLOW);
+      ovShelly.icon = badge(c, LV_SYMBOL_POWER, C_YELLOW);
+    }
+    else if (t == "tpms") {
+      lv_obj_t* c = infoCard(tab, LV_SYMBOL_LOOP, "Reifendruck", ovTpms.val, ovTpms.sub, -1, C_SLATE);
+      ovTpms.icon = badge(c, LV_SYMBOL_LOOP, C_SLATE);
+    }
+    else if (t == "vehicle") {
+      lv_obj_t* c = infoCard(tab, ICON_GAS, "Fahrzeug", ovCar.val, ovCar.sub, -1, C_GAS);
+      ovCar.icon = badge(c, ICON_GAS, C_GAS);
     }
     else if (t == "temp")   bigTile(tab, ICON_THERMOMETER, pageTitle(BP_TEMP).c_str(), C_PURPLE, BP_TEMP, ovTempT, false, 4);
     else if (t == "bat")    bigTile(tab, LV_SYMBOL_BATTERY_FULL, pageTitle(BP_BATTERY).c_str(), C_OK, BP_BATTERY, ovBatT, true, 2);
@@ -1949,6 +1976,86 @@ void refreshDepart() {
   lv_obj_set_style_text_color(dpLbl, bad ? C_WARN : unk ? C_TEXT : C_OK, 0);
 }
 
+// ---- home tiles of further BLE plugins -----------------------------------------------
+// "12.34" -> "12,3 <unit>" (decimals), "" if no number
+String bleNum(DpId d, int decimals, const char* unit) {
+  const String& v = store::get(d);
+  if (!v.length()) return "";
+  char* end;
+  float f = strtof(v.c_str(), &end);
+  if (end == v.c_str()) return "";
+  String s = String(f, (unsigned)decimals);
+  s.replace(".", ",");
+  return unit && unit[0] ? s + " " + unit : s;
+}
+
+void setBleTile(BleTileW& w, const String& val, const String& sub, lv_color_t valCol, lv_color_t badgeCol, bool badgeOn) {
+  if (!w.val) return;
+  lv_label_set_text(w.val, dispText(val.length() ? val : String("--")).c_str());
+  lv_obj_set_style_text_color(w.val, val.length() ? valCol : C_MUTED, 0);
+  lv_label_set_text(w.sub, dispText(sub).c_str());
+  setBadge(w.icon, badgeCol, badgeOn);
+}
+
+// No value yet: "keine Daten"; Bluetooth of the node to the device down: "Bluetooth getrennt"
+String bleState(DpId conn, bool has) {
+  if (!store::devOnline(DEV_BLE)) return "offline";
+  if (store::get(conn) == "OFF") return "Bluetooth getrennt";
+  return has ? "" : "keine Daten";
+}
+
+void refreshBleTiles() {
+  if (ovAlarm.val) {
+    const String& armed = store::get(DP_WP_ARMED);
+    String reason = store::get(DP_WP_REASON), open = store::get(DP_WP_OPEN);
+    bool alarm = reason.length() && reason != "Kein Alarm" && reason != "-";
+    String st = bleState(DP_WP_CONN, armed.length());
+    String val = !armed.length() ? String("") : alarm ? String("ALARM") : armed == "ON" ? String("Scharf") : String("Unscharf");
+    String sub = st.length() ? st : alarm ? reason : (open.length() && open != "-" && open != "keine") ? String("offen: ") + open : String("alles zu");
+    setBleTile(ovAlarm, val, sub, alarm ? C_WARN : armed == "ON" ? C_OK : C_TEXT, alarm ? C_WARN : C_SLATE, alarm || armed == "ON");
+  }
+  if (ovFridge.val) {
+    String t1 = bleNum(DP_FR_T1, 1, "\xC2\xB0" "C"), t2 = bleNum(DP_FR_T2, 1, "\xC2\xB0" "C");
+    const String& err = store::get(DP_FR_ERR);
+    bool bad = err.length() && err != "Kein Fehler" && err != "-" && err != "0";
+    String st = bleState(DP_FR_CONN, t1.length());
+    String sub = st.length() ? st : bad ? String("Fehler ") + err : t2.length() ? String("Zone 2: ") + t2 : String("Soll ") + bleNum(DP_FR_S1, 0, "\xC2\xB0" "C");
+    setBleTile(ovFridge, t1, sub, bad ? C_WARN : C_TEXT, bad ? C_WARN : C_WATER, t1.length() > 0);
+  }
+  if (ovPump.val) {
+    const String& run = store::get(DP_PU_RUN);
+    const String& en = store::get(DP_PU_EN);
+    bool on = run == "ON";
+    String val = !run.length() && !en.length() ? String("") : on ? String("l\xC3\xA4uft") : en == "OFF" ? String("aus") : String("bereit");
+    String st = bleState(DP_PU_CONN, val.length());
+    String pres = bleNum(DP_PU_PRES, 1, "bar");
+    setBleTile(ovPump, val, st.length() ? st : pres, on ? C_WATER : C_TEXT, C_WATER, on);
+  }
+  if (ovShelly.val) {
+    const String& out = store::get(DP_SH_OUT);
+    bool on = out == "ON";
+    String st = bleState(DP_SH_CONN, out.length());
+    setBleTile(ovShelly, !out.length() ? String("") : on ? String("An") : String("Aus"), st.length() ? st : bleNum(DP_SH_POW, 0, "W"),
+               on ? C_YELLOW : C_TEXT, C_YELLOW, on);
+  }
+  if (ovTpms.val) {
+    const String& warn = store::get(DP_TP_WARN);
+    bool bad = warn == "ON";
+    String st = !store::devOnline(DEV_BLE) ? String("offline") : warn.length() ? String("") : String("keine Daten");
+    String text = store::get(DP_TP_TEXT);
+    setBleTile(ovTpms, !warn.length() ? String("") : bad ? String("Warnung") : String("OK"),
+               st.length() ? st : bad ? text : String("alle R\xC3\xA4der ok"), bad ? C_WARN : C_OK, bad ? C_WARN : C_SLATE, bad);
+  }
+  if (ovCar.val) {
+    String fuel = bleNum(DP_OB_FUEL, 0, "%");
+    bool run = store::get(DP_OB_RUN) == "ON";
+    String adb = bleNum(DP_OB_ADB, 0, "%");
+    String st = bleState(DP_OB_CONN, fuel.length() || store::get(DP_OB_RUN).length());
+    String sub = st.length() ? st : String(run ? "Motor l\xC3\xA4uft" : "Motor aus") + (adb.length() ? String(" \xE2\x80\xA2 AdBlue ") + adb : String(""));
+    setBleTile(ovCar, fuel, sub, C_TEXT, C_GAS, run);
+  }
+}
+
 void refreshValues() {
   bool tankOn = store::devOnline(DEV_TANK);
   bool heatOn = store::devOnline(DEV_HEATER);
@@ -1991,6 +2098,8 @@ void refreshValues() {
     setBadge(ovFanIcon, C_FAN, fanOn);
     lv_label_set_text(ovFanSub, fanOn ? (store::get(DP_FAN_HOLD) == "ON" ? "Auto-Hold aktiv" : "Tippen zum Steuern") : "offline");
   }
+
+  refreshBleTiles();
 
   // roof hatch (ble-node)
   if (ovHekiVal || kState) {
@@ -2701,6 +2810,7 @@ void clearHandles() {
   kState = kSub = kPos = kPosLbl = nullptr;
   for (auto& b : kPreset) b = nullptr;
   ovHekiVal = ovHekiSub = ovHekiIcon = nullptr;
+  ovAlarm = ovFridge = ovPump = ovShelly = ovTpms = ovCar = BleTileW();
   lvVan = lvDot = lvRoll = lvPitch = lvState = lvHint = nullptr;
   for (auto& w : lvWedge) w = nullptr;
   for (auto& w : lvWheel) w = nullptr;

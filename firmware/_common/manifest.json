@@ -271,7 +271,8 @@
       "end": "// vannode-i18n:end",
       "before": "</script>",
       "files": [
-        "firmware/_common/ble/web/index.html"
+        "firmware/_common/ble/web/index.html",
+        "firmware/display/camper_display/web/index.html"
       ]
     }
   },

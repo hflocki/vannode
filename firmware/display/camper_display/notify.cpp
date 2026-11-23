@@ -224,7 +224,7 @@ namespace notify {
 
 void begin() {
   queue = xQueueCreate(PUSHOVER_QUEUE, sizeof(Msg));
-  xTaskCreate(senderTask, "push", 8192, nullptr, 1, nullptr);
+  xTaskCreate(senderTask, "push", PUSH_TASK_STACK, nullptr, 1, nullptr);
 }
 
 void requestTest() { testRequested = true; }

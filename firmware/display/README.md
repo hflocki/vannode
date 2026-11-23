@@ -512,6 +512,7 @@ Wird im Haupt-Repo per GitHub Actions gebaut, siehe [Fertige Firmware](../../REA
 ## Hinweise
 
 - **Speicher:** LVGL legt alle Bildschirm-Objekte im PSRAM an (`lv_mem_psram.cpp`, in `lv_conf.h` `LV_USE_STDLIB_MALLOC = LV_STDLIB_CUSTOM`). Der interne RAM bleibt so für WLAN und verschlüsselte Verbindungen (Wetter, Pushover) frei; diese brauchen rund 40–50 kB am Stück. Die Zeile *Speicher* auf der Systemseite zeigt den freien internen RAM zuerst – liegt er unter etwa 50 kB, schlagen Wetterabfragen mit „Fehler -1“ fehl.
+- **Stack-Größen:** Wetter (`WX_TASK_STACK`) und Pushover (`PUSH_TASK_STACK`) stehen in `config.h`. Den Webserver-Stack (AsyncTCP) setzt die Release-.bin beim Bauen auf 8 kB (`-DCONFIG_ASYNC_TCP_STACK_SIZE=8192` in `build.yml`); in der Arduino IDE bleibt es ohne diesen Schalter bei 16 kB. Die Tailscale-Karte zeigt für alle diese Tasks die Stack-Reserve.
 
 - Der MaxxFan meldet keine Drehzahl zurück. Die Lüfterseite zeigt deshalb nur Online-Status und Auto-Hold; die Stufe wird gesetzt, nicht gelesen.
 - PubSubClient verwirft Nachrichten über 4 KB (`MQTT_BUFFER_SIZE`). Große Zigbee-Geräte-JSONs bitte in Zigbee2MQTT nicht unnötig aufblähen.

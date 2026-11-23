@@ -9,6 +9,7 @@
 #include "wifi_manager.h"
 #include "evlog.h"
 #include <Preferences.h>
+#include <AsyncTCP.h>   // CONFIG_ASYNC_TCP_STACK_SIZE (default 16 kB, the release build sets 8 kB)
 
 #if WITH_TAILSCALE
 #include "src/microlink/ml_arduino_config.h"
@@ -74,9 +75,9 @@ static void stackJson(JsonObject o) {
   static const struct { const char* task; const char* key; uint32_t size; } T[] = {
     {"ml_net_io", "net_io", ML_TASK_NET_IO_STACK}, {"ml_derp_tx", "derp_tx", ML_TASK_DERP_TX_STACK},
     {"ml_coord", "coord", ML_TASK_COORD_STACK}, {"ml_wg_mgr", "wg_mgr", ML_TASK_WG_MGR_STACK},
-    {"wx", "wx", 12288},               // weather.cpp
-    {"push", "push", 8192},            // notify.cpp
-    {"async_tcp", "web", 16384}};      // AsyncTCP library (CONFIG_ASYNC_TCP_STACK_SIZE, default 16 kB)
+    {"wx", "wx", WX_TASK_STACK},       // weather.cpp
+    {"push", "push", PUSH_TASK_STACK}, // notify.cpp
+    {"async_tcp", "web", CONFIG_ASYNC_TCP_STACK_SIZE}};   // AsyncTCP library, build flag (build.yml)
   for (auto& t : T) {
     TaskHandle_t h = xTaskGetHandle(t.task);
     if (!h) continue;

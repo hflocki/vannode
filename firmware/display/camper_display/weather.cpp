@@ -212,7 +212,7 @@ void run(void*) {
 void begin() {
   if (!lock) lock = xSemaphoreCreateMutex();
   if (task) return;
-  xTaskCreatePinnedToCore(run, "wx", 12288, nullptr, 1, &task, 0);
+  xTaskCreatePinnedToCore(run, "wx", WX_TASK_STACK, nullptr, 1, &task, 0);
 }
 
 void loop() {}

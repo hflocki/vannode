@@ -23,9 +23,10 @@ Sonst unverändert. Geändert wurde nur, was der Arduino-Build braucht:
 - **Einstellungen statt Kconfig:** Jede `.c`-Datei bindet als erste Zeile `ml_arduino_config.h` ein
   (eigene Datei, GPL-3.0). Darin stehen die Werte, die sonst aus dem Kconfig-Menü von ESP-IDF kommen.
   Keine Zugangsdaten – Auth-Key und Gerätename kommen zur Laufzeit aus den Einstellungen des Displays.
-- **Weggelassen:** Mobilfunk (`ml_cellular.c`, `ml_at_socket.c`, `ml_at_validate.c`), Netzwechsel
+- **Weggelassen:** Mobilfunk (`ml_cellular.c`, `ml_at_socket.c`), Netzwechsel
   (`ml_net_switch.c`) und die eigene Einstellungsseite (`ml_config_httpd.c`, `ml_config_html.h`). Ihre Header
-  bleiben, weil sie bei ausgeschalteter Funktion leere Ersatzfunktionen liefern.
+  bleiben, weil sie bei ausgeschalteter Funktion leere Ersatzfunktionen liefern. `ml_at_validate.c` bleibt
+  drin: `microlink_init()` prüft damit auch ohne Mobilfunk den Namen des Steuerservers.
 
 Angebunden wird microlink in `../../tailscale.cpp`. Bei einem Update von microlink: Dateien aus
 `components/microlink/src`, `include` und `components/wireguard_lwip/src` (samt `crypto/refc`) hierher kopieren,

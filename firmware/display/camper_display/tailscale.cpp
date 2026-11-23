@@ -13,6 +13,7 @@
 #if WITH_TAILSCALE
 #include "src/microlink/ml_arduino_config.h"
 #include "src/microlink/microlink.h"   // C API with its own extern "C"
+extern "C" void vn_ts_nodekey(const microlink_t* ml, char* out, size_t len);   // src/ts_nodekey.c
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -52,7 +53,7 @@ static const uint32_t RETRY_MS = 60000;
 
 static microlink_t* ml = nullptr;
 static SemaphoreHandle_t mx = nullptr;   // guards the strings below (read by the web task)
-static String curIp, curUrl, curName, cfgKey, cfgName;   // cfg*: microlink keeps pointers into these
+static String curIp, curUrl, curName, curNodeKey, cfgKey, cfgName;   // cfg*: microlink keeps pointers into these
 static volatile int curCode = -1;        // microlink_state_t, -1 = not running
 static volatile int curPeers = 0;
 static int loggedCode = -2;
@@ -95,9 +96,12 @@ static void start() {
     return;
   }
   ml = h;
+  char nk[80];
+  vn_ts_nodekey(h, nk, sizeof(nk));   // fixed for this device until sign-out
   {
     Lock l;
     curName = cfgName;
+    curNodeKey = nk;
   }
   evlog::add("Tailscale gestartet als %s%s", cfgName.c_str(), cfgKey.length() ? " (Auth-Key)" : "");
 }
@@ -174,6 +178,7 @@ void json(JsonObject o) {
   o["name"] = curName.length() ? curName : name();
   if (curIp.length()) o["ip"] = curIp;
   if (curUrl.length()) o["url"] = curUrl;
+  if (curNodeKey.length()) o["nodekey"] = curNodeKey;   // for Tailnet Lock: tailscale lock sign <nodekey>
 }
 
 String ip() {

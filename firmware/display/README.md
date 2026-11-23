@@ -265,6 +265,7 @@ Das Display kann selbst in dein [Tailscale](https://tailscale.com)-Netz (Tailnet
 - **Stand:** Die Karte zeigt Zustand, 100.x-Adresse, Anzahl Geräte im Tailnet und den freien internen RAM. Die Systemseite zeigt die Tailscale-Adresse (Display: unter dem QR-Code, Webseite: Zeile *IP*), *Ereignisse* die Anmeldung und Verbindungswechsel.
 - **Abmelden** (Knopf in der Karte) löscht die Schlüssel des Displays und startet neu, danach neu anmelden. *Werkseinstellungen* löschen sie ebenfalls.
 - **Nur das Display** ist im Tailnet, nicht die anderen Geräte (kein Subnet-Router). Wer alle Geräte von unterwegs erreichen will, braucht weiterhin einen Subnet-Router im Camper-Netz.
+- **Tailnet Lock:** Ist er im Tailnet eingeschaltet, muss das Display von einem Signier-Knoten signiert werden. Bis es verbunden ist, zeigt die Karte dafür den fertigen Befehl `tailscale lock sign nodekey:…`. Vorab signierte Auth-Keys gehen nicht, die kann microlink nicht auswerten. Ungetestet.
 - Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays bleibt zusätzlich aktiv.
 - Relais (DERP): bevorzugt Frankfurt. Sobald eine direkte Verbindung klappt, läuft der Verkehr direkt.
 - **Speicher:** microlink braucht internen RAM für seine Tasks und die verschlüsselte Verbindung zum Relais. Unter 60 kB freiem internem RAM startet es nicht (Hinweis in der Karte und unter *Ereignisse*). Wird der RAM mit Tailscale knapp, können Wetterabfragen und Pushover fehlschlagen (siehe [Hinweise](#hinweise)) – dann den eigenen Broker oder Tailscale wieder abschalten.

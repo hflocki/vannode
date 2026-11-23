@@ -1545,6 +1545,7 @@ function tsShow(t){
   else if(t.code===8)h=t.url?`<b>Anmeldung nötig:</b> <a href="${esc(t.url)}" target="_blank" rel="noopener">Anmelde-Link öffnen</a> und mit deinem Tailscale-Konto bestätigen.`:'Anmeldung nötig, warte auf den Link …';
   else h=esc(TS_ST[t.code]||'?');
   if(t.code>=0&&t.heap!==undefined)h+=`<br><small>Freier interner RAM: ${t.heap} kB</small>`;
+  if(t.nodekey&&t.code!==4)h+=`<br><small>Tailnet Lock: auf einem Signier-Knoten ausführen</small><br><code translate="no" style="user-select:all;word-break:break-all">tailscale lock sign ${esc(t.nodekey)}</code>`;
   st.innerHTML=h;
 }
 async function tsPoll(){
@@ -2453,7 +2454,7 @@ vnI18nAdd('en', {
   'Nicht in dieser Firmware (beim Bauen mit WITH_TAILSCALE 0 abgeschaltet).': 'Not in this firmware (switched off with WITH_TAILSCALE 0 when building).',
   'Nicht gestartet: zu wenig freier Arbeitsspeicher (* kB). Zum Beispiel den eigenen Broker abschalten und neu starten.': 'Not started: too little free memory (* kB). For example switch off the own broker and restart.',
   'Wartet auf WLAN …': 'Waiting for WiFi …', 'Startet …': 'Starting …',
-  'Verbunden': 'Connected', 'als *:': 'as *:', '* Geräte im Tailnet': '* devices in the tailnet', 'Freier interner RAM: * kB': 'Free internal RAM: * kB',
+  'Verbunden': 'Connected', 'als *:': 'as *:', '* Geräte im Tailnet': '* devices in the tailnet', 'Freier interner RAM: * kB': 'Free internal RAM: * kB', 'Tailnet Lock: auf einem Signier-Knoten ausführen': 'Tailnet Lock: run on a signing node',
   'Anmeldung nötig:': 'Sign-in needed:', 'Anmelde-Link öffnen': 'Open sign-in link',
   'und mit deinem Tailscale-Konto bestätigen.': 'and confirm with your Tailscale account.',
   'Anmeldung nötig, warte auf den Link …': 'Sign-in needed, waiting for the link …',

@@ -265,6 +265,14 @@
         "firmware/pocket/pocket/webota.cpp",
         "tools/emulator/web/index.html"
       ]
+    },
+    "web/vannode-i18n.js": {
+      "begin": "// vannode-i18n:begin",
+      "end": "// vannode-i18n:end",
+      "before": "</script>",
+      "files": [
+        "firmware/_common/ble/web/index.html"
+      ]
     }
   },
   "dirs": {

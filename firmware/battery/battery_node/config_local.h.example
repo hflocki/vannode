@@ -36,3 +36,7 @@
 // #define DEFAULT_NODE_NAME    "battery-node"
 // #define DEFAULT_MQTT_PREFIX  "camper/battery"
 // #define STATUS_LED_PIN       -1      // other board: RGB LED pin, -1 = none
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

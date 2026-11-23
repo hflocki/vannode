@@ -118,7 +118,9 @@ const M = {
       // M.fw: device script may add fields, e.g. name and dir for the about card (battery-node)
       // clock card: only the devices with a clock (clockset.h), here set from the browser
       const clock = ['display', 'heater', 'ble', 'battery'].includes(M.id) ? {t: Math.floor(Date.now() / 1000), ok: true, src: 'browser'} : undefined;
-      return json({fw: Object.assign({dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: M.hw || chip, max: 1966080}, M.fw || {}),
+      // ?lang=en in the mockup address shows the page in English (UI_LANG of the firmware)
+      const lang = new URLSearchParams(location.search).get('lang') || 'de';
+      return json({fw: Object.assign({dev: M.id, ver: (M.cfg && M.cfg.version) || '1.7.0', chip, chip_id: chipId, hw: M.hw || chip, max: 1966080, lang}, M.fw || {}),
                    clock, up: 5400, log: [
         {b: 0, t: 5380, m: 'MQTT verbunden'}, {b: 0, t: 5378, m: 'WLAN verbunden (192.168.8.31, -61 dBm)'},
         {b: 0, t: 3600, m: 'Update abgelehnt: das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen'},

@@ -40,3 +40,7 @@
 // ---- Device ----------------------------------------------------------
 // #define DEFAULT_MQTT_PREFIX  "camper/ble"
 // #define DEFAULT_NODE_NAME    "ble-node"
+
+// ---- Language --------------------------------------------------------
+// Web page in English instead of German (the release .bin from GitHub stays German)
+// #define UI_LANG              "en"

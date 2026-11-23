@@ -74,6 +74,11 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
+// Language of the web page: "de" (default) or "en". Set it in config_local.h before the
+// first flash; the browser then shows the page in that language (vannode-i18n.js).
+#ifndef UI_LANG
+#define UI_LANG               "de"
+#endif
 #define FW_VERSION            "2.6.8"
 #define FW_DEVICE             "battery"   // device id in the firmware marker (fwcheck.h)
 #define NODE_TITLE            "Battery Node" // web page without index.html.gz, Home Assistant model, serial

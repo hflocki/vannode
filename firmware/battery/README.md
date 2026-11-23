@@ -48,6 +48,16 @@ Wie die Web-Oberfläche aussieht, zeigt das klickbare Mockup [`docs/mockups/batt
 | rot, blinkend | kein WLAN oder keine MQTT-Verbindung |
 | blau | noch keine Batterie angelegt |
 
+## Sprache der Webseite
+
+Die Webseite ist auf Deutsch. Für Englisch vor dem Flashen in `config_local.h` eintragen:
+
+```cpp
+#define UI_LANG "en"
+```
+
+Der Browser übersetzt dann die Seite und die Texte, die das Gerät schickt (Zustände, Einstellungen, Fehlermeldungen). Einstellungen, MQTT-Topics und Home-Assistant-Namen bleiben unverändert. Was noch nicht im Wörterbuch steht, bleibt Deutsch. Lizenz- und Haftungstext auf der Karte *Über VanNode* bleiben im deutschen Original. Die fertige `.bin` aus dem Release ist immer Deutsch; Englisch gibt es nur mit eigenem Build. Ab ble 2.7.0 / battery 2.6.8.
+
 ## Arduino IDE
 
 Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen (Spalte *M5Stack AtomS3 Lite*), erstes Flashen und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.

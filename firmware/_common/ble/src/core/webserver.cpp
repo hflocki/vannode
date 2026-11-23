@@ -413,6 +413,7 @@ void webserverInit() {
         fwcheck::info(fw);
         fw["name"] = NODE_TITLE;   // about card: name and repo folder of this node
         fw["dir"] = NODE_DIR;
+        fw["lang"] = UI_LANG;      // language of the page (vannode-i18n.js)
         evlog::json(d["log"].to<JsonArray>());
         d["up"] = millis() / 1000;
         clockset::json(d["clock"].to<JsonObject>());   // clock card (vannode-system.js)

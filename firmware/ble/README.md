@@ -110,6 +110,16 @@ Liest Werte des Basisfahrzeugs über einen OBD2-Adapter mit **Bluetooth LE** und
 
 **ESP32-C3 Super Mini** oder **ESP32-S3** (z. B. DevKitC-1) – beide baut die CI: `ble-node-esp32c3-v<version>.bin`, `ble-node-esp32s3-v<version>.bin`. Der S3 hat mehr Arbeitsspeicher als der C3 und ist die bessere Wahl, wenn viele Bluetooth-Geräte gleichzeitig verbunden sind. Den M5Stack AtomS3 Lite gibt es ab 2.5.0 nur noch als [battery-node](../battery). Klassischer ESP32 geht ebenso (selbst bauen). Es wird nichts angeschlossen. Der ESP sollte in Bluetooth-Reichweite der Geräte sitzen, für die Dachhaube also oben im Fahrzeug.
 
+## Sprache der Webseite
+
+Die Webseite ist auf Deutsch. Für Englisch vor dem Flashen in `config_local.h` eintragen:
+
+```cpp
+#define UI_LANG "en"
+```
+
+Der Browser übersetzt dann die Seite und die Texte, die das Gerät schickt (Zustände, Einstellungen, Fehlermeldungen). Einstellungen, MQTT-Topics und Home-Assistant-Namen bleiben unverändert. Was noch nicht im Wörterbuch steht, bleibt Deutsch. Lizenz- und Haftungstext auf der Karte *Über VanNode* bleiben im deutschen Original. Die fertige `.bin` aus dem Release ist immer Deutsch; Englisch gibt es nur mit eigenem Build. Ab ble 2.7.0 / battery 2.6.8.
+
 ## Arduino IDE
 
 Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.

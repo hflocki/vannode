@@ -102,6 +102,11 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
+// Language of the web page: "de" (default) or "en". Set it in config_local.h before the
+// first flash; the browser then shows the page in that language (vannode-i18n.js).
+#ifndef UI_LANG
+#define UI_LANG               "de"
+#endif
 #define FW_VERSION            "2.7.0"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload

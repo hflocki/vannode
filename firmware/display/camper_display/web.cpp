@@ -55,8 +55,8 @@ bool     cfgDirty = false;
 
 const char* MASK = "********";
 
+// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
 bool auth(AsyncWebServerRequest* r) {
-  if (settings.webPass.isEmpty()) return true;
   if (r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return true;
   r->requestAuthentication();
   return false;
@@ -413,8 +413,11 @@ bool applySettings(JsonObject o, bool apply) {
     if (apply) settings.links = json;
   }
   if (settings.displayName.length() > 32) settings.displayName = settings.displayName.substring(0, 32);
-  str("webUser", settings.webUser, false);
-  str("webPass", settings.webPass, false, true);
+  // Login stays on: empty user or password keeps the stored one
+  if (!(o["webUser"].is<const char*>() && String(o["webUser"].as<const char*>()).length() == 0))
+    str("webUser", settings.webUser, false);
+  if (!(o["webPass"].is<const char*>() && o["webPass"].as<const char*>()[0] == '\0'))
+    str("webPass", settings.webPass, false, true);
   str("wifiSsid", settings.wifiSsid, true);
   str("wifiPass", settings.wifiPass, true, true);
   if (o["staticIp"].is<bool>() && o["staticIp"].as<bool>() != settings.staticIp) {
@@ -777,7 +780,7 @@ void getScan(AsyncWebServerRequest* r) {
 // ---- OTA upload ----------------------------------------------------------------
 // Checked and written by fwcheck (wrong device / chip, .merged.bin ... are refused early)
 void otaUpload(AsyncWebServerRequest* r, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
-  if (!settings.webPass.isEmpty() && !r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return;
+  if (!r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return;
   if (index == 0) {
     Serial.printf("[ota] upload %s\n", filename.c_str());
     fwcheck::begin(r->contentLength(), r->hasParam("force"));
@@ -807,9 +810,14 @@ void begin() {
   queue = xQueueCreate(24, sizeof(Cmd));
 
   ws.onEvent(onWsEvent);
+  // The page's WebSocket also takes commands: only with the web login (the browser sends it along)
+  ws.handleHandshake([](AsyncWebServerRequest* r) {
+    return r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
+  });
   server.addHandler(&ws);
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
     AsyncWebServerResponse* res = r->beginResponse(200, "text/html", (const uint8_t*)WEB_UI, strlen_P(WEB_UI));
     res->addHeader("Cache-Control", "no-cache");
     r->send(res);
@@ -835,10 +843,12 @@ void begin() {
     r->send(200, "application/json", sensors::toJson());
   });
   server.on("/api/sensors/unknown", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
     r->send(200, "application/json", sensors::unknownJson());
   });
   server.on("/api/rules", HTTP_GET, getRules);
   server.on("/api/rules/state", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
     r->send(200, "application/json", rules::statusJson());
   });
   // Firmware info for the update check in the browser, and the event log
@@ -855,6 +865,7 @@ void begin() {
     r->send(200, "application/json", netdev::json());
   });
   server.on("/api/history", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
     AsyncResponseStream* res = r->beginResponseStream("application/json");
     history::write(*res);
     r->send(res);

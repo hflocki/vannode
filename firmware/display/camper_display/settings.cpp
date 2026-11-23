@@ -50,6 +50,11 @@ void load() {
   settings.apPass       = prefs.getString("appass", DEFAULT_AP_PASSWORD);
   settings.webUser      = prefs.getString("wusr",   DEFAULT_WEB_USER);
   settings.webPass      = prefs.getString("wpw",    DEFAULT_WEB_PASSWORD);
+  // No login stored (up to display 2026-11 empty password = open): the factory login applies
+  if (settings.webUser.isEmpty() || settings.webPass.isEmpty()) {
+    settings.webUser = DEFAULT_WEB_USER;
+    settings.webPass = DEFAULT_WEB_PASSWORD;
+  }
   settings.wifiSsid     = prefs.getString("ssid",   DEFAULT_WIFI_SSID);
   settings.wifiPass     = prefs.getString("wpass",  DEFAULT_WIFI_PASSWORD);
   settings.ip           = prefs.getString("ip",     DEFAULT_STATIC_IP);

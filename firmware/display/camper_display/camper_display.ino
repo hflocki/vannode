@@ -93,6 +93,29 @@ void setup() {
 
 static bool otaStarted = false;
 
+// USB serial: "noauth" puts the web login back to the factory login (forgotten password)
+static void serialCommands() {
+  static String line;
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c != '\n' && c != '\r') {
+      if (line.length() < 32) line += c;
+      continue;
+    }
+    line.trim();
+    if (line == "noauth") {
+      settings.webUser = DEFAULT_WEB_USER;
+      settings.webPass = DEFAULT_WEB_PASSWORD;
+      cfg::save();
+      evlog::add("Web-Login über USB auf Werks-Login zurückgesetzt");
+      Serial.println("[CMD] Web login reset to " DEFAULT_WEB_USER " / " DEFAULT_WEB_PASSWORD);
+    } else if (line.length()) {
+      Serial.println("[CMD] Commands: noauth");
+    }
+    line = "";
+  }
+}
+
 void loop() {
   wifimgr::loop();
   wifiTrialCheck();
@@ -119,5 +142,6 @@ void loop() {
     otaStarted = true;
   }
   if (otaStarted) ArduinoOTA.handle();
+  serialCommands();
   delay(2);
 }

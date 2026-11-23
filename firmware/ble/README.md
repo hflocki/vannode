@@ -186,7 +186,7 @@ Die Web-Oberfläche baut Karten, Knöpfe und Einstellungen aus `live()` und `fie
 
 ## Serieller Monitor
 
-115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login löschen), `help`.
+115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login auf `admin` / `vannode2026` zurücksetzen), `help`.
 
 **Ohne USB-Kabel:** Jedes verbindende Gerät (Dachhaube, Pumpe, Kühlschrank …) hat auf seiner Seite unter *Geräte* eine Karte **Log** mit „Log herunterladen“ und „Log leeren“. Darin stehen dieselben Zeilen wie im seriellen Monitor (Verbindung, Kopplung, GATT-Tabelle, empfangene Daten), bis 8 kB je Gerät, seit dem letzten Neustart. Bei Problemen: Log leeren, Fehler abwarten, herunterladen und schicken.
 

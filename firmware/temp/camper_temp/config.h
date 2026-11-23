@@ -17,7 +17,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.4.10"
+#define FW_VERSION            "1.4.11"
 #define FW_DEVICE            "temp"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID
@@ -53,10 +53,10 @@
 #define DEFAULT_MQTT_PASSWORD   ""
 #endif
 #ifndef DEFAULT_WEB_USER
-#define DEFAULT_WEB_USER        ""      // empty = no login
+#define DEFAULT_WEB_USER        "admin"      // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    ""
+#define DEFAULT_WEB_PASSWORD    "vannode2026"
 #endif
 #ifndef DEFAULT_MQTT_PREFIX
 #define DEFAULT_MQTT_PREFIX   "camper/temp"      // Topics: <prefix>/<sensor id>, <prefix>/status, <prefix>/rssi
@@ -173,7 +173,7 @@ struct AppConfig {
     char mqtt_pass[32];
     char mqtt_prefix[32];
 
-    char web_user[32];     // Web UI login, empty = no login
+    char web_user[32];     // Web UI login, always on (factory login admin / vannode2026)
     char web_pass[32];
 
     uint16_t interval_s;   // Measurement interval in seconds

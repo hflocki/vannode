@@ -79,7 +79,11 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
-    if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
+    // No login stored (up to ble 2.6.2 / battery 2.6.3 empty = open): the factory login applies
+    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0') {
+        strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
+        strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
+    }
     strlcpy(config.node_name,   doc["node_name"]   | DEFAULT_NODE_NAME,     sizeof(config.node_name));
     if (!isValidNodeName(config.node_name)) strlcpy(config.node_name, DEFAULT_NODE_NAME, sizeof(config.node_name));
     if (config.mqtt_prefix[0] == '\0') strlcpy(config.mqtt_prefix, DEFAULT_MQTT_PREFIX, sizeof(config.mqtt_prefix));
@@ -205,12 +209,9 @@ void coreConfigApply(JsonObjectConst in) {
     if (!in["wifi_tx_power"].isNull()) config.wifi_tx_power = (int8_t)(in["wifi_tx_power"] | DEFAULT_TX_POWER);
     if (in["ap_always"].is<bool>()) config.ap_always = in["ap_always"].as<bool>();
     if (in["debug"].is<bool>()) config.debug = in["debug"].as<bool>();   // web UI only, no restart
-    // Web login: empty user removes the login; empty password keeps the old one
-    if (in["web_user"].is<const char*>()) {
-        applyStr(in, "web_user", config.web_user, sizeof(config.web_user), false);
-        applyStr(in, "web_pass", config.web_pass, sizeof(config.web_pass), true);
-        if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
-    }
+    // Web login: always on, empty user or password keeps the stored one
+    applyStr(in, "web_user", config.web_user, sizeof(config.web_user), true);
+    applyStr(in, "web_pass", config.web_pass, sizeof(config.web_pass), true);
     if (in["wifi_ssid"].is<const char*>() && config.wifi_ssid[0] == '\0') config.wifi_pass[0] = '\0';
 }
 

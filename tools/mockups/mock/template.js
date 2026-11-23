@@ -3,7 +3,7 @@ const M = {
   id: 'template',
   config: {version: '1.0.0', reset_reason: 'Einschalten', wifi_ssid: 'Camper-WLAN', ap_ssid: 'Example-Node-A1B2C3',
            wifi_tx_power: 70, ap_always: false, mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '',
-           mqtt_prefix: 'camper/example', web_user: '', interval: 10, scale: 1, offset: 0},
+           mqtt_prefix: 'camper/example', web_user: 'admin', interval: 10, scale: 1, offset: 0},
   reads: 120,
   route(path) { if (path === '/api/measure') { M.reads++; return {ok: true}; } },
   state() {

@@ -45,9 +45,9 @@ static const size_t MAX_BODY_SIZE = 4096;
 // Helpers
 // ============================================================
 
-// Web UI login (HTTP basic auth). Empty user = no login.
+// Web UI login (HTTP basic auth), always on. Factory login: DEFAULT_WEB_USER / DEFAULT_WEB_PASSWORD
+// (admin / vannode2026); devices without a stored login get it at the start (loadConfig).
 static bool authOk(AsyncWebServerRequest* request) {
-    if (config.web_user[0] == '\0') return true;
     return request->authenticate(config.web_user, config.web_pass);
 }
 
@@ -196,10 +196,7 @@ static void handleSaveConfig(AsyncWebServerRequest* request, JsonDocument& doc) 
     }
     bool hasTx = doc["wifi_tx_power"].is<int>();
     if (hasTx && !isValidTxPower(doc["wifi_tx_power"].as<int>())) { sendError(request, "Invalid TX power"); return; }
-    if (doc["web_user"].is<const char*>() && doc["web_user"].as<const char*>()[0]) {
-        const char* wp = doc["web_pass"] | "";
-        if (wp[0] == '\0' && config.web_pass[0] == '\0') { sendError(request, "Login needs a password"); return; }
-    }
+    // The login stays on: an empty user or password keeps the stored one (see apply below)
     if (doc["mqtt_prefix"].is<const char*>()) {
         const char* p = doc["mqtt_prefix"].as<const char*>();
         if (p[0] && (strchr(p, '#') || strchr(p, '+') || p[strlen(p) - 1] == '/')) { sendError(request, "Invalid topic prefix"); return; }
@@ -233,9 +230,8 @@ static void handleSaveConfig(AsyncWebServerRequest* request, JsonDocument& doc) 
     copyIfPresent(doc, "mqtt_user",   config.mqtt_user,   sizeof(config.mqtt_user),   false);
     copyIfPresent(doc, "mqtt_pass",   config.mqtt_pass,   sizeof(config.mqtt_pass),   true);
     copyIfPresent(doc, "mqtt_prefix", config.mqtt_prefix, sizeof(config.mqtt_prefix), true);
-    copyIfPresent(doc, "web_user",    config.web_user,    sizeof(config.web_user),    false);
+    copyIfPresent(doc, "web_user",    config.web_user,    sizeof(config.web_user),    true);
     copyIfPresent(doc, "web_pass",    config.web_pass,    sizeof(config.web_pass),    true);
-    if (config.web_user[0] == '\0') config.web_pass[0] = '\0';   // no user = login off
     if (hasTx) config.wifi_tx_power = (int8_t)doc["wifi_tx_power"].as<int>();
     if (doc["ap_always"].is<bool>()) config.ap_always = doc["ap_always"].as<bool>();
     if (doc["mqtt_port"].is<int>()) {
@@ -452,7 +448,11 @@ void loadConfig() {
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
-    if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
+    // No login stored (up to the 2026-11 releases empty = open): the factory login applies
+    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0') {
+        strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
+        strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
+    }
 
     // Missing or invalid values keep the defaults (the original set the track width to 0 then)
     int m = doc["mount"] | 0;

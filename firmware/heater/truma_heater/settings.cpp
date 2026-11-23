@@ -42,6 +42,11 @@ void settings_load() {
 
   g_settings.web_user = p.getString("wuser", DEFAULT_WEB_USER);
   g_settings.web_pass = p.getString("wwpass", DEFAULT_WEB_PASSWORD);
+  // No login stored (up to heater 2026-11 empty = open): the factory login applies
+  if (g_settings.web_user.isEmpty() || g_settings.web_pass.isEmpty()) {
+    g_settings.web_user = DEFAULT_WEB_USER;
+    g_settings.web_pass = DEFAULT_WEB_PASSWORD;
+  }
 
   g_settings.decoke_minutes = p.getUShort("decmin", DECOKE_DEFAULT_MINUTES);
   g_settings.room_setpoint = p.getFloat("setp", 20.0f);

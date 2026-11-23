@@ -8,7 +8,7 @@ Firmware für einen ESP8266 (ESP-12E, NodeMCU, Wemos D1 mini) oder ESP32-C3, die
 - Werte per **MQTT** mit Home-Assistant-Discovery
 - Web-Oberfläche mit Live-Werten, Min/Max seit Start, Offset-Korrektur je Sensor
 - **Alarm-Grenzwerte** je Sensor (z. B. „Kühlschrank über 8 °C seit 15 min“), per MQTT auch ohne Home Assistant nutzbar, das [display-node](../display) zeigt sie als Warnung
-- Optionaler Login für die Web-Oberfläche
+- Login für die Web-Oberfläche (ab Werk `admin` / `vannode2026`)
 - Access Point beim ersten Start, WLAN/MQTT im Browser einstellen, OTA-Updates
 
 ## Web-Oberfläche
@@ -100,11 +100,11 @@ Live-Seite: Kacheln im Alarm haben einen roten Rahmen, darüber steht der Alarmt
 
 ## Web-Login
 
-Im Tab **MQTT** unter „Web-Oberfläche Login“ Benutzer und Passwort setzen. Dann fragt der Browser beim Öffnen danach (HTTP Basic Auth, gilt auch für die Live-Daten). Leerer Benutzer = kein Login. Login vergessen: im seriellen Monitor `noauth` senden.
+Im Tab **MQTT** unter „Web-Oberfläche Login“ Benutzer und Passwort setzen. Dann fragt der Browser beim Öffnen danach (HTTP Basic Auth, gilt auch für die Live-Daten). Die Anmeldung ist immer an, ab Werk `admin` / `vannode2026` (siehe [README](../../README.md#setup-wlan-und-passwörter-ab-werk)); leere Felder behalten den gespeicherten Wert. Login vergessen: im seriellen Monitor `noauth` senden, dann gilt wieder der Werks-Login.
 
 ## Serieller Monitor
 
-115200 Baud. Befehle: `read` (Werte), `scan` (Bus neu durchsuchen), `bus` (gefundene Adressen), `noauth` (Web-Login entfernen), `help`.
+115200 Baud. Befehle: `read` (Werte), `scan` (Bus neu durchsuchen), `bus` (gefundene Adressen), `noauth` (Web-Login auf Werks-Login zurücksetzen), `help`.
 
 ## Updates ohne USB
 

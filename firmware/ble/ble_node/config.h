@@ -99,7 +99,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.6.2"
+#define FW_VERSION            "2.6.3"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial
@@ -149,10 +149,10 @@
 #define DEFAULT_MQTT_PASSWORD   ""
 #endif
 #ifndef DEFAULT_WEB_USER
-#define DEFAULT_WEB_USER        ""      // empty = no login
+#define DEFAULT_WEB_USER        "admin"      // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    ""
+#define DEFAULT_WEB_PASSWORD    "vannode2026"
 #endif
 // Topics: <prefix>/<plugin>/<value>, commands <prefix>/cmd/<plugin>/<value>/set,
 // <prefix>/status, <prefix>/info (docs/TOPICS.md). The Home Assistant node ID is derived
@@ -553,7 +553,7 @@ struct AppConfig {
     char mqtt_pass[32];
     char mqtt_prefix[32];
 
-    char web_user[32];     // Web UI login, empty = no login
+    char web_user[32];     // Web UI login, always on (factory login admin / vannode2026)
     char web_pass[32];
 
     char node_name[24];    // "ble-node", "battery-node" ...: host name, HA device, web UI title

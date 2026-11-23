@@ -9,7 +9,7 @@ const M = {
   id: 'display',
   wsInterval: 2000,
   config: {
-    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: '', webPass: '',
+    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********',
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
     prefixSelf: 'camper/display', prefixTank: 'camper/tanklevel', prefixLevel: 'camper/level', prefixHeater: 'camper/heater',
@@ -1343,7 +1343,8 @@ function pgSettings(){
   <section data-g="rules">${pgRules()}</section>
   <details data-g="sys" class="fixed" open><summary>System</summary>
    ${inp('hostname','Gerätename (Hostname)')}${inp('apPass','Passwort Setup-WLAN (min. 8 Zeichen)','password')}
-   <div class="f2">${inp('webUser','Web-Benutzer')}${inp('webPass','Web-Passwort (leer = kein Schutz)','password')}</div>
+   <div class="f2">${inp('webUser','Web-Benutzer (leer = bleibt)')}${inp('webPass','Web-Passwort (leer = bleibt)','password')}</div>
+   <p class="mu">Die Anmeldung ist immer an (ab Werk admin / vannode2026). Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login.</p>
    <div class="f2">${inp('ntpServer','Zeitserver')}${inp('tz','Zeitzone (POSIX)')}</div>
    <p class="mu" id="sysinfo"></p>
    </details>

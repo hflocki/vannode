@@ -47,12 +47,12 @@
 #define ROUTER_TOPIC "camper/router/mobile"
 #endif
 
-// Login for the update page (http://pocket-node.local). Empty user = no login
+// Login for the update page (http://pocket-node.local), always on. Empty = factory login
 #ifndef DEFAULT_WEB_USER
-#define DEFAULT_WEB_USER ""
+#define DEFAULT_WEB_USER "admin"
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD ""
+#define DEFAULT_WEB_PASSWORD "vannode2026"
 #endif
 #define WEB_USER DEFAULT_WEB_USER
 #define WEB_PASS DEFAULT_WEB_PASSWORD

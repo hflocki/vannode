@@ -50,8 +50,8 @@ code{background:#1e2d3d;padding:2px 6px;border-radius:4px}button{padding:10px 16
 <form method="POST" action="/api/update" enctype="multipart/form-data">
 <input type="file" name="fw" accept=".bin,.gz"><br><button>Hochladen</button></form></body></html>)HTML";
 
+// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
 bool auth(AsyncWebServerRequest* r) {
-  if (settings.webUser.isEmpty()) return true;
   if (r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return true;
   r->requestAuthentication();
   return false;
@@ -162,9 +162,10 @@ void handleSetConfig(AsyncWebServerRequest* r) {
   if (prefix.length()) settings.mqttPrefix = prefix;
   settings.discovery = b("disc");
 
-  settings.webUser = param(r, "wuser"); settings.webUser.trim();
+  // Login stays on: empty user or password keeps the stored one
+  String wuser = param(r, "wuser"); wuser.trim();
+  if (wuser.length()) settings.webUser = wuser;
   keepIfEmpty("wpw", settings.webPass);
-  if (settings.webUser.isEmpty()) settings.webPass = "";
 
   settings.portEnabled[0] = b("p0");
   settings.portEnabled[1] = b("p1");
@@ -229,8 +230,7 @@ void handleUpdateDone(AsyncWebServerRequest* r) {
 void handleUpdateChunk(AsyncWebServerRequest* r, const String& filename, size_t index,
                        uint8_t* data, size_t len, bool final) {
   if (index == 0) {
-    updateAuthorized = settings.webUser.isEmpty() ||
-                       r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
+    updateAuthorized = r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
     if (!updateAuthorized) return;
     String n = filename;
     n.toLowerCase();

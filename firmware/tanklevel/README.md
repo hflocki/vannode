@@ -190,11 +190,11 @@ Der ESP scannt **passiv**: Er hört nur die Advertising-Pakete mit, die der Sens
 
 ## Web-Login
 
-Im Tab **MQTT** unter „Web-Oberfläche Login“ Benutzer und Passwort setzen. Dann fragt der Browser beim Öffnen danach (HTTP Basic Auth, gilt auch für die Live-Daten). Leerer Benutzer = kein Login. Login vergessen: im seriellen Monitor `noauth` senden.
+Im Tab **MQTT** unter „Web-Oberfläche Login“ Benutzer und Passwort setzen. Dann fragt der Browser beim Öffnen danach (HTTP Basic Auth, gilt auch für die Live-Daten). Die Anmeldung ist immer an, ab Werk `admin` / `vannode2026` (siehe [README](../../README.md#setup-wlan-und-passwörter-ab-werk)); leere Felder behalten den gespeicherten Wert. Login vergessen: im seriellen Monitor `noauth` senden, dann gilt wieder der Werks-Login.
 
 ## Serieller Monitor
 
-115200 Baud. Befehle: `read`, `scan` (BLE-Geräte), `filter` (Frischwasser-Filter umschalten), `noauth` (Web-Login entfernen), `help`.
+115200 Baud. Befehle: `read`, `scan` (BLE-Geräte), `filter` (Frischwasser-Filter umschalten), `noauth` (Web-Login auf Werks-Login zurücksetzen), `help`.
 
 ## Updates ohne USB
 

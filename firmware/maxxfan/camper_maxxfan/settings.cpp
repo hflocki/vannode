@@ -32,6 +32,11 @@ void settingsLoad() {
   settings.discovery  = prefs.getBool  ("disc",   true);
   settings.webUser    = prefs.getString("wuser",  DEFAULT_WEB_USER);
   settings.webPass    = prefs.getString("wpw",    DEFAULT_WEB_PASSWORD);
+  // No login stored (up to maxxfan 2026-11 empty = open): the factory login applies
+  if (settings.webUser.isEmpty() || settings.webPass.isEmpty()) {
+    settings.webUser = DEFAULT_WEB_USER;
+    settings.webPass = DEFAULT_WEB_PASSWORD;
+  }
   settings.portEnabled[0] = prefs.getBool("p0", DEFAULT_PORT0_ENABLED);
   settings.portEnabled[1] = prefs.getBool("p1", DEFAULT_PORT1_ENABLED);
   settings.pulseMs    = prefs.getUShort("pulse",  DEFAULT_PULSE_MS);

@@ -5,7 +5,7 @@ const M = {
   config: {
     version: '0.5.0', name: 'Alde Node', hostname: 'alde-node', reset_reason: 'Einschalten',
     wifi_ssid: 'Camper-WLAN', wifi_tx_power: 70, ap_ssid: 'Alde-Node-A1B2C3', ap_always: false,
-    mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/alde', web_user: '',
+    mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/alde', web_user: 'admin',
     interval: 10, ci_mode: 2, ci_function: 1, el_max: 1, lin_enabled: true, lin_active: true, debug: true,
     ci_ok: true, ci_possible: true, one_uart: false
   },

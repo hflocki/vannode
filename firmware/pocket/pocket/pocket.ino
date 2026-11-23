@@ -47,12 +47,12 @@
 #ifndef ROUTER_TOPIC
 #define ROUTER_TOPIC "camper/router/mobile"
 #endif
-// Login for the update page. Empty user = no login
+// Login for the update page, always on (factory login admin / vannode2026)
 #ifndef WEB_USER
-#define WEB_USER ""
+#define WEB_USER "admin"
 #endif
 #ifndef WEB_PASS
-#define WEB_PASS ""
+#define WEB_PASS "vannode2026"
 #endif
 
 WiFiClient espClient;
@@ -301,6 +301,12 @@ void loadCredentials() {
     cfgMqttUser = mqtt_user; cfgMqttPass = mqtt_pass; cfgLevelTopic = mqtt_topic;
     cfgWebUser = WEB_USER; cfgWebPass = WEB_PASS;
     Serial.println("No credentials: flash once over USB with your own config_local.h");
+  }
+  // No login stored or set (up to pocket 2026-11 empty = open): the factory login applies
+  if (cfgWebUser.isEmpty() || cfgWebPass.isEmpty()) {
+    cfgWebUser = WEB_USER;
+    cfgWebPass = WEB_PASS;
+    if (cfgWebUser.isEmpty() || cfgWebPass.isEmpty()) { cfgWebUser = "admin"; cfgWebPass = "vannode2026"; }
   }
   p.end();
 }

@@ -45,8 +45,8 @@ static String g_state_json = "{}";
 static uint32_t g_last_render = 0;
 static volatile uint32_t g_reboot_at = 0;
 
+// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
 static bool check_auth(AsyncWebServerRequest *req) {
-  if (g_settings.web_user.isEmpty()) return true;
   if (req->authenticate(g_settings.web_user.c_str(), g_settings.web_pass.c_str())) return true;
   req->requestAuthentication();
   return false;
@@ -289,7 +289,7 @@ static void config_save(AsyncWebServerRequest *req) {
   put("ha_prefix", "hapre");
   put("ntp_server", "ntp");
   put("tz", "tz");
-  put("web_user", "wuser");
+  put_secret("web_user", "wuser");   // empty keeps the stored user: the login stays on
   if (req->hasParam("mqtt_log_level", true))
     p.putUChar("mloglvl", constrain(req->getParam("mqtt_log_level", true)->value().toInt(), 0, 4));
   put_secret("web_pass", "wwpass");
@@ -297,9 +297,9 @@ static void config_save(AsyncWebServerRequest *req) {
     return req->hasParam(param, true) && req->getParam(param, true)->value() == "1";
   };
   if (checked("clear_mqtt_pass")) p.putString("mpass", "");
-  if (checked("clear_web_pass")) {
-    p.putString("wuser", "");
-    p.putString("wwpass", "");
+  if (checked("clear_web_pass")) {   // back to the factory login
+    p.putString("wuser", DEFAULT_WEB_USER);
+    p.putString("wwpass", DEFAULT_WEB_PASSWORD);
   }
   p.end();
   req->send(200, "application/json", "{\"ok\":true,\"reboot\":true}");
@@ -388,8 +388,7 @@ void begin() {
         g_reboot_at = millis() + 1500;
       },
       [](AsyncWebServerRequest *req, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
-        if (!g_settings.web_user.isEmpty() &&
-            !req->authenticate(g_settings.web_user.c_str(), g_settings.web_pass.c_str())) {
+        if (!req->authenticate(g_settings.web_user.c_str(), g_settings.web_pass.c_str())) {
           return;
         }
         if (index == 0) {

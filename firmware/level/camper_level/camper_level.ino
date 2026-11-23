@@ -114,11 +114,11 @@ static void handleSerial() {
     } else if (cmd == "sensor") {
         sensorRestart();
     } else if (cmd == "noauth") {
-        // Forgotten web login: switch it off over USB
-        config.web_user[0] = '\0';
-        config.web_pass[0] = '\0';
+        // Forgotten web login: back to the factory login over USB
+        strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
+        strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
         saveConfig();
-        Serial.println("[CMD] Web login removed");
+        Serial.println("[CMD] Web login reset to " DEFAULT_WEB_USER " / " DEFAULT_WEB_PASSWORD);
     } else if (cmd == "help") {
         Serial.println("[CMD] Commands: read, tare, notare, sensor, noauth, help");
     }

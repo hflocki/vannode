@@ -59,9 +59,9 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
 static void handleApiGetConfig(AsyncWebServerRequest* request);
 static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total);
 
-// Web UI login (HTTP basic auth). Empty user = no login.
+// Web UI login (HTTP basic auth), always on. Factory login: DEFAULT_WEB_USER / DEFAULT_WEB_PASSWORD
+// (admin / vannode2026); devices without a stored login get it at the start (loadConfig).
 static bool authOk(AsyncWebServerRequest* request) {
-    if (config.web_user[0] == '\0') return true;
     return request->authenticate(config.web_user, config.web_pass);
 }
 
@@ -473,11 +473,7 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     bool hasTx = doc["wifi_tx_power"].is<int>();
     if (hasTx && !isValidTxPower(doc["wifi_tx_power"].as<int>())) { sendError(request, "Invalid TX power"); return; }
 
-    // A login needs a password: either sent now or already stored
-    if (doc["web_user"].is<const char*>() && doc["web_user"].as<const char*>()[0]) {
-        const char* wp = doc["web_pass"] | "";
-        if (wp[0] == '\0' && config.web_pass[0] == '\0') { sendError(request, "Login needs a password"); return; }
-    }
+    // The login stays on: an empty user or password keeps the stored one (see apply below)
     if (doc["mqtt_prefix"].is<const char*>()) {
         const char* p = doc["mqtt_prefix"].as<const char*>();
         if (p[0] && (strchr(p, '#') || strchr(p, '+') || p[strlen(p) - 1] == '/')) {
@@ -521,9 +517,8 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     copyIfPresent(doc, "mqtt_user",   config.mqtt_user,   sizeof(config.mqtt_user),   false);
     copyIfPresent(doc, "mqtt_pass",   config.mqtt_pass,   sizeof(config.mqtt_pass),   true);
     copyIfPresent(doc, "mqtt_prefix", config.mqtt_prefix, sizeof(config.mqtt_prefix), true);
-    copyIfPresent(doc, "web_user",    config.web_user,    sizeof(config.web_user),    false);
+    copyIfPresent(doc, "web_user",    config.web_user,    sizeof(config.web_user),    true);
     copyIfPresent(doc, "web_pass",    config.web_pass,    sizeof(config.web_pass),    true);
-    if (config.web_user[0] == '\0') config.web_pass[0] = '\0';   // No user = login off
 
     // WiFi TX power and AP mode take effect after the restart triggered by the web UI
     if (hasTx) config.wifi_tx_power = (int8_t)doc["wifi_tx_power"].as<int>();
@@ -608,7 +603,11 @@ void loadConfig() {
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
-    if (config.web_user[0] == '\0') config.web_pass[0] = '\0';
+    // No login stored (up to the 2026-11 releases empty = open): the factory login applies
+    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0') {
+        strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
+        strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
+    }
 
     // Device settings (always with a range check, the file could be old or edited)
     int iv = doc["interval"] | DEFAULT_INTERVAL_S;

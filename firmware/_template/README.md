@@ -9,7 +9,7 @@ ESP32-Firmware für das Wohnmobil im Verbund [VanNode](../../README.md): Werte p
 ## Funktionen
 
 - Werte per MQTT unter `camper/example/<key>`, Home Assistant legt die Entitäten automatisch an
-- Web-Oberfläche: Live-Werte, Einstellungen, MQTT, WLAN, optionaler Login
+- Web-Oberfläche: Live-Werte, Einstellungen, MQTT, WLAN, Login (ab Werk `admin` / `vannode2026`)
 - Setup-WLAN `Example-Node-XXXXXX` (192.168.4.1) beim ersten Start und wenn das WLAN 60 s fehlt
 - Firmware (`.bin`) und Web-Oberfläche (`index.html.gz`) im Web-UI hochladbar, dazu Arduino-OTA
 - TODO: gerätespezifische Funktionen
@@ -49,7 +49,7 @@ TODO: eigene Werte und Befehle in `docs/TOPICS.md` unter einem eigenen Abschnitt
 
 ## Serieller Monitor (115200 Baud)
 
-`read` (Werte anzeigen), `measure` (sofort messen), `noauth` (Web-Login löschen), `help`.
+`read` (Werte anzeigen), `measure` (sofort messen), `noauth` (Web-Login auf Werks-Login zurücksetzen), `help`.
 
 ## Sicheres Update, Ereignisse und Rückfall
 

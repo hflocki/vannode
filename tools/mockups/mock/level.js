@@ -4,7 +4,7 @@ const M = {
   config: {
     version: '2.1.0', reset_reason: 'Einschalten', pins: 'SDA GPIO8 · SCL GPIO9', track_width: 165, wheelbase: 345,
     mount: 0, tolerance: 0.5, filter_active: true, mqtt_fast: false, tare_pitch: 0, tare_roll: 0,
-    mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/level', web_user: '',
+    mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/level', web_user: 'admin',
     wifi_ssid: 'Camper-WLAN', ap_ssid: 'Level-Node-A1B2C3', wifi_tx_power: 70, ap_always: false
   },
   wsInterval: 500,

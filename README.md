@@ -106,7 +106,9 @@ Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, 
 | display | `Display-Node-XXXXXX` | `display1234` | `http://display-node.local` | ohne WLAN oder 1 min ohne Verbindung |
 | pocket | – (WLAN steht in `config_local.h`) | – | `http://pocket-node.local` (nur wach) | – |
 
-**Passwörter ändern:** Die Passwörter oben sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`), spätestens danach im Web-UI. Ein Login für die Web-Oberfläche ist ab Werk aus und lässt sich im Web-UI einschalten. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
+**Login der Web-Oberfläche:** Alle Geräte-Webseiten verlangen eine Anmeldung (HTTP Basic Auth), ab Werk Benutzer **`admin`**, Passwort **`vannode2026`** (beim Pocket-Node für die Update-Seite). Geräte, die vorher ohne Login liefen, bekommen ihn mit dem Update. Benutzer und Passwort lassen sich im Web-UI ändern (Pocket-Node: in `config_local.h`); leere Felder behalten den gespeicherten Wert, ausschalten lässt sich die Anmeldung nicht. Login vergessen: über USB im seriellen Monitor `noauth` senden (ble, battery, tanklevel, temp, level, alde, display), dann gilt wieder der Werks-Login. Heizung und MaxxFan haben keine serielle Konsole: dort mit **Erase All Flash** neu flashen (Einstellungen sind dann weg).
+
+**Passwörter ändern:** Die Passwörter oben und der Werks-Login sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`, `DEFAULT_WEB_PASSWORD`), spätestens danach im Web-UI. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
 
 ## Gemeinsame Regeln
 
@@ -120,7 +122,7 @@ Alle Geräte halten sich an dasselbe Schema, damit Displays und Home Assistant s
 | Befehle | `…/cmd/…` bzw. `…/set/…`, nicht retained |
 | Home Assistant | Auto-Discovery unter `homeassistant/…`, ein Gerät pro Firmware |
 | Einrichtung | Access Point `<Gerät>-Node-XXXXXX`, Einstellungen im Browser unter `http://192.168.4.1` |
-| Web-Oberfläche | Gleiche Optik auf allen Geräten, optionaler Login (HTTP Basic Auth); Login vergessen → `noauth` im seriellen Monitor bzw. Werkseinstellungen |
+| Web-Oberfläche | Gleiche Optik auf allen Geräten, Login immer an (HTTP Basic Auth, ab Werk `admin` / `vannode2026`); Login vergessen → `noauth` im seriellen Monitor (Heizung, MaxxFan: Erase All Flash) |
 | Updates | Im Browser, mit Prüfung (falsches Gerät, `.merged.bin`, zu groß), Ereignis-Log und Rückfall auf die vorherige Firmware |
 | Update, Sicherung, Neustart | Auf allen Geräte-Webseiten dieselben Karten in derselben Reihenfolge: *Firmware- & Web-Update*, *Einstellungen sichern* (JSON-Datei ohne Passwörter und Anmeldung; WLAN/MQTT-Server nur auf Wunsch; beim Display mit Seiten, Kacheln, Automationen und Sensoren), *Ereignisse*, *Gerät* (Neustart, Werkseinstellungen) und *Über VanNode* – gemeinsame Bausteine `firmware/_common/web/vannode-system.js` und `vannode-backup.js` |
 | Firmware-Version | `FW_VERSION` in der `config.h` des Geräts, sichtbar im Web-UI und in HA |
@@ -146,7 +148,7 @@ Alles, was in `config_local.h` steht, gilt statt des Standardwerts aus `config.h
 
 Außerdem lässt sich jeder andere Wert aus `config.h` überschreiben (Pins, Prefix, Tankgröße …).
 
-Wichtig: WLAN, MQTT und Login ab Werk wirken nur, solange auf dem Gerät noch nichts gespeichert ist. Ein normales Update über bestehende Einstellungen ändert sie nicht. Neu übernommen werden sie nach **Werkseinstellungen** im Web-UI, nach dem Flashen mit **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Menü Werkzeuge) bzw. bei temp, tanklevel und level nach dem Hochladen des LittleFS-Images. Die Passwörter für Access Point und OTA gelten dagegen immer sofort.
+Wichtig: WLAN, MQTT und Login ab Werk wirken nur, solange auf dem Gerät noch nichts gespeichert ist (Ausnahme: ein Gerät ganz ohne gespeicherten Login bekommt beim Start den Werks-Login). Ein normales Update über bestehende Einstellungen ändert sie nicht. Neu übernommen werden sie nach **Werkseinstellungen** im Web-UI, nach dem Flashen mit **Erase All Flash Before Sketch Upload: Enabled** (Arduino IDE, Menü Werkzeuge) bzw. bei temp, tanklevel und level nach dem Hochladen des LittleFS-Images. Die Passwörter für Access Point und OTA gelten dagegen immer sofort.
 
 Die Pocket-Node hat keine Einstellungsseite, nur eine Update-Seite; WLAN und MQTT kommen deshalb nur über `config_local.h` (Namen siehe seine README). Eine Firmware mit eigener `config_local.h` speichert die Zugangsdaten im Flash, damit die Actions-Firmware danach per Update-Seite installiert werden kann.
 

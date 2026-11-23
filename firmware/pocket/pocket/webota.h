@@ -13,7 +13,7 @@ namespace webota {
 typedef String (*StatusFn)();   // returns the status as a JSON object
 typedef void (*ProgressFn)(int percent);   // called while an upload runs (loop() is blocked then)
 
-// user empty = no login. host is used for mDNS (http://<host>.local)
+// login always on (factory login filled in by pocket.ino). host is used for mDNS (http://<host>.local)
 void begin(const char* host, const char* version, const char* user, const char* pass,
            StatusFn status, ProgressFn progress);
 void loop();         // call every loop; also starts mDNS once WiFi is up

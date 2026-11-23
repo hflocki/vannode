@@ -2,7 +2,7 @@
 const M = {
   id: 'maxxfan',
   config: {hostname: 'maxxfan-node', ssid: 'Camper-WLAN', static_ip: false, ip: '', gw: '', sn: '255.255.255.0', dns: '',
-           mhost: '192.168.1.1', mport: 1883, muser: '', prefix: 'camper/maxxfan', disc: true, wuser: '',
+           mhost: '192.168.1.1', mport: 1883, muser: '', prefix: 'camper/maxxfan', disc: true, wuser: 'admin',
            p0: false, p1: true, pulse: 150, syncport: 1, lidpin: 4, lidinv: false, apssid: 'MaxxFan-Node-A1B2C3'},
   ports: [{label: 'RJ11', hold: false, led: false}, {label: 'RJ45', hold: false, led: true}],
   sync: false,

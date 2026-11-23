@@ -314,7 +314,7 @@ Die Einstellungen sind in Gruppen geteilt, oben umschaltbar (die letzte Wahl mer
 | ⚡ Automationen | Regeln mit eigenem Speichern-Knopf, siehe [Automationen](#automationen) |
 | 🔌 Verbindung | WLAN · MQTT-Broker |
 | 🌦 Dienste | Wetter · Pushover |
-| 🔧 System | Gerätename, Login, Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
+| 🔧 System | Gerätename, Login (immer an, ab Werk `admin` / `vannode2026`; vergessen: `noauth` über USB), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
 
 **Einstellungen speichern** steht immer unten am Bildschirmrand. Sensoren, eigene Seiten & Kacheln und Automationen haben jeweils einen eigenen Speichern-Knopf. In der Sensorliste ist jeder Sensor eine Zeile mit Typ, Name und aktuellem Wert; Antippen klappt ihn zum Bearbeiten auf.
 

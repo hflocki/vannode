@@ -269,8 +269,8 @@ setInterval(fwLoad, 15000);
 </script>
 </body></html>)HTML";
 
+// Login for the update page, always on (pocket.ino fills in the factory login if none is set)
 bool authOk() {
-  if (webUser.isEmpty()) return true;
   return server.authenticate(webUser.c_str(), webPass.c_str());
 }
 

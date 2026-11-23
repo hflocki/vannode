@@ -4,7 +4,7 @@ const M = {
   config: {
     version: '1.2.0', chip: 'ESP8266', pin: 4, reset_reason: 'Einschalten', wifi_ssid: 'Camper-WLAN',
     ap_ssid: 'Temp-Node-A1B2C3', wifi_tx_power: 70, ap_always: false, mqtt_server: '192.168.1.1', mqtt_port: 1883,
-    mqtt_user: '', mqtt_prefix: 'camper/temp', web_user: '', interval: 10, resolution: 12, max_sensors: 8,
+    mqtt_user: '', mqtt_prefix: 'camper/temp', web_user: 'admin', interval: 10, resolution: 12, max_sensors: 8,
     sensors: [
       {addr: '28FF4A1B6C1603A1', name: 'Kühlschrank', key: 'temp1', offset: 0, lo: null, hi: 8, delay: 15},
       {addr: '28FF7C2D5A1604B2', name: 'Gefrierfach', key: 'temp2', offset: -0.3, lo: null, hi: -10, delay: 15},

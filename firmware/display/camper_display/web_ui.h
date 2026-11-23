@@ -1045,7 +1045,8 @@ function pgSettings(){
   <section data-g="rules">${pgRules()}</section>
   <details data-g="sys" class="fixed" open><summary>System</summary>
    ${inp('hostname','Gerätename (Hostname)')}${inp('apPass','Passwort Setup-WLAN (min. 8 Zeichen)','password')}
-   <div class="f2">${inp('webUser','Web-Benutzer')}${inp('webPass','Web-Passwort (leer = kein Schutz)','password')}</div>
+   <div class="f2">${inp('webUser','Web-Benutzer (leer = bleibt)')}${inp('webPass','Web-Passwort (leer = bleibt)','password')}</div>
+   <p class="mu">Die Anmeldung ist immer an (ab Werk admin / vannode2026). Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login.</p>
    <div class="f2">${inp('ntpServer','Zeitserver')}${inp('tz','Zeitzone (POSIX)')}</div>
    <p class="mu" id="sysinfo"></p>
    </details>

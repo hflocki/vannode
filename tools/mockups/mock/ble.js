@@ -22,7 +22,7 @@ const M = {
     version: '2.6.1', device: 'ble-node', reset_reason: 'Neustart (Software)', ha_node: 'camper_ble',
     core: {wifi_ssid: 'Camper-WLAN', wifi_pass_set: true, ap_ssid: 'BLE-Node-A1B2C3', wifi_tx_power: 70, ap_always: false,
            mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_pass_set: false, mqtt_prefix: 'camper/ble',
-           web_user: '', web_pass_set: false, node_name: 'ble-node', debug: true},
+           web_user: 'admin', web_pass_set: true, node_name: 'ble-node', debug: true},
     plugins: [
       // devices with a Bluetooth connection
       P('rvtech', 'rvtech', 'Dachhaube RV Tech', 2, {name: 'Dachhaube', mac: MAC(1), pin: '', pos_rain: 12, pos_vent: 0, pos_fav: 0}),

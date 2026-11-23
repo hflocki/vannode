@@ -36,7 +36,7 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 - Kein Befehl, solange das Bedienteil „beschäftigt“ oder eine Störung meldet: Der Node versucht es bis zu fünfmal im Abstand von 0,3 s und verwirft den Befehl dann (Ereignis-Log)
 - **Heizstab-Höchststufe** (Werkseinstellung 1 kW): Höhere Stufen lehnt der Node ab, damit eine schwache Landstrom-Absicherung nicht auslöst. Am Bedienteil selbst bleibt alles einstellbar
 - Unbekannter Warmwasser-Modus (Bitwert 3) wird nicht gemeldet statt als „an“
-- Web-Oberfläche: Live-Werte, Bus-Zustand, Steuerung, Einstellungen, MQTT, WLAN, optionaler Login
+- Web-Oberfläche: Live-Werte, Bus-Zustand, Steuerung, Einstellungen, MQTT, WLAN, Login (ab Werk `admin` / `vannode2026`)
 - Setup-WLAN `Alde-Node-XXXXXX` (192.168.4.1) beim ersten Start und wenn das WLAN 60 s fehlt
 - Firmware (`.bin`) und Web-Oberfläche (`index.html.gz`) im Web-UI hochladbar, dazu Arduino-OTA
 
@@ -178,7 +178,7 @@ Erst „Nur lesen“ ausprobieren: Kommen plausible Werte (Sollwert und Raum wie
 | `read` | Statistik beider Busse (Heizbus gültig/verworfen/leer, Bedienteil-Bus Abfragen/Befehle und Rohbytes) und alle Werte |
 | `measure` | Werte sofort per MQTT senden |
 | `sig` | Mitschnitt an/aus: jeder Signal-Frame, dessen Inhalt sich ändert, als Hex (`[SIG] 47 (len=8): …`) – zum Vergleichen mit dem Bedienteil |
-| `noauth` | Web-Login löschen |
+| `noauth` | Web-Login auf Werks-Login `admin` / `vannode2026` zurücksetzen |
 | `help` | Befehle anzeigen |
 
 ## Tests ohne Heizung

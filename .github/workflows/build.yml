@@ -28,10 +28,12 @@ env:
   ESP32_URL: https://espressif.github.io/arduino-esp32/package_esp32_index.json
   ESP8266_URL: https://arduino.esp8266.com/stable/package_esp8266com_index.json
   # Libraries come straight from the git tags of their GitHub repos (exact versions,
-  # independent of the names and versions in the Arduino library index)
+  # independent of the names and versions in the Arduino library index).
+  # "url|Name@version": if the git download fails three times, the same version is taken
+  # from the Arduino library index instead (no spaces in the name)
   COMMON_LIBS: >-
-    https://github.com/knolleary/pubsubclient.git#v2.8
-    https://github.com/bblanchon/ArduinoJson.git#v7.4.2
+    https://github.com/knolleary/pubsubclient.git#v2.8|PubSubClient@2.8
+    https://github.com/bblanchon/ArduinoJson.git#v7.4.2|ArduinoJson@7.4.2
     https://github.com/ESP32Async/ESPAsyncWebServer.git#v3.12.1
     https://github.com/ESP32Async/AsyncTCP.git#v3.5.0
 
@@ -182,8 +184,15 @@ jobs:
             retry arduino-cli core install "$ESP32_CORE"
           fi
           arduino-cli config set library.enable_unsafe_install true
-          for url in $COMMON_LIBS ${{ matrix.libs }}; do
-            retry arduino-cli lib install --git-url "$url"
+          for lib in $COMMON_LIBS ${{ matrix.libs }}; do
+            url="${lib%%|*}"
+            if retry arduino-cli lib install --git-url "$url"; then continue; fi
+            if [[ "$lib" == *"|"* ]]; then
+              echo "::warning::git download failed, taking ${lib#*|} from the Arduino library index"
+              retry arduino-cli lib install "${lib#*|}" || exit 1
+            else
+              exit 1
+            fi
           done
           # LVGL reads its configuration from next to the lvgl library folder
           if [[ "${{ matrix.device }}" == display ]]; then

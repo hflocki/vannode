@@ -22,7 +22,7 @@
 #ifndef UI_LANG
 #define UI_LANG                 "de"
 #endif
-#define FW_VERSION              "2.26.0"
+#define FW_VERSION              "2.27.0"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -76,6 +76,11 @@
 // ---- MQTT ------------------------------------------------------------
 #ifndef DEFAULT_MQTT_PORT
 #define DEFAULT_MQTT_PORT       1883
+#endif
+// Tailscale (beta, tailscale.h): switched on in the web UI, off by default.
+// 0 leaves microlink out of the firmware (saves flash; the settings card then says so).
+#ifndef WITH_TAILSCALE
+#define WITH_TAILSCALE          1
 #endif
 #ifndef DEFAULT_PREFIX_SELF
 #define DEFAULT_PREFIX_SELF     "camper/display"

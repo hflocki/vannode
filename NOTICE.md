@@ -60,7 +60,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
 Shelly, Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Victron, Senso4s, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
-Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
+Teltonika, Tailscale, WireGuard and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
 determined only to make the devices work together (interoperability).
@@ -133,6 +133,9 @@ added here, under its node, and nowhere else.
 | Part | Used for | Source | License |
 | --- | --- | --- | --- |
 | `firmware/display` – fonts Montserrat, Font Awesome 5 Free (converted LVGL fonts) | included | [LVGL](https://github.com/lvgl/lvgl), [Montserrat](https://github.com/JulietaUla/Montserrat), [Font Awesome Free](https://fontawesome.com) | SIL OFL 1.1 (Font Awesome icons: CC BY 4.0) |
+| `firmware/display/camper_display/src/microlink` – microlink 2.3.0, Tailscale-compatible client (Tailscale beta) | included; flat include paths and one `#include` line per C file for the Arduino build, see the README in that folder | [CamM2325/microlink](https://github.com/CamM2325/microlink), Copyright (c) 2025-2026 Cameron Malone | MIT ([`firmware/display/LICENSE-microlink-MIT`](firmware/display/LICENSE-microlink-MIT)) |
+| `firmware/display/camper_display/src/microlink` – wireguard-lwip (part of microlink) | included | [smartalock/wireguard-lwip](https://github.com/smartalock/wireguard-lwip), Copyright (c) 2021 Daniel Hope | BSD-3-Clause ([`firmware/display/LICENSE-wireguard-lwip-BSD-3-Clause`](firmware/display/LICENSE-wireguard-lwip-BSD-3-Clause)) |
+| `firmware/display/camper_display/src/microlink` – X25519 (`x25519.*`), Poly1305 (`poly1305-donna*`) | included | Copyright (c) 2015-2016 Cryptography Research, Inc.; [floodyberry/poly1305-donna](https://github.com/floodyberry/poly1305-donna) | MIT ([`firmware/display/LICENSE-x25519-MIT`](firmware/display/LICENSE-x25519-MIT)); Poly1305: public domain or MIT |
 
 ### Bluetooth-Gateway (`firmware/omg`)
 

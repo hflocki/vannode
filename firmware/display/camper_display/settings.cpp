@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
 #include "settings.h"
+#include "tailscale.h"
 #include "rules.h"
 #include "sensors.h"
 #include "config.h"
@@ -69,6 +70,9 @@ void load() {
   settings.mqttPass     = prefs.getString("mpass",  DEFAULT_MQTT_PASSWORD);
   settings.brkOn        = prefs.getBool  ("brkon",  false);
   settings.brkFb        = prefs.getBool  ("brkfb",  false);
+  settings.tsOn         = prefs.getBool  ("tson",   false);
+  settings.tsName       = prefs.getString("tsname", "");
+  settings.tsKey        = prefs.getString("tskey",  "");
   settings.prefixSelf   = prefs.getString("pself",  DEFAULT_PREFIX_SELF);
   settings.prefixTank   = prefs.getString("ptank",  DEFAULT_PREFIX_TANK);
   settings.prefixLevel  = prefs.getString("plvl",   DEFAULT_PREFIX_LEVEL);
@@ -217,6 +221,9 @@ void save() {
   prefs.putString("mpass",  settings.mqttPass);
   prefs.putBool  ("brkon",  settings.brkOn);
   prefs.putBool  ("brkfb",  settings.brkFb);
+  prefs.putBool  ("tson",   settings.tsOn);
+  prefs.putString("tsname", settings.tsName);
+  prefs.putString("tskey",  settings.tsKey);
   prefs.putString("pself",  settings.prefixSelf);
   prefs.putString("ptank",  settings.prefixTank);
   prefs.putString("plvl",   settings.prefixLevel);
@@ -300,6 +307,7 @@ void factoryReset() {
   prefs.begin(NS, false);
   prefs.clear();
   prefs.end();
+  ts::forget();   // tailnet keys of the display (erased on the next start)
   rules::clear();
   sensors::clear();
 }

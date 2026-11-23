@@ -7,6 +7,7 @@ const M = {
     hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********',
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
+    tsOn: true, tsName: '', tsKey: '', ts: {built: true, on: true, code: 4, ip: '100.101.102.103', peers: 3, name: 'display-node', heap: 112},
     prefixSelf: 'camper/display', prefixTank: 'camper/tanklevel', prefixLevel: 'camper/level', prefixHeater: 'camper/heater',
     prefixFan: 'camper/maxxfan', prefixTemp: 'camper/temp', prefixBattery: 'camper/battery', prefixBle: 'camper/tool', prefixBle2: '', prefixBle3: '', fanPort: 1,
     ntpServer: 'pool.ntp.org', tz: 'CET-1CEST,M3.5.0,M10.5.0/3',
@@ -155,6 +156,8 @@ const M = {
       return M.rules.rules.map((r, i) => i === 0 ? {known: true, active: door, owned: door, allowed: true, last: door ? 'an 19:42' : 'aus 19:40'} : {known: false, active: false, owned: false, allowed: true, last: ''});
     }
     if (path === '/api/pages') { M.pages = body; return {ok: true, msg: 'Seiten gespeichert'}; }
+    if (path === '/api/tailscale/logout') return {ok: true, msg: 'Abgemeldet, Neustart ...', reboot: true};
+    if (path === '/api/tailscale') return M.cfg.ts || {built: true, on: false, code: -1};
     if (path === '/api/scan') return {running: false, nets: [{ssid: 'Camper-WLAN', rssi: -48}, {ssid: 'Campingplatz-Gast', rssi: -77}]};
     if (path === '/api/pushover/test') { M.save({poStatus: 'OK ' + new Date().toTimeString().slice(0, 5)}); return {ok: true, msg: 'Testnachricht wird gesendet'}; }
     if (path === '/api/history') {

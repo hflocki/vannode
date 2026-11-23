@@ -11,6 +11,7 @@
 //  - Same pages in the browser (built-in web server + WebSocket)
 //  - Values and commands via MQTT (e.g. broker on the LTE router)
 //  - Setup access point like the other camper projects
+//  - Optional: Tailscale (microlink) for access from anywhere, see tailscale.h
 //  - Everything lives in the internal flash / NVS: no SD card, safe on hard power cuts
 //
 //  Board settings (Arduino IDE): see README.md
@@ -31,6 +32,7 @@
 #include "weather.h"
 #include "depart.h"
 #include "broker.h"
+#include "tailscale.h"
 #include <ArduinoOTA.h>
 #include "safeguard.h"
 #include "evlog.h"
@@ -83,6 +85,7 @@ void setup() {
   wifimgr::begin();
   // emergency broker (off by default): listens on the MQTT port, the own client connects via 127.0.0.1
   if (settings.brkOn) broker::begin(settings.mqttPort, settings.mqttUser, settings.mqttPass);
+  ts::begin();      // tailscale (off by default): pending sign-out; microlink itself starts in loop() with WiFi
   wx::begin();      // before the UI: it shows weather data and warnings
   if (dispOk) ui::splash("Oberfl\xC3\xA4" "che ...");
   ui::begin();
@@ -131,6 +134,7 @@ void loop() {
   history::loop();
   rules::loop();
   depart::loop();
+  ts::loop();
   disp::loop();
   if (!otaStarted && wifimgr::staConnected()) {   // network upload from the Arduino IDE
     ArduinoOTA.setHostname(settings.hostname.c_str());

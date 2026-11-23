@@ -29,6 +29,7 @@
 #include "wsauth.h"
 #include "broker.h"
 #include "mqttfb.h"
+#include "tailscale.h"
 #include "app_icons.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -167,6 +168,7 @@ void buildSys(JsonObject s) {
   s["rssi"] = wifimgr::rssi();
   s["mqtt"] = mqttc::connected();
   if (broker::running()) s["brk"] = broker::summary();
+  if (settings.tsOn) s["ts"] = ts::ip();          // tailnet address, "" = not (yet) connected
   s["ip"] = wifimgr::ipString();
   s["bri"] = settings.brightness;
   s["finder"] = mqttc::finderActive();
@@ -315,6 +317,10 @@ void getSettings(AsyncWebServerRequest* r) {
   d["brkOn"] = settings.brkOn;
   d["brkFb"] = settings.brkFb;
   broker::json(d["brk"].to<JsonObject>());
+  d["tsOn"] = settings.tsOn;
+  d["tsName"] = settings.tsName;
+  d["tsKey"] = settings.tsKey.isEmpty() ? "" : MASK;
+  ts::json(d["ts"].to<JsonObject>());
   d["prefixSelf"] = settings.prefixSelf;
   d["prefixTank"] = settings.prefixTank;
   d["prefixLevel"] = settings.prefixLevel;
@@ -465,6 +471,14 @@ bool applySettings(JsonObject o, bool apply) {
   }
   str("mqttUser", settings.mqttUser, true);
   str("mqttPass", settings.mqttPass, true, true);
+  // tailscale: microlink starts once per boot, so every change restarts the display
+  if (o["tsOn"].is<bool>() && o["tsOn"].as<bool>() != settings.tsOn) {
+    if (apply) settings.tsOn = o["tsOn"];
+    reboot = true;
+  }
+  str("tsName", settings.tsName, true);
+  if (settings.tsName.length() > 63) settings.tsName = settings.tsName.substring(0, 63);
+  str("tsKey", settings.tsKey, true, true);
   str("ntpServer", settings.ntpServer, true);
   str("tz", settings.tz, true);
   str("prefixSelf", settings.prefixSelf, true);
@@ -944,6 +958,20 @@ void begin() {
     AsyncResponseStream* res = r->beginResponseStream("application/json");
     history::write(*res);
     r->send(res);
+  });
+  // Tailscale: status for the settings card, sign out (erases the device keys, restarts)
+  server.on("/api/tailscale/logout", HTTP_POST, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
+    ts::forget();
+    evlog::add("Tailscale: Abmelden über die Web-Oberfläche");
+    sendResult(r, true, "Abgemeldet, Neustart ...", true);
+    rebootAt = millis() + 1000;
+  });
+  server.on("/api/tailscale", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!auth(r)) return;
+    JsonDocument d;
+    ts::json(d.to<JsonObject>());
+    sendJson(r, d);
   });
   server.on("/api/pushover/test", HTTP_POST, [](AsyncWebServerRequest* r) {
     if (!auth(r)) return;

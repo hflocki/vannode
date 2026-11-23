@@ -39,6 +39,11 @@
 // Web page in English instead of German (the release .bin from GitHub stays German)
 // #define UI_LANG              "en"
 
+// ---- Tailscale -------------------------------------------------------
+// Switched on and signed in on the web page (Settings -> Network -> Tailscale).
+// 0 builds the firmware without it (smaller firmware)
+// #define WITH_TAILSCALE       0
+
 // ---- Home grid of the panel -----------------------------------------
 // #define OV_COLS              3                 // columns x rows of the home tiles (4" panel: 3 x 3)
 // #define OV_ROWS              3

@@ -73,6 +73,10 @@ struct Settings {
   uint16_t mqttPort = 1883;
   bool     brkOn = false;   // emergency broker in the display (broker.h): own client via 127.0.0.1
   bool     brkFb = false;   // with brkOn: standby only, own client uses mqttHost and falls back to 127.0.0.1 (mqttfb.h)
+  // tailscale (tailscale.h), applied after a restart
+  bool     tsOn = false;
+  String   tsName;          // device name in the tailnet, "" = hostname
+  String   tsKey;           // auth key (tskey-auth-...), "" = sign in with the link on the web page
   String prefixSelf, prefixTank, prefixLevel, prefixHeater, prefixFan, prefixTemp, prefixBattery, prefixBle;
   String prefixBle2, prefixBle3;   // further BLE nodes (ble2, ble3), "" = none; the roof hatch may be on any of them
   uint8_t fanPort = 1;

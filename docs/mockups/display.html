@@ -12,6 +12,7 @@ const M = {
     hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********',
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
+    tsOn: true, tsName: '', tsKey: '', ts: {built: true, on: true, code: 4, ip: '100.101.102.103', peers: 3, name: 'display-node', heap: 112},
     prefixSelf: 'camper/display', prefixTank: 'camper/tanklevel', prefixLevel: 'camper/level', prefixHeater: 'camper/heater',
     prefixFan: 'camper/maxxfan', prefixTemp: 'camper/temp', prefixBattery: 'camper/battery', prefixBle: 'camper/tool', prefixBle2: '', prefixBle3: '', fanPort: 1,
     ntpServer: 'pool.ntp.org', tz: 'CET-1CEST,M3.5.0,M10.5.0/3',
@@ -160,6 +161,8 @@ const M = {
       return M.rules.rules.map((r, i) => i === 0 ? {known: true, active: door, owned: door, allowed: true, last: door ? 'an 19:42' : 'aus 19:40'} : {known: false, active: false, owned: false, allowed: true, last: ''});
     }
     if (path === '/api/pages') { M.pages = body; return {ok: true, msg: 'Seiten gespeichert'}; }
+    if (path === '/api/tailscale/logout') return {ok: true, msg: 'Abgemeldet, Neustart ...', reboot: true};
+    if (path === '/api/tailscale') return M.cfg.ts || {built: true, on: false, code: -1};
     if (path === '/api/scan') return {running: false, nets: [{ssid: 'Camper-WLAN', rssi: -48}, {ssid: 'Campingplatz-Gast', rssi: -77}]};
     if (path === '/api/pushover/test') { M.save({poStatus: 'OK ' + new Date().toTimeString().slice(0, 5)}); return {ok: true, msg: 'Testnachricht wird gesendet'}; }
     if (path === '/api/history') {
@@ -1161,7 +1164,7 @@ function update(){
   if(S.awake!==undefined){$('#wake').hidden=!!S.awake;$('#sleep').hidden=!S.awake}
   if($('#sy_ip')){
     set('sy_wifi',S.wifi?`verbunden${S.rssi!==undefined?' · '+S.rssi+' dBm':''}`:'getrennt');
-    set('sy_ip',esc(S.ip||'--'));set('sy_mqtt',(S.mqtt?'verbunden':'getrennt')+(S.brk?' · eigener Broker: '+esc(S.brk):''));
+    set('sy_ip',esc(S.ip||'--')+(S.ts!==undefined?' · Tailscale '+(S.ts?esc(S.ts):'getrennt'):''));set('sy_mqtt',(S.mqtt?'verbunden':'getrennt')+(S.brk?' · eigener Broker: '+esc(S.brk):''));
     $('#sy_scr').innerHTML=S.awake===false?svg('light')+' An':svg('power')+' Aus';
     const br=$('#sy_bri');if(S.bri!==undefined&&document.activeElement!==br)br.value=S.bri;
   }
@@ -1383,6 +1386,13 @@ function pgSettings(){
    <p class="mu" id="brkFbHint" style="margin-top:-4px" hidden>Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter <i>Ersatz-Broker</i> die <b>IP-Adresse des Displays</b> eintragen, dann wechseln sie mit.</p>
    <p class="mu" style="margin-top:-4px">Für Camper ohne Router mit Broker oder zum Testen: Das Display ist dann selbst der MQTT-Broker (Port wie oben, Benutzer und Passwort wie oben gelten für alle Geräte, leer = ohne Anmeldung). Das Feld <i>Broker</i> wird dann nicht gebraucht. Bei den anderen Geräten als Broker die <b>IP-Adresse des Displays</b> eintragen, am besten mit fester IP (Einstellungen → WLAN). Gespeicherte Nachrichten (retained) hält das Display nur im Speicher: Nach einem Neustart senden die Geräte ihre Werte von selbst neu, das dauert ein paar Sekunden. Ab Werk aus, Änderung startet das Display neu.</p>
    <p class="mu" id="brkst" hidden></p></details>
+  <details data-g="net" id="tssec"><summary>Tailscale (Beta)</summary>
+   <p class="mu">Bringt das Display in dein Tailnet: Webseite und eigener Broker sind dann von unterwegs unter seiner 100.x-Adresse erreichbar, ohne Portfreigabe am Router. Gilt nur für das Display selbst, nicht für die anderen Geräte. Ab Werk aus, jede Änderung startet das Display neu.</p>
+   <label class="chk"><input type="checkbox" id="tsOn"> Tailscale einschalten</label>
+   <div class="f2">${inp('tsName','Gerätename im Tailnet (leer = Hostname)','text','display-node')}${inp('tsKey','Auth-Key (optional)','password','tskey-auth-…')}</div>
+   <p class="mu" style="margin-top:-4px">Ohne Auth-Key meldest du das Display per Link an: Nach dem Neustart erscheint hier der Link, öffnen und mit deinem Tailscale-Konto bestätigen. In der Tailscale-Verwaltung beim Display danach <i>Disable key expiry</i> wählen, sonst muss es sich nach Ablauf des Schlüssels neu anmelden.</p>
+   <p class="mu" id="tsst"></p>
+   <div class="row"><button class="btn sm" type="button" id="tsout" hidden>Abmelden</button></div></details>
   <details data-g="svc"><summary>Wetter</summary>
    <p class="mu">Wetter von <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (kostenlos, ohne Anmeldung). Das Display braucht dafür Internet über den Router. Warnungen (Böen, Gewitter) erscheinen oben im Display und gehen auch per Pushover raus.</p>
    <label class="chk"><input type="checkbox" id="wxOn"> Wetter abrufen</label>
@@ -1472,7 +1482,7 @@ function showGroup(g,fromSec){setGroup=g;try{localStorage.setItem('setGroup',g)}
   const sb=$('.savebar');if(sb)sb.style.display=g==='rules'?'none':'';   // automations have their own save button
   if(g==='rules'){if(!rulesLoaded){rulesLoaded=true;loadRules()}else ruleState()}
   const sd=$('#snd');if(g==='dev'&&sd&&!sd.open){sd.open=true}}
-const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs'];
+const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs','tsName','tsKey'];
 async function loadSettings(){
   rulesLoaded=false;
   try{
@@ -1486,6 +1496,7 @@ async function loadSettings(){
     {const l=(ST.webTiles||WEB_DEFAULT).split(',');for(let i=0;i<16;i++){const e=$('#wt'+i);if(e)e.value=l[i]||'none'}}
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
     $('#brkOn').checked=!!ST.brkOn;$('#brkFb').checked=!!ST.brkFb;brkHint();
+    $('#tsOn').checked=!!ST.tsOn;tsShow(ST.ts);
     $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
@@ -1505,6 +1516,8 @@ async function loadSettings(){
   $('#lnksug').onclick=()=>{readLinks();SUGGEST.forEach(([n,h])=>{if(!LINKS.some(x=>x.u.includes(h)||x.n.toLowerCase()===n.toLowerCase()))LINKS.push({n,u:'http://'+h+'.local/'})});renderLinks()};
   $('#brightness').oninput=e=>send({c:'bri',v:e.target.value});
   $('#scan').onclick=scan;
+  $('#tsout').onclick=()=>{if(confirm('Display bei Tailscale abmelden? Die Schlüssel werden gelöscht, danach startet es neu und muss neu angemeldet werden.'))post('/api/tailscale/logout')};
+  clearInterval(tsTimer);tsTimer=setInterval(tsPoll,4000);
   $('#wxsearch').onclick=wxSearch;$('#wxq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();wxSearch()}};
   $('#potest').onclick=async()=>{await post('/api/pushover/test');setTimeout(async()=>{try{const r=await fetch('/api/settings');const s=await r.json();$('#postat').textContent=s.poStatus?'Zuletzt: '+s.poStatus:''}catch(e){}},6000)};
   $('#fstart').onclick=()=>send({c:'finder',on:!finder.on,f:$('#ffilter').value});
@@ -1517,6 +1530,27 @@ function brkHint(){
   $('#brkFbRow').hidden=!on;$('#brkFbHint').hidden=!fb;
   const b=ST.brk||{};
   if(st){st.hidden=!b.on;if(b.on)st.textContent=`Läuft auf Port ${b.port}: ${b.clients} Geräte verbunden, ${b.retained} gespeicherte Nachrichten (${b.kb} kB), ${b.msgs} Nachrichten seit dem Start.`}
+}
+// Tailscale card: status line (codes = microlink_state_t), refreshed while the card is open
+const TS_ST=['bereit','wartet auf WLAN','verbindet …','meldet sich an …','verbunden','verbindet neu …','Fehler','Anmeldung abgelehnt – Auth-Key abgelaufen oder Gerät in der Tailscale-Verwaltung nicht freigegeben','Anmeldung nötig'];
+let tsTimer=0;
+function tsShow(t){
+  const st=$('#tsst');if(!st||!t)return;
+  const out=$('#tsout');out.hidden=!t.built;
+  if(!t.built){st.textContent='Nicht in dieser Firmware (beim Bauen mit WITH_TAILSCALE 0 abgeschaltet).';$('#tsOn').disabled=true;return}
+  if(!t.on){st.textContent='Aus.';return}
+  let h;
+  if(t.code<0)h=t.wait==='ram'?`Nicht gestartet: zu wenig freier Arbeitsspeicher (${t.heap} kB). Zum Beispiel den eigenen Broker abschalten und neu starten.`:t.wait==='wifi'?'Wartet auf WLAN …':'Startet …';
+  else if(t.code===4)h=`<b>Verbunden</b> als ${esc(t.name)}: <a href="http://${esc(t.ip)}/" target="_blank" rel="noopener">http://${esc(t.ip)}/</a> · <span>${t.peers} Geräte im Tailnet</span>`;
+  else if(t.code===8)h=t.url?`<b>Anmeldung nötig:</b> <a href="${esc(t.url)}" target="_blank" rel="noopener">Anmelde-Link öffnen</a> und mit deinem Tailscale-Konto bestätigen.`:'Anmeldung nötig, warte auf den Link …';
+  else h=esc(TS_ST[t.code]||'?');
+  if(t.code>=0&&t.heap!==undefined)h+=`<br><small>Freier interner RAM: ${t.heap} kB</small>`;
+  st.innerHTML=h;
+}
+async function tsPoll(){
+  const d=$('#tssec');if(!d){clearInterval(tsTimer);return}
+  if(!d.open||!$('#tsOn').checked||document.visibilityState!=='visible')return;
+  try{const r=await fetch('/api/tailscale');if(r.ok)tsShow(await r.json())}catch(e){}
 }
 async function post(url,body){
   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):'{}'});
@@ -1760,7 +1794,7 @@ function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
-  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;
+  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;o.tsOn=$('#tsOn').checked;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;
@@ -2406,7 +2440,26 @@ vnI18nAdd('en', {
   "keine": "none",
   'Nur als Ersatz-Broker (bereit, wenn der Broker oben nicht erreichbar ist)': 'Fallback broker only (ready when the broker above cannot be reached)',
   'Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter': 'The display normally connects to the broker above. If it cannot be reached for 2 minutes, the display switches to its own broker and back as soon as the broker returns. On the other devices enter under',
-  'die': 'the', 'IP-Adresse des Displays': 'IP address of the display', 'eintragen, dann wechseln sie mit.': ', then they switch along.'
+  'die': 'the', 'IP-Adresse des Displays': 'IP address of the display', 'eintragen, dann wechseln sie mit.': ', then they switch along.',
+  'Tailscale (Beta)': 'Tailscale (beta)',
+  'Bringt das Display in dein Tailnet: Webseite und eigener Broker sind dann von unterwegs unter seiner 100.x-Adresse erreichbar, ohne Portfreigabe am Router. Gilt nur für das Display selbst, nicht für die anderen Geräte. Ab Werk aus, jede Änderung startet das Display neu.': 'Puts the display into your tailnet: the web page and the own broker are then reachable from anywhere under its 100.x address, without port forwarding on the router. Only the display itself, not the other devices. Off by default, every change restarts the display.',
+  'Tailscale einschalten': 'Switch on Tailscale',
+  'Gerätename im Tailnet (leer = Hostname)': 'Device name in the tailnet (empty = hostname)',
+  'Auth-Key (optional)': 'Auth key (optional)',
+  'Ohne Auth-Key meldest du das Display per Link an: Nach dem Neustart erscheint hier der Link, öffnen und mit deinem Tailscale-Konto bestätigen. In der Tailscale-Verwaltung beim Display danach': 'Without an auth key you sign the display in with a link: after the restart the link shows up here, open it and confirm with your Tailscale account. Then choose',
+  'wählen, sonst muss es sich nach Ablauf des Schlüssels neu anmelden.': 'for the display in the Tailscale admin console, otherwise it has to sign in again when its key expires.',
+  'Abmelden': 'Sign out',
+  'Aus.': 'Off.',
+  'Nicht in dieser Firmware (beim Bauen mit WITH_TAILSCALE 0 abgeschaltet).': 'Not in this firmware (switched off with WITH_TAILSCALE 0 when building).',
+  'Nicht gestartet: zu wenig freier Arbeitsspeicher (* kB). Zum Beispiel den eigenen Broker abschalten und neu starten.': 'Not started: too little free memory (* kB). For example switch off the own broker and restart.',
+  'Wartet auf WLAN …': 'Waiting for WiFi …', 'Startet …': 'Starting …',
+  'Verbunden': 'Connected', 'als *:': 'as *:', '* Geräte im Tailnet': '* devices in the tailnet', 'Freier interner RAM: * kB': 'Free internal RAM: * kB',
+  'Anmeldung nötig:': 'Sign-in needed:', 'Anmelde-Link öffnen': 'Open sign-in link',
+  'und mit deinem Tailscale-Konto bestätigen.': 'and confirm with your Tailscale account.',
+  'Anmeldung nötig, warte auf den Link …': 'Sign-in needed, waiting for the link …',
+  'wartet auf WLAN': 'waiting for WiFi', 'verbindet …': 'connecting …', 'meldet sich an …': 'registering …',
+  'verbindet neu …': 'reconnecting …', 'Anmeldung nötig': 'Sign-in needed',
+  'Anmeldung abgelehnt – Auth-Key abgelaufen oder Gerät in der Tailscale-Verwaltung nicht freigegeben': 'Sign-in refused – auth key expired or device not approved in the Tailscale admin console',
 });
 // i18n-en:end
 // vannode-system:begin

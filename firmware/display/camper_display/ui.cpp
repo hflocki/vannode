@@ -9,6 +9,7 @@
 #include "datastore.h"
 #include "mqtt_client.h"
 #include "wifi_manager.h"
+#include "tailscale.h"
 #include "display_hw.h"
 #include "weather.h"
 #include "icons.h"
@@ -2784,6 +2785,12 @@ void refreshHeader() {
     }
     lv_label_set_text(sQrLbl, sta ? "Webseite \xC3\xB6" "ffnen" : "Setup-WLAN");
     if (wifimgr::dhcpFallback()) info += "\nFeste IP ging nicht \xE2\x80\x93 DHCP bis zum Neustart";
+    if (settings.tsOn) {   // tailscale: address in the tailnet, or what it waits for
+      String t = ts::ip();
+      if (t.length()) info += "\nTailscale http://" + t + "/";
+      else if (ts::needsLogin()) info += "\nTailscale: Anmelde-Link auf der Webseite";
+      else info += "\nTailscale verbindet ...";
+    }
     lv_label_set_text(sNet, dispText(info).c_str());
     String vals[SYS_N];
     vals[0] = sta ? settings.wifiSsid : (wifimgr::apActive() ? "Setup-WLAN " + wifimgr::apSsid() : String("nicht verbunden"));

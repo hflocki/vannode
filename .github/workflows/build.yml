@@ -187,7 +187,7 @@ jobs:
           arduino-cli config set library.enable_unsafe_install true
           libdir="$(arduino-cli config get directories.user)/libraries"
           mkdir -p "$libdir"
-          # "https://github.com/x/name.git#tag" -> $libdir/name (shallow clone of that tag)
+          # repo URL "<repo>.git#<tag>" -> $libdir/<repo> (shallow clone of that tag)
           getlib() { rm -rf -- "${2:?}"; git -c advice.detachedHead=false clone -q --depth 1 --branch "$3" "$1" "$2"; }
           for lib in $COMMON_LIBS ${{ matrix.libs }}; do
             url="${lib%%|*}"

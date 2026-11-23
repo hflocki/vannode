@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `display-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 2.27.4 | **Tailscale braucht rund 14 kB weniger internen RAM:** Die Stacks der vier microlink-Tasks sind auf den gemessenen Bedarf plus etwa 2 kB Reserve verkleinert (zusammen 27,5 statt 42 kB). Die Stack-Reserve in der Tailscale-Karte zeigt jetzt auch die eigenen Tasks des Displays (Wetter, Pushover, Webserver) als Grundlage für die nächsten Einsparungen. |
 | 2.27.3 | **Tailscale-Karte zeigt den Speicher genauer:** größter freier Block des internen RAM und für jede microlink-Task die Stack-Reserve (nie benutzter Teil / Größe). Grundlage, um die Stacks später zu verkleinern; die Stack-Größen lassen sich jetzt in `ml_arduino_config.h` einstellen (Werte noch unverändert). |
 | 2.27.2 | **Tailscale mit Tailnet Lock:** Solange das Display nicht verbunden ist, zeigt die Tailscale-Karte seinen Node-Key als fertigen Befehl `tailscale lock sign nodekey:…` zum Kopieren. Den auf einem Signier-Knoten ausführen, wenn die Tailscale-Verwaltung beim Signieren „error generating command“ meldet. Ob microlink in einem Tailnet mit Tailnet Lock vollständig läuft, ist noch nicht getestet. |
 | 2.27.1 | Erste gebaute Version mit **Tailscale (Beta)**, Beschreibung siehe 2.27.0. Bei 2.27.0 fehlte beim Bauen eine Datei von microlink (`ml_at_validate.c`), dafür gab es keine Firmware. |

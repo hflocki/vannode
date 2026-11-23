@@ -50,6 +50,9 @@
 #ifndef PLUGIN_RVTECH
 #define PLUGIN_RVTECH         1      // Roof hatch: RV Tech skylight motor control, BLE connection
 #endif
+#ifndef PLUGIN_SHELLY
+#define PLUGIN_SHELLY         1      // Switch: Shelly Gen2+ (Plus / Pro / Gen3 / Gen4) over Bluetooth RPC, BLE connection
+#endif
 #ifndef PLUGIN_CARAWATER
 #define PLUGIN_CARAWATER      1      // Water pump: CaraWater (e.g. ISP 15), BLE connection
 #endif
@@ -88,7 +91,7 @@
 #define CT_BLE_PASSIVE  (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_BLESENSOR + PLUGIN_GOVEE + PLUGIN_BTHOME + PLUGIN_TPMS + PLUGIN_SENSO4S)
 #define CT_GAS          (PLUGIN_DIMES + PLUGIN_MOPEKA_PRO + PLUGIN_MOPEKA_STD + PLUGIN_SENSO4S)
 #define CT_BMS          0      // batteries: own node (firmware/battery)
-#define CT_BLE_LINKS    (PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + PLUGIN_TRUMALC + CT_BMS)
+#define CT_BLE_LINKS    (PLUGIN_SHELLY + PLUGIN_CARAWATER + PLUGIN_RVTECH + PLUGIN_WCS_FRIDGE + PLUGIN_WIPRO + PLUGIN_OBD + PLUGIN_SUPERSENSE + PLUGIN_TRUMALC + CT_BMS)
 #define CT_USE_BLE      ((CT_BLE_PASSIVE + CT_BLE_LINKS) > 0)
 #define CT_PLUGIN_COUNT (CT_BLE_PASSIVE + CT_BLE_LINKS)
 
@@ -99,7 +102,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.6.6"
+#define FW_VERSION            "2.7.0"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial

@@ -3,9 +3,10 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 
-// Plugin "bthome": any sensor speaking BTHome v2 without encryption (ATC / pvvx firmware,
-// Shelly BLU H&T / Door / Button / Motion, ...). Only the MAC is set; the values are
-// recognized from the packet (decoding in bthome_decode.h, host test in firmware/ble/tests).
+// Plugin "bthome": any sensor speaking BTHome v2 (ATC / pvvx firmware, Shelly BLU H&T /
+// Door / Button / Motion, ...). Only the MAC is set; the values are recognized from the
+// packet (decoding in bthome_decode.h, host test in firmware/ble/tests). Encrypted sensors
+// need their key (bthome_crypt.h, AES-CCM via mbedtls); the packet counter must grow.
 //
 // The recognized values are kept in the setting "objs" (object ids in packet order, e.g.
 // "02,03,01"), so the Home Assistant entities exist right after a restart, before the
@@ -19,17 +20,22 @@
 #include "../core/settings.h"
 #include "../core/mqtt_ha.h"
 #include "bthome_decode.h"
+#include "bthome_crypt.h"
+#include <mbedtls/aes.h>
 #include <NimBLEDevice.h>
 
 #define BTH_MAX BTHOME_VALUES
 
 struct BthCfg {
     char mac[18];
+    char key[33];                 // 32 hex digits, only for encrypted sensors
     char objs[BTH_MAX * 3 + 1];   // "02,03,01" - filled automatically
 };
 
 static const Field BTH_FIELDS[] = {
     FLD_MAC(BthCfg, mac, "mac", "Sensor-MAC", "Über \"Suchen\" aus der Liste wählen (passt: Dienst FCD2)"),
+    FLD_TEXT(BthCfg, key, "key", "Schlüssel (nur verschlüsselt)",
+             "32 Zeichen (Hex), z. B. aus der Shelly-App bei aktivierter Verschlüsselung. Leer = unverschlüsselt"),
     FLD_TEXT(BthCfg, objs, "objs", "Erkannte Werte",
              "Füllt sich beim Empfang von selbst. Leeren und speichern, um die Werte neu zu erkennen"),
 };
@@ -41,6 +47,7 @@ class BtHomePlugin : public Plugin {
 public:
     explicit BtHomePlugin(uint8_t index) : Plugin("bthome", "BTHome-Sensor", "BTHome", index) {
         portMUX_INITIALIZE(&mux);
+        mbedtls_aes_init(&aes);
         memset(&c, 0, sizeof(c));
         buildSlots();
     }
@@ -56,6 +63,11 @@ public:
             strlcpy(lastMac, c.mac, sizeof(lastMac));
             hasData = false;
         }
+        uint8_t k[16];
+        keyOk = bthKeyBytes(c.key, k) && mbedtls_aes_setkey_enc(&aes, k, 128) == 0;
+        macOk = bthMacBytes(c.mac, macBytes);
+        badKey = false;
+        haveCnt = false;
         buildSlots();
         updates++;
     }
@@ -108,7 +120,8 @@ public:
 
     void live(JsonObject o) override {
         const char* st = c.mac[0] == '\0'        ? "Kein Sensor"
-                         : result == BTH_ENCRYPTED ? "Verschlüsselt (nicht unterstützt)"
+                         : result == BTH_ENCRYPTED ? (c.key[0] ? "Schlüssel ungültig (32 Hex-Zeichen)" : "Verschlüsselt: Schlüssel fehlt")
+                         : badKey                  ? "Falscher Schlüssel"
                          : result == BTH_WRONG_VERSION ? "Kein BTHome v2"
                          : !hasData                ? "Warte auf Daten"
                          : available()             ? "OK"
@@ -176,6 +189,11 @@ private:
     Entity ents[BTH_MAX + 1];
 
     BthResult result = BTH_OK;
+    mbedtls_aes_context aes;
+    bool keyOk = false, macOk = false, badKey = false, haveCnt = false;
+    uint8_t macBytes[6] = {0};
+    uint32_t lastCnt = 0;
+    unsigned long lastCntAt = 0;
     bool hasData = false;
     bool lastAvail = false;
     int rssi = 0;
@@ -189,8 +207,36 @@ private:
         return on ? "ja" : "nein";
     }
 
+    static void aesBlock(void* ctx, const uint8_t in[16], uint8_t out[16]) {
+        mbedtls_aes_crypt_ecb((mbedtls_aes_context*)ctx, MBEDTLS_AES_ENCRYPT, in, out);
+    }
+
     void handle(const uint8_t* d, size_t n) {
         bytesToHex(d, n, rawHex, sizeof(rawHex));
+        uint8_t plain[BLE_RAW_MAX];
+        if (n >= 1 && (d[0] & 0x01)) {
+            if (!keyOk || !macOk) {
+                result = BTH_ENCRYPTED;
+                updates++;
+                return;
+            }
+            size_t pl = 0;
+            uint32_t counter = 0;
+            bool wasBad = badKey;
+            badKey = !bthDecrypt(aesBlock, &aes, macBytes, d, n, plain, sizeof(plain), pl, counter);
+            if (badKey) {
+                if (!wasBad) updates++;
+                return;
+            }
+            // Replayed packets are dropped: the counter must grow. After 10 min without a
+            // valid packet any counter is taken again (sensor got new batteries).
+            if (haveCnt && counter <= lastCnt && millis() - lastCntAt < 600000UL) return;
+            haveCnt = true;
+            lastCnt = counter;
+            lastCntAt = millis();
+            d = plain;
+            n = pl;
+        }
         BthValue v[BTH_MAX * 2];
         size_t cnt = 0;
         result = bthParse(d, n, v, BTH_MAX * 2, cnt);

@@ -168,7 +168,11 @@ const M = {
       govee: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name GVH5…)'},
               {k: 'temp_offset', l: 'Korrektur Temperatur', t: 'float', min: -10, max: 10, step: 0.1, u: '°C', h: 'Wird zum Messwert addiert, z. B. -0,5'},
               {k: 'hum_offset', l: 'Korrektur Luftfeuchte', t: 'float', min: -20, max: 20, step: 0.5, u: '%'}],
+      shelly: [{k: 'mac', l: 'Shelly-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name beginnt mit "Shelly")'},
+               {k: 'channel', l: 'Kanal', t: 'int', min: 0, max: 3, h: '0 bei Geräten mit einem Ausgang, beim 2PM 0 oder 1'},
+               {k: 'interval', l: 'Abfrage alle', t: 'int', min: 5, max: 600, u: 's', h: 'Leistung und Zustand werden so oft abgefragt'}],
       bthome: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (passt: Dienst FCD2)'},
+               {k: 'key', l: 'Schlüssel (nur verschlüsselt)', t: 'text', max: 32, h: '32 Zeichen (Hex), z. B. aus der Shelly-App bei aktivierter Verschlüsselung. Leer = unverschlüsselt'},
                {k: 'objs', l: 'Erkannte Werte', t: 'text', max: 24, h: 'Füllt sich beim Empfang von selbst. Leeren und speichern, um die Werte neu zu erkennen'}],
       blesensor: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                   {k: 'source', l: 'Datenquelle', t: 'select', o: 'Herstellerdaten|Service-Daten'},
@@ -193,7 +197,7 @@ const M = {
             {type: 'dimes', name: 'Gas: DIMES / SRG WAVE', ble: 1}, {type: 'mopeka', name: 'Gas: Mopeka Pro', ble: 1}, {type: 'mopeka_std', name: 'Gas: Mopeka Standard', ble: 1},
             {type: 'senso4s', name: 'Gas: Senso4s Waage', ble: 1}, {type: 'trumalc', name: 'Gas: Truma LevelControl', ble: 2},
 
-            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
+            {type: 'govee', name: 'Thermometer Govee', ble: 1}, {type: 'tpms', name: 'Reifendruck SuperSense TireCheck', ble: 1}, {type: 'bthome', name: 'BTHome-Sensor (ATC/pvvx, Shelly BLU …)', ble: 1}, {type: 'shelly', name: 'Schalter: Shelly Gen2+ per Bluetooth (Plus, Pro, Gen3, Gen4)', ble: 2}, {type: 'blesensor', name: 'Eigener BLE-Sensor', ble: 1}],
     // mockup only: room for one device of every type (real node: 12 devices, 3 connections)
     max_devices: 16,
     max_links: 8
@@ -421,6 +425,10 @@ const M = {
         return {state: 'OK', ok: true,
           rows: [['Batterie', 87, '%'], ['Temperatur', 19.8, '°C'], ['Luftfeuchte', 54.2, '%'], ['Spannung', 2.91, 'V'], ['Bluetooth', -76, 'dBm'], ['Alter', 6, 's']],
           raw: '40 00 A5 01 57 02 BC 07 03 2C 15 0C 5E 0B'};
+      case 'shelly':
+        return {state: 'An', ok: true, gauge: {v: Math.round(wave(42, 3, 30)), unit: 'W', label: 'Leistung - an', max: 2000},
+          rows: [['Spannung', 12.6, 'V'], ['Strom', 3.33, 'A'], ['Energie', 1.27, 'kWh'], ['Gerätetemperatur', 31, '°C'], ['Bluetooth', -71, 'dBm'], ['Gerät', 'Plus1PM', '']],
+          ctrl: [{t: 'switch', k: 'output', l: 'Schalter', v: true}]};
       case 'blesensor':
         return {state: 'OK', ok: true,
           rows: [['Temperatur', Math.round(wave(21.4, 0.3, 60) * 10) / 10, '°C'], ['Luftfeuchte', 58, '%'], ['Batterie', 87, '%'], ['Bluetooth', -77, 'dBm'], ['Alter', 4, 's']],

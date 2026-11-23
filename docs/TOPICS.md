@@ -252,7 +252,7 @@ Der battery-node hat eine eigene Firmware (`firmware/battery`, bis ble 2.4.0 die
 
 ## BLE-Node `camper/ble`
 
-Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std`, `senso4s`, `trumalc` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
+Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `fridge` (WCS), `wipro` (Alarm WiPro III, nur lesen), `obd` (OBD2-Adapter, nur lesen), `dimes`, `mopeka`, `mopeka_std`, `senso4s`, `trumalc` (Gas; im VanNode-System liest Gas aber tanklevel-node, Display und Pocket-Node nehmen es von dort), `govee` (Thermometer Govee), `bthome` (BTHome-Sensor), `shelly` (Shelly über Bluetooth), `blesensor` (eigener BLE-Sensor), `supersense` (Tanksensor SuperSense). Die zweite Instanz desselben Plugins bekommt eine `2` angehängt (`rvtech2`). Befehle haben die Form `…/cmd/<plugin>/<key>/set`.
 
 | Topic | Inhalt |
 | --- | --- |
@@ -279,6 +279,8 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/tpms/warning`, `warning_text` | `ON` / `OFF`, wenn irgendein Rad außerhalb der Grenzen seiner Achse liegt; Text z. B. `Vorne links: 2.80 bar zu niedrig` oder `OK` |
 | `…/govee/temperature`, `humidity`, `battery`, `rssi` | Thermometer Govee: °C, %, Batterie %, Signal |
 | `…/bthome/<wert>`, `rssi` | BTHome-Sensor: je erkanntem Wert ein Topic, z. B. `temperature`, `humidity`, `battery`, `voltage`, `door` (`ON`/`OFF`), `button` (`press` …); ein zweiter gleicher Wert bekommt `_2` |
+| `…/shelly/output`, `power`, `voltage`, `current`, `energy`, `temperature`, `ble_rssi`, `state`, `connected` | Shelly über Bluetooth: Ausgang `ON`/`OFF`, Leistung W, Spannung V, Strom A, Energie kWh (gesamt), Gerätetemperatur °C, Signal, Status, Verbindung. Ab ble 2.7.0 |
+| `…/cmd/shelly/output/set` | `ON` / `OFF` schaltet den Ausgang des Shelly (nicht retained) |
 | `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |
 
 **Kühlschrank** (`fridge`). Die Topics heißen nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum).

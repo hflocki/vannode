@@ -86,6 +86,9 @@ public:
     // Without response if the characteristic supports it, else with response
     bool writeAuto(const uint8_t* d, size_t n);
     bool write(const char* s, bool response) { return write((const uint8_t*)s, strlen(s), response); }
+    // Writes to another characteristic of the service given to begin() (or of any service if
+    // that is empty), e.g. a control characteristic next to the data one. Loop task only.
+    bool writeTo(const char* uuid, const uint8_t* d, size_t n, bool response);
     // Log the next n received packets as hex (diagnosis, e.g. the answer to a command)
     void logNextRx(uint8_t n) { rxLogged = n >= 20 ? 0 : (uint8_t)(20 - n); }
     bool canWrite() const { return linkUp && writeChr != nullptr; }

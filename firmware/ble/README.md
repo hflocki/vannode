@@ -34,7 +34,8 @@ Alle Plugin-Typen sind in der Release-`.bin` enthalten. Ab Werk ist kein Gerät 
 | Gas: Senso4s Waage (Basic / Plus) – *ungetestet* | Mithören | MAC, Flaschengröße |
 | Reifendruck SuperSense TireCheck (bis 8 Räder in einem Gerät) | Mithören | je Rad Sensor-MAC und Position, Warnung unter / über (bar) je Achse mit Standardwert |
 | Thermometer Govee (H5072, H5074, H5075, H5101, H5102, H5104, H5174, H5177, H5179; Modell wird erkannt; der Scan läuft dafür aktiv, weil z. B. der H5179 seine Werte nur in der Scan-Antwort sendet) | Mithören | MAC, Korrektur Temperatur/Feuchte |
-| **BTHome-Sensor** (ATC/pvvx-Firmware, Shelly BLU H&T / Door / Button / Motion …, BTHome v2 ohne Verschlüsselung) | Mithören | MAC, die Werte werden erkannt (siehe unten) |
+| **Schalter Shelly** (Gen2+: Plus, Pro, Gen3, Gen4, z. B. Plus 1PM, Mini 1PM Gen3; an/aus, Leistung, Spannung, Strom, Energie) über Bluetooth, ohne WLAN am Shelly – *ungetestet* | Verbinden | MAC, Kanal (0–3), Abfrage alle … s (siehe unten) |
+| **BTHome-Sensor** (ATC/pvvx-Firmware, Shelly BLU H&T / Door / Button / Motion …, BTHome v2, auch verschlüsselt) | Mithören | MAC, Schlüssel nur bei Verschlüsselung, die Werte werden erkannt (siehe unten) |
 | **Eigener BLE-Sensor** | Mithören | MAC, Datenquelle, bis zu 3 Werte mit Stelle und Umrechnung (siehe unten) |
 
 - **Mithören:** Sensoren, die nur senden. Beliebig viele gleichzeitig.
@@ -58,8 +59,20 @@ Die Batterie-Plugins (Daly, Ective, BM2) sind ab 2.5.0 nicht mehr in dieser Firm
 3. Werte unter `camper/ble/<id>/<wert>`, z. B. `…/bthome/temperature`, `humidity`, `battery`, `voltage`; Tür, Fenster, Bewegung … als `ON`/`OFF`; Taster als Text (`press`, `double_press`, `long_press` …).
 
 - **ATC/pvvx** (Xiaomi LYWSD03MMC u. a.): im Telink-Flasher *Advertising type* **BTHome** wählen (Werkseinstellung neuerer Versionen).
-- **Verschlüsselte** Sensoren (Shelly BLU mit gesetztem Schlüssel) werden nicht gelesen, die Live-Seite zeigt dann „Verschlüsselt“.
+- **Verschlüsselte** Sensoren (z. B. Shelly BLU mit Verschlüsselung in der Shelly-App): den Schlüssel (32 Hex-Zeichen) unter **Schlüssel** eintragen. Ohne Schlüssel zeigt die Live-Seite „Verschlüsselt: Schlüssel fehlt“, bei falschem Schlüssel „Falscher Schlüssel“. Wiederholte alte Pakete (gleicher oder kleinerer Zähler) werden verworfen; kommt 10 Minuten kein gültiges Paket, nimmt der Node den Zähler neu an (z. B. nach Batteriewechsel).
 - Höchstens 8 Werte je Sensor (`BTHOME_VALUES`).
+
+### Shelly über Bluetooth
+
+Shelly-Geräte ab Gen2 (Plus, Pro, Gen3, Gen4) lassen sich über Bluetooth schalten, ohne dass der Shelly im WLAN ist, z. B. für Licht oder Pumpe an einem Shelly Plus 1PM. Der Node nutzt dafür die von Shelly veröffentlichte Bluetooth-Schnittstelle (RPC über GATT).
+
+1. Gerät **Schalter: Shelly …** hinzufügen, **Suchen** und den Shelly wählen (Name beginnt mit „Shelly“).
+2. **Kanal:** 0 bei Geräten mit einem Ausgang, beim 2PM 0 oder 1. **Abfrage alle:** wie oft Zustand und Leistung geholt werden (Standard 30 s).
+3. Nach dem Neustart: Schalter in der Live-Ansicht, in Home Assistant und per MQTT (`…/cmd/shelly/output/set` mit `ON`/`OFF`).
+
+- Bluetooth muss am Shelly an sein, ebenso der RPC-Dienst über Bluetooth (Shelly-App → Einstellungen → Bluetooth). Ein Shelly mit **Passwort** lässt sich so nicht schalten, die Live-Seite zeigt das an.
+- Belegt einen der 3 Verbindungsplätze.
+- *Ungetestet* – noch an keinem echten Shelly ausprobiert. Rückmeldungen bitte mit dem Ereignis-Log des Geräts.
 
 ### Eigener BLE-Sensor
 

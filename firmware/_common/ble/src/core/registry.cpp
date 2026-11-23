@@ -55,6 +55,9 @@ Plugin* createJk(uint8_t index);
 #if PLUGIN_LITIME
 Plugin* createLitime(uint8_t index);
 #endif
+#if PLUGIN_SHELLY
+Plugin* createShelly(uint8_t index);
+#endif
 #if PLUGIN_CARAWATER
 Plugin* createCaraWater(uint8_t index);
 #endif
@@ -87,6 +90,9 @@ Plugin* createVictron(uint8_t index);
 static const PluginType TYPES[] = {
 #if PLUGIN_RVTECH
     {"rvtech", "Dachhaube RV Tech", BLE_LINK, createRvTech},
+#endif
+#if PLUGIN_SHELLY
+    {"shelly", "Schalter: Shelly Gen2+ per Bluetooth (Plus, Pro, Gen3, Gen4)", BLE_LINK, createShelly},
 #endif
 #if PLUGIN_CARAWATER
     {"pump", "Wasserpumpe CaraWater", BLE_LINK, createCaraWater},

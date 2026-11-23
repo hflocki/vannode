@@ -391,6 +391,24 @@ int BleLink::read(const char* uuid, uint8_t* out, size_t max) {
     return (int)n;
 }
 
+bool BleLink::writeTo(const char* uuid, const uint8_t* d, size_t n, bool response) {
+    if (!linkUp || !client || !client->isConnected() || !uuid || !uuid[0]) return false;
+    NimBLEUUID want(uuid);
+    NimBLERemoteCharacteristic* chr = nullptr;
+    for (NimBLERemoteService* s : client->getServices(false)) {
+        if (service[0] && !(s->getUUID() == NimBLEUUID(service))) continue;
+        chr = s->getCharacteristic(want);
+        if (chr) break;
+    }
+    if (!chr || !(chr->canWrite() || chr->canWriteNoResponse())) {
+        devlogf(tag, "Write %s: characteristic not found or not writable", uuid);
+        return false;
+    }
+    if (response && !chr->canWrite()) response = false;
+    else if (!response && !chr->canWriteNoResponse()) response = true;
+    return chr->writeValue(d, n, response);
+}
+
 bool BleLink::writeAuto(const uint8_t* d, size_t n) {
     if (!writeChr) return false;
     return write(d, n, !writeChr->canWriteNoResponse());

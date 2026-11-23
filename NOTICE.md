@@ -59,7 +59,7 @@ installation can damage devices, the vehicle or other property and can put peopl
 ## Trademarks
 
 Product and company names used in this project – for example Truma, Combi, CP Plus, CaraWater,
-Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Victron, Senso4s, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
+Shelly, Daly, Ective, JBD, JK-BMS, LiTime, Redodo, PowerQueen, Victron, Senso4s, Govee, Mopeka, SuperSense, MaxxFan, Heki, Votronic, Xiaomi, M5Stack, Espressif, Guition, SMLIGHT,
 Teltonika and Home Assistant – are trademarks or registered trademarks of their respective owners.
 They are used only to name compatible devices. VanNode is not affiliated with, endorsed, supported
 or certified by any of these owners. Protocols are taken from public open-source projects or were
@@ -111,6 +111,8 @@ added here, under its node, and nowhere else.
 | `firmware/ble` – Govee and Mopeka formats | decoding as in these libraries, own implementation | [Bluetooth-Devices/govee-ble](https://github.com/Bluetooth-Devices/govee-ble), [Bluetooth-Devices/mopeka-iot-ble](https://github.com/Bluetooth-Devices/mopeka-iot-ble) | MIT |
 | `firmware/ble` – SuperSense tank sensors (service UUID, BCD payload) | protocol knowledge, own C++ implementation (no code copied) | [adahmen/supersense-homeassistant](https://github.com/adahmen/supersense-homeassistant) | MIT |
 | `firmware/_common/truma_lc_decode.h`, plugin `trumalc` – Truma LevelControl (GATT layout, key derivation, value layout) | ported | [cyclemat/HAOS-Truma-Levelcontrol-Integration](https://github.com/cyclemat/HAOS-Truma-Levelcontrol-Integration) | GPL-3.0 |
+| `firmware/ble` – plugin `shelly` – Shelly Gen2+ RPC over Bluetooth (GATT UUIDs, framing) | protocol knowledge from the manufacturer's public documentation, own C++ implementation | Shelly knowledge base, "Communicating with Shelly devices via Bluetooth Low Energy using RPC" | – (public documentation) |
+| `firmware/ble` – `bthome_crypt.h` – BTHome v2 encryption (AES-CCM nonce and layout) | own implementation of the public format | [bthome.io/encryption](https://bthome.io/encryption/) | – (public specification) |
 | `firmware/ble` – `senso4s_decode.h`, plugin `senso4s` – Senso4s advertisement layout and status codes | ported | [ksanislo/senso4s_ble](https://github.com/ksanislo/senso4s_ble), Copyright 2026 Ken Sanislo | Apache-2.0 ([`firmware/ble/LICENSE-Apache-2.0`](firmware/ble/LICENSE-Apache-2.0)) |
 
 ### Tanklevel-Node (`firmware/tanklevel`)

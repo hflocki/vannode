@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `battery-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 2.6.8 | Gemeinsamer Bluetooth-Kern mit dem ble-node 2.7.0 (Schreiben auf weitere Kennlinien eines verbundenen Geräts, für Shelly im ble-node). Für die Batterien keine Änderung. |
 | 2.6.7 | **Behoben: Seite blieb auf iPhone/iPad (Safari) nach dem Login leer bzw. ohne Live-Werte.** Safari schickt die Anmeldung beim WebSocket nicht mit. Die Seite holt sich jetzt nach dem Login einen Schlüssel (`/api/wstoken`, gemeinsamer Baustein `wsauth.h`) und öffnet den WebSocket damit; andere Browser gehen wie bisher. Gemeinsamer BLE-Kern wie ble 2.6.6. |
 | 2.6.6 | **Uhrzeit ohne Internet:** neue Karte *Uhrzeit* bei den System-Karten: zeigt die Gerätezeit und woher sie kommt, *Uhrzeit vom Handy übernehmen* und *Von Hand setzen*. Hat das Gerät keine gültige Zeit, übernimmt die Webseite beim Öffnen automatisch die Zeit des Browsers (`POST /api/time`, gemeinsamer Baustein `clockset`). Ein späterer NTP-Abgleich ersetzt sie; bei einem Neustart bleibt sie, bei Stromausfall nicht. Zusätzlich wird der Router (Gateway) als NTP-Server gefragt. Gemeinsamer BLE-Kern wie ble 2.6.5. |
 | 2.6.5 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |

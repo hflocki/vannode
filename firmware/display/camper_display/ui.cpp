@@ -19,6 +19,7 @@
 #include "alerts.h"
 #include "depart.h"
 #include "netdev.h"
+#include "broker.h"
 #include <lvgl.h>
 #include <vector>
 #include <algorithm>
@@ -2678,7 +2679,8 @@ void refreshHeader() {
     vals[0] = sta ? settings.wifiSsid : (wifimgr::apActive() ? "Setup-WLAN " + wifimgr::apSsid() : String("nicht verbunden"));
     vals[1] = wifimgr::ipString();
     vals[2] = sta ? String(wifimgr::rssi()) + " dBm (" + signalText(wifimgr::rssi()) + ")" : String("--");
-    vals[3] = settings.mqttHost.isEmpty() ? String("nicht eingerichtet") : settings.mqttHost + (mqttc::connected() ? " \xE2\x80\xA2 verbunden" : " \xE2\x80\xA2 getrennt");
+    if (settings.brkOn) vals[3] = String("eigener Broker \xE2\x80\xA2 ") + (broker::running() ? broker::summary() : String("aus"));
+    else vals[3] = settings.mqttHost.isEmpty() ? String("nicht eingerichtet") : settings.mqttHost + (mqttc::connected() ? " \xE2\x80\xA2 verbunden" : " \xE2\x80\xA2 getrennt");
     vals[4] = settings.hostname + ".local";
     vals[5] = String(FW_NAME " " FW_VERSION) + (disp::touchOk() ? "" : " \xE2\x80\xA2 Touch fehlt");
     vals[6] = uptimeText(millis() / 1000);

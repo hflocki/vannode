@@ -227,6 +227,18 @@ Das Display abonniert `<Basis-Topic>/#` jedes Geräts und die Topics der Kacheln
 
 Beispiel: `mosquitto_pub -h <broker> -t camper/display/cmd/screen -m OFF`
 
+### Eigener Broker (Notfall)
+
+Für einen Camper ohne Router mit MQTT-Broker oder zum Testen kann das Display selbst der Broker sein: *Einstellungen → Verbindung → MQTT-Broker → Eigener Broker im Display (Notfall)*. Ab Werk aus, das Einschalten startet das Display neu. Nur das Display hat diese Funktion.
+
+- Das Display lauscht auf dem eingestellten Port (Standard 1883), sein eigener Client verbindet sich intern. Das Feld *Broker* wird dann nicht gebraucht.
+- **Benutzer und Passwort** der MQTT-Einstellungen gelten als Anmeldung für alle Geräte; leer = ohne Anmeldung.
+- Bei den anderen Geräten als Broker die **IP-Adresse des Displays** eintragen. Dafür am besten eine feste IP am Display einstellen.
+- Unterstützt wird, was VanNode, Zigbee2MQTT und OpenMQTTGateway brauchen: Anmeldung, Letzter Wille (`…/status` = `offline`), gespeicherte Nachrichten (retained), Abos mit `+` und `#`, QoS 0/1/2 beim Empfang (gesendet wird immer mit QoS 0). Bis 16 Verbindungen, 2000 gespeicherte Nachrichten bzw. 1 MB.
+- Die gespeicherten Nachrichten liegen nur im Speicher. Nach einem Neustart des Displays senden die Geräte ihre Werte von selbst neu (spätestens beim nächsten Wert bzw. nach dem Neuverbinden).
+- Kein Ersatz für einen Broker im Router: Ist das Display aus, haben die anderen Geräte keinen Broker. Steht ein Router mit Broker zur Verfügung (z. B. RUT956), bleibt der Haken aus.
+- Stand auf der Systemseite (Display: Zeile *MQTT*; Webseite: *System*) und in den MQTT-Einstellungen: Anzahl Verbindungen und gespeicherte Nachrichten.
+
 ### Dachhaube (Heki über den ble-node)
 
 Die Seite **Dachhaube** zeigt den Zustand („Zu“, „Offen 40 %“, „Regen“, „Lüften“, „Öffnet …“) und die Bluetooth-Verbindung des BLE-Node zur Haube. Darunter die vier Voreinstellungen des BLE-Node (**Auf** 100 %, **Zu**, **Regen** 12 %, **Lüften**), die aktive ist hervorgehoben, und ein Regler für die Position. Der Regler folgt der Haube, während sie fährt, aber nicht, solange man ihn anfasst.

@@ -30,6 +30,7 @@
 #include "sensors.h"
 #include "weather.h"
 #include "depart.h"
+#include "broker.h"
 #include <ArduinoOTA.h>
 #include "safeguard.h"
 #include "evlog.h"
@@ -80,6 +81,8 @@ void setup() {
   if (dispOk) ui::splash("WLAN ...");   // start screen with logo until the UI is ready
   else Serial.println("[boot] display init failed, web page still works");
   wifimgr::begin();
+  // emergency broker (off by default): listens on the MQTT port, the own client connects via 127.0.0.1
+  if (settings.brkOn) broker::begin(settings.mqttPort, settings.mqttUser, settings.mqttPass);
   wx::begin();      // before the UI: it shows weather data and warnings
   if (dispOk) ui::splash("Oberfl\xC3\xA4" "che ...");
   ui::begin();

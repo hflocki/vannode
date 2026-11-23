@@ -27,6 +27,7 @@
 #include "evlog.h"
 #include "clockset.h"
 #include "wsauth.h"
+#include "broker.h"
 #include "app_icons.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -122,7 +123,7 @@ void buildCfg(JsonDocument& d) {
     else d["links"].to<JsonArray>();
   }
   d["ap"] = wifimgr::apActive() && !wifimgr::staConnected();
-  d["setup"] = settings.wifiSsid.isEmpty() || settings.mqttHost.isEmpty();
+  d["setup"] = settings.wifiSsid.isEmpty() || (settings.mqttHost.isEmpty() && !settings.brkOn);
   JsonArray b = d["builtin"].to<JsonArray>();
   for (int i = 0; i < BP_COUNT; i++) b.add(settings.builtin[i]);
   d["ovTiles"] = settings.ovTiles.length() ? settings.ovTiles : String(DEFAULT_OV_TILES);
@@ -153,6 +154,7 @@ void buildSys(JsonObject s) {
   s["wifi"] = wifimgr::staConnected();
   s["rssi"] = wifimgr::rssi();
   s["mqtt"] = mqttc::connected();
+  if (broker::running()) s["brk"] = broker::summary();
   s["ip"] = wifimgr::ipString();
   s["bri"] = settings.brightness;
   s["finder"] = mqttc::finderActive();
@@ -298,6 +300,8 @@ void getSettings(AsyncWebServerRequest* r) {
   d["mqttPort"] = settings.mqttPort;
   d["mqttUser"] = settings.mqttUser;
   d["mqttPass"] = settings.mqttPass.isEmpty() ? "" : MASK;
+  d["brkOn"] = settings.brkOn;
+  broker::json(d["brk"].to<JsonObject>());
   d["prefixSelf"] = settings.prefixSelf;
   d["prefixTank"] = settings.prefixTank;
   d["prefixLevel"] = settings.prefixLevel;
@@ -434,6 +438,10 @@ bool applySettings(JsonObject o, bool apply) {
   str("mqttHost", settings.mqttHost, true);
   if (o["mqttPort"].is<int>() && o["mqttPort"].as<int>() != settings.mqttPort) {
     if (apply) settings.mqttPort = o["mqttPort"];
+    reboot = true;
+  }
+  if (o["brkOn"].is<bool>() && o["brkOn"].as<bool>() != settings.brkOn) {
+    if (apply) settings.brkOn = o["brkOn"];
     reboot = true;
   }
   str("mqttUser", settings.mqttUser, true);

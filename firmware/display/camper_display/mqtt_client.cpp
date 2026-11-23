@@ -182,16 +182,18 @@ void subscribeAll() {
 }
 
 void connect() {
-  if (settings.mqttHost.isEmpty() || !wifimgr::staConnected()) return;
+  // own broker (broker.h): always through the loopback, the broker host field is not used
+  const char* host = settings.brkOn ? "127.0.0.1" : settings.mqttHost.c_str();
+  if ((!settings.brkOn && settings.mqttHost.isEmpty()) || !wifimgr::staConnected()) return;
   uint32_t now = millis();
   if (lastAttempt != 0 && now - lastAttempt < MQTT_RECONNECT_MS) return;
   lastAttempt = now;
 
-  mqtt.setServer(settings.mqttHost.c_str(), settings.mqttPort);
+  mqtt.setServer(host, settings.mqttPort);
   String will = self("status");
   const char* user = settings.mqttUser.isEmpty() ? nullptr : settings.mqttUser.c_str();
   const char* pass = settings.mqttUser.isEmpty() ? nullptr : settings.mqttPass.c_str();
-  Serial.printf("[mqtt] connecting to %s:%u\n", settings.mqttHost.c_str(), settings.mqttPort);
+  Serial.printf("[mqtt] connecting to %s:%u\n", host, settings.mqttPort);
   if (mqtt.connect(clientId.c_str(), user, pass, will.c_str(), 1, true, "offline")) {
     Serial.println("[mqtt] connected");
     publish(will, "online", true);

@@ -1127,7 +1127,7 @@ function update(){
   if(S.awake!==undefined){$('#wake').hidden=!!S.awake;$('#sleep').hidden=!S.awake}
   if($('#sy_ip')){
     set('sy_wifi',S.wifi?`verbunden${S.rssi!==undefined?' · '+S.rssi+' dBm':''}`:'getrennt');
-    set('sy_ip',esc(S.ip||'--'));set('sy_mqtt',S.mqtt?'verbunden':'getrennt');
+    set('sy_ip',esc(S.ip||'--'));set('sy_mqtt',(S.mqtt?'verbunden':'getrennt')+(S.brk?' · eigener Broker: '+esc(S.brk):''));
     $('#sy_scr').innerHTML=S.awake===false?svg('light')+' An':svg('power')+' Aus';
     const br=$('#sy_bri');if(S.bri!==undefined&&document.activeElement!==br)br.value=S.bri;
   }
@@ -1342,7 +1342,10 @@ function pgSettings(){
    <label class="chk"><input type="checkbox" id="staticIp"> Feste IP-Adresse</label>
    <div class="f2">${inp('ip','IP')}${inp('gateway','Gateway')}${inp('subnet','Subnetz')}${inp('dns','DNS')}</div></details>
   <details data-g="net" ${cfg&&cfg.setup?'open':''}><summary>MQTT-Broker</summary>
-   <div class="f2">${inp('mqttHost','Broker (IP/Name)','text','192.168.1.1')}${inp('mqttPort','Port','number')}${inp('mqttUser','Benutzer')}${inp('mqttPass','Passwort','password')}</div></details>
+   <div class="f2">${inp('mqttHost','Broker (IP/Name)','text','192.168.1.1')}${inp('mqttPort','Port','number')}${inp('mqttUser','Benutzer')}${inp('mqttPass','Passwort','password')}</div>
+   <label class="chk"><input type="checkbox" id="brkOn" onchange="brkHint()"> Eigener Broker im Display (Notfall)</label>
+   <p class="mu" style="margin-top:-4px">Für Camper ohne Router mit Broker oder zum Testen: Das Display ist dann selbst der MQTT-Broker (Port wie oben, Benutzer und Passwort wie oben gelten für alle Geräte, leer = ohne Anmeldung). Das Feld <i>Broker</i> wird dann nicht gebraucht. Bei den anderen Geräten als Broker die <b>IP-Adresse des Displays</b> eintragen, am besten mit fester IP (Einstellungen → WLAN). Gespeicherte Nachrichten (retained) hält das Display nur im Speicher: Nach einem Neustart senden die Geräte ihre Werte von selbst neu, das dauert ein paar Sekunden. Ab Werk aus, Änderung startet das Display neu.</p>
+   <p class="mu" id="brkst" hidden></p></details>
   <details data-g="svc"><summary>Wetter</summary>
    <p class="mu">Wetter von <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (kostenlos, ohne Anmeldung). Das Display braucht dafür Internet über den Router. Warnungen (Böen, Gewitter) erscheinen oben im Display und gehen auch per Pushover raus.</p>
    <label class="chk"><input type="checkbox" id="wxOn"> Wetter abrufen</label>
@@ -1445,6 +1448,7 @@ async function loadSettings(){
     {const l=(ST.ovTiles||OV_DEFAULT).split(',');for(let i=0;i<9;i++){const e=$('#ov'+i);if(e)e.value=(l[i]||'none').trim()}ovSel=-1;renderOvEd()}
     {const l=(ST.webTiles||WEB_DEFAULT).split(',');for(let i=0;i<16;i++){const e=$('#wt'+i);if(e)e.value=l[i]||'none'}}
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
+    $('#brkOn').checked=!!ST.brkOn;brkHint();
     $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
@@ -1469,6 +1473,12 @@ async function loadSettings(){
   $('#fstart').onclick=()=>send({c:'finder',on:!finder.on,f:$('#ffilter').value});
   $('#fdisc').onclick=()=>{$('#ffilter').value='homeassistant/#';send({c:'finder',on:true,f:'homeassistant/#'})};
   renderFinder();
+}
+// own broker: status line and the broker host field (not used while it is on)
+function brkHint(){
+  const on=$('#brkOn').checked,h=$('#mqttHost'),st=$('#brkst');if(h)h.disabled=on;
+  const b=ST.brk||{};
+  if(st){st.hidden=!b.on;if(b.on)st.textContent=`Läuft auf Port ${b.port}: ${b.clients} Geräte verbunden, ${b.retained} gespeicherte Nachrichten (${b.kb} kB), ${b.msgs} Nachrichten seit dem Start.`}
 }
 async function post(url,body){
   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):'{}'});
@@ -1686,6 +1696,7 @@ function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
+  o.brkOn=$('#brkOn').checked;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;

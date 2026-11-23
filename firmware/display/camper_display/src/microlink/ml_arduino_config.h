@@ -28,6 +28,13 @@
 #define CONFIG_ML_CTRL_HOST "controlplane.tailscale.com"
 #define CONFIG_ML_CTRL_NOISE_PUBKEY_HEX ""
 
+// Stack sizes of microlink's tasks in bytes (internal RAM). Defaults of microlink 2.3.0;
+// the Tailscale card shows how much of each is really used (stack reserve) before they are lowered.
+#define ML_TASK_NET_IO_STACK   (8 * 1024)
+#define ML_TASK_DERP_TX_STACK  (14 * 1024)
+#define ML_TASK_COORD_STACK    (12 * 1024)
+#define ML_TASK_WG_MGR_STACK   (8 * 1024)
+
 // Left off (not defined): zero-copy receive, subnet router / exit node, IPv6 forwarding (NAT66),
 // cellular modem, WiFi/cellular switching, microlink's own web UI, OTA rollback,
 // control plane over TLS, streaming map fetch.

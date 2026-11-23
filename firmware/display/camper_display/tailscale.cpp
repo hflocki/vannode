@@ -17,6 +17,7 @@ extern "C" void vn_ts_nodekey(const microlink_t* ml, char* out, size_t len);   /
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include <freertos/task.h>
 #endif
 
 namespace ts {
@@ -66,6 +67,20 @@ struct Lock {
 };
 
 static size_t internalFree() { return heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); }
+
+// Stack use of microlink's tasks, to size their stacks (ml_arduino_config.h)
+static void stackJson(JsonObject o) {
+  static const struct { const char* task; const char* key; uint32_t size; } T[] = {
+    {"ml_net_io", "net_io", ML_TASK_NET_IO_STACK}, {"ml_derp_tx", "derp_tx", ML_TASK_DERP_TX_STACK},
+    {"ml_coord", "coord", ML_TASK_COORD_STACK}, {"ml_wg_mgr", "wg_mgr", ML_TASK_WG_MGR_STACK}};
+  for (auto& t : T) {
+    TaskHandle_t h = xTaskGetHandle(t.task);
+    if (!h) continue;
+    JsonObject s = o[t.key].to<JsonObject>();
+    s["size"] = t.size;
+    s["free"] = (unsigned)uxTaskGetStackHighWaterMark(h);   // bytes never used so far (ESP-IDF counts bytes)
+  }
+}
 
 static void onState(microlink_t*, microlink_state_t st, void*) { curCode = (int)st; }
 
@@ -173,6 +188,8 @@ void json(JsonObject o) {
   o["code"] = ml ? (int)curCode : -1;
   o["peers"] = (int)curPeers;
   o["heap"] = (unsigned)(internalFree() / 1024);
+  o["block"] = (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) / 1024);   // TLS needs one piece
+  if (ml) stackJson(o["stk"].to<JsonObject>());
   if (settings.tsOn && !ml) o["wait"] = gaveUp ? "ram" : (wifimgr::staConnected() ? "start" : "wifi");
   Lock l;
   o["name"] = curName.length() ? curName : name();

@@ -269,6 +269,7 @@ Das Display kann selbst in dein [Tailscale](https://tailscale.com)-Netz (Tailnet
 - Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays bleibt zusätzlich aktiv.
 - Relais (DERP): bevorzugt Frankfurt. Sobald eine direkte Verbindung klappt, läuft der Verkehr direkt.
 - **Speicher:** microlink braucht internen RAM für seine Tasks und die verschlüsselte Verbindung zum Relais. Unter 60 kB freiem internem RAM startet es nicht (Hinweis in der Karte und unter *Ereignisse*). Wird der RAM mit Tailscale knapp, können Wetterabfragen und Pushover fehlschlagen (siehe [Hinweise](#hinweise)) – dann den eigenen Broker oder Tailscale wieder abschalten.
+- **RAM messen:** Die Karte zeigt neben dem freien internen RAM den größten freien Block (Wetter und Pushover brauchen rund 40–50 kB am Stück) und für jede microlink-Task die **Stack-Reserve** (nie benutzter Teil / Größe). Mit diesen Werten lassen sich die Stacks in `src/microlink/ml_arduino_config.h` verkleinern.
 - Ohne Tailscale bauen: `#define WITH_TAILSCALE 0` in `config_local.h` (kleinere Firmware, die Karte meldet dann „Nicht in dieser Firmware“).
 
 ## Warnungen

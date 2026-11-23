@@ -24,7 +24,7 @@ namespace ts {
 
 void begin();             // in setup(), after the settings are loaded
 void loop();              // in loop(): starts microlink once WiFi is up
-void json(JsonObject o);  // {built, on, code, ip, peers, url, name, nodekey, heap}; code -1 = not running
+void json(JsonObject o);  // {built, on, code, ip, peers, url, name, nodekey, heap, block, stk}; code -1 = not running
 String ip();              // tailnet address, "" = not connected
 String name();            // device name in the tailnet (setting or hostname)
 bool needsLogin();        // waiting for the interactive sign-in

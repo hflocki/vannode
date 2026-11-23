@@ -23,6 +23,8 @@ Sonst unverändert. Geändert wurde nur, was der Arduino-Build braucht:
 - **Einstellungen statt Kconfig:** Jede `.c`-Datei bindet als erste Zeile `ml_arduino_config.h` ein
   (eigene Datei, GPL-3.0). Darin stehen die Werte, die sonst aus dem Kconfig-Menü von ESP-IDF kommen.
   Keine Zugangsdaten – Auth-Key und Gerätename kommen zur Laufzeit aus den Einstellungen des Displays.
+- **Stack-Größen einstellbar:** In `microlink_internal.h` stehen die vier `ML_TASK_*_STACK` in `#ifndef`, damit
+  `ml_arduino_config.h` sie setzen kann.
 - **Weggelassen:** Mobilfunk (`ml_cellular.c`, `ml_at_socket.c`), Netzwechsel
   (`ml_net_switch.c`) und die eigene Einstellungsseite (`ml_config_httpd.c`, `ml_config_html.h`). Ihre Header
   bleiben, weil sie bei ausgeschalteter Funktion leere Ersatzfunktionen liefern. `ml_at_validate.c` bleibt

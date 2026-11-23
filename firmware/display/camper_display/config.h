@@ -16,7 +16,7 @@
 // =====================================================================
 
 #define FW_NAME                 "display-node"
-#define FW_VERSION              "2.23.1"
+#define FW_VERSION              "2.23.2"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -187,7 +187,7 @@
 #define DEFAULT_WEB_USER        "admin" // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    "vannode2026"
+#define DEFAULT_WEB_PASSWORD    "admin"
 #endif
 #ifndef DEFAULT_FAN_PORT
 #define DEFAULT_FAN_PORT        1                   // VanTurtle port 1 = RJ45

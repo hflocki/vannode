@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `level-v<ve
 
 | Version | Änderungen |
 |---|---|
+| 2.4.12 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |
 | 2.4.11 | **Web-Login immer an:** ab Werk Benutzer `admin`, Passwort `vannode2026`. Geräte, die bisher ohne Login liefen, bekommen ihn mit diesem Update; leere Felder behalten den gespeicherten Wert, abschalten lässt sich die Anmeldung nicht mehr. USB-Befehl `noauth` setzt auf den Werks-Login zurück (statt ihn zu löschen). |
 | 2.4.10 | **Gleiche System-Karten auf allen Geräten:** Firmware- & Web-Update, Einstellungen sichern, Ereignisse und Gerät (Neustart) kommen jetzt aus einem gemeinsamen Baustein (`firmware/_common/web/vannode-system.js`) und sehen überall gleich aus: Dateiauswahl als Feld mit Dateiname, Fortschrittsbalken, Prüfung der Datei wie bisher (gleiche Regeln). Sicherung: *Sichern* und *Einspielen* nebeneinander, *Einspielen* erst nach der Dateiwahl. |
 | 2.4.9 | Neue Karte **Einstellungen sichern** unter dem Firmware-Update (gemeinsamer Baustein `firmware/_common/web/vannode-backup.js`): alle Einstellungen als Datei sichern und wieder einspielen. Passwörter und die Anmeldung sind nicht enthalten und bleiben beim Einspielen erhalten; WLAN, IP, Gerätename und MQTT-Server nur mit Häkchen. Läuft nur in der Web-Seite über die vorhandene `/api/config`, die Firmware selbst ist unverändert |

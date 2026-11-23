@@ -134,7 +134,7 @@ Seit 1.3.0 hat jede Firmware eine Kennung (`CAMPER-FW:pocket:<version>:<chip>;`,
 
 **Einmal per USB mit eigener `config_local.h` flashen:** Der Build aus GitHub Actions enthält keine Zugangsdaten (ohne `config_local.h` gebaut). Ab Version 1.1.0 speichert eine Firmware mit eigenen Zugangsdaten WLAN, MQTT und den Web-Login im Flash, die Actions-Firmware liest sie von dort. Deshalb das erste Mal (und nach einem Löschen des Flash) per USB mit eigener `config_local.h` flashen, danach reichen die Updates über die Webseite.
 
-Die Update-Seite verlangt eine Anmeldung, ab Werk `admin` / `vannode2026`; eigene Werte mit `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASSWORD` in `config_local.h` (leer = Werks-Login).
+Die Update-Seite verlangt eine Anmeldung, ab Werk `admin` / `admin`; eigene Werte mit `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASSWORD` in `config_local.h` (leer = Werks-Login).
 
 ---
 

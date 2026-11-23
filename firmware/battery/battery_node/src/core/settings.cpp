@@ -79,8 +79,9 @@ static void coreFromFile(JsonDocument& doc) {
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
-    // No login stored (up to ble 2.6.2 / battery 2.6.3 empty = open): the factory login applies
-    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0') {
+    // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
+    // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
+    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0' || strcmp(config.web_pass, "vannode2026") == 0) {
         strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
         strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
     }

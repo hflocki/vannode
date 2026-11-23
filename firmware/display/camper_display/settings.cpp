@@ -50,8 +50,9 @@ void load() {
   settings.apPass       = prefs.getString("appass", DEFAULT_AP_PASSWORD);
   settings.webUser      = prefs.getString("wusr",   DEFAULT_WEB_USER);
   settings.webPass      = prefs.getString("wpw",    DEFAULT_WEB_PASSWORD);
-  // No login stored (up to display 2026-11 empty password = open): the factory login applies
-  if (settings.webUser.isEmpty() || settings.webPass.isEmpty()) {
+  // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
+  // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
+  if (settings.webUser.isEmpty() || settings.webPass.isEmpty() || settings.webPass == "vannode2026") {
     settings.webUser = DEFAULT_WEB_USER;
     settings.webPass = DEFAULT_WEB_PASSWORD;
   }

@@ -52,7 +52,7 @@
 #define DEFAULT_WEB_USER "admin"
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD "vannode2026"
+#define DEFAULT_WEB_PASSWORD "admin"
 #endif
 #define WEB_USER DEFAULT_WEB_USER
 #define WEB_PASS DEFAULT_WEB_PASSWORD

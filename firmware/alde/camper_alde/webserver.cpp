@@ -60,7 +60,7 @@ static void handleApiGetConfig(AsyncWebServerRequest* request);
 static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total);
 
 // Web UI login (HTTP basic auth), always on. Factory login: DEFAULT_WEB_USER / DEFAULT_WEB_PASSWORD
-// (admin / vannode2026); devices without a stored login get it at the start (loadConfig).
+// (admin / admin); devices without a stored login get it at the start (loadConfig).
 static bool authOk(AsyncWebServerRequest* request) {
     return request->authenticate(config.web_user, config.web_pass);
 }
@@ -603,8 +603,9 @@ void loadConfig() {
     strlcpy(config.mqtt_prefix, doc["mqtt_prefix"] | DEFAULT_MQTT_PREFIX,   sizeof(config.mqtt_prefix));
     strlcpy(config.web_user,    doc["web_user"]    | DEFAULT_WEB_USER,      sizeof(config.web_user));
     strlcpy(config.web_pass,    doc["web_pass"]    | DEFAULT_WEB_PASSWORD,  sizeof(config.web_pass));
-    // No login stored (up to the 2026-11 releases empty = open): the factory login applies
-    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0') {
+    // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
+    // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
+    if (config.web_user[0] == '\0' || config.web_pass[0] == '\0' || strcmp(config.web_pass, "vannode2026") == 0) {
         strlcpy(config.web_user, DEFAULT_WEB_USER, sizeof(config.web_user));
         strlcpy(config.web_pass, DEFAULT_WEB_PASSWORD, sizeof(config.web_pass));
     }

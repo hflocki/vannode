@@ -22,7 +22,7 @@ struct Settings {
   String   mqttPrefix;
   bool     discovery = true;
 
-  String   webUser;          // always set (factory login admin / vannode2026)
+  String   webUser;          // always set (factory login admin / admin)
   String   webPass;
 
   bool     portEnabled[2] = {false, true};

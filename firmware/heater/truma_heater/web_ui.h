@@ -366,7 +366,7 @@ nav button .ico{display:inline-flex}
       <div class="fg"><label>Web-Benutzer (leer = bleibt)</label><input data-cfg="web_user"></div>
       <div class="fg"><label>Web-Passwort</label><input data-cfg="web_pass" type="password" placeholder="(unverändert)" autocomplete="new-password"></div>
     </div>
-    <div class="hint">Die Anmeldung ist immer an (ab Werk <code>admin</code> / <code>vannode2026</code>). Leere Felder behalten den gespeicherten Wert.</div>
+    <div class="hint">Die Anmeldung ist immer an (ab Werk <code>admin</code> / <code>admin</code>). Leere Felder behalten den gespeicherten Wert.</div>
     <div class="sw"><span class="t">Web-Login auf Werks-Login zurücksetzen</span><label class="toggle"><input type="checkbox" data-cfg="clear_web_pass"><span></span></label></div>
     <div class="btns"><button class="btn save" data-save="f-sys">💾 Speichern</button></div>
   </div>

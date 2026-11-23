@@ -48,7 +48,7 @@ Das Display (ESP32-S3 mit 16 MB und PSRAM) hat eigene Werte, siehe [Display-READ
 | --- | --- | --- | --- | --- | --- | --- |
 | Board | ESP32C3 Dev Module | ESP32S3 Dev Module | ESP32 Dev Module | M5AtomS3 | M5Core2 (unter *esp32*, nicht unter „M5Stack“) | NodeMCU 1.0 (ESP-12E Module) bzw. LOLIN(WEMOS) D1 R2 & mini |
 | USB CDC On Boot | **Enabled** | **Enabled** | – | **Enabled** | – | – |
-| Partition Scheme / Flash Size | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **8M with spiffs (3MB APP/1.5MB SPIFFS)** | Default (2 x 6.5 MB app, 3.6 MB SPIFFS) – hat OTA, nichts ändern | **4MB (FS:1MB OTA:~1019KB)** |
+| Partition Scheme / Flash Size | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)** | **Minimal SPIFFS (1.9MB APP with OTA/128KB SPIFFS)** (gleiches Schema, beim ESP32 heißt es 128KB) | **8M with spiffs (3MB APP/1.5MB SPIFFS)** | Default (2 x 6.5 MB app, 3.6 MB SPIFFS) – hat OTA, nichts ändern | **4MB (FS:1MB OTA:~1019KB)** |
 | PSRAM | – | aus (falsche Einstellung führt zu Abstürzen) | – | – | – | – |
 | Anschluss | USB-C | Buchse „USB“ (nicht „UART“), dort kommt auch das serielle Log | USB | USB-C | USB-C | USB |
 | Besonderheit | Port wechselt nach dem Upload (Neustart), neu wählen | – | – | Wird er beim Hochladen nicht gefunden: Knopf am Gehäuse beim Einstecken ca. 2 s halten (Download-Modus) | – | – |

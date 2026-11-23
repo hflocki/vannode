@@ -98,7 +98,7 @@ Gleicher Aufbau und gleiche Optik wie bei tanklevel-node, temp-node und heater-n
 
 - **Live:** Ein/Öffnen, Schließen, Auto, Richtung, Langsamer, Schneller, Stufe 1–10 setzen, Auto-Hold-Anzeige, Sync auf AUS, Haube offen/zu (mit Haubenkontakt)
 - **MaxxFan:** Bedienteil je Port (Controller-LED, Piep als Verbindungstest), Ports ein/aus, Tastendruck-Dauer, Sync-Port, Haubenkontakt
-- **MQTT:** Broker, Topic-Prefix, Home-Assistant-Discovery, Web-Login (immer an, ab Werk `admin` / `vannode2026`; vergessen: mit Erase All Flash neu flashen)
+- **MQTT:** Broker, Topic-Prefix, Home-Assistant-Discovery, Web-Login (immer an, ab Werk `admin` / `admin`; vergessen: mit Erase All Flash neu flashen)
 - **WiFi:** Verbindungsstatus, WLAN, feste IP, Access Point, Firmware-Update, Neustart, Werkseinstellungen
 
 Zum Ausprobieren ohne Gerät: [`docs/mockups/maxxfan.html`](../../docs/mockups/maxxfan.html) im Repo-Hauptordner (siehe [Mockups](../../README.md#mockups)).

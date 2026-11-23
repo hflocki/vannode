@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "1.2.11"
+#define FW_VERSION            "1.2.12"
 #define FW_DEVICE            "example"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Example Node"   // web UI title, HA device name, serial banner
 
@@ -62,7 +62,7 @@
 #define DEFAULT_WEB_USER        "admin"      // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    "vannode2026"
+#define DEFAULT_WEB_PASSWORD    "admin"
 #endif
 #ifndef DEFAULT_MQTT_PREFIX
 #define DEFAULT_MQTT_PREFIX   "camper/example"   // Topics: <prefix>/<value key>, <prefix>/status, <prefix>/rssi
@@ -135,7 +135,7 @@ struct AppConfig {
     char mqtt_pass[32];
     char mqtt_prefix[32];
 
-    char web_user[32];     // Web UI login, always on (factory login admin / vannode2026)
+    char web_user[32];     // Web UI login, always on (factory login admin / admin)
     char web_pass[32];
 
     // ---- Device settings (TODO: add your own, plus load/save/validate in webserver.cpp) ----

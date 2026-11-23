@@ -14,7 +14,7 @@
 //  MaxxFan Node - VanTurtle board (TCA9555) -> MQTT / Home Assistant
 // =====================================================================
 
-#define FW_VERSION              "1.9.5"
+#define FW_VERSION              "1.9.6"
 #define FW_DEVICE               "maxxfan"   // device id in the firmware marker (fwcheck.h)
 
 // ---- Device / access point ------------------------------------------
@@ -114,7 +114,7 @@
 #define DEFAULT_WEB_USER        "admin"      // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    "vannode2026"
+#define DEFAULT_WEB_PASSWORD    "admin"
 #endif
 #ifndef STATE_REPUBLISH_MS
 #define STATE_REPUBLISH_MS      60000   // full state publish interval

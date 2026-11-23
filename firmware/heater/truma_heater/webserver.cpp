@@ -45,7 +45,7 @@ static String g_state_json = "{}";
 static uint32_t g_last_render = 0;
 static volatile uint32_t g_reboot_at = 0;
 
-// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
+// Web UI login (HTTP basic auth), always on; factory login admin / admin (config.h)
 static bool check_auth(AsyncWebServerRequest *req) {
   if (req->authenticate(g_settings.web_user.c_str(), g_settings.web_pass.c_str())) return true;
   req->requestAuthentication();

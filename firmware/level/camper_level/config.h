@@ -18,7 +18,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.4.11"
+#define FW_VERSION            "2.4.12"
 #define FW_DEVICE             "level"   // device id in the firmware marker (fwcheck.h)
 
 #ifndef DEFAULT_AP_SSID
@@ -57,7 +57,7 @@
 #define DEFAULT_WEB_USER        "admin"      // login is always on; empty input keeps the stored value
 #endif
 #ifndef DEFAULT_WEB_PASSWORD
-#define DEFAULT_WEB_PASSWORD    "vannode2026"
+#define DEFAULT_WEB_PASSWORD    "admin"
 #endif
 
 #ifndef DEFAULT_MQTT_PREFIX
@@ -154,7 +154,7 @@ struct AppConfig {
     char mqtt_pass[32];
     char mqtt_prefix[32];
 
-    char web_user[32];     // Web UI login, always on (factory login admin / vannode2026)
+    char web_user[32];     // Web UI login, always on (factory login admin / admin)
     char web_pass[32];
 
     MountOrientation mount;

@@ -129,7 +129,7 @@ In `config.h`:
 
 **Eigene Werte ohne `config.h` zu ändern:** `truma_heater/config_local.h.example` nach `truma_heater/config_local.h` kopieren und dort z. B. ein eigenes AP-Passwort (`DEFAULT_AP_PASSWORD`) oder die Board-Auswahl eintragen. Die Datei wird automatisch eingebunden, von Git ignoriert und von Patches nie angefasst. Auch WLAN, Broker und Web-Login ab Werk lassen sich dort eintragen; sie gelten, solange im Gerät noch nichts gespeichert ist (erster Start, Werkseinstellungen, „Erase All Flash“).
 
-**Web-Login:** Die Webseite verlangt immer eine Anmeldung, ab Werk `admin` / `vannode2026` (Geräte ohne Login bekommen ihn mit dem Update). Unter *System → Zeit & Zugriff* änderbar, leere Felder behalten den Wert; der Schalter „Web-Login auf Werks-Login zurücksetzen“ stellt `admin` / `vannode2026` wieder her. Vergessen: Die Heizung hat keine serielle Konsole (die UART braucht der LIN-Bus), also mit „Erase All Flash“ neu flashen.
+**Web-Login:** Die Webseite verlangt immer eine Anmeldung, ab Werk `admin` / `admin` (Geräte ohne Login bekommen ihn mit dem Update). Unter *System → Zeit & Zugriff* änderbar, leere Felder behalten den Wert; der Schalter „Web-Login auf Werks-Login zurücksetzen“ stellt `admin` / `admin` wieder her. Vergessen: Die Heizung hat keine serielle Konsole (die UART braucht der LIN-Bus), also mit „Erase All Flash“ neu flashen.
 
 ## Fehlersuche
 

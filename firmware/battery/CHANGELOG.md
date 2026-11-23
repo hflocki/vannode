@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `battery-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 2.6.5 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |
 | 2.6.4 | **Web-Login immer an:** ab Werk Benutzer `admin`, Passwort `vannode2026`. Geräte, die bisher ohne Login liefen, bekommen ihn mit diesem Update; leere Felder behalten den gespeicherten Wert, abschalten lässt sich die Anmeldung nicht mehr. USB-Befehl `noauth` setzt auf den Werks-Login zurück (statt ihn zu löschen). Gemeinsamer BLE-Kern wie ble 2.6.3. |
 | 2.6.3 | Gemeinsamer BLE-Kern wie ble 2.6.2: Fehler „Einstellungen unvollständig empfangen“ bzw. Node antwortet nicht mehr bei knappem Speicher behoben (Antwort in einem Stück, Feldbeschreibungen über `/api/schema`), Fahrt-Erkennung über `<Wurzel>/+/driving` |
 | 2.6.2 | **Gleiche System-Karten auf allen Geräten:** Firmware- & Web-Update, Einstellungen sichern, Ereignisse und Gerät (Neustart, Werkseinstellungen) kommen jetzt aus einem gemeinsamen Baustein (`firmware/_common/web/vannode-system.js`) und sehen überall gleich aus: Dateiauswahl als Feld mit Dateiname, Fortschrittsbalken, Prüfung der Datei wie bisher (gleiche Regeln). Sicherung: *Sichern* und *Einspielen* nebeneinander, *Einspielen* erst nach der Dateiwahl. |

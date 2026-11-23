@@ -50,7 +50,7 @@ code{background:#1e2d3d;padding:2px 6px;border-radius:4px}button{padding:10px 16
 <form method="POST" action="/api/update" enctype="multipart/form-data">
 <input type="file" name="fw" accept=".bin,.gz"><br><button>Hochladen</button></form></body></html>)HTML";
 
-// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
+// Web UI login (HTTP basic auth), always on; factory login admin / admin (config.h)
 bool auth(AsyncWebServerRequest* r) {
   if (r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return true;
   r->requestAuthentication();

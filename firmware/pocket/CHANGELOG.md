@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `pocket-v<v
 
 | Version | Änderungen |
 | --- | --- |
+| 1.6.3 | **Werks-Login jetzt admin / admin** (statt `vannode2026`). Ein selbst gesetztes Passwort bleibt beim Update unverändert; nur Geräte ohne Login oder noch mit dem Werks-Passwort `vannode2026` bekommen admin / admin. |
 | 1.6.2 | **Web-Login immer an:** ab Werk Benutzer `admin`, Passwort `vannode2026`. Geräte, die bisher ohne Login liefen, bekommen ihn mit diesem Update; leere Felder behalten den gespeicherten Wert, abschalten lässt sich die Anmeldung nicht mehr. Gilt für die Update-Seite; eigene Werte weiter über `config_local.h`. |
 | 1.6.1 | Update-Seite mit der gemeinsamen Karte **Über VanNode** wie alle anderen Geräte (Logo, Urheber, Lizenz, Links auf Lizenztext und zentrale NOTICE.md) statt der eigenen Fußzeile |
 | 1.6.0 | **Road Buddy heißt jetzt Pocket-Node:** Ordner `firmware/pocket`, Sketch `pocket.ino`, Firmware-Kennung `pocket`, Hostname `pocket-node.local`, eigenes Topic `camper/pocket`, Release-Dateien `pocket-node-core2-…`. Einmal per USB flashen (die alte Update-Seite lehnt die neue Kennung ab); gespeicherte WLAN-Daten bleiben erhalten. Alte retained Topics `camper/roadbuddy/status` und `…/info` löschen |

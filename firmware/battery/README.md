@@ -85,7 +85,7 @@ Neue Batterie-Typen kommen als Plugin wie beim ble-node dazu (siehe [Neues Plugi
 
 ## Serieller Monitor
 
-115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login auf `admin` / `vannode2026` zurücksetzen), `help`. Jede Batterie hat unter *Geräte* eine Karte **Log** mit Download, der Reiter **Debug** (*System → Debug*) zeigt alle Logs auf einmal.
+115200 Baud. Befehle: `read` (alle Werte), `scan` (Bluetooth-Geräte in der Nähe), `noauth` (vergessenen Web-Login auf `admin` / `admin` zurücksetzen), `help`. Jede Batterie hat unter *Geräte* eine Karte **Log** mit Download, der Reiter **Debug** (*System → Debug*) zeigt alle Logs auf einmal.
 
 ## Sicheres Update, Ereignisse und Rückfall
 

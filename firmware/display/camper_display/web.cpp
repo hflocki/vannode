@@ -55,7 +55,7 @@ bool     cfgDirty = false;
 
 const char* MASK = "********";
 
-// Web UI login (HTTP basic auth), always on; factory login admin / vannode2026 (config.h)
+// Web UI login (HTTP basic auth), always on; factory login admin / admin (config.h)
 bool auth(AsyncWebServerRequest* r) {
   if (r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return true;
   r->requestAuthentication();

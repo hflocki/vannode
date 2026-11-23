@@ -42,8 +42,9 @@ void settings_load() {
 
   g_settings.web_user = p.getString("wuser", DEFAULT_WEB_USER);
   g_settings.web_pass = p.getString("wwpass", DEFAULT_WEB_PASSWORD);
-  // No login stored (up to heater 2026-11 empty = open): the factory login applies
-  if (g_settings.web_user.isEmpty() || g_settings.web_pass.isEmpty()) {
+  // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
+  // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
+  if (g_settings.web_user.isEmpty() || g_settings.web_pass.isEmpty() || g_settings.web_pass == "vannode2026") {
     g_settings.web_user = DEFAULT_WEB_USER;
     g_settings.web_pass = DEFAULT_WEB_PASSWORD;
   }

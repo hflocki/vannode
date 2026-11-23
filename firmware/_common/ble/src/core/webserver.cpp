@@ -62,7 +62,7 @@ struct WebCommand {
 static QueueHandle_t cmdQueue = nullptr;
 
 // Web UI login (HTTP basic auth), always on. Factory login DEFAULT_WEB_USER / DEFAULT_WEB_PASSWORD
-// (admin / vannode2026); a device without a stored login gets it at the start (settings.cpp).
+// (admin / admin); a device without a stored login gets it at the start (settings.cpp).
 static bool authOk(AsyncWebServerRequest* request) {
     return request->authenticate(config.web_user, config.web_pass);
 }

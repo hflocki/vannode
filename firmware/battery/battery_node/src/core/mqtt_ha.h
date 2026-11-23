@@ -24,5 +24,8 @@ void mqttRequestDiscovery();
 void mqttForget(Plugin* p);
 // Home Assistant node ID derived from the MQTT prefix ("camper/ble" -> "camper_ble")
 const char* mqttNodeId();
+// Departure check of the display: last value of <root>/+/driving (root = first part of the
+// prefix, e.g. "camper"), false without MQTT or without a display
+bool mqttDriving();
 
 #endif // CT_MQTT_HA_H

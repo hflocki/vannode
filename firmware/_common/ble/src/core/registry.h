@@ -60,6 +60,10 @@ uint8_t registryLinksOn(const Plugin* except = nullptr);
 // At boot: more than MAX_BLE_LINKS connecting plugins switched on (edited config): switch off the rest
 void registryEnforceLinkLimit();
 
+// Vehicle driving: a device of this node says so (OBD engine running) or the display's
+// departure check does (<root>/+/driving = ON over MQTT, see mqtt_ha.cpp)
+bool registryDriving();
+
 #define FOR_EACH_PLUGIN(p) \
     for (uint8_t _i = 0; _i < pluginCount(); _i++) \
         for (Plugin* p = pluginAt(_i); p; p = nullptr)

@@ -159,7 +159,9 @@ public:
     // ---- Web UI ----
     // Fills o with: "state" (text), "ok" (bool), optional "gauge" {v, unit, label, max},
     // "zones" [{l, v, unit, s, k, on}, ...] (equal panels side by side, optional switch k),
-    // "rows" [[label, value, unit], ...], "ctrl" [{t: switch|select|buttons|slider, ...}], "raw"
+    // "rows" [[label, value, unit], ...], "ctrl" [{t: switch|select|buttons|slider, ...}], "raw",
+    // "tanks" [{l, p, v, u, s, r, off}, ...] (equal tank tiles: label, fill 0..100 for the picture,
+    // shown value + unit, sub line, small raw value, off = channel not used)
     virtual void live(JsonObject o) = 0;
 
     // ---- MQTT / Home Assistant ----
@@ -175,6 +177,10 @@ public:
 
     // Command from MQTT (<prefix>/cmd/<id>/<key>/set) or from the web UI (same key / value)
     virtual void command(const char* key, const char* value) {}
+
+    // Vehicle is driving according to this device (OBD: engine running). Other plugins ask
+    // registryDriving(), which also takes the departure check of the display (MQTT).
+    virtual bool driving() const { return false; }
 };
 
 // Helpers for live() and command()

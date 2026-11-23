@@ -242,6 +242,7 @@ public:
     }
 
     uint8_t bleUse() const override { return BLE_LINK; }
+    bool driving() const override { return running; }   // engine running = on the road
     const char* bleAddress() const override { return c.mac; }
     bool bleCandidate(int32_t company, const char* uuid, const char* name) const override {
         return containsIgnoreCase(name, "OBD") || containsIgnoreCase(name, "vLink") ||

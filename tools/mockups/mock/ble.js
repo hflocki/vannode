@@ -34,7 +34,8 @@ const M = {
       P('obd', 'obd', 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', 2, {name: 'Fahrzeug', mac: MAC(5), pin: '', gatt: 0,
         service: '', notify: '', write: '', profile: 1, mode: 0, detect: 1, run_v: 13.2, poll_s: 5, rest_min: 10}),
       P('supersense', 'supersense', 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', 2, {name: 'Tanks', mac: MAC(15), medium: 1, tank_size: 100, empty1: 0, full1: 0,
-        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 0, size3: 0, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0}),
+        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 3, size3: 80, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0,
+        show1: 0, show2: 1, show3: 1, show4: 0, poll_s: 10, drive_s: 300}),
       // passive sensors (advertisements only)
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
@@ -99,21 +100,27 @@ const M = {
       bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
       supersense: [{k: 'mac', l: 'MAC der Box', t: 'mac', h: 'SSBT… – über "Suchen" aus der Liste wählen'},
                    {k: 'medium', l: 'Sensor 1: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show1', l: 'Sensor 1: Anzeige', t: 'select', o: 'Inhalt|Freier Platz', h: 'Nur die Kachel in der Live-Ansicht: Inhalt oder noch freier Platz (z. B. beim Abwassertank)'},
                    {k: 'tank_size', l: 'Sensor 1: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty1', l: 'Sensor 1: Rohwert leer', t: 'int', min: 0, max: 9998, h: 'Leer und voll = 0: Standard (2475 = 100 %). Sonst den Rohwert aus der Live-Ansicht bei leerem bzw. vollem Tank eintragen'},
                    {k: 'full1', l: 'Sensor 1: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind2', l: 'Sensor 2: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show2', l: 'Sensor 2: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size2', l: 'Sensor 2: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty2', l: 'Sensor 2: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full2', l: 'Sensor 2: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind3', l: 'Sensor 3: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show3', l: 'Sensor 3: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size3', l: 'Sensor 3: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty3', l: 'Sensor 3: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full3', l: 'Sensor 3: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind4', l: 'Sensor 4: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show4', l: 'Sensor 4: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size4', l: 'Sensor 4: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
-                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
+                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'poll_s', l: 'Aktualisieren im Stand alle', t: 'int', min: 1, max: 3600, step: 1, u: 's', h: 'Füllstände werden über diese Zeit gemittelt, dann angezeigt und per MQTT gesendet'},
+                   {k: 'drive_s', l: 'Aktualisieren während der Fahrt alle', t: 'int', min: 1, max: 3600, step: 1, u: 's', h: 'Länger als im Stand, weil das Wasser schwappt (Warnungen am Display springen sonst). Fahrt = OBD-Adapter an diesem Node meldet Motor läuft, oder der Abfahrtscheck des Displays'}],
       dimes: GAS_FIELDS,
       senso4s: GAS_FIELDS,
       trumalc: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name beginnt mit "T", z. B. "T…Alugas 11kg")'},
@@ -377,16 +384,22 @@ const M = {
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
       }
       case 'supersense': {
-        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor
-        const raw = [Math.round(wave(1820, 6, 11)), 640, 9999, 9999];
-        const pct = raw.map(r => Math.round(r / 24.75));
-        const size = [+p.cfg.tank_size || 100, +p.cfg.size2 || 90];
-        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel,
-          gauge: {v: pct[0], unit: '%', label: 'Frischwasser', max: 100},
-          rows: [['Sensor 1: Frischwasser', pct[0] + ' % · ' + (pct[0] * size[0] / 100).toFixed(1) + ' L · Rohwert ' + raw[0] + ' · 9.3 °C', ''],
-                 ['Sensor 2: Grauwasser', pct[1] + ' % · ' + (pct[1] * size[1] / 100).toFixed(1) + ' L · Rohwert ' + raw[1] + ' · 10.2 °C', ''],
-                 ['Bluetooth', -76, 'dBm']],
-          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 99 99 99 99'};
+        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor; tiles like the device sends them
+        const c = p.cfg, raw = [Math.round(wave(1820, 6, 11)), 640, 300, 9999];
+        const KIND = ['Sensor', 'Frischwasser', 'Grauwasser', 'Schwarzwasser', 'Gas', 'Tank'];
+        const kinds = [c.medium, c.kind2, c.kind3, c.kind4].map(Number), sizes = [c.tank_size, c.size2, c.size3, c.size4].map(Number);
+        const shows = [c.show1, c.show2, c.show3, c.show4].map(Number), temps = [9.3, 10.2, 10.8];
+        const tanks = raw.map((r, i) => {
+          const t = {l: kinds[i] ? KIND[kinds[i]] : 'Sensor ' + (i + 1)};
+          if (r !== 9999) t.r = r;
+          if (!kinds[i] || r === 9999) return Object.assign(t, {off: true, s: !kinds[i] ? (r !== 9999 ? 'nicht zugeordnet' : 'nicht benutzt') : 'kein Sensor'});
+          const pct = Math.min(100, Math.round(r / 24.75)), l = pct * sizes[i] / 100, free = shows[i] === 1;
+          return Object.assign(t, {p: pct, v: free ? 100 - pct : pct, u: '%', free: free || undefined,
+            s: (free ? 'frei ' + (sizes[i] - l).toFixed(1) : l.toFixed(1)) + ' L · ' + temps[i] + ' °C'});
+        });
+        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, tanks,
+          rows: [['Aktualisierung', 'alle ' + (c.poll_s || 10) + ' s (Stand)', ''], ['Bluetooth', -76, 'dBm']],
+          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 03 00 99 99'};
       }
       case 'tpms': {
         const p = [3.62, 3.21, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];

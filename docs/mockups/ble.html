@@ -40,7 +40,8 @@ const M = {
       P('obd', 'obd', 'Fahrzeug: OBD2-Adapter (ELM327 / vLinker)', 2, {name: 'Fahrzeug', mac: MAC(5), pin: '', gatt: 0,
         service: '', notify: '', write: '', profile: 1, mode: 0, detect: 1, run_v: 13.2, poll_s: 5, rest_min: 10}),
       P('supersense', 'supersense', 'Tanks: SuperSense Empfängerbox (bis 4 Sensoren)', 2, {name: 'Tanks', mac: MAC(15), medium: 1, tank_size: 100, empty1: 0, full1: 0,
-        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 0, size3: 0, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0}),
+        kind2: 2, size2: 90, empty2: 0, full2: 0, kind3: 3, size3: 80, empty3: 0, full3: 0, kind4: 0, size4: 0, empty4: 0, full4: 0,
+        show1: 0, show2: 1, show3: 1, show4: 0, poll_s: 10, drive_s: 300}),
       // passive sensors (advertisements only)
       P('dimes', 'dimes', 'Gas: DIMES / SRG WAVE', 1, Object.assign({name: 'Gasflasche', mac: MAC(9)}, GAS_CFG)),
       P('mopeka', 'mopeka', 'Gas: Mopeka Pro', 1, Object.assign({name: 'Gasflasche 2', mac: MAC(10), empty_mm: 38, full_mm: 366}, GAS_CFG)),
@@ -105,21 +106,27 @@ const M = {
       bm2: [{k: 'mac', l: 'BM2-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name "Battery Monitor" / "BM2")'}],
       supersense: [{k: 'mac', l: 'MAC der Box', t: 'mac', h: 'SSBT… – über "Suchen" aus der Liste wählen'},
                    {k: 'medium', l: 'Sensor 1: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show1', l: 'Sensor 1: Anzeige', t: 'select', o: 'Inhalt|Freier Platz', h: 'Nur die Kachel in der Live-Ansicht: Inhalt oder noch freier Platz (z. B. beim Abwassertank)'},
                    {k: 'tank_size', l: 'Sensor 1: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty1', l: 'Sensor 1: Rohwert leer', t: 'int', min: 0, max: 9998, h: 'Leer und voll = 0: Standard (2475 = 100 %). Sonst den Rohwert aus der Live-Ansicht bei leerem bzw. vollem Tank eintragen'},
                    {k: 'full1', l: 'Sensor 1: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind2', l: 'Sensor 2: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show2', l: 'Sensor 2: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size2', l: 'Sensor 2: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty2', l: 'Sensor 2: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full2', l: 'Sensor 2: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind3', l: 'Sensor 3: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show3', l: 'Sensor 3: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size3', l: 'Sensor 3: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty3', l: 'Sensor 3: Rohwert leer', t: 'int', min: 0, max: 9998},
                    {k: 'full3', l: 'Sensor 3: Rohwert voll', t: 'int', min: 0, max: 9998},
                    {k: 'kind4', l: 'Sensor 4: Tank', t: 'select', o: 'nicht benutzt|Frischwasser|Grauwasser|Schwarzwasser|Gas|Sonstiges'},
+                   {k: 'show4', l: 'Sensor 4: Anzeige', t: 'select', o: 'Inhalt|Freier Platz'},
                    {k: 'size4', l: 'Sensor 4: Tankgröße', t: 'float', min: 0, max: 5000, step: 0.1, u: 'L'},
                    {k: 'empty4', l: 'Sensor 4: Rohwert leer', t: 'int', min: 0, max: 9998},
-                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998}],
+                   {k: 'full4', l: 'Sensor 4: Rohwert voll', t: 'int', min: 0, max: 9998},
+                   {k: 'poll_s', l: 'Aktualisieren im Stand alle', t: 'int', min: 1, max: 3600, step: 1, u: 's', h: 'Füllstände werden über diese Zeit gemittelt, dann angezeigt und per MQTT gesendet'},
+                   {k: 'drive_s', l: 'Aktualisieren während der Fahrt alle', t: 'int', min: 1, max: 3600, step: 1, u: 's', h: 'Länger als im Stand, weil das Wasser schwappt (Warnungen am Display springen sonst). Fahrt = OBD-Adapter an diesem Node meldet Motor läuft, oder der Abfahrtscheck des Displays'}],
       dimes: GAS_FIELDS,
       senso4s: GAS_FIELDS,
       trumalc: [{k: 'mac', l: 'Sensor-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen (Name beginnt mit "T", z. B. "T…Alugas 11kg")'},
@@ -383,16 +390,22 @@ const M = {
                 raw: p.type === 'dimes' ? '02 01 06 11 FF 4C 52 00 0A 5D 03' : '59 00 03 60 2F 4A 81 AB CD EF 00 00'};
       }
       case 'supersense': {
-        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor
-        const raw = [Math.round(wave(1820, 6, 11)), 640, 9999, 9999];
-        const pct = raw.map(r => Math.round(r / 24.75));
-        const size = [+p.cfg.tank_size || 100, +p.cfg.size2 || 90];
-        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel,
-          gauge: {v: pct[0], unit: '%', label: 'Frischwasser', max: 100},
-          rows: [['Sensor 1: Frischwasser', pct[0] + ' % · ' + (pct[0] * size[0] / 100).toFixed(1) + ' L · Rohwert ' + raw[0] + ' · 9.3 °C', ''],
-                 ['Sensor 2: Grauwasser', pct[1] + ' % · ' + (pct[1] * size[1] / 100).toFixed(1) + ' L · Rohwert ' + raw[1] + ' · 10.2 °C', ''],
-                 ['Bluetooth', -76, 'dBm']],
-          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 99 99 99 99'};
+        // Box with 4 channels: raw 2475 = 100 %, 9999 = no sensor; tiles like the device sends them
+        const c = p.cfg, raw = [Math.round(wave(1820, 6, 11)), 640, 300, 9999];
+        const KIND = ['Sensor', 'Frischwasser', 'Grauwasser', 'Schwarzwasser', 'Gas', 'Tank'];
+        const kinds = [c.medium, c.kind2, c.kind3, c.kind4].map(Number), sizes = [c.tank_size, c.size2, c.size3, c.size4].map(Number);
+        const shows = [c.show1, c.show2, c.show3, c.show4].map(Number), temps = [9.3, 10.2, 10.8];
+        const tanks = raw.map((r, i) => {
+          const t = {l: kinds[i] ? KIND[kinds[i]] : 'Sensor ' + (i + 1)};
+          if (r !== 9999) t.r = r;
+          if (!kinds[i] || r === 9999) return Object.assign(t, {off: true, s: !kinds[i] ? (r !== 9999 ? 'nicht zugeordnet' : 'nicht benutzt') : 'kein Sensor'});
+          const pct = Math.min(100, Math.round(r / 24.75)), l = pct * sizes[i] / 100, free = shows[i] === 1;
+          return Object.assign(t, {p: pct, v: free ? 100 - pct : pct, u: '%', free: free || undefined,
+            s: (free ? 'frei ' + (sizes[i] - l).toFixed(1) : l.toFixed(1)) + ' L · ' + temps[i] + ' °C'});
+        });
+        return {state: rel ? 'Für App freigegeben' : 'OK', ok: !rel, tanks,
+          rows: [['Aktualisierung', 'alle ' + (c.poll_s || 10) + ' s (Stand)', ''], ['Bluetooth', -76, 'dBm']],
+          ctrl: [sw], raw: String(raw[0]).padStart(4, '0').replace(/(..)(..)/, '$1 $2') + ' 06 40 03 00 99 99'};
       }
       case 'tpms': {
         const p = [3.62, 3.21, 4.41, Math.round(wave(4.35, 0.03, 40) * 100) / 100];
@@ -652,6 +665,21 @@ const M = {
       .zone .step { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
       .zone .step button.b { width: 40px; height: 36px; padding: 0; margin: 0; font-size: 1.2rem; line-height: 1; }
       .zone .step b { min-width: 3.6em; font-variant-numeric: tabular-nums; }
+      /* Tanks: equal tiles with a tank picture (SuperSense box, up to 4 sensors) */
+      .tanks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+      .tank { background: var(--bg-input); border-radius: 10px; padding: 8px 4px; text-align: center; min-width: 0; }
+      .tank .l { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tank .vessel { position: relative; width: 36px; height: 64px; margin: 6px auto; border: 2px solid var(--border);
+        border-radius: 6px; overflow: hidden; background: var(--bg-card); }
+      .tank .vessel i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent); transition: height 0.4s; }
+      .card.ok .tank .vessel i { background: var(--success); }
+      .tank.free .vessel { background: repeating-linear-gradient(45deg, var(--bg-card) 0 4px, var(--bg-input) 4px 8px); }
+      .tank .v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--accent); }
+      .card.ok .tank .v { color: var(--success); }
+      .tank .s { font-size: 0.7rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+      .tank .r { font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .tank.off { opacity: 0.45; }
+      .tank.off .v { color: var(--text-muted); }
       .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
       .tile { background: var(--bg-input); border-radius: 8px; padding: 8px 6px; text-align: center; min-width: 0; }
       .tile span { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px;
@@ -986,7 +1014,17 @@ nav button .ico{display:inline-flex}
         else if (tab == "dev") renderPlugins();
         else if (tab.startsWith("p:")) {
           const p = CFG.plugins.find((x) => "p:" + x.id == tab);
-          if (p && !p.removed) renderPlugin(p);
+          if (p && !p.removed && !fieldsOf(p).length && !SCHEMA[p.type]) {
+            // Field descriptions not loaded yet: fetch them, then draw the page
+            const want = tab;
+            m.append(el("div", { className: "card" }, "Einstellungen werden geladen …"));
+            loadSchema(p.type)
+              .then(() => { if (tab == want) render(); })
+              .catch((e) => {
+                if (tab != want) return;
+                m.replaceChildren(el("div", { className: "card" }, "Fehler: " + e.message));
+              });
+          } else if (p && !p.removed) renderPlugin(p);
           else {
             tab = "dev";
             return render();
@@ -1083,6 +1121,28 @@ nav button .ico{display:inline-flex}
             ),
           );
         }
+        if (p.tanks)
+          c.append(
+            el(
+              "div",
+              { className: "tanks" },
+              ...p.tanks.map((t) =>
+                el(
+                  "div",
+                  { className: "tank" + (t.off ? " off" : "") + (t.free ? " free" : "") },
+                  el("div", { className: "l", title: t.l }, t.l),
+                  el(
+                    "div",
+                    { className: "vessel" },
+                    el("i", { style: "height:" + Math.max(0, Math.min(100, t.p || 0)) + "%" }),
+                  ),
+                  el("div", { className: "v" }, t.off ? "–" : fmt(t.v, t.u)),
+                  el("div", { className: "s" }, t.s || ""),
+                  t.r != null ? el("div", { className: "r" }, "Roh " + t.r) : "",
+                ),
+              ),
+            ),
+          );
         // Main switch of a device (e.g. whole fridge) above its compartments
         const top = (p.ctrl || []).filter((x) => x.top);
         if (top.length) {
@@ -1317,8 +1377,15 @@ nav button .ico{display:inline-flex}
         }
         return o;
       }
-      // Field descriptions: once per type in CFG.schemas (1.5.2), per device before
-      const fieldsOf = (p) => (CFG.schemas && CFG.schemas[p.type]) || p.fields || [];
+      // Field descriptions per type, fetched from /api/schema when a device page is opened
+      // (2.6.2; before in /api/config under "schemas", which made that answer too large)
+      const SCHEMA = {};
+      const fieldsOf = (p) => SCHEMA[p.type] || (CFG.schemas && CFG.schemas[p.type]) || p.fields || [];
+      async function loadSchema(type) {
+        if (SCHEMA[type] || (CFG.schemas && CFG.schemas[type])) return;
+        const r = await api("/api/schema?type=" + encodeURIComponent(type));
+        SCHEMA[type] = r.fields || [];
+      }
       function openDevice(id) {
         tab = "p:" + id;
         render();
@@ -1783,8 +1850,10 @@ nav button .ico{display:inline-flex}
           busy = true;
           for (const b of $("#main").querySelectorAll("button")) b.disabled = true;
           const before = new Set(CFG.plugins.map((p) => p.id));
+          let saved = false;
           try {
             await api("/api/config", body);
+            saved = true;
             toast(msg);
             await new Promise((r) => setTimeout(r, 300)); // the device applies it in its main loop
             const keep = window.scrollY;
@@ -1794,8 +1863,21 @@ nav button .ico{display:inline-flex}
             if (added) openDevice(added.id);
             else window.scrollTo(0, keep);
           } catch (e) {
-            toast(e.message, true);
-            render();
+            if (!saved) {
+              toast(e.message, true);
+              return render();
+            }
+            // Saved on the device, but the new list did not come: do not show the old list
+            // (adding again from it would create a second device)
+            $("#main").replaceChildren(
+              el(
+                "div",
+                { className: "card" },
+                el("b", { style: "color:var(--warning)" }, "Gespeichert – die Geräteliste konnte nicht geladen werden"),
+                el("small", { style: "display:block;margin:6px 0 10px" }, e.message),
+                el("button", { className: "b", textContent: "Seite neu laden", on: { click: () => location.reload() } }),
+              ),
+            );
           }
         };
         const active = CFG.plugins.filter((p) => !p.removed);
@@ -2226,8 +2308,18 @@ nav button .ico{display:inline-flex}
         ws.onclose = () => setTimeout(connect, 3000);
       }
       async function load() {
-        const c = await api("/api/config");
-        if (!Array.isArray(c.plugins)) throw new Error("Einstellungen unvollständig empfangen – bitte neu laden");
+        let c;
+        // One more try after a short pause: the node may be busy (saving, connecting)
+        for (let i = 0; ; i++) {
+          try {
+            c = await api("/api/config");
+            if (!Array.isArray(c.plugins)) throw new Error("Einstellungen unvollständig empfangen – bitte neu laden");
+            break;
+          } catch (e) {
+            if (i >= 1) throw e;
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
         CFG = c;
         $("#title span").textContent = CFG.device;
         document.title = CFG.device;

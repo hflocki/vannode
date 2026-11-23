@@ -81,6 +81,35 @@ static void sendError(AsyncWebServerRequest* request, int code, const char* msg)
     request->send(code, "application/json", s);
 }
 
+// JSON answer in one buffer of exactly the needed size. AsyncResponseStream grows its buffer by a
+// few bytes per write (thousands of reallocs for /api/config) and silently cuts the answer when
+// the heap runs short: the browser got half a JSON with status 200 ("Einstellungen unvollständig
+// empfangen") and the fragmented heap could stall the node afterwards.
+#define JSON_HEAP_RESERVE 8192   // left free for WiFi, TCP and Bluetooth while answering
+
+static void sendJson(AsyncWebServerRequest* request, JsonDocument& doc) {
+    if (doc.overflowed()) {
+        sendError(request, 503, "Zu wenig Speicher auf dem Gerät – bitte neu laden");
+        return;
+    }
+    size_t len = measureJson(doc);
+    if (len + JSON_HEAP_RESERVE > ESP.getMaxAllocHeap()) {
+        Serial.printf("[Web] Answer of %u bytes refused, largest free block %u\n", (unsigned)len, (unsigned)ESP.getMaxAllocHeap());
+        sendError(request, 503, "Zu wenig Speicher auf dem Gerät – bitte neu laden");
+        return;
+    }
+    // cbuf keeps one byte free: len + 2 holds the whole answer without growing
+    AsyncResponseStream* res = request->beginResponseStream("application/json", len + 2);
+    size_t n = res ? serializeJson(doc, *res) : 0;
+    if (n != len) {
+        delete res;
+        sendError(request, 503, "Zu wenig Speicher auf dem Gerät – bitte neu laden");
+        return;
+    }
+    res->addHeader("Cache-Control", "no-store");
+    request->send(res);
+}
+
 // Collects a request body; returns true once it is complete (body in out)
 static bool collectBody(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total,
                         String& body, bool& rejected) {
@@ -113,8 +142,8 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     for (uint8_t i = 0; i < pluginTypeCount(); i++) {
         const PluginType* t = pluginTypeAt(i);
         JsonObject o = types.add<JsonObject>();
-        o["type"] = t->type;
-        o["name"] = t->name;
+        o["type"] = JsonString(t->type, true);   // constant strings: stored as pointers, not copied
+        o["name"] = JsonString(t->name, true);
         o["ble"] = t->ble;
     }
     coreConfigToJson(doc["core"].to<JsonObject>());
@@ -122,34 +151,46 @@ static void handleGetConfig(AsyncWebServerRequest* request) {
     doc["restart_needed"] = registryRestartNeeded();
     if (registrySafeStart) doc["safe"] = true;
 
-    // Field descriptions are the same for every device of a type, so they are sent once
-    // per type under "schemas" (one copy per device made /api/config too large for the
-    // heap with several "blesensor" devices).
-    JsonObject schemas = doc["schemas"].to<JsonObject>();
+    // The field descriptions are not part of this answer: the web UI fetches them per type from
+    // /api/schema when a device page is opened. With them (blesensor, OBD, SuperSense ...)
+    // /api/config needed more heap than the node has left while Bluetooth connections run.
     JsonArray arr = doc["plugins"].to<JsonArray>();
     auto addPlugin = [&](Plugin* p, bool isPending) {
         JsonObject o = arr.add<JsonObject>();
         o["id"] = (const char*)p->id;
-        o["type"] = p->type;
-        o["type_name"] = p->typeName;
+        o["type"] = JsonString(p->type, true);
+        o["type_name"] = JsonString(p->typeName, true);
         o["ble"] = p->bleUse();
         o["running"] = p->enabled && !p->removed;
         if (isPending) o["pending"] = true;
         if (p->removed) o["removed"] = true;
-        if (!schemas[p->type].is<JsonArray>()) pluginSchemaToJson(p, schemas[p->type].to<JsonArray>());
         pluginConfigToJson(p, o["cfg"].to<JsonObject>());
     };
     FOR_EACH_PLUGIN(p) addPlugin(p, false);
     for (uint8_t i = 0; i < pendingCount(); i++) addPlugin(pendingAt(i), true);
-    // Out of memory: a clear error instead of a half answer the web UI cannot use
-    if (doc.overflowed()) {
-        sendError(request, 503, "Zu wenig Speicher für die Einstellungen – bitte neu laden");
+    sendJson(request, doc);
+}
+
+// Field descriptions of one device type: /api/schema?type=<type>
+static void handleGetSchema(AsyncWebServerRequest* request) {
+    if (!auth(request)) return;
+    if (!request->hasParam("type")) {
+        sendError(request, 400, "type fehlt");
         return;
     }
-    // Stream the answer instead of building a second copy in a String
-    AsyncResponseStream* res = request->beginResponseStream("application/json");
-    serializeJson(doc, *res);
-    request->send(res);
+    const String& type = request->getParam("type")->value();
+    // fields() is a method: take any device of that type (running, removed or pending)
+    Plugin* p = nullptr;
+    FOR_EACH_PLUGIN(x) if (!p && type == x->type) p = x;
+    for (uint8_t i = 0; !p && i < pendingCount(); i++) if (type == pendingAt(i)->type) p = pendingAt(i);
+    if (!p) {
+        sendError(request, 404, "Kein Gerät dieses Typs");
+        return;
+    }
+    JsonDocument doc;
+    doc["type"] = JsonString(p->type, true);
+    pluginSchemaToJson(p, doc["fields"].to<JsonArray>());
+    sendJson(request, doc);
 }
 
 // Body: {"core": {...}} or {"plugin": "<id>", "cfg": {...}}
@@ -338,6 +379,7 @@ void webserverInit() {
     });
 
     server.on("/api/config", HTTP_GET, handleGetConfig);
+    server.on("/api/schema", HTTP_GET, handleGetSchema);
     server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest* request) {}, NULL,
               [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
                   // Checked per chunk: the body handler runs before the request handler
@@ -477,9 +519,7 @@ void webserverInit() {
         JsonDocument doc;
         doc["active"] = bleActive();
         bleFillSeenList(doc["devices"].to<JsonArray>());
-        String response;
-        serializeJson(doc, response);
-        request->send(200, "application/json", response);
+        sendJson(request, doc);
     });
 }
 

@@ -99,7 +99,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "2.6.1"
+#define FW_VERSION            "2.6.2"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial
@@ -482,6 +482,12 @@
 #endif
 #ifndef MQTT_SUPERSENSE_MS
 #define MQTT_SUPERSENSE_MS    30000
+#endif
+#ifndef SUPERSENSE_POLL_S
+#define SUPERSENSE_POLL_S     10     // Default update interval when standing (web UI)
+#endif
+#ifndef SUPERSENSE_DRIVE_S
+#define SUPERSENSE_DRIVE_S    300    // Default update interval while driving (web UI)
 #endif
 #ifndef WIPRO_OFFLINE_MS
 #define WIPRO_OFFLINE_MS      120000 // No status for 2 min = alarm module offline

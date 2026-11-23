@@ -220,28 +220,32 @@ void coreConfigApply(JsonObjectConst in) {
 
 static const char* const FIELD_TYPES[] = {"text", "mac", "float", "int", "bool", "select"};
 
+// Field tables are constant: their texts go into the JSON documents as pointers, not as copies
+// (JsonString(…, true)), which keeps /api/config, /api/schema and saving small.
+static inline JsonString fixed(const char* s) { return JsonString(s, true); }
+
 void pluginSchemaToJson(Plugin* p, JsonArray arr) {
     const Field* f = nullptr;
     size_t n = p->fields(f);
     for (size_t i = 0; i < n; i++) {
         JsonObject o = arr.add<JsonObject>();
-        o["k"] = f[i].key;
-        o["l"] = f[i].label;
-        o["t"] = FIELD_TYPES[f[i].type];
+        o["k"] = fixed(f[i].key);
+        o["l"] = fixed(f[i].label);
+        o["t"] = fixed(FIELD_TYPES[f[i].type]);
         if (f[i].type == F_FLOAT || f[i].type == F_INT) {
             o["min"] = f[i].min;
             o["max"] = f[i].max;
             o["step"] = f[i].step;
         }
         if (f[i].type == F_TEXT) o["max"] = f[i].max > 0 ? (int)f[i].max : (int)f[i].size - 1;
-        if (f[i].unit) o["u"] = f[i].unit;
-        if (f[i].options) o["o"] = f[i].options;
-        if (f[i].help) o["h"] = f[i].help;
+        if (f[i].unit) o["u"] = fixed(f[i].unit);
+        if (f[i].options) o["o"] = fixed(f[i].options);
+        if (f[i].help) o["h"] = fixed(f[i].help);
     }
 }
 
 void pluginConfigToJson(Plugin* p, JsonObject o) {
-    o["type"] = p->type;
+    o["type"] = fixed(p->type);
     o["enabled"] = p->enabledNext;
     o["name"] = (const char*)p->name;
     const Field* f = nullptr;
@@ -250,13 +254,14 @@ void pluginConfigToJson(Plugin* p, JsonObject o) {
     if (!base) return;
     for (size_t i = 0; i < n; i++) {
         void* m = base + f[i].offset;
+        JsonString k = fixed(f[i].key);
         switch (f[i].type) {
             case F_TEXT:
-            case F_MAC:    o[f[i].key] = (const char*)m; break;
-            case F_FLOAT:  o[f[i].key] = *(float*)m; break;
-            case F_INT:    o[f[i].key] = *(int32_t*)m; break;
-            case F_BOOL:   o[f[i].key] = *(bool*)m; break;
-            case F_SELECT: o[f[i].key] = *(uint8_t*)m; break;
+            case F_MAC:    o[k] = (const char*)m; break;   // device values: copied
+            case F_FLOAT:  o[k] = *(float*)m; break;
+            case F_INT:    o[k] = *(int32_t*)m; break;
+            case F_BOOL:   o[k] = *(bool*)m; break;
+            case F_SELECT: o[k] = *(uint8_t*)m; break;
         }
     }
 }

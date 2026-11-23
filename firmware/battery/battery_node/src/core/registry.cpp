@@ -7,6 +7,7 @@
 // tools/common/sync_common.py (copies it into firmware/ble and firmware/battery).
 
 #include "registry.h"
+#include "mqtt_ha.h"
 
 // ============================================================
 // Plugin types (one factory per type, implemented in src/plugins/)
@@ -296,6 +297,14 @@ void registryEnforceLinkLimit() {
             Serial.printf("[MAIN] %s switched off: more than %d Bluetooth connections\n", p->id, MAX_BLE_LINKS);
         }
     }
+}
+
+bool registryDriving() {
+    for (uint8_t i = 0; i < count; i++) {
+        Plugin* p = plugins[i];
+        if (p->enabled && !p->removed && p->driving()) return true;
+    }
+    return mqttDriving();
 }
 
 bool registrySafeStart = false;

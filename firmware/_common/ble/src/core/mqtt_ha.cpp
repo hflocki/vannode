@@ -332,10 +332,32 @@ static void runQueuedCommands() {
     }
 }
 
+// <root>/+/driving: "<root>/" of the own prefix ("camper/ble" -> "camper/")
+static volatile bool drivingFlag = false;
+static String drivingRoot() {
+    String r = config.mqtt_prefix;
+    int s = r.indexOf('/');
+    return s > 0 ? r.substring(0, s + 1) : r + "/";
+}
+
+bool mqttDriving() {
+    return drivingFlag && mqtt.connected();
+}
+
 static void mqttCallback(char* topicName, byte* payload, unsigned int length) {
+    String t = topicName;
+    // Departure check of the display: <root>/<node>/driving = ON / OFF (retained)
+    if (t.endsWith("/driving")) {
+        String root = drivingRoot();
+        // exactly one level between root and "/driving" (camper/display/driving)
+        if (t.startsWith(root) && t.length() > root.length() + 8 &&
+            t.substring(root.length(), t.length() - 8).indexOf('/') < 0) {
+            drivingFlag = length >= 2 && (payload[0] == 'O' || payload[0] == 'o') && (payload[1] == 'N' || payload[1] == 'n');
+        }
+        return;
+    }
     // <prefix>/cmd/<plugin>/<key>/set
     String prefix = topic("cmd/");
-    String t = topicName;
     if (!t.startsWith(prefix) || !t.endsWith("/set")) return;
     String rest = t.substring(prefix.length(), t.length() - 4);
     int slash = rest.indexOf('/');
@@ -408,6 +430,7 @@ void mqttLoop() {
             if (connected) {
                 Serial.println("[MQTT] Connected!");
                 mqtt.subscribe(topic("cmd/#").c_str());
+                mqtt.subscribe((drivingRoot() + "+/driving").c_str());
                 discoveryPublished = false;   // Always re-announce after (re)connect
                 mqtt.publish(willTopic.c_str(), "online", true);
                 lastCorePublish = 0;          // Publish all states right away

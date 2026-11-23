@@ -6,8 +6,13 @@
 // Plugin "supersense": SuperSense receiver box ("SSBT…") with up to 4 tank sensors, over a BLE
 // connection. Read-only. About 1 s after connecting the init packet is written, then the box
 // notifies the levels and temperatures of all 4 channels. Each channel is set up as a tank
-// (kind, size, taught raw values for empty / full). Decoding in supersense_decode.h (shared
-// with the tanklevel node, host test in firmware/ble/tests).
+// (kind, size, taught raw values for empty / full, shown as content or free space). Decoding in
+// supersense_decode.h (shared with the tanklevel node, host test in firmware/ble/tests).
+//
+// Update interval: the box notifies by itself. The levels are averaged over an interval and
+// only then shown and published - a short one when standing, a long one while driving (water
+// sloshes, the alarms on the display should not flap). Driving comes from registryDriving():
+// OBD adapter of this node (engine running) or the departure check of the display over MQTT.
 
 #include "../core/plugin.h"
 
@@ -15,6 +20,7 @@
 
 #include "../core/ble_link.h"
 #include "../core/devlog.h"
+#include "../core/registry.h"
 #include "../core/util.h"
 #include "supersense_decode.h"
 
@@ -22,17 +28,24 @@
 static const char* const SS_KIND[] = {"Sensor", "Frischwasser", "Grauwasser", "Schwarzwasser", "Gas", "Tank"};
 #define SS_NKIND (sizeof(SS_KIND) / sizeof(SS_KIND[0]))
 
+#define SS_SHOWS "Inhalt|Freier Platz"
+
 struct SuperSenseCfg {
     char mac[18];
     uint8_t kind[SS_CHANNELS];      // 0 = not used
     float size[SS_CHANNELS];        // litres
     int32_t empty[SS_CHANNELS];     // taught raw value at empty (0 = default scale)
     int32_t full[SS_CHANNELS];      // taught raw value at full  (0 = default scale)
+    uint8_t show[SS_CHANNELS];      // web UI tile: 0 = content, 1 = free space
+    int32_t poll_s;                 // update interval when standing (s)
+    int32_t drive_s;                // update interval while driving (s)
 };
 
 // Channel 1 keeps the keys of 2.2 ("medium", "tank_size") so existing settings carry over
 #define SS_CH_FIELDS(i, kk, ks, ke, kf, n)                                                                  \
     FLD_SELECT(SuperSenseCfg, kind[i], kk, "Sensor " n ": Tank", SS_KINDS, nullptr),                       \
+    FLD_SELECT(SuperSenseCfg, show[i], "show" n, "Sensor " n ": Anzeige", SS_SHOWS,                         \
+               i == 0 ? "Nur die Kachel in der Live-Ansicht: Inhalt oder noch freier Platz (z. B. beim Abwassertank)" : nullptr), \
     FLD_FLOAT(SuperSenseCfg, size[i], ks, "Sensor " n ": Tankgröße", "L", 0, 5000, 0.1f, nullptr),         \
     FLD_INT(SuperSenseCfg, empty[i], ke, "Sensor " n ": Rohwert leer", nullptr, 0, 9998,                    \
             i == 0 ? "Leer und voll = 0: Standard (2475 = 100 %). Sonst den Rohwert aus der Live-Ansicht bei leerem bzw. vollem Tank eintragen" : nullptr), \
@@ -44,6 +57,10 @@ static const Field SS_FIELDS[] = {
     SS_CH_FIELDS(1, "kind2", "size2", "empty2", "full2", "2"),
     SS_CH_FIELDS(2, "kind3", "size3", "empty3", "full3", "3"),
     SS_CH_FIELDS(3, "kind4", "size4", "empty4", "full4", "4"),
+    FLD_INT(SuperSenseCfg, poll_s, "poll_s", "Aktualisieren im Stand alle", "s", 1, 3600,
+            "Füllstände werden über diese Zeit gemittelt, dann angezeigt und per MQTT gesendet"),
+    FLD_INT(SuperSenseCfg, drive_s, "drive_s", "Aktualisieren während der Fahrt alle", "s", 1, 3600,
+            "Länger als im Stand, weil das Wasser schwappt (Warnungen am Display springen sonst). Fahrt = OBD-Adapter an diesem Node meldet Motor läuft, oder der Abfahrtscheck des Displays"),
 };
 
 #define SS_CH_ENTITIES(n)                                                                                       \
@@ -73,6 +90,8 @@ public:
         memset(&c, 0, sizeof(c));
         c.kind[0] = 1;   // sensor 1 = fresh water
         for (uint8_t i = 0; i < SS_CHANNELS; i++) c.size[i] = SUPERSENSE_DEFAULT_TANK;
+        c.poll_s = SUPERSENSE_POLL_S;
+        c.drive_s = SUPERSENSE_DRIVE_S;
     }
     void onConfigChanged() override {
         for (uint8_t i = 0; i < SS_CHANNELS; i++) {
@@ -80,10 +99,14 @@ public:
             if (c.size[i] < 0) c.size[i] = 0;
             if (c.empty[i] < 0) c.empty[i] = 0;
             if (c.full[i] < 0) c.full[i] = 0;
+            if (c.show[i] > 1) c.show[i] = 0;
         }
+        if (c.poll_s < 1) c.poll_s = SUPERSENSE_POLL_S;    // settings of 2.6.1 and older
+        if (c.drive_s < 1) c.drive_s = SUPERSENSE_DRIVE_S;
         if (strcmp(c.mac, lastMac) != 0) {
             strlcpy(lastMac, c.mac, sizeof(lastMac));
             hasLevels = hasTemps = false;
+            resetWindow();
         }
         updates++;
         if (begun) link.setTarget(c.mac);
@@ -127,6 +150,7 @@ public:
         }
         BlePacket pkt;
         while (link.receive(pkt)) parse(pkt);
+        applyWindow();
 
         bool avail = available();
         if (avail != lastAvailable) {
@@ -153,36 +177,42 @@ public:
     void live(JsonObject o) override {
         o["state"] = stateText();
         o["ok"] = available();
-        char label[40], v[64];
-        // Gauge for the first used channel with a sensor
-        bool gauge = false;
+        // One tile per channel, all four the same size; the raw value is the latest one (for
+        // teaching empty / full), level and litres are the averaged, published ones
+        char v[40];
+        JsonArray tanks = o["tanks"].to<JsonArray>();
         for (uint8_t i = 0; i < SS_CHANNELS; i++) {
-            float p = percent(i);
-            if (c.kind[i] == 0 || p < 0) continue;
-            if (!gauge) {
-                JsonObject g = o["gauge"].to<JsonObject>();
-                g["v"] = roundf(p);
-                g["unit"] = "%";
-                g["label"] = SS_KIND[c.kind[i]];
-                g["max"] = 100;
-                gauge = true;
-            }
-        }
-        for (uint8_t i = 0; i < SS_CHANNELS; i++) {
-            if (!hasLevels) break;
-            int32_t raw = level[i];
-            if (raw == SS_NONE && c.kind[i] == 0) continue;   // nothing connected, nothing set up
-            snprintf(label, sizeof(label), "Sensor %u%s%s", i + 1, c.kind[i] ? ": " : "", c.kind[i] ? SS_KIND[c.kind[i]] : "");
-            if (raw == SS_NONE) {
-                strlcpy(v, "kein Sensor", sizeof(v));
+            JsonObject t = tanks.add<JsonObject>();
+            bool used = c.kind[i] != 0;
+            if (used) {
+                t["l"] = SS_KIND[c.kind[i]];
             } else {
-                float p = percent(i), t;
-                size_t n = snprintf(v, sizeof(v), "%.0f %% · %.1f L · Rohwert %ld", p, liters(i), (long)raw);
-                if (temperature(i, t)) snprintf(v + n, sizeof(v) - n, " · %.1f °C", t);
-                if (c.kind[i] == 0) strlcat(v, " · nicht zugeordnet", sizeof(v));
+                snprintf(v, sizeof(v), "Sensor %u", i + 1);
+                t["l"] = (const char*)v;   // stack buffer: copied
             }
-            liveRowText(o, label, v);
+            int32_t raw = hasLevels ? lastRaw[i] : SS_NONE;
+            if (raw >= 0) t["r"] = raw;
+            float p = percent(i);
+            if (!used || p < 0) {
+                t["off"] = true;
+                t["s"] = !used ? (raw >= 0 ? "nicht zugeordnet" : "nicht benutzt") : (hasLevels ? "kein Sensor" : "–");
+                continue;
+            }
+            bool free = c.show[i] == 1;
+            float l = liters(i);
+            t["p"] = roundf(p);
+            t["v"] = roundf(free ? 100.0f - p : p);
+            t["u"] = "%";
+            if (free) snprintf(v, sizeof(v), "frei %.1f L", c.size[i] - l);
+            else snprintf(v, sizeof(v), "%.1f L", l);
+            float tc;
+            if (temperature(i, tc)) snprintf(v + strlen(v), sizeof(v) - strlen(v), " · %.1f °C", tc);
+            t["s"] = (const char*)v;
+            if (free) t["free"] = true;
         }
+        bool drive = registryDriving();
+        snprintf(v, sizeof(v), "alle %ld s (%s)", (long)(drive ? c.drive_s : c.poll_s), drive ? "Fahrt" : "Stand");
+        liveRowText(o, "Aktualisierung", v);
         liveRowNum(o, "Bluetooth", link.connected() ? (float)link.rssi() : NAN, 0, "dBm");
         if (link.lastError()) liveRowText(o, "Letzter BT-Fehler", link.lastErrorText());
         liveCtrl(o, "switch", "release", "Bluetooth für App freigeben")["v"] = link.released();
@@ -234,7 +264,13 @@ private:
     bool lastAvailable = false;
 
     bool hasLevels = false, hasTemps = false;
-    int32_t level[SS_CHANNELS] = {SS_NONE, SS_NONE, SS_NONE, SS_NONE};
+    int32_t level[SS_CHANNELS] = {SS_NONE, SS_NONE, SS_NONE, SS_NONE};     // averaged, shown / published
+    int32_t lastRaw[SS_CHANNELS] = {SS_NONE, SS_NONE, SS_NONE, SS_NONE};   // latest packet
+    // Averaging window: sum and count of valid raw values per channel since the last update
+    int64_t winSum[SS_CHANNELS] = {0, 0, 0, 0};
+    uint16_t winCount[SS_CHANNELS] = {0, 0, 0, 0};
+    bool winData = false;            // at least one level packet in the window
+    unsigned long winStart = 0;
     int32_t temp[SS_CHANNELS] = {SS_NONE, SS_NONE, SS_NONE, SS_NONE};
     char rawHex[26] = "";
     unsigned long lastMsg = 0;
@@ -273,12 +309,41 @@ private:
         size_t h = 0;
         for (size_t i = 0; i < p.len && h + 3 < sizeof(rawHex); i++) h += snprintf(rawHex + h, sizeof(rawHex) - h, "%02X ", p.data[i]);
         if (h) rawHex[h - 1] = '\0';
-        bool changed = !hasLevels || memcmp(level, v, sizeof(level)) != 0;
-        memcpy(level, v, sizeof(level));
+        if (memcmp(lastRaw, v, sizeof(lastRaw)) != 0)
+            devlogf(id, "Raw %ld / %ld / %ld / %ld (%s)", (long)v[0], (long)v[1], (long)v[2], (long)v[3], rawHex);
+        memcpy(lastRaw, v, sizeof(lastRaw));
+        for (uint8_t i = 0; i < SS_CHANNELS; i++) {
+            if (v[i] < 0 || winCount[i] == UINT16_MAX) continue;
+            winSum[i] += v[i];
+            winCount[i]++;
+        }
+        winData = true;
+        // First levels after connecting: show them right away, the interval starts from there
+        if (!hasLevels) applyWindow(true);
+    }
+
+    void resetWindow() {
+        memset(winSum, 0, sizeof(winSum));
+        memset(winCount, 0, sizeof(winCount));
+        winData = false;
+        winStart = millis();
+    }
+
+    // End of the interval (standing / driving): averaged levels become the shown ones
+    void applyWindow(bool now = false) {
+        uint32_t ms = (uint32_t)(registryDriving() ? c.drive_s : c.poll_s) * 1000UL;
+        if (!now && (!winData || millis() - winStart < ms)) return;
+        if (!winData) return;
+        int32_t nl[SS_CHANNELS];
+        for (uint8_t i = 0; i < SS_CHANNELS; i++)
+            nl[i] = winCount[i] ? (int32_t)((winSum[i] + winCount[i] / 2) / winCount[i]) : SS_NONE;
+        bool changed = !hasLevels || memcmp(level, nl, sizeof(level)) != 0;
+        memcpy(level, nl, sizeof(level));
         hasLevels = true;
+        resetWindow();
         if (changed) {
             updates++;
-            devlogf(id, "Levels %ld / %ld / %ld / %ld (%s)", (long)v[0], (long)v[1], (long)v[2], (long)v[3], rawHex);
+            devlogf(id, "Levels %ld / %ld / %ld / %ld", (long)nl[0], (long)nl[1], (long)nl[2], (long)nl[3]);
         }
     }
 };

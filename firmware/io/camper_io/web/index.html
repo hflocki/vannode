@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 hflocki - part of VanNode, https://github.com/hflocki/vannode - GNU GPL v3 with additional terms, see NOTICE.md. NO WARRANTY, use at your own risk. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>IO Node</title>
+<style>
+:root {
+    --bg-primary: #0f1419;
+    --bg-secondary: #1a2332;
+    --bg-card: #1e2d3d;
+    --bg-input: #0d1b2a;
+    --accent: #4fc3f7;
+    --accent-glow: rgba(79,195,247,0.3);
+    --cold: #4fc3f7;
+    --mild: #00d4aa;
+    --warm: #ff9f43;
+    --hot: #ff4757;
+    --warning: #ffb800;
+    --danger: #ff4757;
+    --success: #00d4aa;
+    --text-primary: #e8f0f8;
+    --text-secondary: #8899aa;
+    --text-muted: #556677;
+    --border: #2a3a4a;
+    --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+.header {
+    background: var(--bg-secondary); padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.header h1 { font-size: 1.15rem; font-weight: 600; color: var(--accent); }
+.status-dots { display: flex; gap: 6px; align-items: center; font-size: 0.65rem; color: var(--text-muted); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); display: inline-block; margin-right: 4px; }
+.status-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(0,212,170,0.3); }
+.status-dot.warning { background: var(--warning); }
+.tabs { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
+/* Icon above the label: all tabs fit even on small phones (320 px) */
+.tab {
+    flex: 1; min-width: 0; padding: 8px 1px 7px; text-align: center; font-size: 0.68rem; font-weight: 500; line-height: 1.2;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+}
+.tab .ico { font-size: 1.05rem; line-height: 1; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(79,195,247,0.05); }
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+.card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 12px; }
+.card-title.accent { color: var(--accent); }
+
+/* Live: one tile per sensor */
+.temps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.temps.cols-1 { grid-template-columns: 1fr; }
+.temp-tile {
+    position: relative; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 14px 12px 20px; overflow: hidden; min-width: 0;
+}
+.temp-tile::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--tile-color, var(--text-muted));
+}
+.temp-name { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.temp-value { font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 6px 0 4px; color: var(--tile-color, var(--text-primary)); line-height: 1.1; }
+.temp-value small { font-size: 1rem; font-weight: 500; color: var(--text-secondary); margin-left: 2px; }
+.temp-minmax { display: flex; gap: 12px; font-size: 0.75rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.temp-minmax b { color: var(--text-primary); font-weight: 600; }
+.temp-state { font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; }
+.temp-tile.error .temp-value { color: var(--text-muted); }
+.temp-tile.error .temp-state { color: var(--danger); }
+.temp-tile.alarm { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
+.temp-tile.alarm .temp-state { color: var(--danger); font-weight: 600; }
+.alarm-banner { border-color: var(--danger); background: rgba(255,71,87,0.12); color: var(--danger);
+    font-size: 0.85rem; font-weight: 600; line-height: 1.4; }
+.sensor-alarm { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Values */
+.values-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.value-item { background: var(--bg-input); border-radius: 8px; padding: 12px; text-align: center; }
+.value-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px; }
+.value-num { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Forms */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+.form-group input, .form-group select {
+    width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; outline: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+.form-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; width: 100%; }
+.btn-primary { background: var(--accent); color: var(--bg-primary); }
+.btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-danger { background: rgba(255,71,87,0.15); color: var(--danger); border: 1px solid var(--danger); }
+.btn-small { width: auto; padding: 6px 10px; font-size: 0.75rem; }
+.btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+.info-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-secondary); }
+
+/* Sensor editor */
+.sensor-edit { background: var(--bg-input); border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); }
+.sensor-edit.missing { border-color: rgba(255,71,87,0.5); }
+.sensor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.sensor-addr { font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem; color: var(--text-secondary); word-break: break-all; }
+.sensor-live { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sensor-edit .form-group { margin-bottom: 8px; }
+.sensor-edit .form-group input { background: var(--bg-card); padding: 8px 10px; font-size: 0.85rem; }
+.sensor-grid { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px; }
+.sensor-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.badge { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px;
+    background: rgba(79,195,247,0.15); color: var(--accent); vertical-align: middle; }
+.badge.err { background: rgba(255,71,87,0.15); color: var(--danger); }
+.badge.new { background: rgba(255,184,0,0.15); color: var(--warning); }
+
+/* Bus list */
+.dev-list { display: flex; flex-direction: column; gap: 6px; }
+.dev { display: flex; align-items: center; gap: 10px; background: var(--bg-input); border-radius: 8px; padding: 8px 10px; }
+.dev-main { flex: 1; min-width: 0; }
+.dev-addr { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-all; }
+.dev-name { font-size: 0.7rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-temp { font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 12px 0; }
+
+.enable-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle span { position: absolute; inset: 0; background: var(--border); border-radius: 13px; cursor: pointer; transition: 0.2s; }
+.toggle span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--text-primary); border-radius: 50%; transition: 0.2s; }
+.toggle input:checked + span { background: var(--accent); }
+.toggle input:checked + span::before { transform: translateX(20px); }
+
+code { font-family: ui-monospace, Menlo, monospace; }
+.hidden { display: none !important; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 20px; font-size: 0.85rem; color: var(--accent); opacity: 0; transition: all 0.3s; z-index: 999; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.err { border-color: var(--danger); color: var(--danger); }
+
+/* Small phones: keep the title on one line, one tile per row */
+@media (max-width: 374px) {
+    .header { padding: 14px 12px; gap: 8px; }
+    .header h1 { font-size: 1rem; white-space: nowrap; }
+    .status-dots { gap: 4px; font-size: 0.6rem; }
+    .temps { grid-template-columns: 1fr; }
+    .sensor-grid { grid-template-columns: 1fr 1fr; }
+    .sensor-grid .form-group:last-child { grid-column: span 2; }
+}
+@media (min-width: 600px) { body { display: flex; justify-content: center; } .app-wrap { width: 100%; max-width: 520px; } }
+:root{--fwu-ok:var(--success);--fwu-warn:var(--warning);--fwu-bad:var(--danger);--fwu-mute:var(--text-secondary);--fwu-line:var(--border)}
+.fwu-cur{font-size:.8rem;margin:0 0 10px}
+.fwu-chk{font-size:.8rem;margin:8px 0;line-height:1.4}
+.fwu-chk.ok{color:var(--fwu-ok)}.fwu-chk.warn{color:var(--fwu-warn)}.fwu-chk.bad{color:var(--fwu-bad)}
+.fwu-force{display:flex;gap:8px;align-items:center;font-size:.8rem;margin:0 0 8px}
+.fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
+.fwu-ev{padding:4px 0;border-bottom:1px solid var(--fwu-line)}.fwu-ev:last-child{border-bottom:0}
+.fwu-ev span{color:var(--fwu-mute);margin-right:8px;white-space:nowrap}.fwu-ev.bad{color:var(--fwu-bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+/* IO node */
+.io-group { margin-bottom: 14px; }
+.io-group-t { font-size: .72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; margin: 4px 2px 8px; }
+.io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.io-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-height: 74px; display: flex; flex-direction: column; justify-content: space-between; }
+button.io-tile { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.io-tile.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow) inset; }
+.io-tile .n { font-size: .8rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.io-tile .v { font-size: 1.35rem; font-weight: 600; }
+.io-tile .v small { font-size: .75rem; color: var(--text-secondary); margin-left: 3px; font-weight: 400; }
+.io-tile.on .v { color: var(--accent); }
+.io-tile .s { font-size: .7rem; color: var(--text-secondary); }
+.io-add { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.io-add .btn { margin: 0; }
+.ch-card .card-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ch-card .ch-type { font-size: .7rem; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.ch-card .ch-btns { display: flex; gap: 4px; }
+.ch-card .ch-btns button { background: none; border: 1px solid var(--border); color: var(--text-secondary); border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: .8rem; }
+.ch-chk { display: flex; align-items: center; gap: 8px; font-size: .82rem; margin: 6px 0; }
+.ch-warn { color: var(--warning); font-size: .75rem; margin-top: 4px; }
+.pin-row { display: flex; justify-content: space-between; font-size: .8rem; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.pin-row:last-child { border-bottom: 0; }
+.pin-row .free { color: var(--text-secondary); }
+.pin-row .dup { color: var(--danger); }
+.sr-only, .exp-only { }
+/* camper-theme:begin */
+/* VanNode design (same look as the display): calm and technical, colour means state,
+   blue means control. Shared block, edit firmware/_common/web/camper-theme.css and run
+   tools/common/sync_common.py; it overrides the page's own styles above it. */
+:root{
+ --bg-primary:#0D1115;--bg-secondary:#11161B;--bg-card:#151B21;--bg-input:#0D1115;--border:#222B34;--radius:14px;
+ --accent:#4DA3F0;--accent-glow:rgba(77,163,240,.25);--success:#46B97C;--warning:#E5A23B;--danger:#E5534B;
+ --text-primary:#E7ECF0;--text-secondary:#B4BEC8;--text-muted:#8B98A5;
+ --water:#3E9BE0;--water-glow:rgba(62,155,224,.25);--gas:#D9893A;--grey:#8A96A3;
+ --cold:#3E9BE0;--mild:#46B97C;--warm:#E5A23B;--hot:#E5534B;
+ --bg:#0D1115;--bg2:#11161B;--card:#151B21;--input:#0D1115;--acc:#4DA3F0;--acc-glow:rgba(77,163,240,.25);--warn:#E5A23B;
+ --ok:#46B97C;--ink:#E7ECF0;--mute:#8B98A5;--dim:#6F7C89;--line:#222B34;--r:14px;--bad:#E5534B;
+ --cm-line2:#2F3A45;--cm-hi:#1C242C;--cm-acx:#06131F;color-scheme:dark}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.4}
+svg.i{width:20px;height:20px;flex:none;vertical-align:-4px}
+.header{background:var(--bg-primary);padding:14px 16px;border-bottom:1px solid var(--border);gap:12px}
+.header h1{font-size:1.15rem;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:10px;min-width:0}
+.header h1 svg.i{color:var(--accent)}
+.status-dots{gap:6px;font-size:.75rem;color:var(--text-primary);flex-wrap:wrap;justify-content:flex-end}
+.status-dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.status-dot{width:8px;height:8px;margin-right:6px;background:var(--cm-line2);box-shadow:none}
+.status-dot.active{background:var(--success);box-shadow:none}
+.status-dot.warning{background:var(--warning)}
+.tabs{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font-size:.72rem;color:var(--text-muted);border-bottom:2px solid transparent;border-radius:10px 10px 0 0;padding:8px 2px 8px;gap:4px}
+.tab .ico{display:inline-flex;font-size:1.05rem}
+.tab .ico svg.i{width:20px;height:20px}
+.tab.active,.tab.gas.active,.tab.grey.active{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+.tab.active .ico{color:var(--accent)}
+.tab-content{padding:16px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+.card-title,.card-title.accent,.card-title.water,.card-title.gas{font-size:.85rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-secondary);margin-bottom:12px}
+.values-grid{gap:10px}
+.value-item{background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:left}
+.value-label{font-size:.75rem;color:var(--text-muted)}
+.value-num{font-size:1.35rem;font-weight:600}
+.info-row{padding:10px 0;font-size:.9rem}
+.info-label{color:var(--text-muted)}
+.form-group label{font-size:.8rem;color:var(--text-muted);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{min-height:40px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--cm-line2);border-radius:10px;font-size:.95rem;color:var(--text-primary)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
+.form-hint{font-size:.78rem;color:var(--text-muted)}
+.btn{min-height:44px;border-radius:10px;font-size:.95rem;font-weight:600;gap:8px}
+.btn-primary{background:var(--accent);color:var(--cm-acx);border:1px solid var(--accent)}
+.btn-secondary{background:var(--cm-hi);color:var(--text-primary);border:1px solid var(--cm-line2)}
+.btn-danger{background:transparent;color:#F08A84;border:1px solid #5A2A2A}
+.btn-small{min-height:34px;padding:6px 12px;font-size:.85rem;border-radius:9px}
+.btn-row{gap:10px}
+.enable-row{padding:4px 0}
+.toggle{width:44px;height:26px}
+.toggle span{background:var(--cm-line2);border-radius:999px}
+.toggle span::before{width:20px;height:20px;left:3px;top:3px;background:#fff}
+.toggle input:checked+span{background:var(--accent)}
+.toggle input:checked+span::before{transform:translateX(18px)}
+.badge{border-radius:999px;padding:2px 8px;background:rgba(77,163,240,.15);color:var(--accent)}
+.badge.err{background:rgba(229,83,75,.15);color:var(--danger)}
+.badge.new{background:rgba(229,162,59,.15);color:var(--warning)}
+.dev{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.empty{color:var(--text-muted)}
+.toast{background:var(--text-primary);color:var(--bg-primary);border:0;border-radius:10px}
+.toast.err{background:var(--danger);color:#fff}
+.alarm-banner{background:#2A2213;border-color:#4A3A1C;color:#F6D9A3}
+a{color:var(--accent)}
+@media (min-width:600px){.app-wrap{max-width:560px}}
+/* the same parts under other names (toolbox: header/nav, maxxfan: .dots/.dot/.ct) */
+header{background:var(--bg-primary);border-bottom:1px solid var(--border)}
+header h1{color:var(--text-primary);display:flex;align-items:center;gap:10px}
+header h1 svg.i{color:var(--accent)}
+nav{background:var(--bg-primary);border-bottom:1px solid var(--border);padding:8px 8px 0;gap:4px;scrollbar-width:none}
+nav button{color:var(--text-muted);border-radius:10px 10px 0 0;font-size:.72rem}
+nav button.on{color:var(--text-primary);border-bottom-color:var(--accent);background:var(--cm-hi);font-weight:600}
+nav button.on .ico{color:var(--accent)}
+nav button .ico{display:inline-flex}
+.dots{gap:6px;font-size:.75rem;color:var(--text-primary)}
+.dots>span{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--cm-hi)}
+.dot{background:var(--cm-line2);margin-right:6px;box-shadow:none}
+.dot.on{background:var(--ok);box-shadow:none}
+/* labels in sentence case instead of capitals, no coloured side stripes, flat fills */
+.ct,.temp-name,.bat-name,.gauge-title,.grp,.wedge .wl{text-transform:none;letter-spacing:0;font-size:.85rem}
+.ct{font-weight:600;color:var(--text-secondary)}
+.temp-tile::before{display:none}
+.temp-tile{padding:14px}
+.tank-fill{background:var(--water)}
+.bat::before{display:none}
+.bat{padding-left:16px}
+.ct.acc{color:var(--text-secondary)}
+.header h1,header h1{white-space:normal}
+.header h1 span,header h1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card h2{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:600}
+.card.dev-card::before{display:none}
+/* camper-theme:end */
+/* vannode-symbol:begin */
+/* VanNode symbol left of the page title, generated by tools/logo/make_logo.py */
+.vn{display:inline-block;width:26px;height:26px;flex:none;vertical-align:-6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E") center/contain no-repeat}
+/* vannode-symbol:end */
+/* vannode-logo-wide:begin */
+/* VanNode logo with wordmark ("Über VanNode"), generated by tools/logo/make_logo.py */
+.vnlogo{display:block;width:240px;max-width:100%;aspect-ratio:681.5/200;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='682' height='200' viewBox='0.0 0.0 681.5 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3Cg transform='translate(225,136.8)'%3E%3Cpath transform='translate(0.00,0) scale(0.10000,-0.10000)' d='M313 160 434 558H616L418 0H207L9 558H192Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(60.60,0) scale(0.10000,-0.10000)' d='M274 566Q333 566 377.5 542.0Q422 518 446 479V558H617V0H446V79Q421 40 376.5 16.0Q332 -8 273 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(126.50,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%23E7ECF0'/%3E%3Cpath transform='translate(191.90,0) scale(0.10000,-0.10000)' d='M617 326V0H447V303Q447 359 418.0 390.0Q389 421 340 421Q291 421 262.0 390.0Q233 359 233 303V0H62V558H233V484Q259 521 303.0 542.5Q347 564 402 564Q500 564 558.5 500.5Q617 437 617 326Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(257.30,0) scale(0.10000,-0.10000)' d='M28 279Q28 365 66.0 430.5Q104 496 170.0 531.0Q236 566 318 566Q400 566 466.0 531.0Q532 496 570.0 430.5Q608 365 608 279Q608 193 569.5 127.5Q531 62 464.5 27.0Q398 -8 316 -8Q234 -8 168.5 27.0Q103 62 65.5 127.0Q28 192 28 279ZM434 279Q434 346 400.5 382.0Q367 418 318 418Q268 418 235.0 382.5Q202 347 202 279Q202 212 234.5 176.0Q267 140 316 140Q365 140 399.5 176.0Q434 212 434 279Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(319.00,0) scale(0.10000,-0.10000)' d='M274 566Q329 566 374.5 543.0Q420 520 446 481V740H617V0H446V80Q422 40 377.5 16.0Q333 -8 274 -8Q205 -8 149.0 27.5Q93 63 60.5 128.5Q28 194 28 280Q28 366 60.5 431.0Q93 496 149.0 531.0Q205 566 274 566ZM324 417Q273 417 237.5 380.5Q202 344 202 280Q202 216 237.5 178.5Q273 141 324 141Q375 141 410.5 178.0Q446 215 446 279Q446 343 410.5 380.0Q375 417 324 417Z' fill='%232F8AE0'/%3E%3Cpath transform='translate(384.90,0) scale(0.10000,-0.10000)' d='M585 238H198Q202 186 231.5 158.5Q261 131 304 131Q368 131 393 185H575Q561 130 524.5 86.0Q488 42 433.0 17.0Q378 -8 310 -8Q228 -8 164.0 27.0Q100 62 64.0 127.0Q28 192 28 279Q28 366 63.5 431.0Q99 496 163.0 531.0Q227 566 310 566Q391 566 454.0 532.0Q517 498 552.5 435.0Q588 372 588 288Q588 264 585 238ZM413 333Q413 377 383.0 403.0Q353 429 308 429Q265 429 235.5 404.0Q206 379 199 333Z' fill='%232F8AE0'/%3E%3Ccircle cx='289.10' cy='-27.90' r='5.00' fill='%232F8AE0'/%3E%3Cg stroke='%232F8AE0' stroke-width='5.50' stroke-linecap='round'%3E%3Cline x1='289.10' y1='-51.10' x2='289.10' y2='-69.60'/%3E%3Cline x1='306.10' y1='-48.60' x2='316.10' y2='-61.60'/%3E%3C/g%3E%3Ccircle cx='289.10' cy='-74.10' r='7.50' fill='%232F8AE0'/%3E%3Ccircle cx='318.10' cy='-64.60' r='7.50' fill='%232F8AE0'/%3E%3C/g%3E%3C/svg%3E") left center/contain no-repeat}
+/* vannode-logo-wide:end */
+</style>
+<!-- vannode-icon:begin -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0.0 0.0 200.0 200.0'%3E%3Cpolygon points='100,8 182,54 182,146 100,192 18,146 18,54' fill='%231E2A36' stroke='%232F8AE0' stroke-width='9' stroke-linejoin='round'/%3E %3Cpath d='M42 132 V96 Q42 82 56 81 H128 Q140 81 147 90 L162 111 Q166 116 166 123 V132 Z' fill='%23E7ECF0'/%3E %3Cpath d='M131 89 H139 L153 110 H131 Z' fill='%231E2A36'/%3E %3Ccircle cx='70' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Ccircle cx='140' cy='134' r='13' fill='%23E7ECF0' stroke='%231E2A36' stroke-width='5'/%3E %3Cg stroke='%232F8AE0' stroke-width='4'%3E%3Cline x1='60' y1='110' x2='86' y2='96'/%3E%3Cline x1='86' y1='96' x2='112' y2='113'/%3E%3Cline x1='60' y1='110' x2='112' y2='113'/%3E%3C/g%3E %3Cg fill='%232F8AE0'%3E%3Ccircle cx='60' cy='110' r='7'/%3E%3Ccircle cx='86' cy='96' r='7'/%3E%3Ccircle cx='112' cy='113' r='7'/%3E%3C/g%3E %3Cline x1='100' y1='81' x2='100' y2='70' stroke='%23E7ECF0' stroke-width='4.5'/%3E %3Ccircle cx='100' cy='66' r='6.5' fill='%232F8AE0'/%3E %3Cpath d='M88 58 Q100 46 112 58' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round'/%3E %3Cpath d='M80 50 Q100 30 120 50' fill='none' stroke='%232F8AE0' stroke-width='4.5' stroke-linecap='round' opacity='.6'/%3E%3C/svg%3E">
+<!-- vannode-icon:end -->
+</head>
+<body>
+<div class="app-wrap">
+    <div class="header">
+        <h1><i class="vn" aria-hidden="true"></i><span>IO</span></h1>
+        <div class="status-dots">
+            <span><span class="status-dot" id="dot-sensor"></span>Kanäle</span>
+            <span><span class="status-dot" id="dot-wifi"></span>WiFi</span>
+            <span><span class="status-dot" id="dot-mqtt"></span>MQTT</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="live"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16M8 15l3-4 3 3 5-6"/></svg></span><span>Live</span></div>
+        <div class="tab" data-tab="channels"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M14 10v4M10 16v4"/></svg></span><span>Kanäle</span></div>
+        <div class="tab" data-tab="hw"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10H7zM9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></span><span>Hardware</span></div>
+        <div class="tab" data-tab="mqtt"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg></span><span>MQTT</span></div>
+        <div class="tab" data-tab="wifi"><span class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></svg></span><span>WiFi</span></div>
+    </div>
+
+    <!-- LIVE TAB: built from the channel list the device sends (io.h) -->
+    <div class="tab-content active" id="tab-live">
+        <div id="live-box"></div>
+        <div class="card" id="live-empty" hidden><div class="form-hint" style="margin:0">Noch keine Kanäle. Im Tab <b>Hardware</b> die Busse einstellen, dann im Tab <b>Kanäle</b> Relais, Eingänge und Sensoren anlegen.</div></div>
+    </div>
+
+    <!-- CHANNELS TAB -->
+    <div class="tab-content" id="tab-channels">
+        <div id="ch-list"></div>
+        <div class="card">
+            <div class="card-title">Kanal hinzufügen</div>
+            <div class="io-add">
+                <button class="btn btn-secondary" onclick="addCh('relay')">+ Relais</button>
+                <button class="btn btn-secondary" onclick="addCh('input')">+ Eingang</button>
+                <button class="btn btn-secondary" onclick="addCh('temp')">+ Temperatur</button>
+                <button class="btn btn-secondary" onclick="addCh('analog')">+ Analog</button>
+            </div>
+            <div class="form-hint">Die ID ist das MQTT-Topic: <code>&lt;prefix&gt;/&lt;id&gt;</code>, Relais schalten über <code>&lt;prefix&gt;/cmd/&lt;id&gt;</code> mit <code>ON</code>, <code>OFF</code> oder <code>TOGGLE</code>. Erlaubt sind a-z, 0-9, _ und -.</div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveIo()">💾 Speichern & Neustart</button></div>
+    </div>
+
+    <!-- HARDWARE TAB -->
+    <div class="tab-content" id="tab-hw">
+        <div class="card">
+            <div class="card-title accent">DS18B20 (1-Wire)</div>
+            <div class="form-group"><label>GPIO</label><select id="hw-ow" class="pinsel" data-role="1-Wire"></select></div>
+            <div class="form-hint">Alle Temperaturfühler an einem Pin, 4,7 kΩ Pull-up nach 3,3 V.</div>
+        </div>
+        <div class="card">
+            <div class="card-title accent">74HC595 (Relais-Kette)</div>
+            <div class="form-group"><label>Anzahl Chips</label><select id="hw-sr-chips"></select></div>
+            <div class="form-row sr-only">
+                <div class="form-group"><label>Daten (DS)</label><select id="hw-sr-data" class="pinsel" data-role="74HC595 Daten"></select></div>
+                <div class="form-group"><label>Takt (SHCP)</label><select id="hw-sr-clock" class="pinsel" data-role="74HC595 Takt"></select></div>
+            </div>
+            <div class="form-row sr-only">
+                <div class="form-group"><label>Latch (STCP)</label><select id="hw-sr-latch" class="pinsel" data-role="74HC595 Latch"></select></div>
+                <div class="form-group"><label>OE (optional)</label><select id="hw-sr-oe" class="pinsel" data-role="74HC595 OE"></select></div>
+            </div>
+            <div class="form-hint">8 Ausgänge je Chip, dazwischen ein Treiber (z. B. ULN2803) oder ein fertiges 595-Relaisboard. Mit OE-Pin (und 10 kΩ nach 3,3 V) bleiben die Relais beim Start sicher aus, bis die Startwerte geladen sind.</div>
+        </div>
+        <div class="card">
+            <div class="card-title accent">I2C-Expander</div>
+            <div class="form-row">
+                <div class="form-group"><label>Typ</label><select id="hw-exp-type"><option value="mcp23017">MCP23017 (16 Pins)</option><option value="pcf8574">PCF8574 (8 Pins)</option></select></div>
+                <div class="form-group"><label>Anzahl</label><select id="hw-exp-chips"></select></div>
+            </div>
+            <div class="form-row exp-only">
+                <div class="form-group"><label>SDA</label><select id="hw-sda" class="pinsel" data-role="I2C SDA"></select></div>
+                <div class="form-group"><label>SCL</label><select id="hw-scl" class="pinsel" data-role="I2C SCL"></select></div>
+            </div>
+            <div class="form-group exp-only"><label>Adresse des ersten Chips</label><select id="hw-exp-addr"></select></div>
+            <div class="form-hint">Weitere Chips mit den folgenden Adressen (A0–A2 entsprechend setzen). Eingänge und Relais am Expander werden im Tab <b>Kanäle</b> zugeordnet.</div>
+        </div>
+        <div class="card">
+            <div class="card-title accent">Messung</div>
+            <div class="form-group"><label>Intervall Temperatur und Analog (Sekunden)</label><input type="number" id="hw-interval" min="2" max="3600"></div>
+            <div class="form-hint">Relais und Eingänge melden jede Änderung sofort.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Bus durchsuchen</div>
+            <div id="scan-out" class="form-hint" style="margin:0 0 10px">Findet DS18B20 am 1-Wire-Pin und Geräte am I2C-Bus (mit den gespeicherten Pins).</div>
+            <div class="btn-row" style="margin:0"><button class="btn btn-secondary" onclick="scanBus()">🔍 Suchen</button></div>
+        </div>
+        <div class="card">
+            <div class="card-title">Pin-Belegung</div>
+            <div id="pin-map"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveIo()">💾 Speichern & Neustart</button></div>
+    </div>
+
+    <!-- MQTT TAB -->
+    <div class="tab-content" id="tab-mqtt">
+        <div class="card">
+            <div class="card-title">MQTT Settings (Home Assistant)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Server</label><input type="text" id="cfg-mqtt-server"></div>
+                <div class="form-group"><label>Port</label><input type="number" id="cfg-mqtt-port" value="1883"></div>
+            </div>
+            <div class="form-group"><label>Ersatz-Broker (optional)</label><input type="text" id="cfg-mqtt-fb" placeholder="IP des Displays, z. B. 192.168.1.50"></div>
+            <div class="form-hint">Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.</div>
+            <div class="form-row">
+                <div class="form-group"><label>Benutzer</label><input type="text" id="cfg-mqtt-user"></div>
+                <div class="form-group"><label>Passwort</label><input type="password" id="cfg-mqtt-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            </div>
+            <div class="form-group">
+                <label>Topic-Prefix</label><input type="text" id="cfg-mqtt-prefix" value="camper/io">
+                <div class="form-hint">Kanäle unter <code>&lt;prefix&gt;/&lt;id&gt;</code>, Befehle unter <code>&lt;prefix&gt;/cmd/&lt;id&gt;</code>, Status unter <code>&lt;prefix&gt;/status</code></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Web-Oberfläche Login</div>
+            <div class="form-row">
+                <div class="form-group"><label>Benutzer</label><input type="text" id="cfg-web-user" autocomplete="off" autocapitalize="none"></div>
+                <div class="form-group"><label>Passwort</label><input type="password" id="cfg-web-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            </div>
+            <div class="form-hint">Die Anmeldung ist immer an (ab Werk <code>admin</code> / <code>admin</code>). Leere Felder behalten den gespeicherten Wert. Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login.</div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveSetup()">💾 Speichern</button></div>
+    </div>
+
+    <!-- WIFI TAB -->
+    <div class="tab-content" id="tab-wifi">
+        <div class="card">
+            <div class="card-title">Verbindungsstatus</div>
+            <div class="info-row"><span class="info-label">Status</span><span id="wifi-state">--</span></div>
+            <div class="info-row"><span class="info-label">RSSI</span><span id="wifi-rssi">--</span></div>
+            <div class="info-row"><span class="info-label">Firmware</span><span id="fw-version">--</span></div>
+            <div class="info-row"><span class="info-label">Laufzeit</span><span id="uptime">--</span></div>
+            <div class="info-row"><span class="info-label">Freier Speicher</span><span id="heap">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Neustart</span><span id="reset-reason">--</span></div>
+            <div class="info-row"><span class="info-label">WLAN-Abbrüche</span><span id="wifi-drops">--</span></div>
+            <div class="info-row"><span class="info-label">Letzter Abbruchgrund</span><span id="wifi-reason" style="text-align:right;word-break:break-all">--</span></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">WLAN-Verbindung</div>
+            <div class="form-group"><label>SSID</label><input type="text" id="cfg-wifi-ssid"></div>
+            <div class="form-group"><label>Passwort</label><input type="password" id="cfg-wifi-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            <div class="form-group">
+                <label>Sendeleistung</label>
+                <select id="cfg-tx-power">
+                    <option value="34">8,5 dBm</option><option value="44">11 dBm</option><option value="52">13 dBm</option>
+                    <option value="60">15 dBm</option><option value="70">17,5 dBm (Standard)</option><option value="78">19,5 dBm (Maximum)</option>
+                </select>
+                <div class="form-hint">Bricht die Verbindung oft ab, zuerst eine niedrigere Stufe probieren.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Access Point</div>
+            <div class="form-group"><label>Name (SSID)</label><input type="text" id="cfg-ap-ssid"></div>
+            <div class="form-group"><label>Passwort (min. 8 Zeichen)</label><input type="password" id="cfg-ap-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            <div class="enable-row">
+                <div>
+                    <div style="font-size:0.85rem">Access Point immer an</div>
+                    <div class="form-hint" style="margin-top:2px">Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Das Gerät ist dann über seine IP im WLAN oder <code>io-node.local</code> erreichbar.</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfg-ap-always"><span></span></label>
+            </div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveWifi()">💾 Speichern & Verbinden</button></div>
+        <div id="vn-system"></div>
+
+            </div>
+
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+let ws = null;
+let lastSig = '';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (v, d = 1) => (v === null || v === undefined) ? '--' : Number(v).toFixed(d).replace('.', ',');
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        $('tab-' + tab.dataset.tab).classList.add('active');
+    });
+});
+
+// WebSocket with the login: Safari does not send the page login along with the WebSocket, so the
+// page fetches a token first (/api/wstoken) and passes it as ?t= (wsauth.h on the device)
+function wsOpen(cb) {
+    fetch('/api/wstoken', {cache: 'no-store'}).then((r) => r.ok ? r.json() : {}).catch(() => ({})).then((j) =>
+        cb(new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (j && j.t ? '?t=' + encodeURIComponent(j.t) : ''))));
+}
+function connectWS() {
+    wsOpen((s) => {
+    ws = s;
+    ws.onmessage = (evt) => { try { updateLiveData(JSON.parse(evt.data)); } catch (e) {} };
+    ws.onclose = () => { setTimeout(connectWS, 3000); };
+    });
+}
+
+function formatUptime(s) {
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    return (d ? d + ' d ' : '') + (d || h ? h + ' h ' : '') + m + ' min';
+}
+function formatAge(s) {
+    if (s < 0) return 'noch kein Wert';
+    if (s < 60) return 'vor ' + s + ' s';
+    if (s < 3600) return 'vor ' + Math.floor(s / 60) + ' min';
+    return 'vor ' + Math.floor(s / 3600) + ' h';
+}
+
+// ---- channels (io.h) ------------------------------------------------------------------
+let IO = null;            // {hw, ch, chip, max_ch, sr_max, exp_max} as loaded / edited
+let SCAN = null;          // last bus scan
+let LIVE = {};            // id -> live entry (analog mV for the editor)
+const TYPE_NAME = {relay: 'Relais', input: 'Eingang', temp: 'Temperatur', analog: 'Analog'};
+// GPIOs on the header of the board, with notes
+const PINS = {
+    c3: [[0, 'ADC'], [1, 'ADC'], [2, 'ADC, Boot-Pin'], [3, 'ADC'], [4, 'ADC'], [5, ''], [6, ''], [7, ''],
+         [8, 'Boot-Pin, LED'], [9, 'Boot-Pin, BOOT-Taste'], [10, ''], [20, 'RX'], [21, 'TX']],
+    s3: [[1, 'ADC'], [2, 'ADC'], [3, 'ADC, Boot-Pin'], [4, 'ADC'], [5, 'ADC'], [6, 'ADC'], [7, 'ADC'], [8, 'ADC'], [9, 'ADC'], [10, 'ADC'],
+         [11, ''], [12, ''], [13, ''], [14, ''], [15, ''], [16, ''], [17, ''], [18, ''], [21, ''], [38, ''], [39, ''], [40, ''],
+         [41, ''], [42, ''], [45, 'Boot-Pin'], [46, 'Boot-Pin'], [47, ''], [48, 'LED']]
+};
+const ADC = {c3: [0, 1, 2, 3, 4], s3: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]};
+const BOOT = {c3: [2, 8, 9], s3: [0, 3, 45, 46]};
+const pins = () => PINS[IO && IO.chip] || PINS.c3;
+const pinNote = (p) => (pins().find((x) => x[0] === p) || [p, ''])[1];
+
+function pinOptions(sel, onlyAdc) {
+    const adc = ADC[IO.chip] || ADC.c3;
+    return '<option value="-1">–</option>' + pins().filter((x) => !onlyAdc || adc.includes(x[0]))
+        .map(([p, n]) => `<option value="${p}"${p === sel ? ' selected' : ''}>GPIO${p}${n ? ' (' + n + ')' : ''}</option>`).join('');
+}
+
+function fillHw() {
+    const h = IO.hw;
+    document.querySelectorAll('#tab-hw .pinsel').forEach((s) => {
+        const key = {'hw-ow': 'ow', 'hw-sr-data': 'sr_data', 'hw-sr-clock': 'sr_clock', 'hw-sr-latch': 'sr_latch', 'hw-sr-oe': 'sr_oe', 'hw-sda': 'sda', 'hw-scl': 'scl'}[s.id];
+        s.innerHTML = pinOptions(h[key]);
+        s.onchange = () => { h[key] = parseInt(s.value); renderPinMap(); };
+    });
+    const num = (id, max, val, fn) => {
+        const s = $(id);
+        s.innerHTML = Array.from({length: max + 1}, (_, i) => `<option value="${i}"${i === val ? ' selected' : ''}>${i === 0 ? 'keine' : i}</option>`).join('');
+        s.onchange = () => { fn(parseInt(s.value)); showBusRows(); renderChannels(); renderPinMap(); };
+    };
+    num('hw-sr-chips', IO.sr_max || 4, h.sr_chips, (v) => h.sr_chips = v);
+    num('hw-exp-chips', IO.exp_max || 8, h.exp_chips, (v) => h.exp_chips = v);
+    $('hw-exp-type').value = h.exp_type;
+    $('hw-exp-type').onchange = () => { h.exp_type = $('hw-exp-type').value; fillAddr(); renderChannels(); };
+    $('hw-interval').value = h.interval;
+    $('hw-interval').onchange = () => { h.interval = parseInt($('hw-interval').value) || 10; };
+    fillAddr();
+    showBusRows();
+}
+
+function fillAddr() {
+    const h = IO.hw, base = h.exp_type === 'pcf8574' ? [0x20, 0x38] : [0x20];
+    const opts = [];
+    base.forEach((b) => { for (let a = b; a < b + 8; a++) opts.push(a); });
+    if (!opts.includes(h.exp_addr)) h.exp_addr = opts[0];
+    $('hw-exp-addr').innerHTML = opts.map((a) => `<option value="${a}"${a === h.exp_addr ? ' selected' : ''}>0x${a.toString(16).toUpperCase()}${a >= 0x38 ? ' (PCF8574A)' : ''}</option>`).join('');
+    $('hw-exp-addr').onchange = () => { h.exp_addr = parseInt($('hw-exp-addr').value); };
+}
+
+function showBusRows() {
+    document.querySelectorAll('.sr-only').forEach((e) => e.hidden = !IO.hw.sr_chips);
+    document.querySelectorAll('.exp-only').forEach((e) => e.hidden = !IO.hw.exp_chips);
+}
+
+// All GPIOs in use: pin -> list of users (bus pins and channels)
+function pinUse() {
+    const use = {}, h = IO.hw;
+    const add = (p, who) => { if (p >= 0) (use[p] = use[p] || []).push(who); };
+    add(h.ow, '1-Wire');
+    if (h.sr_chips) { add(h.sr_data, '74HC595 Daten'); add(h.sr_clock, '74HC595 Takt'); add(h.sr_latch, '74HC595 Latch'); add(h.sr_oe, '74HC595 OE'); }
+    if (h.exp_chips) { add(h.sda, 'I2C SDA'); add(h.scl, 'I2C SCL'); }
+    IO.ch.forEach((c) => { if ((c.type === 'relay' || c.type === 'input') && c.bus === 'gpio' || c.type === 'analog') add(c.pin, c.name || c.id); });
+    return use;
+}
+
+function renderPinMap() {
+    const use = pinUse();
+    $('pin-map').innerHTML = pins().map(([p, n]) => {
+        const u = use[p] || [];
+        const cls = u.length > 1 ? 'dup' : u.length ? '' : 'free';
+        return `<div class="pin-row"><span>GPIO${p}${n ? ' <small class="free">' + esc(n) + '</small>' : ''}</span><span class="${cls}">${u.length ? esc(u.join(', ')) + (u.length > 1 ? ' – doppelt!' : '') : 'frei'}</span></div>`;
+    }).join('');
+}
+
+function busOptions(c) {
+    const h = IO.hw;
+    let o = `<option value="gpio"${c.bus === 'gpio' ? ' selected' : ''}>GPIO</option>`;
+    if (c.type === 'relay' && (h.sr_chips || c.bus === 'sr')) o += `<option value="sr"${c.bus === 'sr' ? ' selected' : ''}>74HC595</option>`;
+    if (h.exp_chips || c.bus === 'exp') o += `<option value="exp"${c.bus === 'exp' ? ' selected' : ''}>I2C-Expander</option>`;
+    return o;
+}
+
+function targetField(c, i) {
+    const h = IO.hw;
+    if (c.bus === 'sr') {
+        const n = Math.max(1, h.sr_chips) * 8;
+        return `<div class="form-group"><label>Ausgang</label><select onchange="setCh(${i},'pin',+this.value)">` +
+            Array.from({length: n}, (_, k) => `<option value="${k}"${k === c.pin ? ' selected' : ''}>Chip ${Math.floor(k / 8) + 1} · Q${k % 8}</option>`).join('') + '</select></div>';
+    }
+    if (c.bus === 'exp') {
+        const np = h.exp_type === 'pcf8574' ? 8 : 16, chips = Math.max(1, h.exp_chips);
+        const pinName = (k) => np === 16 ? (k < 8 ? 'A' + k : 'B' + (k - 8)) : 'P' + k;
+        return `<div class="form-row"><div class="form-group"><label>Expander</label><select onchange="setCh(${i},'chip',+this.value)">` +
+            Array.from({length: chips}, (_, k) => `<option value="${k}"${k === c.chip ? ' selected' : ''}>${k + 1} (0x${(h.exp_addr + k).toString(16).toUpperCase()})</option>`).join('') +
+            `</select></div><div class="form-group"><label>Pin</label><select onchange="setCh(${i},'pin',+this.value)">` +
+            Array.from({length: np}, (_, k) => `<option value="${k}"${k === c.pin ? ' selected' : ''}>${pinName(k)}</option>`).join('') + '</select></div></div>';
+    }
+    return `<div class="form-group"><label>GPIO</label><select onchange="setCh(${i},'pin',+this.value)">${pinOptions(c.pin, c.type === 'analog')}</select></div>`;
+}
+
+function romOptions(c) {
+    const roms = (SCAN && SCAN.roms || []).map((r) => r.rom);
+    if (c.rom && !roms.includes(c.rom)) roms.unshift(c.rom);
+    const t = (rom) => { const r = SCAN && SCAN.roms.find((x) => x.rom === rom); return r && r.t !== undefined ? ' · ' + fmt(r.t, 1) + ' °C' : ''; };
+    return '<option value="">– wählen –</option>' + roms.map((r) => `<option value="${r}"${r === c.rom ? ' selected' : ''}>${r}${t(r)}</option>`).join('');
+}
+
+function chWarn(c) {
+    const boot = BOOT[IO.chip] || BOOT.c3;
+    if ((c.type === 'relay' || c.type === 'input') && c.bus === 'gpio' && boot.includes(c.pin))
+        return `<div class="ch-warn">GPIO${c.pin} ist ein Boot-Pin: ${c.type === 'relay' ? 'ein Relaismodul daran kann den Start verhindern' : 'beim Start nicht nach Masse ziehen'}.</div>`;
+    if ((c.type === 'relay' || c.type === 'input') && c.bus === 'gpio' && (c.pin === 20 || c.pin === 21) && IO.chip === 'c3')
+        return '<div class="ch-warn">GPIO20/21 sind RX/TX: die serielle Ausgabe stört dann.</div>';
+    return '';
+}
+
+function renderChannels() {
+    const box = $('ch-list');
+    if (!IO.ch.length) { box.innerHTML = ''; return; }
+    box.innerHTML = IO.ch.map((c, i) => {
+        let body = `<div class="form-row">
+            <div class="form-group"><label>Name</label><input type="text" maxlength="31" value="${esc(c.name)}" oninput="setCh(${i},'name',this.value,1)"></div>
+            <div class="form-group"><label>ID (Topic)</label><input type="text" maxlength="23" value="${esc(c.id)}" oninput="setCh(${i},'id',this.value.toLowerCase(),1)"></div></div>`;
+        if (c.type === 'relay' || c.type === 'input') {
+            body += `<div class="form-group"><label>Anschluss</label><select onchange="setCh(${i},'bus',this.value)">${busOptions(c)}</select></div>` + targetField(c, i);
+        }
+        if (c.type === 'relay') {
+            body += `<div class="form-row">
+                <div class="form-group"><label>Relais schaltet bei</label><select onchange="setCh(${i},'low',this.value==='1')">
+                    <option value="0"${!c.low ? ' selected' : ''}>HIGH</option><option value="1"${c.low ? ' selected' : ''}>LOW</option></select></div>
+                <div class="form-group"><label>Nach dem Start</label><select onchange="setCh(${i},'boot',+this.value)">
+                    <option value="0"${c.boot === 0 ? ' selected' : ''}>aus</option><option value="1"${c.boot === 1 ? ' selected' : ''}>an</option><option value="2"${c.boot === 2 ? ' selected' : ''}>letzter Zustand</option></select></div></div>
+                <div class="form-group"><label>Impuls (ms, 0 = bleibt an)</label><input type="number" min="0" max="3600000" value="${c.pulse || 0}" onchange="setCh(${i},'pulse',+this.value,1)"></div>
+                <div class="form-hint">Die meisten Relaismodule mit Optokoppler schalten bei LOW. Klackt das Relais beim falschen Zustand, hier umstellen.</div>`;
+        } else if (c.type === 'input') {
+            body += `<label class="ch-chk"><input type="checkbox"${c.low ? ' checked' : ''} onchange="setCh(${i},'low',this.checked,1)"> Umkehren (LOW = an, z. B. Kontakt nach Masse)</label>
+                <label class="ch-chk"><input type="checkbox"${c.pullup ? ' checked' : ''} onchange="setCh(${i},'pullup',this.checked,1)"> Pull-up einschalten</label>
+                <div class="form-group"><label>Entprellen (ms)</label><input type="number" min="0" max="10000" value="${c.debounce ?? 50}" onchange="setCh(${i},'debounce',+this.value,1)"></div>`;
+        } else if (c.type === 'temp') {
+            body += `<div class="form-group"><label>Sensor</label><select onchange="setCh(${i},'rom',this.value,1)">${romOptions(c)}</select></div>
+                <div class="form-group"><label>Offset (°C)</label><input type="number" step="0.1" min="-10" max="10" value="${c.offset || 0}" onchange="setCh(${i},'offset',+this.value,1)"></div>
+                <div class="form-hint">Sensoren findet <b>Suchen</b> im Tab Hardware. Welcher welcher ist: einen in der Hand anwärmen und zusehen, welcher Wert steigt.</div>`;
+        } else if (c.type === 'analog') {
+            const mv = LIVE[c.id] && LIVE[c.id].mv !== undefined ? LIVE[c.id].mv + ' mV' : '–';
+            body += targetField(c, i) + `
+                <div class="form-row"><div class="form-group"><label>Punkt 1: mV</label><input type="number" value="${c.raw1}" onchange="setCh(${i},'raw1',+this.value,1)"></div>
+                    <div class="form-group"><label>= Wert</label><input type="number" step="any" value="${c.val1}" onchange="setCh(${i},'val1',+this.value,1)"></div></div>
+                <div class="form-row"><div class="form-group"><label>Punkt 2: mV</label><input type="number" value="${c.raw2}" onchange="setCh(${i},'raw2',+this.value,1)"></div>
+                    <div class="form-group"><label>= Wert</label><input type="number" step="any" value="${c.val2}" onchange="setCh(${i},'val2',+this.value,1)"></div></div>
+                <div class="form-row"><div class="form-group"><label>Einheit</label><input type="text" maxlength="7" value="${esc(c.unit || '')}" oninput="setCh(${i},'unit',this.value,1)"></div>
+                    <div class="form-group"><label>Nachkommastellen</label><input type="number" min="0" max="4" value="${c.dec ?? 2}" onchange="setCh(${i},'dec',+this.value,1)"></div></div>
+                <div class="form-hint">Jetzt am Pin: <b id="mv-${esc(c.id)}">${mv}</b>. Zwei bekannte Zustände messen (z. B. 0 V und 12 V am Spannungsteiler) und eintragen, dazwischen wird linear gerechnet. Der ADC misst bis etwa 2500 mV.</div>`;
+        }
+        return `<div class="card ch-card"><div class="card-title"><span><span class="ch-type">${TYPE_NAME[c.type]}</span> ${esc(c.name || c.id)}</span>
+            <span class="ch-btns"><button title="nach oben" onclick="moveCh(${i},-1)">↑</button><button title="Entfernen" onclick="delCh(${i})">✕</button></span></div>${body}${chWarn(c)}</div>`;
+    }).join('');
+}
+
+function setCh(i, k, v, quiet) {
+    const c = IO.ch[i];
+    c[k] = v;
+    if (k === 'bus') { c.pin = c.bus === 'gpio' ? -1 : 0; c.chip = 0; }
+    if (k === 'name' && c._autoId) c.id = v.toLowerCase().replace(/[äöüß]/g, (m) => ({'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss'}[m])).replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 23);
+    if (k === 'id') c._autoId = false;
+    if (k === 'name' && c._autoId) {   // keep typing in the name field, only update the id field
+        const card = document.querySelectorAll('.ch-card')[i];
+        if (card) card.querySelectorAll('input')[1].value = c.id;
+    }
+    if (!quiet) renderChannels();
+    renderPinMap();
+}
+
+function addCh(type) {
+    if (IO.ch.length >= (IO.max_ch || 48)) { showToast('Maximal ' + IO.max_ch + ' Kanäle', true); return; }
+    const c = {type, id: '', name: '', _autoId: true, bus: 'gpio', chip: 0, pin: -1, low: type === 'relay', boot: 0, pulse: 0,
+               pullup: true, debounce: 50, rom: '', offset: 0, raw1: 0, val1: 0, raw2: 1000, val2: 1, unit: 'V', dec: 2};
+    if (type === 'relay' && IO.hw.sr_chips) { c.bus = 'sr'; c.pin = 0; }
+    IO.ch.push(c);
+    renderChannels();
+    renderPinMap();
+    const cards = document.querySelectorAll('.ch-card');
+    if (cards.length) cards[cards.length - 1].scrollIntoView({behavior: 'smooth'});
+}
+function delCh(i) { IO.ch.splice(i, 1); renderChannels(); renderPinMap(); }
+function moveCh(i, d) { const j = i + d; if (j < 0 || j >= IO.ch.length) return; [IO.ch[i], IO.ch[j]] = [IO.ch[j], IO.ch[i]]; renderChannels(); }
+
+async function loadIo() {
+    try {
+        const r = await fetch('/api/io', {cache: 'no-store'});
+        if (!r.ok) throw new Error();
+        IO = await r.json();
+        IO.ch = IO.ch || [];
+        fillHw();
+        renderChannels();
+        renderPinMap();
+    } catch (e) { showToast('Fehler beim Laden der Kanäle', true); }
+}
+
+async function saveIo() {
+    if (!IO) return;
+    const seen = {};
+    for (const c of IO.ch) {
+        if (!/^[a-z0-9_-]{1,23}$/.test(c.id)) { showToast('Ungültige ID: ' + (c.id || '(leer)'), true); return; }
+        if (seen[c.id]) { showToast('ID doppelt: ' + c.id, true); return; }
+        seen[c.id] = 1;
+        if ((c.type === 'relay' || c.type === 'input' || c.type === 'analog') && c.bus !== 'sr' && c.bus !== 'exp' && !(c.pin >= 0)) { showToast(c.id + ': GPIO fehlt', true); return; }
+        if (c.type === 'temp' && !c.rom) { showToast(c.id + ': Sensor wählen', true); return; }
+    }
+    const dup = Object.entries(pinUse()).find(([, u]) => u.length > 1);
+    if (dup) { showToast('GPIO' + dup[0] + ' ist doppelt belegt', true); return; }
+    const body = {hw: IO.hw, ch: IO.ch.map((c) => {
+        const o = {id: c.id, name: c.name || c.id, type: c.type};
+        if (c.type === 'relay') Object.assign(o, {bus: c.bus, chip: c.chip, pin: c.pin, low: c.low, boot: c.boot, pulse: c.pulse || 0});
+        if (c.type === 'input') Object.assign(o, {bus: c.bus, chip: c.chip, pin: c.pin, low: c.low, pullup: c.pullup, debounce: c.debounce});
+        if (c.type === 'temp') Object.assign(o, {rom: c.rom, offset: c.offset || 0});
+        if (c.type === 'analog') Object.assign(o, {pin: c.pin, raw1: c.raw1, val1: c.val1, raw2: c.raw2, val2: c.val2, unit: c.unit, dec: c.dec});
+        return o;
+    })};
+    try {
+        const r = await fetch('/api/io', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+        if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch (e) {} throw new Error(m); }
+        showToast('Gespeichert – Neustart...');
+        setTimeout(restartDevice, 800);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+async function scanBus() {
+    $('scan-out').textContent = 'Suche läuft...';
+    try {
+        await fetch('/api/io/scan', {method: 'POST'});
+        await new Promise((ok) => setTimeout(ok, 1500));
+        SCAN = await (await fetch('/api/io/scan', {cache: 'no-store'})).json();
+        const roms = SCAN.roms || [], i2c = SCAN.i2c || [];
+        const used = new Set(IO.ch.filter((c) => c.type === 'temp').map((c) => c.rom));
+        let html = '<b>DS18B20:</b> ' + (roms.length ? roms.map((r) => esc(r.rom) + (r.t !== undefined ? ' (' + fmt(r.t, 1) + ' °C)' : '') + (used.has(r.rom) ? ' ✓' : '')).join(', ') : 'keine');
+        html += '<br><b>I2C:</b> ' + (i2c.length ? i2c.map((a) => '0x' + a.toString(16).toUpperCase()).join(', ') : 'keine');
+        const fresh = roms.filter((r) => !used.has(r.rom));
+        if (fresh.length) html += `<br><button class="btn btn-secondary" style="margin-top:8px" onclick="addFound()">+ ${fresh.length} neue Fühler als Kanal anlegen</button>`;
+        $('scan-out').innerHTML = html;
+        renderChannels();
+    } catch (e) { $('scan-out').textContent = 'Fehler beim Suchen'; }
+}
+
+function addFound() {
+    const used = new Set(IO.ch.filter((c) => c.type === 'temp').map((c) => c.rom));
+    let n = IO.ch.filter((c) => c.type === 'temp').length;
+    (SCAN.roms || []).filter((r) => !used.has(r.rom)).forEach((r) => {
+        if (IO.ch.length >= (IO.max_ch || 48)) return;
+        n++;
+        IO.ch.push({type: 'temp', id: 'temp' + n, name: 'Temperatur ' + n, rom: r.rom, offset: 0});
+    });
+    renderChannels();
+    document.querySelector('[data-tab="channels"]').click();
+}
+
+async function switchRelay(id) {
+    try {
+        const r = await fetch('/api/io/set?id=' + encodeURIComponent(id) + '&v=toggle', {method: 'POST'});
+        if (!r.ok) throw new Error();
+    } catch (e) { showToast('Befehl fehlgeschlagen', true); }
+}
+
+function updateLiveData(d) {
+    const list = d.ch || [];
+    LIVE = {};
+    list.forEach((c) => LIVE[c.id] = c);
+    const box = $('live-box');
+    $('live-empty').hidden = list.length > 0;
+    const sig = list.map((c) => c.id + c.type + c.name).join('|');
+    if (sig !== lastSig) {
+        lastSig = sig;
+        const group = (type, title) => {
+            const g = list.filter((c) => c.type === type);
+            if (!g.length) return '';
+            return `<div class="io-group"><div class="io-group-t">${title}</div><div class="io-grid">` + g.map((c) =>
+                type === 'relay'
+                    ? `<button class="io-tile" id="t-${esc(c.id)}" onclick="switchRelay('${esc(c.id)}')"><span class="n">${esc(c.name)}</span><span class="v"></span><span class="s">antippen zum Schalten</span></button>`
+                    : `<div class="io-tile" id="t-${esc(c.id)}"><span class="n">${esc(c.name)}</span><span class="v"></span><span class="s"></span></div>`).join('') + '</div></div>';
+        };
+        box.innerHTML = group('relay', 'Relais') + group('input', 'Eingänge') + group('temp', 'Temperaturen') + group('analog', 'Analog');
+    }
+    for (const c of list) {
+        const t = $('t-' + c.id);
+        if (!t) continue;
+        const v = t.querySelector('.v');
+        if (c.type === 'relay' || c.type === 'input') {
+            t.classList.toggle('on', !!c.on);
+            v.textContent = c.on ? 'An' : 'Aus';
+        } else {
+            v.innerHTML = fmt(c.v, c.dec) + '<small>' + esc(c.unit || '') + '</small>';
+            if (c.type === 'analog') t.querySelector('.s').textContent = c.mv !== undefined ? c.mv + ' mV' : '';
+        }
+        const mv = $('mv-' + c.id);
+        if (mv && c.mv !== undefined) mv.textContent = c.mv + ' mV';
+    }
+    $('dot-sensor').className = 'status-dot ' + (list.length ? 'active' : 'warning');
+    $('dot-wifi').className = 'status-dot ' + (d.rssi ? 'active' : '');
+    $('dot-mqtt').className = 'status-dot ' + (d.mqtt ? 'active' : '');
+    $('wifi-state').textContent = d.wifi || '--';
+    $('wifi-rssi').textContent = d.rssi ? d.rssi + ' dBm' : '--';
+    $('uptime').textContent = formatUptime(d.uptime || 0);
+    $('heap').textContent = Math.round((d.heap || 0) / 1024) + ' kB';
+    $('wifi-drops').textContent = d.wifi_drops ?? '--';
+    $('wifi-reason').textContent = d.wifi_reason || '--';
+}
+
+// POST a (partial) config object; throws with the device's error message if rejected
+async function postConfig(obj) {
+    const resp = await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(obj)
+    });
+    if (!resp.ok) {
+        let msg = 'HTTP ' + resp.status;
+        try { msg = (await resp.json()).error || msg; } catch (e) {}
+        throw new Error(msg);
+    }
+}
+
+async function loadSetup() {
+    try {
+        const resp = await fetch('/api/config');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const cfg = await resp.json();
+        // Passwords are never sent by the device; the fields stay empty on purpose
+        $('cfg-mqtt-server').value = cfg.mqtt_server || '';
+        $('cfg-mqtt-port').value = cfg.mqtt_port || 1883;
+        $('cfg-mqtt-fb').value = cfg.mqtt_fb || '';
+        $('cfg-mqtt-user').value = cfg.mqtt_user || '';
+        $('cfg-mqtt-prefix').value = cfg.mqtt_prefix || 'camper/io';
+        $('cfg-wifi-ssid').value = cfg.wifi_ssid || '';
+        $('cfg-ap-ssid').value = cfg.ap_ssid || '';
+        $('cfg-tx-power').value = String(cfg.wifi_tx_power || 70);
+        $('cfg-ap-always').checked = !!cfg.ap_always;
+        $('cfg-web-user').value = cfg.web_user || '';
+        $('fw-version').textContent = cfg.version || '--';
+        $('reset-reason').textContent = cfg.reset_reason || '--';
+    } catch (e) {
+        showToast('Fehler beim Laden der Einstellungen', true);
+    }
+}
+
+async function saveSetup() {
+    const cfg = {
+        mqtt_server: $('cfg-mqtt-server').value.trim(),
+        mqtt_port: parseInt($('cfg-mqtt-port').value) || 1883, mqtt_fb: $('cfg-mqtt-fb').value.trim(),
+        mqtt_user: $('cfg-mqtt-user').value.trim(),
+        mqtt_prefix: $('cfg-mqtt-prefix').value.trim().replace(/\/+$/, '')
+    };
+    const pass = $('cfg-mqtt-pass').value;
+    if (pass) cfg.mqtt_pass = pass;
+    cfg.web_user = $('cfg-web-user').value.trim();
+    const webPass = $('cfg-web-pass').value;
+    if (webPass) cfg.web_pass = webPass;
+    try {
+        await postConfig(cfg);
+        showToast('Gespeichert – Neustart...');
+        setTimeout(restartDevice, 800);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function saveWifi() {
+    const cfg = {
+        wifi_ssid: $('cfg-wifi-ssid').value.trim(),
+        ap_ssid: $('cfg-ap-ssid').value.trim(),
+        wifi_tx_power: parseInt($('cfg-tx-power').value),
+        ap_always: $('cfg-ap-always').checked
+    };
+    const pass = $('cfg-wifi-pass').value;
+    if (pass) cfg.wifi_pass = pass;
+    const apPass = $('cfg-ap-pass').value;
+    if (apPass) {
+        if (apPass.length < 8) { showToast('AP-Passwort: mindestens 8 Zeichen', true); return; }
+        cfg.ap_pass = apPass;
+    }
+    try {
+        await postConfig(cfg);
+        showToast('Gespeichert – Neustart...');
+        setTimeout(restartDevice, 800);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+async function restartDevice() {
+    try { await fetch('/api/restart', {method: 'POST'}); } catch (e) {}
+    showToast('Neustart... Seite lädt in 10 s neu');
+    setTimeout(() => location.reload(), 10000);
+}
+
+function showToast(msg, isErr) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+loadSetup();
+loadIo();
+connectWS();
+// i18n-en:begin
+// English words of this page and of the texts this node sends (vannode-i18n.js).
+// UI_LANG "en" in config_local.h switches the page to English; German stays the original.
+vnI18nAdd('en', {
+  'Kanäle': 'Channels', 'Hardware': 'Hardware', 'Kanal hinzufügen': 'Add channel', '+ Relais': '+ Relay', '+ Eingang': '+ Input', '+ Temperatur': '+ Temperature', '+ Analog': '+ Analog',
+  'Noch keine Kanäle. Im Tab': 'No channels yet. Set up the buses in the', 'die Busse einstellen, dann im Tab': 'tab, then add relays, inputs and sensors in the',
+  'Relais, Eingänge und Sensoren anlegen.': 'tab.', 'Die ID ist das MQTT-Topic:': 'The ID is the MQTT topic:', ', Relais schalten über': ', relays switch via',
+  'mit': 'with', 'oder': 'or', '. Erlaubt sind a-z, 0-9, _ und -.': '. Allowed are a-z, 0-9, _ and -.', '💾 Speichern & Neustart': '💾 Save & restart',
+  'DS18B20 (1-Wire)': 'DS18B20 (1-Wire)', 'Alle Temperaturfühler an einem Pin, 4,7 kΩ Pull-up nach 3,3 V.': 'All temperature sensors on one pin, 4.7 kΩ pull-up to 3.3 V.',
+  '74HC595 (Relais-Kette)': '74HC595 (relay chain)', 'Anzahl Chips': 'Number of chips', 'Daten (DS)': 'Data (DS)', 'Takt (SHCP)': 'Clock (SHCP)', 'Latch (STCP)': 'Latch (STCP)', 'OE (optional)': 'OE (optional)',
+  '8 Ausgänge je Chip, dazwischen ein Treiber (z. B. ULN2803) oder ein fertiges 595-Relaisboard. Mit OE-Pin (und 10 kΩ nach 3,3 V) bleiben die Relais beim Start sicher aus, bis die Startwerte geladen sind.':
+    '8 outputs per chip, with a driver in between (e.g. ULN2803) or a ready-made 595 relay board. With the OE pin (and 10 kΩ to 3.3 V) the relays stay safely off at the start until the start values are loaded.',
+  'I2C-Expander': 'I2C expander', 'Typ': 'Type', 'Anzahl': 'Number', 'MCP23017 (16 Pins)': 'MCP23017 (16 pins)', 'PCF8574 (8 Pins)': 'PCF8574 (8 pins)', 'Adresse des ersten Chips': 'Address of the first chip',
+  'Weitere Chips mit den folgenden Adressen (A0–A2 entsprechend setzen). Eingänge und Relais am Expander werden im Tab': 'Further chips use the following addresses (set A0–A2 accordingly). Inputs and relays on the expander are assigned in the',
+  'zugeordnet.': 'tab.', 'Intervall Temperatur und Analog (Sekunden)': 'Interval temperature and analog (seconds)', 'Relais und Eingänge melden jede Änderung sofort.': 'Relays and inputs report every change right away.',
+  'Bus durchsuchen': 'Search the bus', 'Findet DS18B20 am 1-Wire-Pin und Geräte am I2C-Bus (mit den gespeicherten Pins).': 'Finds DS18B20 on the 1-Wire pin and devices on the I2C bus (with the saved pins).',
+  '🔍 Suchen': '🔍 Search', 'Suchen': 'Search', 'Pin-Belegung': 'Pin assignment', 'frei': 'free', '* – doppelt!': '* – twice!', 'keine': 'none',
+  'Kanäle unter': 'Channels under', 'Relais': 'Relays', 'Eingänge': 'Inputs', 'Temperaturen': 'Temperatures', 'Analog': 'Analog', 'antippen zum Schalten': 'tap to switch',
+  'Eingang': 'Input', 'Temperatur': 'Temperature', 'Anschluss': 'Connection', 'GPIO': 'GPIO', 'I2C-Expander ': 'I2C expander', 'Ausgang': 'Output', 'Chip * · Q*': 'Chip * · Q*', 'Expander': 'Expander', 'Pin': 'Pin',
+  'Relais schaltet bei': 'Relay switches at', 'Nach dem Start': 'After the start', 'letzter Zustand': 'last state', 'Impuls (ms, 0 = bleibt an)': 'Pulse (ms, 0 = stays on)',
+  'Die meisten Relaismodule mit Optokoppler schalten bei LOW. Klackt das Relais beim falschen Zustand, hier umstellen.': 'Most relay modules with optocoupler switch at LOW. If the relay clicks in the wrong state, change it here.',
+  'Umkehren (LOW = an, z. B. Kontakt nach Masse)': 'Invert (LOW = on, e.g. contact to ground)', 'Pull-up einschalten': 'Switch on pull-up', 'Entprellen (ms)': 'Debounce (ms)',
+  'Sensor': 'Sensor', '– wählen –': '– choose –', 'Offset (°C)': 'Offset (°C)', 'Sensoren findet': 'Sensors are found by',
+  'im Tab Hardware. Welcher welcher ist: einen in der Hand anwärmen und zusehen, welcher Wert steigt.': 'in the Hardware tab. To tell them apart: warm one in your hand and watch which value rises.',
+  'Punkt 1: mV': 'Point 1: mV', 'Punkt 2: mV': 'Point 2: mV', '= Wert': '= value', 'Einheit': 'Unit', 'Nachkommastellen': 'Decimals', 'Jetzt am Pin:': 'Now at the pin:',
+  '. Zwei bekannte Zustände messen (z. B. 0 V und 12 V am Spannungsteiler) und eintragen, dazwischen wird linear gerechnet. Der ADC misst bis etwa 2500 mV.':
+    '. Measure two known states (e.g. 0 V and 12 V at the voltage divider) and enter them, values in between are interpolated linearly. The ADC measures up to about 2500 mV.',
+  'nach oben': 'up', 'Entfernen': 'Remove', 'ID (Topic)': 'ID (topic)',
+  'GPIO* ist ein Boot-Pin: ein Relaismodul daran kann den Start verhindern.': 'GPIO* is a boot pin: a relay module on it can prevent the start.',
+  'GPIO* ist ein Boot-Pin: beim Start nicht nach Masse ziehen.': 'GPIO* is a boot pin: do not pull it to ground at the start.',
+  'GPIO20/21 sind RX/TX: die serielle Ausgabe stört dann.': 'GPIO20/21 are RX/TX: the serial output then interferes.',
+  'GPIO* (*)': 'GPIO* (*)', 'ADC': 'ADC', 'Boot-Pin': 'boot pin', 'ADC, Boot-Pin': 'ADC, boot pin', 'Boot-Pin, LED': 'boot pin, LED', 'Boot-Pin, BOOT-Taste': 'boot pin, BOOT button',
+  'Maximal * Kanäle': 'At most * channels', 'Ungültige ID: *': 'Invalid ID: *', 'ID doppelt: *': 'Duplicate ID: *', '*: GPIO fehlt': '*: GPIO missing', '*: Sensor wählen': '*: choose a sensor',
+  'GPIO* ist doppelt belegt': 'GPIO* is used twice', 'Fehler beim Laden der Kanäle': 'Error loading the channels', 'Suche läuft...': 'Searching...', 'Fehler beim Suchen': 'Error while searching',
+  '+ * neue Fühler als Kanal anlegen': '+ add * new sensors as channels', 'DS18B20:': 'DS18B20:', 'I2C:': 'I2C:',
+  // texts the node sends
+  'Intervall 2-3600 s': 'Interval 2-3600 s', 'Zu viele 74HC595': 'Too many 74HC595', '74HC595: Daten-, Takt- und Latch-Pin fehlen': '74HC595: data, clock and latch pin missing',
+  'Zu viele Expander': 'Too many expanders', 'Expander: SDA- und SCL-Pin fehlen': 'Expander: SDA and SCL pin missing', 'Expander: Adresse ungültig': 'Expander: invalid address',
+  '*: GPIO* gibt es auf diesem Chip nicht': '*: GPIO* does not exist on this chip', 'GPIO* ist doppelt belegt (*)': 'GPIO* is used twice (*)', 'Zu viele Kanäle': 'Too many channels',
+  '*: Typ unbekannt': '*: unknown type', '*: Anschluss ungültig': '*: invalid connection', '*: 74HC595-Ausgang ungültig': '*: invalid 74HC595 output', '*: 74HC595-Ausgang * doppelt': '*: 74HC595 output * used twice',
+  '*: Expander-Pin ungültig': '*: invalid expander pin', '*: Expander * Pin * doppelt': '*: expander * pin * used twice', '*: Impuls 0-3600000 ms': '*: pulse 0-3600000 ms', '*: Entprellen 0-10000 ms': '*: debounce 0-10000 ms',
+  'Temperatur: erst den 1-Wire-Pin setzen': 'Temperature: set the 1-Wire pin first', '*: Sensor-Adresse ungültig': '*: invalid sensor address', '*: Offset max. ±10 °C': '*: offset max. ±10 °C',
+  '*: GPIO* kann nicht analog messen': '*: GPIO* cannot measure analog', '*: die zwei Punkte brauchen verschiedene mV': '*: the two points need different mV', 'Speichern läuft noch': 'Still saving',
+  'Unbekanntes Relais oder Befehl': 'Unknown relay or command', 'id und v fehlen': 'id and v missing', 'Zu viele Daten': 'Too much data', 'Dateisystem nicht bereit': 'File system not ready',
+  'Kanäle gespeichert (*)': 'Channels saved (*)', 'Expander 0x* antwortet nicht': 'Expander 0x* does not respond', 'io.json nicht lesbar (*)': 'io.json not readable (*)', 'io.json: *': 'io.json: *',
+  'Fehler: *': 'Error: *', 'An': 'On', 'Aus': 'Off'
+});
+// i18n-en:end
+// vannode-about:begin
+// VanNode "Über" card: logo, author, license, link to the third-party list and project link, placed right
+// below the firmware update card of every device page. Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// This card is part of the Appropriate Legal Notices of VanNode. Under the additional terms of
+// its GNU GPL v3 license (section 7 b/c, see NOTICE.md) the author attribution, the project link
+// and the license information must stay in every copy and modified version.
+(function () {
+  const REPO = 'https://github.com/hflocki/vannode';
+  const COPY = 'Copyright © 2026 hflocki';
+  const A = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
+  const GPL = 'Dieses Programm ist freie Software: Du kannst es unter den Bedingungen der GNU General Public License Version 3, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern. Es wird in der Hoffnung bereitgestellt, dass es nützlich ist, aber OHNE JEDE GEWÄHRLEISTUNG – sogar ohne die implizite Gewährleistung der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.';
+  const TERMS = 'Zusätzliche Bedingungen nach Abschnitt 7 der GPL: Dieser Urhebervermerk, der Link zum Projekt und die Lizenzangaben müssen in allen Kopien und veränderten Fassungen erhalten bleiben. Veränderte Fassungen müssen als solche gekennzeichnet sein und dürfen nicht als eigenes Werk ausgegeben werden. Name und Logo „VanNode“ sind nicht Teil der Lizenz: Forks brauchen einen eigenen Namen und ein eigenes Logo.';
+  const RISK = 'Nutzung auf eigene Gefahr: VanNode ist ein privates, unentgeltliches Hobbyprojekt und keine Sicherheitseinrichtung. Es ersetzt weder die Schutzfunktionen der Hersteller noch Gas-, CO- oder Rauchmelder; angezeigte Werte und Warnungen können falsch sein oder ausbleiben. Soweit gesetzlich zulässig, ist jede Haftung für Schäden ausgeschlossen. Produkt- und Firmennamen gehören ihren Inhabern, VanNode hat keine Verbindung zu ihnen.';
+  // firmware id (FW_DEVICE) -> name and repo folder. Third-party parts are not listed on the
+  // devices: the card links to the one central NOTICE.md of the repository (sorted by node).
+  const DEV = {
+    tanklevel: {n: 'Tanklevel-Node', d: 'tanklevel'},
+    temp:      {n: 'Temp-Node', d: 'temp'},
+    maxxfan:   {n: 'MaxxFan-Node', d: 'maxxfan'},
+    example:   {n: 'Vorlage', d: '_template'},
+    toolbox:   {n: 'BLE-Node', d: 'ble'},
+    heater:    {n: 'Heater-Node', d: 'heater'},
+    level:     {n: 'Level-Node', d: 'level'},
+    alde:      {n: 'Alde-Node', d: 'alde'},
+    pocket:    {n: 'Pocket-Node', d: 'pocket'},
+  };
+  DEV.ble = DEV.toolbox;   // mockups use the folder name
+  DEV.template = DEV.example;
+  const HW = {esp32: 'ESP32', esp32c3: 'ESP32-C3', esp32s3: 'ESP32-S3', esp32c6: 'ESP32-C6', esp8266: 'ESP8266', atoms3: 'AtomS3', core2: 'Core2'};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const small = 'margin:6px 0;font-size:.85em;opacity:.8';
+
+  function card(upd, fw) {
+    // Devices not listed above: name and folder from /api/system (fw.name, fw.dir), if sent
+    const info = DEV[fw.dev] || {n: fw.name || fw.dev || 'VanNode', d: fw.dir || ''};
+    const c = document.createElement('div');
+    c.className = upd.className;
+    c.id = 'vn-about';
+    c.style.marginTop = '12px';
+    const t = upd.firstElementChild;
+    const title = document.createElement(t ? t.tagName : 'h2');
+    if (t) title.className = t.className;
+    title.textContent = 'Über VanNode';
+    const base = info.d ? REPO + '/blob/main/firmware/' + info.d + '/' : REPO + '/blob/main/';
+    c.append(title);
+    c.insertAdjacentHTML('beforeend',
+      '<i class="vnlogo" role="img" aria-label="VanNode" style="margin:4px 0 10px"></i>' +
+      '<p style="margin:6px 0"><b>' + esc(info.n) + '</b> · Firmware ' + esc(fw.ver || '--') + (fw.hw ? ' · ' + esc(HW[fw.hw] || fw.hw) : '') + '</p>' +
+      '<p style="margin:6px 0">' + COPY + '<br>Teil von VanNode – Camper-Elektronik über MQTT<br>' + A(REPO, 'github.com/hflocki/vannode') + '</p>' +
+      '<p style="margin:6px 0">Lizenz: <b>GNU GPL Version 3</b>. ' + GPL + '</p>' +
+      '<p style="' + small + '">' + TERMS + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em"><b>Ohne Gewähr.</b> ' + RISK + '</p>' +
+      '<p style="margin:6px 0;font-size:.85em">' + A(base + 'LICENSE', 'Lizenztext (GPL-3.0)') + ' · ' + A(REPO + '/blob/main/NOTICE.md', 'Hinweise und fremde Teile') + '</p>');
+    upd.insertAdjacentElement('afterend', c);
+  }
+
+  let fw = null, busy = false;
+  function place() {
+    const cur = document.getElementById('fwu-cur');
+    const upd = cur && cur.closest('.card');
+    if (!upd || document.getElementById('vn-about')) return;
+    if (fw) return card(upd, fw);
+    if (busy) return;
+    busy = true;
+    fetch('/api/system', {cache: 'no-store'}).then((r) => r.json()).then((j) => { fw = j.fw || {}; })
+      .catch(() => { fw = {}; }).finally(() => { busy = false; place(); });
+  }
+  // The update card is built by the page (sometimes only when its tab opens): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+})();
+// vannode-about:end
+// vannode-backup:begin
+// VanNode "Einstellungen sichern" card, placed right below the firmware update card of every
+// device page (vannode-system.js). Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// Works only in the browser with the existing /api/config of the device: the backup is the
+// answer of GET /api/config without passwords, login and read-only values; restoring takes the
+// device's current settings and overwrites only the saved values, then sends them the way the
+// page itself does (JSON, or form fields on the MaxxFan and heater nodes). Network settings
+// (WiFi, IP, host name, MQTT server) are only taken over when the box is ticked.
+(function () {
+  // Keys never put into a backup (secrets, login, read-only information)
+  const SECRET = /pass|pwd|token|^wpw$|^web_user$|^wuser$/i;
+  const READONLY = ['version', 'reset_reason', 'guard', 'sensor_def', 'pins', 'pin', 'chip', 'max_sensors',
+    'tare_active', 'ci_ok', 'ci_possible', 'lin_active', 'one_uart', 'name', 'apssid', 'restart_needed', 'safe',
+    'types', 'schemas', 'max_links', 'max_devices', 'ha_node', 'device', 'values', 'status'];
+  // Network and identity: only with "auch Netzwerk übernehmen"
+  const NET = ['wifi_ssid', 'ssid', 'wifi_tx_power', 'ap_ssid', 'ap_always', 'static_ip', 'ip', 'gateway', 'gw',
+    'subnet', 'sn', 'dns', 'hostname', 'node_name', 'mqtt_server', 'mqtt_host', 'mhost', 'mqtt_port', 'mport',
+    'mqtt_user', 'muser', 'mqtt_prefix', 'prefix', 'mqtt_base', 'mqtt_fb', 'mfb'];
+  // Nodes whose /api/config takes form fields instead of JSON
+  const FORM = {maxxfan: 1, heater: 1};
+  const BLE = {ble: 1, toolbox: 1, battery: 1};
+  // Display: settings, pages and tiles, automations and sensors (own API, camelCase keys)
+  const D_SECRET = ['wifiPass', 'mqttPass', 'webPass', 'apPass', 'poToken', 'poUser'];
+  const D_READONLY = ['fw', 'mac', 'poStatus'];
+  const D_NET = ['wifiSsid', 'staticIp', 'ip', 'gateway', 'subnet', 'dns', 'hostname'];
+  const IC_UP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>';
+  const IC_DOWN = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>';
+  const IC_FILE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>';
+
+  const keep = (k) => !SECRET.test(k) && READONLY.indexOf(k) < 0 && !/_set$/.test(k);
+  const strip = (o) => { const r = {}; for (const k in o) if (keep(k)) r[k] = o[k]; return r; };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function getJson(url) {
+    const r = await fetch(url, {cache: 'no-store'});
+    if (!r.ok) throw new Error(url + ': ' + r.status);
+    return r.json();
+  }
+  // POST with retries while the device is busy saving the previous request (503)
+  async function post(url, body, form) {
+    for (let i = 0; i < 15; i++) {
+      const opt = {method: 'POST'};
+      if (form) {
+        const f = new URLSearchParams();
+        for (const k in body) {
+          const v = body[k];
+          if (v === null || v === undefined || typeof v === 'object') continue;
+          f.append(k, v === true ? '1' : v === false ? '0' : String(v));
+        }
+        opt.body = f;
+      } else {
+        opt.headers = {'Content-Type': 'application/json'};
+        opt.body = JSON.stringify(body);
+      }
+      const r = await fetch(url, opt);
+      if (r.status === 503) { await sleep(400); continue; }
+      let j = {};
+      try { j = await r.json(); } catch (e) {}
+      if (!r.ok) throw new Error(j.error || j.msg || ('HTTP ' + r.status));
+      return j;
+    }
+    throw new Error('Gerät beschäftigt');
+  }
+
+  async function makeBackup(fw) {
+    if (fw.dev === 'display') {
+      const st = await getJson('/api/settings');
+      D_SECRET.concat(D_READONLY).forEach((k) => delete st[k]);
+      const b = {type: 'vannode-backup', version: 1, device: 'display', fw: fw.ver || '', date: new Date().toISOString(),
+                 settings: st, pages: await getJson('/api/pages')};
+      try { b.rules = await getJson('/api/rules'); } catch (e) {}
+      try { b.sensors = await getJson('/api/sensors'); } catch (e) {}
+      return b;
+    }
+    const cfg = await getJson('/api/config');
+    const b = {type: 'vannode-backup', version: 1, device: fw.dev || '', fw: fw.ver || '', date: new Date().toISOString()};
+    if (BLE[fw.dev]) {
+      b.core = strip(cfg.core || {});
+      b.plugins = (cfg.plugins || []).filter((p) => !p.removed).map((p) => ({id: p.id, type: p.type, cfg: p.cfg}));
+    } else {
+      b.config = strip(cfg);
+    }
+    return b;
+  }
+
+  // All current values of the device (login name included: some nodes clear what is missing)
+  // + the allowed values of the backup
+  function merged(cur, saved, net) {
+    const out = {};
+    for (const k in cur) if (READONLY.indexOf(k) < 0 && !/_set$/.test(k)) out[k] = cur[k];
+    for (const k in saved) {
+      if (!keep(k)) continue;
+      if (!net && NET.indexOf(k) >= 0) continue;
+      out[k] = saved[k];
+    }
+    return out;
+  }
+
+  // Display: pages, automations, sensors, then the settings (they may restart the display)
+  async function restoreDisplay(b, net, log) {
+    if (b.pages && b.pages.pages) { await post('/api/pages', b.pages); log('Seiten und Kacheln übernommen'); }
+    if (b.rules && b.rules.rules) { await post('/api/rules', b.rules); log('Automationen übernommen'); }
+    if (b.sensors && b.sensors.devices) { await post('/api/sensors', b.sensors); log('Sensoren übernommen'); }
+    const s = Object.assign({}, b.settings || {});
+    D_SECRET.concat(D_READONLY).forEach((k) => delete s[k]);
+    if (!net) D_NET.forEach((k) => delete s[k]);
+    await post('/api/settings', s);
+    log('Einstellungen übernommen');
+  }
+
+  async function restoreBle(b, net, log) {
+    let cfg = await getJson('/api/config');
+    const have = {};
+    (cfg.plugins || []).forEach((p) => { if (!p.removed) have[p.id] = p; });
+    for (const p of b.plugins || []) {
+      let id = p.id;
+      if (!have[id] || have[id].type !== p.type) {
+        // not on this device: add a new one of that type, it gets the next free id
+        if (!(cfg.types || []).some((t) => t.type === p.type)) { log('Übersprungen (Typ fehlt in dieser Firmware): ' + p.id); continue; }
+        try { await post('/api/config', {add: p.type}); } catch (e) { log('Nicht angelegt: ' + p.id + ' – ' + e.message); continue; }
+        cfg = await getJson('/api/config');
+        const fresh = (cfg.plugins || []).filter((x) => x.type === p.type && !x.removed && !have[x.id]);
+        if (!fresh.length) { log('Nicht angelegt: ' + p.id); continue; }
+        id = fresh[fresh.length - 1].id;
+        have[id] = fresh[fresh.length - 1];
+      }
+      try { await post('/api/config', {plugin: id, cfg: p.cfg || {}}); log('Übernommen: ' + id); }
+      catch (e) { log('Fehler bei ' + id + ': ' + e.message); }
+    }
+    // core last: a network change restarts the node right away
+    const core = merged((await getJson('/api/config')).core || {}, b.core || {}, net);
+    return post('/api/config', {core});
+  }
+
+  function card(upd, fw) {
+    const c = document.createElement('div');
+    c.className = upd.className;
+    c.id = 'vn-backup';
+    const t = upd.firstElementChild;
+    const title = document.createElement(t ? t.tagName : 'h2');
+    if (t) title.className = t.className;
+    title.textContent = 'Einstellungen sichern';
+    c.append(title);
+    const disp = fw.dev === 'display';
+    const what = disp ? 'Alle Einstellungen, Seiten, Kacheln, Automationen und Sensoren' : BLE[fw.dev] ? 'Alle Einstellungen und Geräte' : 'Alle Einstellungen';
+    c.insertAdjacentHTML('beforeend',
+      '<div class="vnc-hint">' + what + ' als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.</div>' +
+      '<label class="vnc-file" id="vnbk-label">' + IC_FILE + '<span class="nm">Sicherung zum Einspielen wählen …</span>' +
+      '<span class="pick">Durchsuchen</span><input type="file" id="vnbk-file" accept=".json,application/json"></label>' +
+      '<label class="vnc-opt"><input type="checkbox" id="vnbk-net"> Auch WLAN, IP und Gerätename' + (disp ? '' : ' sowie MQTT-Server') + ' übernehmen</label>' +
+      '<div class="vnc-row"><button type="button" class="vnc-b" id="vnbk-exp">' + IC_DOWN + 'Sichern</button>' +
+      '<button type="button" class="vnc-b p" id="vnbk-imp" disabled>' + IC_UP + 'Einspielen</button></div>' +
+      '<div class="vnc-msg" id="vnbk-msg"></div>');
+    const vu = document.getElementById('vn-update');
+    (vu || upd).insertAdjacentElement('afterend', c);
+    const msg = c.querySelector('#vnbk-msg');
+    const say = (s) => { msg.textContent = s; };
+    const file = c.querySelector('#vnbk-file');
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      c.querySelector('#vnbk-label').classList.toggle('has', !!f);
+      c.querySelector('#vnbk-label .nm').textContent = f ? f.name : 'Sicherung zum Einspielen wählen …';
+      c.querySelector('#vnbk-imp').disabled = !f;
+    });
+
+    c.querySelector('#vnbk-exp').onclick = async () => {
+      try {
+        const b = await makeBackup(fw);
+        const name = (fw.dev || 'vannode') + '-' + new Date().toISOString().slice(0, 10) + '.json';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(b, null, 1)], {type: 'application/json'}));
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        say('Gespeichert: ' + name);
+      } catch (e) { say('Sichern fehlgeschlagen: ' + e.message); }
+    };
+
+    c.querySelector('#vnbk-imp').onclick = async () => {
+      const f = file.files[0];
+      if (!f) return say('Erst eine Sicherungsdatei wählen');
+      let b;
+      try { b = JSON.parse(await f.text()); } catch (e) { return say('Keine gültige Datei'); }
+      // older display backups have their own type
+      if (b && b.type === 'camper-display-backup') b = Object.assign({}, b, {type: 'vannode-backup', device: 'display'});
+      if (!b || b.type !== 'vannode-backup') return say('Keine VanNode-Sicherung');
+      const same = b.device === fw.dev || (BLE[b.device] && BLE[fw.dev] && (b.device === 'battery') === (fw.dev === 'battery'));
+      if (!same) return say('Die Sicherung gehört zu „' + b.device + '“, nicht zu diesem Gerät („' + fw.dev + '“)');
+      const net = c.querySelector('#vnbk-net').checked;
+      if (!confirm('Einstellungen aus der Sicherung vom ' + String(b.date || '').slice(0, 10) + ' übernehmen?' +
+        (net ? '\nWLAN, IP und Gerätename werden mit übernommen.' : '') + '\nDas Gerät startet danach eventuell neu.')) return;
+      const lines = [];
+      const log = (s) => { lines.push(s); say(lines.join('\n')); };
+      try {
+        if (disp) {
+          await restoreDisplay(b, net, log);
+          log('Fertig – Seite lädt gleich neu.');
+          setTimeout(() => location.reload(), 4000);
+        } else if (BLE[fw.dev]) {
+          await restoreBle(b, net, log);
+          log('Fertig. Geänderte Geräte gelten nach einem Neustart (Karte Gerät → Neustart).');
+        } else {
+          const cur = await getJson('/api/config');
+          await post('/api/config', merged(cur, b.config || {}, net), !!FORM[fw.dev]);
+          log('Fertig – Seite lädt gleich neu.');
+          setTimeout(() => location.reload(), 6000);
+        }
+      } catch (e) { log('Einspielen fehlgeschlagen: ' + e.message); }
+    };
+  }
+
+  let fw = null, busy = false;
+  function place() {
+    const cur = document.getElementById('fwu-cur');
+    const upd = cur && cur.closest('.card');
+    // with the shared system cards right below the update card; on pages without them (older
+    // layout) only once the "Über VanNode" card exists, so the order stays update, backup, about
+    const shared = !!document.getElementById('vn-update');
+    if (!upd || (!shared && !document.getElementById('vn-about')) || document.getElementById('vn-backup')) return;
+    if (fw) return card(upd, fw);
+    if (busy) return;
+    busy = true;
+    fetch('/api/system', {cache: 'no-store'}).then((r) => r.json()).then((j) => { fw = j.fw || {}; })
+      .catch(() => { fw = {}; }).finally(() => { busy = false; place(); });
+  }
+  // The update card is built by the page (sometimes only when its tab opens): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+})();
+// vannode-backup:end
+// vannode-system:begin
+// VanNode system cards, the same on every device page: "Firmware- & Web-Update", "Ereignisse",
+// "Uhrzeit" (only devices whose /api/system has "clock", see clockset.h) and "Gerät" (restart,
+// factory reset). Shared copy from firmware/_common/web
+// (tools/common/sync_common.py) - edit it there.
+// The page only puts <div id="vn-system"></div> where the cards belong (data-log="0": no event
+// card, the page shows the log elsewhere). The "Einstellungen sichern" card (vannode-backup.js)
+// goes right below the update card, "Über VanNode" (vannode-about.js) at the end.
+// The file checks (fwInspect) are the same rules as fwcheck.cpp on the devices: change both together.
+(function () {
+  // Device differences, by firmware id (FW_DEVICE)
+  const DEVCFG = {
+    heater:  {upd: '/update', field: 'firmware', web: false, restart: '/api/reboot'},
+    display: {upd: '/update', field: 'firmware', web: false, restart: '/api/reboot', factory: '/api/factory'},
+    maxxfan: {field: 'update', fs: true, restart: '/api/reboot', factory: '/api/factory'},
+    ble:     {factory: '/api/factory'},
+    toolbox: {factory: '/api/factory'},
+    battery: {factory: '/api/factory'},
+  };
+  const DEF = {upd: '/api/update', field: 'f', web: true, fs: false, restart: '/api/restart', factory: ''};
+  const FW_CHIPS = {'-1': 'ESP8266', 0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2'};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const ICON = {
+    up: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
+    down: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>',
+    file: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>',
+    restart: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>',
+  };
+  // Own look, independent of the page's classes; colours from the page's variables (VanNode theme
+  // or display), with the dark theme values as fallback
+  const CSS = `
+.vnc{background:var(--card,var(--bg-card,#151B21));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line,var(--border,#222B34));border-radius:14px;padding:16px;margin:0 0 12px;text-align:left;box-sizing:border-box}
+.vnc *{box-sizing:border-box}
+.vnc .vnc-t{font-size:.85rem;font-weight:600;margin:0 0 12px;color:var(--tx2,var(--text-secondary,#B4BEC8));text-transform:none;letter-spacing:0;padding:0;border:0}
+.vnc .vnc-cur{font-size:.85rem;margin:0 0 10px;line-height:1.45}
+.vnc .vnc-hint{font-size:.78rem;color:var(--mu,var(--text-muted,#8B98A5));margin:0 0 12px;line-height:1.5}
+.vnc .vnc-hint code{font-size:.95em}
+.vnc .vnc-file{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 6px 6px 12px;margin:0 0 10px;border:1px dashed var(--line2,var(--cm-line2,#2F3A45));border-radius:10px;background:var(--bg-input,var(--bg,#0D1115));color:var(--mu,var(--text-muted,#8B98A5));cursor:pointer}
+.vnc .vnc-file:hover{border-color:var(--ac,var(--accent,#4DA3F0))}
+.vnc .vnc-file input{display:none}
+.vnc .vnc-file .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.vnc .vnc-file.has .nm{color:var(--tx,var(--text-primary,#E7ECF0))}
+.vnc .vnc-file .pick{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:8px;font-size:.85rem;font-weight:600;background:var(--hi,var(--cm-hi,#1C242C));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45))}
+.vnc .vnc-row{display:flex;gap:10px;flex-wrap:wrap}
+.vnc .vnc-b{flex:1 1 0;min-width:120px;min-height:44px;margin:0;padding:0 14px;border-radius:10px;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--hi,var(--cm-hi,#1C242C));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45))}
+.vnc .vnc-b.p{background:var(--ac,var(--accent,#4DA3F0));border-color:var(--ac,var(--accent,#4DA3F0));color:var(--acx,var(--cm-acx,#06131F))}
+.vnc .vnc-b.d{background:transparent;color:#E5534B;border-color:rgba(229,83,75,.45)}
+.vnc .vnc-b:disabled{opacity:.45;cursor:default}
+.vnc .vnc-chk{font-size:.82rem;margin:0 0 10px;line-height:1.45}
+.vnc .vnc-chk:empty{display:none}
+.vnc .ok{color:#46B97C}.vnc .warn{color:#E5A23B}.vnc .bad{color:#E5534B}
+.vnc .vnc-opt{display:flex;gap:8px;align-items:center;font-size:.85rem;margin:0 0 10px;cursor:pointer}
+.vnc .vnc-opt input{width:18px;height:18px;margin:0;accent-color:var(--ac,var(--accent,#4DA3F0))}
+.vnc .vnc-bar{height:6px;border-radius:3px;background:var(--line,var(--border,#222B34));overflow:hidden;margin:0 0 10px}
+.vnc .vnc-bar i{display:block;height:100%;width:0;background:var(--ac,var(--accent,#4DA3F0));transition:width .2s}
+.vnc .vnc-msg{font-size:.82rem;margin:10px 0 0;line-height:1.45;white-space:pre-line;color:var(--mu,var(--text-muted,#8B98A5))}
+.vnc .vnc-msg:empty{display:none}
+.vnc .fwu-log{font-size:.75rem;line-height:1.4;max-height:320px;overflow-y:auto}
+.vnc .fwu-ev{padding:4px 0;border-bottom:1px solid var(--line,var(--border,#222B34))}
+.vnc .fwu-ev span{color:var(--mu,var(--text-muted,#8B98A5));margin-right:8px}
+.vnc .fwu-ev.bad{color:#E5534B}
+.vnc .vnc-in{flex:1 1 180px;min-width:0;min-height:44px;padding:0 12px;border-radius:10px;font:inherit;font-size:.95rem;background:var(--bg-input,var(--bg,#0D1115));color:var(--tx,var(--text-primary,#E7ECF0));border:1px solid var(--line2,var(--cm-line2,#2F3A45));color-scheme:dark}`;
+
+  let FWI = null, LOG = null, UP = 0, cfg = DEF, pick = null, CLK = null, clkAuto = false;
+  const $ = (id) => document.getElementById(id);
+
+  function verCmp(a, b) {
+    const x = String(a).split('.').map((n) => parseInt(n) || 0), y = String(b).split('.').map((n) => parseInt(n) || 0);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+  }
+  const ago = (s) => s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d';
+  const hwHint = () => FWI && FWI.hw ? ` – passende Datei: …-node-${FWI.hw}-v….bin` : '';
+
+  // Checks the chosen file in the browser: {ok, kind, msg, warn, force} (rules as in fwcheck.cpp)
+  async function inspect(file) {
+    const n = file.name.toLowerCase(), kb = Math.round(file.size / 1024) + ' kB';
+    if (n.endsWith('.gz')) {
+      if (!cfg.web) return {ok: false, msg: 'Die Web-Oberfläche steckt bei diesem Gerät in der Firmware – nur die .bin hochladen'};
+      return {ok: true, kind: 'web', msg: 'Web-Oberfläche (' + kb + '), ersetzt nur die Seite, ohne Neustart'};
+    }
+    if (cfg.fs && /littlefs|spiffs/.test(n)) return {ok: true, kind: 'fs', warn: true, msg: 'Dateisystem-Abbild (' + kb + ') – ersetzt die Web-Oberfläche, danach Neustart'};
+    if (!n.endsWith('.bin')) return {ok: false, msg: cfg.web ? 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)' : 'Nur .bin (Firmware)'};
+    const merged = 'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.';
+    if (n.includes('merged')) return {ok: false, msg: merged};
+    const u = new Uint8Array(await file.arrayBuffer());
+    if (u.length < 64 || u[0] !== 0xE9) return {ok: false, msg: 'Keine ESP-Firmware'};
+    const esp32 = !FWI || FWI.chip_id >= 0;   // ESP8266 images have no chip id and no .merged.bin
+    if (esp32 && u.length > 0x8001 && u[0x8000] === 0xAA && u[0x8001] === 0x50) return {ok: false, msg: merged};
+    const chip = u[12] | (u[13] << 8);
+    if (FWI && esp32 && chip !== FWI.chip_id) return {ok: false, msg: `Firmware für ${FW_CHIPS[chip] || 'einen unbekannten Chip'}, dieses Gerät ist ein ${FW_CHIPS[FWI.chip_id] || FWI.chip}${hwHint()}`};
+    if (FWI && FWI.max && u.length > FWI.max) return {ok: false, msg: `Datei zu groß (${kb}, Platz ${Math.round(FWI.max / 1024)} kB)`};
+    const m = new TextDecoder('latin1').decode(u).match(/CAMPER-FW:([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24}):([A-Za-z0-9_.-]{1,24});/);
+    if (!m) return {ok: false, force: true, msg: 'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.'};
+    if (FWI && m[1] !== FWI.dev) return {ok: false, msg: `Firmware für „${m[1]}“, dieses Gerät ist „${FWI.dev}“`};
+    if (FWI && m[3] !== FWI.chip) return {ok: false, msg: `Firmware für ${m[3]}, dieses Gerät ist ein ${FWI.chip}${hwHint()}`};
+    const c = FWI ? verCmp(m[2], FWI.ver) : 1;
+    return {ok: true, kind: 'fw', warn: c <= 0, msg: `Firmware ${m[1]} v${m[2]} (${kb}) – ` +
+      (c > 0 ? 'neuer als die installierte' : c === 0 ? 'gleiche Version wie installiert' : 'ÄLTER als die installierte (Downgrade)')};
+  }
+
+  function showInfo() {
+    const cur = $('fwu-cur');
+    if (cur && FWI) cur.innerHTML = `Installiert: <b>${esc(FWI.dev)} v${esc(FWI.ver)}</b> · ${FW_CHIPS[FWI.chip_id] || esc(FWI.chip)}` +
+      (FWI.max ? ` · Platz ${Math.round(FWI.max / 1024)} kB` : '');
+    const hint = $('vnc-uhint');
+    if (hint && FWI) {
+      const dev = esc(FWI.dev || 'gerät'), hw = esc(FWI.hw || '<board>');
+      hint.innerHTML = `Firmware: die <code>${dev}-node-${hw}-v….bin</code> aus dem Release oder aus der Arduino IDE ` +
+        `(Sketch → Kompilierte Binärdatei exportieren → <code>….ino.bin</code>, <b>nicht</b> die <code>.merged.bin</code>), danach Neustart.` +
+        (cfg.web ? `<br>Web-Oberfläche: die <code>${dev}-node-web-v….html.gz</code> aus dem Release oder <code>data/index.html.gz</code>, ohne Neustart.` : '') +
+        (cfg.fs ? ' Ein LittleFS-Abbild (Dateiname mit „littlefs“) wird ebenfalls erkannt.' : '') +
+        ' Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.';
+    }
+    // Event log: every .fwu-log on the page (the display shows it on its system page)
+    document.querySelectorAll('.fwu-log').forEach((box) => {
+      if (!LOG) return;
+      box.innerHTML = LOG.length ? LOG.map((e) => {
+        const when = e.b === 0 ? 'vor ' + ago(Math.max(0, UP - e.t)) : (e.b === 1 ? 'vorheriger Start' : e.b + ' Starts zuvor') + ', nach ' + ago(e.t);
+        const bad = /abgelehnt|fehlgeschlagen|nicht gespeichert|zurück auf|Absturz|Watchdog|Spannungseinbruch/.test(e.m);
+        return `<div class="fwu-ev${bad ? ' bad' : ''}"><span>${esc(when)}</span>${esc(e.m)}</div>`;
+      }).join('') : '<div class="fwu-ev">Noch keine Einträge.</div>';
+    });
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/system', {cache: 'no-store'});
+      if (!r.ok) return;
+      const d = await r.json();
+      FWI = d.fw || null;
+      LOG = d.log || [];
+      UP = d.up || 0;
+      cfg = Object.assign({}, DEF, FWI && DEVCFG[FWI.dev] || {});
+      const inp = $('vnc-ufile');
+      if (inp) inp.accept = cfg.web ? '.bin,.gz' : '.bin';
+      showInfo();
+      // fallback MQTT broker in use (mqttfb.h)
+      const mf = $('vnc-mqfb');
+      if (mf) {
+        const m = d.mqttfb;
+        mf.style.display = m && m.on ? '' : 'none';
+        if (m && m.on) mf.innerHTML = `<span class="warn">MQTT über Ersatz-Broker ${esc(m.fb)}</span> · seit ${esc(ago(m.since || 0))}`;
+      }
+      CLK = d.clock ? Object.assign({at: Date.now()}, d.clock) : null;
+      showClock();
+      // No valid time on the device (no internet, no NTP at the router): take the browser's once
+      if (CLK && !CLK.ok && !clkAuto) {
+        clkAuto = true;
+        setClock(Date.now(), false, 'Uhrzeit automatisch vom Browser übernommen (das Gerät hatte keine).');
+      }
+    } catch (e) {}
+  }
+
+  // ---- Clock card ----
+  const SRC = {ntp: 'über das Internet (NTP)', browser: 'vom Browser übernommen', manual: 'von Hand gesetzt'};
+  const two = (n) => String(n).padStart(2, '0');
+  const fmtTime = (d) => ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + two(d.getDate()) + '.' + two(d.getMonth() + 1) + '.' +
+    d.getFullYear() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+  function showClock() {
+    const c = $('vn-clock');
+    if (!c) return;
+    c.style.display = CLK ? '' : 'none';
+    if (!CLK) return;
+    const cur = $('vnc-ccur');
+    if (!CLK.ok) {
+      cur.innerHTML = '<span class="warn">Keine Uhrzeit gesetzt</span>';
+    } else {
+      const dev = new Date((CLK.t * 1000) + (Date.now() - CLK.at));
+      const off = Math.round((dev.getTime() - Date.now()) / 60000);
+      cur.innerHTML = 'Gerät: <b>' + fmtTime(dev) + '</b> · ' + esc(SRC[CLK.src] || 'Quelle unbekannt') +
+        (Math.abs(off) >= 2 ? ' · <span class="warn">weicht ' + Math.abs(off) + ' min vom Browser ab</span>' : '');
+    }
+    const inp = $('vnc-cin');
+    if (inp && !inp.value) {
+      const n = new Date();
+      inp.value = n.getFullYear() + '-' + two(n.getMonth() + 1) + '-' + two(n.getDate()) + 'T' + two(n.getHours()) + ':' + two(n.getMinutes());
+    }
+  }
+  async function setClock(ms, manual, okText) {
+    const out = $('vnc-cmsg');
+    try {
+      const r = await fetch('/api/time?t=' + Math.round(ms / 1000) + (manual ? '&m=1' : ''), {method: 'POST'});
+      let j = {};
+      try { j = await r.json(); } catch (e) {}
+      if (!r.ok || j.ok === false) throw new Error(j.error || j.msg || ('HTTP ' + r.status));
+      if (out) out.textContent = okText;
+      load();
+    } catch (e) { if (out) out.textContent = 'Nicht gesetzt: ' + e.message; }
+  }
+
+  function setChk(text, cls) {
+    const chk = $('fwu-chk');
+    if (!chk) return;
+    chk.textContent = text;
+    chk.className = 'vnc-chk ' + (cls || '');
+  }
+
+  async function chosen() {
+    const f = $('vnc-ufile').files[0], btn = $('fwu-btn'), lab = $('vnc-ulabel');
+    pick = null;
+    $('vnc-uforce-row').style.display = 'none';
+    $('vnc-uforce').checked = false;
+    lab.classList.toggle('has', !!f);
+    lab.querySelector('.nm').textContent = f ? f.name : (cfg.web ? '.bin oder .html.gz wählen …' : '.bin wählen …');
+    if (!f) { setChk(''); btn.disabled = true; return; }
+    setChk('Prüfe …');
+    const r = await inspect(f);
+    pick = r;
+    setChk((r.ok ? (r.warn ? '⚠ ' : '✓ ') : '✕ ') + r.msg, r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+    if (r.force) $('vnc-uforce-row').style.display = '';
+    btn.disabled = !r.ok;
+  }
+
+  function upload() {
+    const f = $('vnc-ufile').files[0], btn = $('fwu-btn'), bar = $('vnc-ubar');
+    if (!f || !pick) return setChk('Erst eine Datei wählen', 'bad');
+    if (pick.warn && pick.kind === 'fw' && !confirm(pick.msg + '\nTrotzdem installieren?')) return;
+    const force = !pick.ok && pick.force && $('vnc-uforce').checked;
+    const fd = new FormData();
+    fd.append(cfg.field, f);
+    const x = new XMLHttpRequest();
+    bar.style.display = '';
+    bar.firstChild.style.width = '0%';
+    btn.disabled = true;
+    x.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const p = Math.round(e.loaded / e.total * 100);
+      bar.firstChild.style.width = p + '%';
+      setChk(p < 100 ? `Übertrage … ${p} %` : 'Wird geschrieben …');
+    };
+    x.onload = () => {
+      let j = null;
+      try { j = JSON.parse(x.responseText); } catch (e) {}
+      const text = (j && j.msg) || x.responseText || ('Fehler HTTP ' + x.status);
+      const ok = x.status === 200 && (j ? j.ok !== false : /^OK/i.test(x.responseText) || x.responseText === '');
+      if (ok && /^OK web/.test(x.responseText)) { setChk('✓ Web-Oberfläche ersetzt – Seite lädt neu …', 'ok'); setTimeout(() => location.reload(), 1500); return; }
+      if (ok) { setChk('✓ Update ok – das Gerät startet neu, die Seite lädt gleich neu …', 'ok'); setTimeout(() => location.reload(), 15000); return; }
+      bar.style.display = 'none';
+      setChk('✕ ' + text, 'bad');
+      btn.disabled = false;
+      load();
+    };
+    x.onerror = () => { bar.style.display = 'none'; setChk('✕ Verbindung abgebrochen', 'bad'); btn.disabled = false; load(); };
+    x.open('POST', cfg.upd + (force ? '?force=1' : ''));
+    x.send(fd);
+  }
+
+  async function devAction(url, question, msg) {
+    if (!confirm(question)) return;
+    const out = $('vnc-dmsg');
+    try {
+      await fetch(url, {method: 'POST'});
+      out.textContent = msg;
+      setTimeout(() => location.reload(), 10000);
+    } catch (e) { out.textContent = 'Keine Verbindung zum Gerät'; }
+  }
+
+  function card(title) {
+    const c = document.createElement('div');
+    c.className = 'card vnc';
+    c.innerHTML = `<h3 class="vnc-t">${title}</h3>`;
+    return c;
+  }
+
+  function build(box) {
+    box.dataset.vnBuilt = '1';
+    if (!$('vn-sys-css')) {
+      const st = document.createElement('style');
+      st.id = 'vn-sys-css';
+      st.textContent = CSS;
+      document.head.appendChild(st);
+    }
+    const upd = card('Firmware- &amp; Web-Update');
+    upd.id = 'vn-update';
+    upd.insertAdjacentHTML('beforeend',
+      '<div class="vnc-cur" id="fwu-cur">Installiert: …</div>' +
+      '<div class="vnc-hint" id="vnc-uhint">Die Datei wird vor dem Hochladen geprüft.</div>' +
+      '<label class="vnc-file" id="vnc-ulabel">' + ICON.file + '<span class="nm">Datei wählen …</span>' +
+      '<span class="pick">Durchsuchen</span><input type="file" id="vnc-ufile" accept=".bin,.gz"></label>' +
+      '<div class="vnc-chk" id="fwu-chk"></div>' +
+      '<label class="vnc-opt" id="vnc-uforce-row" style="display:none"><input type="checkbox" id="vnc-uforce"> Ohne Kennung hochladen</label>' +
+      '<div class="vnc-bar" id="vnc-ubar" style="display:none"><i></i></div>' +
+      '<div class="vnc-row"><button type="button" class="vnc-b p" id="fwu-btn" disabled>' + ICON.up + 'Hochladen</button></div>');
+    box.appendChild(upd);
+
+    if (box.dataset.log !== '0') {
+      const log = card('Ereignisse');
+      log.insertAdjacentHTML('beforeend', '<div class="vnc-cur" id="vnc-mqfb" style="display:none"></div><div class="fwu-log">Lade …</div>' +
+        '<div class="vnc-hint" style="margin:8px 0 0">Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.</div>');
+      box.appendChild(log);
+    }
+
+    const clk = card('Uhrzeit');
+    clk.id = 'vn-clock';
+    clk.style.display = 'none';
+    clk.insertAdjacentHTML('beforeend',
+      '<div class="vnc-cur" id="vnc-ccur">…</div>' +
+      '<div class="vnc-hint">Ohne Internet übernimmt diese Seite die Uhrzeit automatisch vom Handy bzw. Rechner, sobald das Gerät keine hat. ' +
+      'Die Zeit bleibt bei einem Neustart erhalten, nicht bei Stromausfall; ein späterer Abgleich über das Internet ersetzt sie.</div>' +
+      '<div class="vnc-row" style="margin-bottom:10px"><button type="button" class="vnc-b p" id="vnc-cnow">Uhrzeit vom Handy übernehmen</button></div>' +
+      '<div class="vnc-row"><input type="datetime-local" class="vnc-in" id="vnc-cin">' +
+      '<button type="button" class="vnc-b" id="vnc-cset" style="flex:0 1 auto">Von Hand setzen</button></div>' +
+      '<div class="vnc-msg" id="vnc-cmsg"></div>');
+    box.appendChild(clk);
+
+    const dev = card('Gerät');
+    dev.insertAdjacentHTML('beforeend',
+      '<div class="vnc-row"><button type="button" class="vnc-b" id="vnc-restart">' + ICON.restart + 'Neustart</button>' +
+      '<button type="button" class="vnc-b d" id="vnc-factory" style="display:none">Werkseinstellungen</button></div>' +
+      '<div class="vnc-msg" id="vnc-dmsg"></div>');
+    box.appendChild(dev);
+
+    $('vnc-ufile').addEventListener('change', chosen);
+    $('vnc-uforce').addEventListener('change', () => {
+      $('fwu-btn').disabled = !(pick && (pick.ok || (pick.force && $('vnc-uforce').checked)));
+    });
+    $('fwu-btn').addEventListener('click', upload);
+    $('vnc-cnow').addEventListener('click', () => setClock(Date.now(), false, 'Uhrzeit vom Browser übernommen.'));
+    $('vnc-cset').addEventListener('click', () => {
+      const v = $('vnc-cin').value, t = v ? new Date(v).getTime() : NaN;
+      if (isNaN(t)) { $('vnc-cmsg').textContent = 'Erst Datum und Uhrzeit eintragen'; return; }
+      setClock(t, true, 'Uhrzeit gesetzt.');
+    });
+    $('vnc-restart').addEventListener('click', () => devAction(cfg.restart, 'Gerät neu starten?', 'Startet neu – die Seite lädt gleich neu …'));
+    $('vnc-factory').addEventListener('click', () => devAction(cfg.factory,
+      'Alle Einstellungen löschen?\nDas Gerät startet danach mit den Werkseinstellungen und öffnet sein Setup-WLAN.',
+      'Zurückgesetzt – das Gerät startet neu und öffnet sein Setup-WLAN.'));
+    load().then(() => {
+      $('vnc-factory').style.display = cfg.factory ? '' : 'none';
+      chosen();
+    });
+  }
+
+  function place() {
+    const box = $('vn-system');
+    if (box && !box.dataset.vnBuilt) build(box);
+    // "Über VanNode" (vannode-about.js) puts itself below the update card: move it to the end
+    const about = $('vn-about');
+    if (box && about && box.lastElementChild !== about && box.contains($('vn-update'))) box.appendChild(about);
+    else if (!box && LOG === null && document.querySelector('.fwu-log')) { LOG = []; load(); }
+  }
+  window.vnSystemRefresh = load;   // pages may call it, e.g. after their own actions
+  // The page may build the container later or again (tabs): watch for it
+  new MutationObserver(place).observe(document.documentElement, {childList: true, subtree: true});
+  document.addEventListener('DOMContentLoaded', place);
+  // Once at the start on every tab: a device without a valid clock gets the browser's (see load)
+  setTimeout(() => { if (FWI === null) load(); }, 1500);
+  setInterval(() => { if ($('vn-system') || document.querySelector('.fwu-log')) load(); }, 15000);
+})();
+// vannode-system:end
+// vannode-i18n:begin
+// Language of the device web pages (shared copy from firmware/_common/web, see sync_common.py).
+// The pages are written in German. When the firmware reports another language in
+// /api/system (fw.lang, set with UI_LANG in config_local.h), this block replaces the German
+// texts in the browser, also texts that arrive later (live values, messages from the device).
+// Lookup: whole text, then each part around " · " / ": " / " – ", then longer phrases inside
+// the text, then patterns with * (any text). Not found = stays German. Nothing is sent back to
+// the device, so settings and MQTT stay as they are.
+// Each page adds its own words with vnI18nAdd('en', {...}); the shared cards are below.
+var VN_I18N = VN_I18N || {};
+function vnI18nAdd(lang, words) {
+  if (!VN_I18N) VN_I18N = {};   // called by a page before this block ran
+  var d = VN_I18N[lang] || (VN_I18N[lang] = {});
+  for (var k in words) d[k] = words[k];
+}
+var vnLang = (function () {
+  var lang = 'de', dict = null, phrases = [], patterns = [], busy = false;
+  try { lang = localStorage.getItem('vnLang') || 'de'; } catch (e) {}
+  var SKIP = {SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1};
+  var ATTRS = ['placeholder', 'title', 'aria-label'];
+
+  function prepare() {
+    dict = VN_I18N[lang] || null;
+    phrases = []; patterns = [];
+    if (!dict) return;
+    for (var k in dict) {
+      if (k.indexOf('*') >= 0) {
+        var re = '^' + k.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '(.+?)') + '$';
+        patterns.push([new RegExp(re), dict[k]]);
+      } else if (k.length >= 12 && k.indexOf(' ') > 0) {
+        phrases.push(k);
+      }
+    }
+    phrases.sort(function (a, b) { return b.length - a.length; });
+  }
+  function word(t) {
+    if (Object.prototype.hasOwnProperty.call(dict, t)) return dict[t];
+    var c = t.replace(/[:…]+$/, '');   // "Label:" / "Lade …"
+    if (c !== t && Object.prototype.hasOwnProperty.call(dict, c.trim())) return dict[c.trim()] + t.slice(c.length);
+    return null;
+  }
+  function tr(s) {
+    if (!dict || !s) return s;
+    var t = s.trim();
+    if (!t || !/[A-Za-zÄÖÜäöüß]/.test(t)) return s;
+    var lead = s.slice(0, s.indexOf(t)), trail = s.slice(s.indexOf(t) + t.length);
+    var w = word(t);
+    if (w === null) {
+      for (var i = 0; i < patterns.length; i++) {
+        var m = patterns[i][0].exec(t);
+        if (m) { var n = 1, out = patterns[i][1]; w = out.replace(/\*/g, function () { return tr(m[n++] || ''); }); break; }
+      }
+    }
+    if (w === null && /( · | – |: |\|)/.test(t)) {
+      var parts = t.split(/( · | – |: |\|)/), changed = false;
+      for (var j = 0; j < parts.length; j += 2) {
+        var p = word(parts[j].trim());
+        if (p !== null) { parts[j] = parts[j].replace(parts[j].trim(), p); changed = true; }
+      }
+      if (changed) w = parts.join('');
+    }
+    if (w === null) {
+      var x = t, hit = false;
+      for (var k = 0; k < phrases.length; k++) {
+        if (x.indexOf(phrases[k]) >= 0) { x = x.split(phrases[k]).join(dict[phrases[k]]); hit = true; }
+      }
+      if (hit) w = x;
+    }
+    return w === null ? s : lead + w + trail;
+  }
+  function walk(node) {
+    if (node.nodeType === 3) {
+      var p = node.parentNode;
+      if (p && !SKIP[p.nodeName] && !(p.closest && p.closest('[translate=no]'))) {
+        var v = tr(node.nodeValue);
+        if (v !== node.nodeValue) node.nodeValue = v;
+      }
+      return;
+    }
+    if (node.nodeType !== 1 || SKIP[node.nodeName] || node.getAttribute('translate') === 'no') return;
+    for (var a = 0; a < ATTRS.length; a++) {
+      var at = node.getAttribute(ATTRS[a]);
+      if (at) { var t = tr(at); if (t !== at) node.setAttribute(ATTRS[a], t); }
+    }
+    if (node.nodeName === 'INPUT' && (node.type === 'button' || node.type === 'submit') && node.value) {
+      var bv = tr(node.value); if (bv !== node.value) node.value = bv;
+    }
+    for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  function start() {
+    prepare();
+    if (!dict) return;
+    document.documentElement.lang = lang;
+    walk(document.body);
+    new MutationObserver(function (list) {
+      if (busy) return;
+      busy = true;
+      try {
+        list.forEach(function (m) {
+          if (m.type === 'characterData') walk(m.target);
+          else if (m.type === 'attributes') walk(m.target);
+          else m.addedNodes.forEach(walk);
+        });
+      } finally { busy = false; }
+    }).observe(document.body, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS});
+    ['alert', 'confirm', 'prompt'].forEach(function (f) {
+      var orig = window[f];
+      window[f] = function (msg) { var a = [].slice.call(arguments); a[0] = tr(String(msg == null ? '' : msg)); return orig.apply(window, a); };
+    });
+  }
+  function set(l) {
+    l = l || 'de';
+    var old = lang;
+    lang = l;
+    try { localStorage.setItem('vnLang', l); } catch (e) {}
+    if (l !== old) location.reload();   // back to German or another language: start clean
+  }
+  // Language from the device (cached, so the next load translates right away)
+  function init() {
+    if (lang !== 'de') start();
+    fetch('/api/system', {cache: 'no-store'}).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.fw) set(d.fw.lang || 'de'); }).catch(function () {});
+  }
+  // after all scripts of the page (their words are added further down)
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else setTimeout(init, 0);
+  return {t: tr, lang: function () { return lang; }};
+})();
+// Shared cards: update, backup, events, device, clock, about (vannode-system.js, -backup.js, -about.js).
+// The license and liability texts of the about card stay German on purpose (original wording).
+vnI18nAdd('en', {
+  'Firmware- & Web-Update': 'Firmware & web update', 'Firmware': 'Firmware', 'Hochladen': 'Upload', 'Durchsuchen': 'Browse',
+  'Datei wählen …': 'Choose file …', '.bin wählen …': 'Choose .bin …', '.bin oder .html.gz wählen …': 'Choose .bin or .html.gz …',
+  'Die Datei wird vor dem Hochladen geprüft.': 'The file is checked before uploading.',
+  'Nur .bin (Firmware)': 'Only .bin (firmware)', 'Nur .bin (Firmware) oder .gz (Web-Oberfläche)': 'Only .bin (firmware) or .gz (web interface)',
+  'Installiert': 'Installed', 'Installiert: …': 'Installed: …', 'Prüfe …': 'Checking …', 'Übertrage …': 'Transferring …', 'Wird geschrieben …': 'Writing …',
+  'Keine ESP-Firmware': 'Not an ESP firmware', 'Keine gültige Datei': 'Not a valid file', 'Erst eine Datei wählen': 'Choose a file first',
+  'Ohne Kennung hochladen': 'Upload without ID', 'Gerät beschäftigt': 'Device busy', 'Keine Verbindung zum Gerät': 'No connection to the device',
+  'Keine Gerätekennung in der Datei: fremde Firmware oder eine Version vor der Kennung. Nur hochladen, wenn sicher ist, dass sie für dieses Gerät ist.':
+    'No device ID in the file: foreign firmware or a version from before the ID. Only upload it if you are sure it is for this device.',
+  'Das ist die .merged.bin (komplettes Flash-Abbild für USB). Bitte die .bin ohne „merged“ nehmen.': 'This is the .merged.bin (complete flash image for USB). Please take the .bin without "merged".',
+  'Die Web-Oberfläche steckt bei diesem Gerät in der Firmware – nur die .bin hochladen': 'On this device the web interface is part of the firmware – only upload the .bin',
+  'Ein LittleFS-Abbild (Dateiname mit „littlefs“) wird ebenfalls erkannt.': 'A LittleFS image (file name with "littlefs") is recognized as well.',
+  'gleiche Version wie installiert': 'same version as installed', 'ÄLTER als die installierte (Downgrade)': 'OLDER than the installed one (downgrade)',
+  'Trotzdem installieren?': 'Install anyway?', 'Das Gerät startet danach eventuell neu.': 'The device may restart afterwards.',
+  '✓ Update ok – das Gerät startet neu, die Seite lädt gleich neu …': '✓ Update ok – the device restarts, the page reloads in a moment …',
+  '✓ Web-Oberfläche ersetzt – Seite lädt neu …': '✓ Web interface replaced – page reloads …', '✕ Verbindung abgebrochen': '✕ Connection lost',
+  'Fehler HTTP': 'HTTP error', 'Fehler bei': 'Error at', 'Datei zu groß': 'File too big', 'Firmware für': 'Firmware for',
+  'aus dem Release oder aus der Arduino IDE': 'from the release or from the Arduino IDE', 'aus dem Release oder': 'from the release or',
+  'Sketch → Kompilierte Binärdatei exportieren →': 'Sketch → Export compiled binary →', 'ersetzt nur die Seite, ohne Neustart': 'replaces only the page, no restart',
+  'ersetzt die Web-Oberfläche, danach Neustart': 'replaces the web interface, then restart', 'danach Neustart.': 'then restart.',
+  'Web-Oberfläche': 'Web interface', 'Firmware: die': 'Firmware: the', 'Web-Oberfläche: die': 'Web interface: the', 'Dateisystem-Abbild': 'File system image',
+  'passende Datei': 'matching file', 'dieses Gerät ist ein': 'this device is a', 'Quelle unbekannt': 'Source unknown',
+  'Einstellungen sichern': 'Back up settings', 'Sichern': 'Back up', 'Einspielen': 'Restore', 'Sicherung zum Einspielen wählen …': 'Choose a backup to restore …',
+  'Erst eine Sicherungsdatei wählen': 'Choose a backup file first', 'Keine VanNode-Sicherung': 'Not a VanNode backup',
+  'auch Netzwerk übernehmen': 'also restore network', 'Auch WLAN, IP und Gerätename': 'Also WiFi, IP and device name', 'sowie MQTT-Server': 'and MQTT server',
+  'Alle Einstellungen und Geräte': 'All settings and devices', 'Alle Einstellungen': 'All settings',
+  'Alle Einstellungen, Seiten, Kacheln, Automationen und Sensoren': 'All settings, pages, tiles, automations and sensors',
+  'als Datei. Passwörter und die Anmeldung sind nicht enthalten, beim Einspielen bleiben die vorhandenen erhalten.': 'as a file. Passwords and the login are not included; the existing ones are kept when restoring.',
+  'Einstellungen aus der Sicherung vom': 'Settings from the backup of', 'übernehmen?': 'restore?', 'übernehmen': 'restore',
+  'WLAN, IP und Gerätename werden mit übernommen.': 'WiFi, IP and device name are restored too.', 'Die Sicherung gehört zu „': 'The backup belongs to "',
+  'Einstellungen übernommen': 'Settings restored', 'Seiten und Kacheln übernommen': 'Pages and tiles restored', 'Automationen übernommen': 'Automations restored',
+  'Sensoren übernommen': 'Sensors restored', 'Übernommen:': 'Restored:', 'Nicht angelegt:': 'Not created:', 'Nicht gesetzt:': 'Not set:',
+  'Übersprungen (Typ fehlt in dieser Firmware):': 'Skipped (type missing in this firmware):',
+  'Fertig. Geänderte Geräte gelten nach einem Neustart (Karte Gerät → Neustart).': 'Done. Changed devices apply after a restart (card Device → Restart).',
+  'Fertig – Seite lädt gleich neu.': 'Done – page reloads in a moment.', 'Sichern fehlgeschlagen:': 'Backup failed:', 'Einspielen fehlgeschlagen:': 'Restore failed:',
+  'Ereignisse': 'Events', 'Noch keine Einträge.': 'No entries yet.', 'Bleibt bei Neustart, Absturz und Update erhalten, nicht bei Stromausfall.': 'Kept across restarts, crashes and updates, not across power loss.',
+  'vorheriger Start': 'previous start', 'Starts zuvor': 'starts before',
+  'Gerät': 'Device', 'Neustart': 'Restart', 'Werkseinstellungen': 'Factory reset', 'Gerät neu starten?': 'Restart the device?',
+  'Alle Einstellungen löschen?\nDas Gerät startet danach mit den Werkseinstellungen und öffnet sein Setup-WLAN.': 'Delete all settings?\nThe device then starts with factory settings and opens its setup WiFi.',
+  'Startet neu – die Seite lädt gleich neu …': 'Restarting – the page reloads in a moment …', 'Zurückgesetzt – das Gerät startet neu und öffnet sein Setup-WLAN.': 'Reset – the device restarts and opens its setup WiFi.',
+  'Uhrzeit': 'Clock', 'Keine Uhrzeit gesetzt': 'No time set', 'Uhrzeit vom Handy übernehmen': 'Take time from the phone', 'Von Hand setzen': 'Set manually',
+  'Erst Datum und Uhrzeit eintragen': 'Enter date and time first', 'Uhrzeit gesetzt.': 'Time set.', 'Uhrzeit vom Browser übernommen.': 'Time taken from the browser.',
+  'Uhrzeit automatisch vom Browser übernommen (das Gerät hatte keine).': 'Time taken from the browser automatically (the device had none).',
+  'Ohne Internet übernimmt diese Seite die Uhrzeit automatisch vom Handy bzw. Rechner, sobald das Gerät keine hat.': 'Without internet this page takes the time from the phone or computer as soon as the device has none.',
+  'über das Internet (NTP)': 'from the internet (NTP)', 'vom Browser übernommen': 'taken from the browser', 'von Hand gesetzt': 'set manually', 'min vom Browser ab': 'min off the browser',
+  'Über VanNode': 'About VanNode', 'Über': 'About', 'Teil von VanNode – Camper-Elektronik über MQTT': 'Part of VanNode – camper electronics over MQTT',
+  'Lizenz:': 'License:', 'Lizenztext (GPL-3.0)': 'License text (GPL-3.0)', 'Hinweise und fremde Teile': 'Notices and third-party parts', 'Ohne Gewähr.': 'No warranty.',
+  'Platz': 'Space', 'Vorlage': 'Template', 'Lade …': 'Loading …', 'Gespeichert:': 'Saved:',
+  // node page basics shared by all nodes
+  'Speichern': 'Save', 'Gespeichert': 'Saved', 'Fehler': 'Error', 'Fehler:': 'Error:', 'Einstellungen': 'Settings', 'System': 'System', 'Live': 'Live',
+  'Benutzer': 'User', 'Passwort': 'Password', 'Web-Login': 'Web login', 'Gerätename': 'Device name', 'Laufzeit': 'Uptime', 'Freier Speicher': 'Free memory',
+  'WLAN-Name (SSID)': 'WiFi name (SSID)', 'WLAN-Passwort': 'WiFi password', 'WLAN-Signal': 'WiFi signal', 'WLAN-Abbrüche': 'WiFi drops',
+  'Eigener Access Point': 'Own access point', 'Access Point immer an': 'Access point always on', 'AP-Passwort': 'AP password', 'Sendeleistung': 'Transmit power',
+  'MQTT verbunden': 'MQTT connected', 'MQTT getrennt': 'MQTT disconnected', 'Topic-Präfix': 'Topic prefix', 'Letzter Neustart': 'Last restart',
+  'Gesetzt – leer lassen zum Beibehalten': 'Set – leave empty to keep', 'Jetzt neu starten': 'Restart now', 'Neustart…': 'Restarting…', 'Seite neu laden': 'Reload page',
+  'Start v*, Grund: *': 'Start v*, reason: *', 'WLAN verbunden (*)': 'WiFi connected (*)', 'WLAN getrennt': 'WiFi disconnected',
+  'Neustart über die Web-Oberfläche': 'Restart from the web interface', 'Werkseinstellungen über die Web-Oberfläche': 'Factory reset from the web interface',
+  'Neustart (Software)': 'Restart (software)', 'Absturz': 'Crash', 'Brownout (Spannung zu niedrig)': 'Brownout (voltage too low)', 'Deep Sleep': 'Deep sleep',
+  'Watchdog (Hardware)': 'Watchdog (hardware)', 'Watchdog (Interrupt)': 'Watchdog (interrupt)', 'Watchdog (Software)': 'Watchdog (software)', 'Watchdog (Task)': 'Watchdog (task)',
+  'Einstellungen gespeichert': 'Settings saved', 'Web-Login über USB auf Werks-Login zurückgesetzt': 'Web login reset to the factory login over USB',
+  'Update über den IDE-Netzwerkport ok, Neustart': 'Update over the IDE network port ok, restart', 'Update abgelehnt:': 'Update refused:',
+  'Wenig Speicher: frei *, größter Block *, Minimum * Bytes': 'Low memory: free *, largest block *, minimum * bytes',
+  "Die Zeit bleibt bei einem Neustart erhalten, nicht bei Stromausfall; ein späterer Abgleich über das Internet ersetzt sie.": "The time is kept across a restart, not across power loss; a later sync over the internet replaces it.",
+  "Auch WLAN, IP und Gerätename sowie MQTT-Server übernehmen": "Also restore WiFi, IP, device name and MQTT server",
+  "ohne Neustart. Die Datei wird vor dem Hochladen geprüft; die Einstellungen bleiben erhalten.": "no restart. The file is checked before uploading; the settings are kept.",
+  "das ist die .merged.bin (komplettes Flash-Abbild für USB) – bitte die .bin ohne „merged“ nehmen": "this is the .merged.bin (complete flash image for USB) – please take the .bin without \"merged\"",
+  "Update auf v* ok (* kB), Neustart": "Update to v* ok (* kB), restart",
+  "Firmware-Upload gestartet (* kB)": "Firmware upload started (* kB)",
+  "Einschalten": "Power on",
+  "Mindestens 8 Zeichen, leer = unverändert": "At least 8 characters, empty = unchanged",
+  "Die Anmeldung ist immer an (ab Werk admin / admin). Leer lassen = bleibt. Login vergessen: über USB den Befehl noauth senden, dann gilt wieder der Werks-Login.": "The login is always on (factory admin / admin). Leave empty = kept. Forgot the login: send the command noauth over USB, then the factory login applies again.",
+  "Aus = AP nur als Rückfall, wenn das WLAN fehlt": "Off = AP only as a fallback when WiFi is missing",
+  "aus": "off",
+  "an": "on",
+  "zu": "closed",
+  "offen": "open",
+  "ja": "yes",
+  "nein": "no",
+  "keine": "none",
+  "nichts": "nothing",
+  "nicht": "not",
+  "läuft": "running"
+});
+// Network, MQTT and login cards of the node pages (temp, tanklevel, level, maxxfan, heater, alde, template).
+vnI18nAdd('en', {
+  'MQTT Settings (Home Assistant)': 'MQTT settings (Home Assistant)', 'MQTT-Broker': 'MQTT broker', 'Topic-Prefix': 'Topic prefix', 'Basis-Topic': 'Base topic',
+  'Werte unter': 'Values under', ', Status unter': ', status under', '…, Status unter': '…, status under', 'Status unter': 'Status under', 'Befehle unter': 'Commands under',
+  'Home-Assistant-Discovery': 'Home Assistant discovery', 'Auto-Discovery': 'Auto discovery', 'Discovery-Prefix': 'Discovery prefix', 'MQTT-Passwort löschen': 'Delete MQTT password',
+  'Web-Oberfläche Login': 'Web interface login', 'Die Anmeldung ist immer an (ab Werk': 'The login is always on (factory default',
+  '). Leere Felder behalten den gespeicherten Wert.': '). Empty fields keep the saved value.',
+  '). Leere Felder behalten den gespeicherten Wert. Login vergessen: über USB den Befehl': '). Empty fields keep the saved value. Forgot the login: send the command',
+  'im seriellen Monitor senden, dann gilt wieder der Werks-Login.': 'over USB in the serial monitor, then the factory login applies again.',
+  'Web-Benutzer (leer = bleibt)': 'Web user (empty = kept)', 'Web-Passwort': 'Web password', 'Web-Login auf Werks-Login zurücksetzen': 'Reset web login to the factory login',
+  '💾 Speichern': '💾 Save', '💾 Speichern & Verbinden': '💾 Save & connect', '💾 Speichern & Neustart': '💾 Save & restart', '🔄 Neustart': '🔄 Restart',
+  'Verbindungsstatus': 'Connection status', 'Letzter Abbruchgrund': 'Last disconnect reason', 'Absicherung': 'Security', 'WLAN-Verbindung': 'WiFi connection',
+  'Gerätename (Hostname)': 'Device name (hostname)', 'Feste IP-Adresse': 'Static IP address', 'Feste IP (optional, leer = DHCP)': 'Static IP (optional, empty = DHCP)',
+  'Subnetz': 'Subnet', 'DNS (leer = Gateway)': 'DNS (empty = gateway)',
+  '8,5 dBm': '8.5 dBm', '17,5 dBm (Standard)': '17.5 dBm (default)', '19,5 dBm (Maximum)': '19.5 dBm (maximum)',
+  'Bricht die Verbindung oft ab, zuerst eine niedrigere Stufe probieren.': 'If the connection drops often, try a lower level first.',
+  'Bricht die Verbindung oft ab, zuerst 8,5 dBm probieren. Manche Boards (z. B. ESP32-C3 Super Mini) laufen mit weniger Leistung stabiler.':
+    'If the connection drops often, try 8.5 dBm first. Some boards (e.g. ESP32-C3 Super Mini) run more stably with less power.',
+  'Bricht die Verbindung oft ab, zuerst 8,5 dBm probieren. Der ESP32-C3 Super Mini läuft mit weniger Leistung stabiler. Nur 2,4-GHz-WLAN.':
+    'If the connection drops often, try 8.5 dBm first. The ESP32-C3 Super Mini runs more stably with less power. 2.4 GHz WiFi only.',
+  'Passwort (min. 8 Zeichen)': 'Password (min. 8 characters)', '(unverändert)': '(unchanged)', '(unverändert) AP:': '(unchanged) AP:', 'unverändert': 'unchanged',
+  'Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Das Gerät ist dann über seine IP im WLAN oder':
+    'Off = AP only as an emergency fallback when the WiFi cannot be reached for 60 s. The device can then be reached via its IP in the WiFi or',
+  'Aus = AP nur als Notfall, wenn das WLAN 60 s nicht erreichbar ist. Stabilere WLAN-Verbindung; das Gerät ist dann über seine IP im WLAN oder':
+    'Off = AP only as an emergency fallback when the WiFi cannot be reached for 60 s. More stable WiFi connection; the device can then be reached via its IP in the WiFi or',
+  'erreichbar.': '.', 'Zeit & Zugriff': 'Time & access', 'NTP-Server': 'NTP server', 'Zeitzone (POSIX)': 'Time zone (POSIX)',
+  'Fehler beim Laden der Einstellungen': 'Error loading the settings', 'Fehler beim Laden': 'Error loading', 'Fehler beim Speichern': 'Error saving',
+  'Neustart... Seite lädt in 10 s neu': 'Restarting... page reloads in 10 s', 'Gespeichert – Neustart...': 'Saved – restarting...', 'Gespeichert – Neustart …': 'Saved – restarting …',
+  'Gespeichert – Neustart': 'Saved – restarting', '✓ Gespeichert – Gerät startet neu': '✓ Saved – device restarts', 'Gerät startet neu...': 'Device restarts...', 'Neustart …': 'Restarting …',
+  'Wirklich neu starten? Nochmal tippen': 'Really restart? Tap again', '? Das Gerät startet neu.': '? The device restarts.',
+  'Keine Verbindung': 'No connection', 'Befehl abgelehnt': 'Command refused', 'Befehl fehlgeschlagen': 'Command failed', 'Befehl gesendet': 'Command sent',
+  'noch kein Wert': 'no value yet', 'nicht gefunden': 'not found', 'nicht verbunden': 'not connected', 'nicht vorhanden': 'not present', 'Übernehmen': 'Apply',
+  'Setzen': 'Set', 'Starten': 'Start', 'Leeren': 'Clear', 'Herunterladen': 'Download', 'Zurücksetzen': 'Reset', 'Zurückgesetzt': 'Reset done', 'Suchen': 'Search',
+  'Aktualisieren': 'Refresh', 'Aus': 'Off', 'An': 'On', 'Ja': 'Yes', 'Nein': 'No', 'Verbunden': 'Connected', 'Getrennt': 'Disconnected', 'Sensor': 'Sensor',
+  'Temperatur': 'Temperature', 'Spannung': 'Voltage', 'Messung': 'Measurement', 'Intervall (Sekunden)': 'Interval (seconds)', 'Intervall 1-600 s': 'Interval 1-600 s',
+  'Rohwert': 'Raw value', 'Rohdaten': 'Raw data', 'Glättungsfilter': 'Smoothing filter', 'Anzeige': 'Display', 'Modus': 'Mode', 'Modell': 'Model', 'Dauer': 'Duration',
+  'Debug an': 'Debug on', 'Debug aus': 'Debug off', 'Log geleert': 'Log cleared', 'Download fehlgeschlagen': 'Download failed', 'Warnung': 'Warning',
+  'Automatisch aktualisieren (alle 3 s)': 'Refresh automatically (every 3 s)',
+  // texts the classic nodes send (event log, errors)
+  'Web-Oberfläche nicht gespeichert (LittleFS voll oder nicht bereit)': 'Web interface not saved (LittleFS full or not ready)',
+  'Web-Oberfläche nicht gespeichert': 'Web interface not saved', 'Web-Oberfläche nicht gespeichert: *': 'Web interface not saved: *',
+  'Web-Oberfläche ersetzt (* kB)': 'Web interface replaced (* kB)', 'Dateisystem-Abbild geschrieben (* kB), Neustart': 'File system image written (* kB), restart',
+  'LittleFS nicht beschreibbar': 'LittleFS not writable', 'Schreibfehler (Speicher voll?)': 'Write error (memory full?)',
+  'Update über den IDE-Netzwerkport fehlgeschlagen (Fehler *)': 'Update over the IDE network port failed (error *)',
+  'Einstellungen gespeichert, Neustart': 'Settings saved, restart',
+  'vor *': '* ago',
+  'MQTT über Ersatz-Broker *': 'MQTT via fallback broker *', '· seit *': '· for *', 'MQTT: Broker * weg, Ersatz-Broker *': 'MQTT: broker * gone, fallback broker *',
+  'MQTT: Ersatz-Broker * weg, zurück zu *': 'MQTT: fallback broker * gone, back to *', 'MQTT: Broker * wieder da': 'MQTT: broker * back',
+  'Ersatz-Broker (optional)': 'Fallback broker (optional)', 'Ersatz-Broker': 'Fallback broker', 'IP des Displays, z. B. 192.168.1.50': 'IP of the display, e.g. 192.168.1.50',
+  'Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker) und wechselt zurück, sobald er wieder da ist. Leer = aus.':
+    'If the broker cannot be reached for 2 minutes, the device connects to the fallback broker (e.g. the display with its broker switched on) and returns as soon as the broker is back. Empty = off.', 'die': 'the', 'und': 'and', 'vorheriger Start, nach *': 'previous start, after *', '* Starts zuvor, nach *': '* starts before, after *'
+});
+// vannode-i18n:end
+</script>
+</body>
+</html>

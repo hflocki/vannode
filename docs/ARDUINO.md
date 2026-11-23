@@ -29,8 +29,8 @@ Fertige `.bin`-Dateien gibt es unter [Releases](https://github.com/hflocki/vanno
 | Bibliothek | Autor | Version | Quelle | Gerät |
 | --- | --- | --- | --- | --- |
 | NimBLE-Arduino | h2zero | 2.5.1 | `h2zero/NimBLE-Arduino` | ble, tanklevel |
-| OneWire | Paul Stoffregen | 2.3.8 | `PaulStoffregen/OneWire` | temp |
-| DallasTemperature | Miles Burton | 4.0.6 | `milesburton/Arduino-Temperature-Control-Library` | temp |
+| OneWire | Paul Stoffregen | 2.3.8 | `PaulStoffregen/OneWire` | temp, io |
+| DallasTemperature | Miles Burton | 4.0.6 | `milesburton/Arduino-Temperature-Control-Library` | temp, io |
 | ESP Async TCP (ESP8266) | ESP32Async | 2.0.0 | `ESP32Async/ESPAsyncTCP` | temp auf ESP8266 |
 | SparkFun BNO08x Cortex Based IMU | SparkFun | 1.0.6 | `sparkfun/SparkFun_BNO08x_Arduino_Library` | level |
 | GFX Library for Arduino | moononournation | 1.6.0 | `moononournation/Arduino_GFX` | display |

@@ -8,12 +8,14 @@
     "wifi_manager.h": [
       "firmware/_template/camper_example",
       "firmware/temp/camper_temp",
-      "firmware/level/camper_level"
+      "firmware/level/camper_level",
+      "firmware/io/camper_io"
     ],
     "wifi_manager.cpp": [
       "firmware/_template/camper_example",
       "firmware/temp/camper_temp",
-      "firmware/level/camper_level"
+      "firmware/level/camper_level",
+      "firmware/io/camper_io"
     ],
     "devinfo.h": [
       "firmware/_template/camper_example",
@@ -25,7 +27,8 @@
       "firmware/display/camper_display",
       "firmware/pocket/pocket",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "devinfo.cpp": [
       "firmware/_template/camper_example",
@@ -37,7 +40,8 @@
       "firmware/display/camper_display",
       "firmware/pocket/pocket",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "safeguard.h": [
       "firmware/_template/camper_example",
@@ -49,7 +53,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "safeguard.cpp": [
       "firmware/_template/camper_example",
@@ -61,7 +66,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "evlog.h": [
       "firmware/_template/camper_example",
@@ -74,7 +80,8 @@
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node",
-      "firmware/alde/camper_alde"
+      "firmware/alde/camper_alde",
+      "firmware/io/camper_io"
     ],
     "evlog.cpp": [
       "firmware/_template/camper_example",
@@ -87,7 +94,8 @@
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node",
-      "firmware/alde/camper_alde"
+      "firmware/alde/camper_alde",
+      "firmware/io/camper_io"
     ],
     "fwcheck.h": [
       "firmware/_template/camper_example",
@@ -100,7 +108,8 @@
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node",
-      "firmware/alde/camper_alde"
+      "firmware/alde/camper_alde",
+      "firmware/io/camper_io"
     ],
     "fwcheck.cpp": [
       "firmware/_template/camper_example",
@@ -113,7 +122,8 @@
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node",
-      "firmware/alde/camper_alde"
+      "firmware/alde/camper_alde",
+      "firmware/io/camper_io"
     ],
     "fw_config.h": [
       "firmware/_template/camper_example",
@@ -126,7 +136,8 @@
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
       "firmware/battery/battery_node",
-      "firmware/alde/camper_alde"
+      "firmware/alde/camper_alde",
+      "firmware/io/camper_io"
     ],
     "supersense_decode.h": [
       "firmware/tanklevel/camper_tanklevel",
@@ -155,7 +166,8 @@
       "firmware/alde/camper_alde",
       "firmware/display/camper_display",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "mqttfb.h": [
       "firmware/_template/camper_example",
@@ -168,7 +180,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ],
     "mqttfb.cpp": [
       "firmware/_template/camper_example",
@@ -181,7 +194,8 @@
       "firmware/tanklevel/camper_tanklevel",
       "firmware/temp/camper_temp",
       "firmware/ble/ble_node",
-      "firmware/battery/battery_node"
+      "firmware/battery/battery_node",
+      "firmware/io/camper_io"
     ]
   },
   "blocks": {
@@ -197,7 +211,8 @@
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
-        "firmware/pocket/pocket/webota.cpp"
+        "firmware/pocket/pocket/webota.cpp",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode-system.js": {
@@ -213,7 +228,8 @@
         "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/alde/camper_alde/web/index.html",
-        "firmware/display/camper_display/web/index.html"
+        "firmware/display/camper_display/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode-about.js": {
@@ -229,7 +245,8 @@
         "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/alde/camper_alde/web/index.html",
-        "firmware/pocket/pocket/webota.cpp"
+        "firmware/pocket/pocket/webota.cpp",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode-backup.js": {
@@ -245,7 +262,8 @@
         "firmware/_common/ble/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
         "firmware/alde/camper_alde/web/index.html",
-        "firmware/display/camper_display/web/index.html"
+        "firmware/display/camper_display/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/camper-theme.css": {
@@ -260,7 +278,8 @@
         "firmware/maxxfan/camper_maxxfan/web/index.html",
         "firmware/_common/ble/web/index.html",
         "tools/emulator/web/index.html",
-        "firmware/heater/truma_heater/web/index.html"
+        "firmware/heater/truma_heater/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode.css": {
@@ -277,7 +296,8 @@
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/pocket/pocket/webota.cpp",
-        "tools/emulator/web/index.html"
+        "tools/emulator/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode-icon.html": {
@@ -294,7 +314,8 @@
         "firmware/heater/truma_heater/web/index.html",
         "firmware/display/camper_display/web/index.html",
         "firmware/pocket/pocket/webota.cpp",
-        "tools/emulator/web/index.html"
+        "tools/emulator/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     },
     "web/vannode-i18n.js": {
@@ -310,7 +331,8 @@
         "firmware/_template/camper_example/web/index.html",
         "firmware/alde/camper_alde/web/index.html",
         "firmware/heater/truma_heater/web/index.html",
-        "firmware/tanklevel/camper_tanklevel/web/index.html"
+        "firmware/tanklevel/camper_tanklevel/web/index.html",
+        "firmware/io/camper_io/web/index.html"
       ]
     }
   },

@@ -97,6 +97,11 @@ jobs:
             fqbn: esp32:esp32:esp32:PartitionScheme=min_spiffs
             sketch: firmware/alde/camper_alde
             libs: ''
+          - device: io
+            target: esp32c3
+            fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
+            sketch: firmware/io/camper_io
+            libs: https://github.com/PaulStoffregen/OneWire.git#v2.3.8 https://github.com/milesburton/Arduino-Temperature-Control-Library.git#v4.0.6
           - device: maxxfan
             target: esp32c3
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs

@@ -10,7 +10,7 @@ body:
     id: device
     attributes:
       label: Gerät
-      options: [tanklevel, temp, level, heater, alde, maxxfan, display, roadbuddy, toolbox, ble, battery, pocket, neues Gerät, anderes]
+      options: [tanklevel, temp, level, heater, alde, io, maxxfan, display, roadbuddy, toolbox, ble, battery, pocket, neues Gerät, anderes]
     validations:
       required: true
   - type: textarea

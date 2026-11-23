@@ -33,6 +33,8 @@ DEVICES = [
      "firmware/tanklevel/camper_tanklevel/web/index.html"),
     ("temp", "Temperatur", "DS18B20-Sensoren mit Min/Max und Alarmgrenzen",
      "firmware/temp/camper_temp/web/index.html"),
+    ("io", "IO Node", "Relais (GPIO, 74HC595, I2C-Expander), Eingänge, DS18B20 und Analogwerte, alles im Browser eingerichtet",
+     "firmware/io/camper_io/web/index.html"),
     ("level", "Level", "Wasserwaage mit Keilhöhen und Tara",
      "firmware/level/camper_level/web/index.html"),
     ("maxxfan", "MaxxFan", "Dachlüfter: Öffnen, Schließen, Stufe, Auto-Hold",

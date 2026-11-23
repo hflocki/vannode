@@ -64,6 +64,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | [`firmware/tanklevel`](firmware/tanklevel) | ESP32-C3 | Frischwasser + Grauwasser (Votronic), Gasflasche (BLE) | `camper/tanklevel` |
 | [`firmware/temp`](firmware/temp) | ESP8266 / ESP32-C3 | bis zu 8 DS18B20 (Kühlschrank, Gefrierfach …) mit Alarm-Grenzwerten | `camper/temp` |
+| [`firmware/io`](firmware/io) | ESP32-C3 | Relais (GPIO, 74HC595, MCP23017/PCF8574), Eingänge, DS18B20 und Analogwerte, alles in der Web-Oberfläche eingerichtet | `camper/io` |
 | [`firmware/ble`](firmware/ble) | ESP32-C3 / ESP32-S3 | **ble-node**: Bluetooth-Geräte als Plugins – Dachhaube RV Tech (Heki), Wasserpumpe CaraWater, WCS-Kühlschrank, Alarm WiPro III und OBD2-Adapter (nur lesen), SuperSense-Tanks und -Reifendruck, Thermometer Govee / BTHome, optional Gas (DIMES, Mopeka, Senso4s, Truma LevelControl) und eigene BLE-Sensoren; weitere Nodes als `camper/ble2` … | `camper/ble` |
 | [`firmware/battery`](firmware/battery) | M5Stack AtomS3 Lite | **battery-node**: Batterien per Bluetooth (Daly BMS, Ective BM X, BM2, JBD, JK-BMS, LiTime/Redodo) und Victron Instant Readout (SmartShunt/BMV, Solarregler, Orion), Status-LED; gleicher Kern und gleiche Web-Oberfläche wie `ble` ([`firmware/_common/ble`](firmware/_common/ble)), eigene Releases | `camper/battery` |
 | [`firmware/heater`](firmware/heater) | ESP32 + LIN-Transceiver | Truma Combi / Vario Heat als iNet Box am CP Plus | `camper/heater` |
@@ -103,10 +104,11 @@ Ohne eingetragenes WLAN öffnet jedes Gerät ein eigenes Setup-WLAN. Verbinden, 
 | maxxfan | `MaxxFan-Node-XXXXXX` | `maxxfan1234` | `http://maxxfan-node.local` | ohne WLAN |
 | heater | `heater-node-XXXX` | `truma1234` | `http://heater-node.local` | ohne WLAN oder 60 s ohne Verbindung |
 | alde | `Alde-Node-XXXXXX` | `alde1234` | `http://alde-node.local` | ohne WLAN oder 60 s ohne Verbindung |
+| io | `IO-Node-XXXXXX` | `ionode1234` | `http://io-node.local` | ohne WLAN oder 60 s ohne Verbindung |
 | display | `Display-Node-XXXXXX` | `display1234` | `http://display-node.local` | ohne WLAN oder 1 min ohne Verbindung |
 | pocket | – (WLAN steht in `config_local.h`) | – | `http://pocket-node.local` (nur wach) | – |
 
-**Login der Web-Oberfläche:** Alle Geräte-Webseiten verlangen eine Anmeldung (HTTP Basic Auth), ab Werk Benutzer **`admin`**, Passwort **`admin`** (beim Pocket-Node für die Update-Seite). Geräte, die vorher ohne Login liefen oder noch den ersten Werks-Login `vannode2026` haben, bekommen admin / admin mit dem Update; ein selbst gesetztes Passwort bleibt unverändert. Benutzer und Passwort lassen sich im Web-UI ändern (Pocket-Node: in `config_local.h`); leere Felder behalten den gespeicherten Wert, ausschalten lässt sich die Anmeldung nicht. Login vergessen: über USB im seriellen Monitor `noauth` senden (ble, battery, tanklevel, temp, level, alde, display), dann gilt wieder der Werks-Login. Heizung und MaxxFan haben keine serielle Konsole: dort mit **Erase All Flash** neu flashen (Einstellungen sind dann weg).
+**Login der Web-Oberfläche:** Alle Geräte-Webseiten verlangen eine Anmeldung (HTTP Basic Auth), ab Werk Benutzer **`admin`**, Passwort **`admin`** (beim Pocket-Node für die Update-Seite). Geräte, die vorher ohne Login liefen oder noch den ersten Werks-Login `vannode2026` haben, bekommen admin / admin mit dem Update; ein selbst gesetztes Passwort bleibt unverändert. Benutzer und Passwort lassen sich im Web-UI ändern (Pocket-Node: in `config_local.h`); leere Felder behalten den gespeicherten Wert, ausschalten lässt sich die Anmeldung nicht. Login vergessen: über USB im seriellen Monitor `noauth` senden (ble, battery, tanklevel, temp, level, alde, io, display), dann gilt wieder der Werks-Login. Heizung und MaxxFan haben keine serielle Konsole: dort mit **Erase All Flash** neu flashen (Einstellungen sind dann weg).
 
 **Passwörter ändern:** Die Passwörter oben und der Werks-Login sind öffentlich (sie stehen hier). Vor dem ersten Flashen in `config_local.h` eigene setzen (`DEFAULT_AP_PASSWORD`, `DEFAULT_OTA_PASSWORD`, `DEFAULT_WEB_PASSWORD`), spätestens danach im Web-UI. Das OTA-Passwort gilt für den Netzwerk-Port der Arduino IDE.
 

@@ -5,6 +5,7 @@
 # skip: temp esp8266      in the temp release (tag temp-v...), the bundle carries the ESP32-C3 build
 # skip: heater esp32c3    in the heater release (tag heater-v...), the bundle carries the ESP32 build
 # skip: alde esp32        not tested on a real heater yet
+# skip: io esp32c3        new, not tested on hardware yet
 display   esp32s3
 heater    esp32
 maxxfan   esp32c3

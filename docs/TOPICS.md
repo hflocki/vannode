@@ -30,6 +30,7 @@ Das Display liest `camper/+/status` und `camper/+/info` für die Geräteliste au
 | Display (Wandpanel) | `camper/display` | display | [firmware/display](../firmware/display/README.md) |
 | Pocket-Node (M5Stack Core2, bis 1.5.8 Road Buddy) | `camper/pocket` | pocket | [firmware/pocket](../firmware/pocket/README.md) |
 | Emulator (Werkzeug am PC) | `camper/emulator` (+ die Topics der nachgebildeten Geräte) | – | [tools/emulator](../tools/emulator/README.md) |
+| IO-Node (Relais, Eingänge, DS18B20, Analog) | `camper/io` | io | [firmware/io](../firmware/io/README.md) |
 | Muster-Gerät | `camper/example` | template | [firmware/_template](../firmware/_template/README.md) |
 | Router RUT956 | `camper/rut`, `camper/door` | Teltonika „Data to Server“ | – |
 | Zigbee-Gateway (SMLIGHT) | `camper/zigbee/data`, `camper/zigbee/cmd` | Gateway | [firmware/display](../firmware/display/README.md#sensoren-zigbee--bluetooth) |
@@ -382,6 +383,20 @@ Eigene Topics (sendet die Pocket-Node selbst, Präfix änderbar mit `#define SEL
 | `camper/pocket/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
 
 Weitere Topics unter diesen Präfixen (z. B. `rssi`, `voltage`, `raw_level`, `tare_*`, Grauwasser) werden ignoriert.
+
+## IO-Node `camper/io`
+
+Die Kanäle und ihre IDs werden in der Web-Oberfläche angelegt (Tab *Kanäle*).
+
+| Topic | Inhalt |
+|---|---|
+| `…/status` | `online` / `offline` (Last Will) |
+| `…/info` | Diagnose (retained, beim Verbinden und jede Minute): JSON mit `version`, `ip`, `mac`, `rssi`, `uptime` (s), `reset`, `heap` |
+| `…/rssi` | WLAN-Signal in dBm |
+| `…/<id>` | retained, je Kanal: Relais und Eingang `ON` / `OFF` (sofort bei jeder Änderung), Temperatur in °C, Analog als Zahl in der eingestellten Einheit |
+| `…/cmd/<id>` | Relais schalten: `ON`, `OFF`, `TOGGLE` (auch `1` / `0`) |
+
+Home Assistant: Relais als `switch`, Eingänge als `binary_sensor`, Temperatur und Analog als `sensor`. Wird ein Kanal gelöscht, räumt der Node nach dem Neustart seine Entität und das retained Topic ab.
 
 ## Muster-Gerät `camper/example`
 

@@ -68,7 +68,7 @@ determined only to make the devices work together (interoperability).
 ## Third-party components
 
 This is the only list of third-party parts in VanNode; the devices link to it from their
-"Über VanNode" card. It is sorted by node. Temp-, MaxxFan- and Pocket-Node and the template
+"Über VanNode" card. It is sorted by node. Temp-, IO-, MaxxFan- and Pocket-Node and the template
 contain no third-party parts besides the libraries listed at the end. New third-party code is
 added here, under its node, and nowhere else.
 

@@ -55,7 +55,7 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 | Chip | Heizbus und Bedienteil-Bus | Release-Datei | Hinweis |
 |---|---|---|---|
 | **ESP32 DevKit (WROOM-32)** – Empfehlung | beide gleichzeitig | ✓ `alde-node-esp32` | Standard-Pins passen, kein eigenes Kompilieren nötig |
-| ESP32-S3 | beide gleichzeitig | – selbst kompilieren | GPIO 25 gibt es nicht, GPIO 26–37 je nach Modul für Flash/PSRAM belegt |
+| ESP32-S3 | beide gleichzeitig | ✓ `alde-node-esp32s3` | GPIO 25 gibt es nicht, GPIO 26–37 je nach Modul für Flash/PSRAM belegt |
 | ESP32-C3 | nur **einer** von beiden (ein freier UART) | – selbst kompilieren | für die Steuerung den Heizbus ausschalten (Web-UI → Einstellungen → Heizbus) |
 
 ### Verdrahtung
@@ -102,18 +102,17 @@ Nur Bedienteil-Bus (ein LIN-Modul): Kanal 4 bleibt frei. Am ESP32 DevKit bleibt 
 
 Der 5V-Pin führt nur 5 V, wenn der ESP über USB oder einen Step-down versorgt wird.
 
-**`config_local.h` je ESP** (nur beim Selbst-Kompilieren; für das ESP32 DevKit mit der Release-Datei nicht nötig):
+**`config_local.h` je ESP** (nur beim Selbst-Kompilieren; mit den Release-Dateien für ESP32 DevKit und ESP32-S3 nicht nötig – dort den Heizbus im Web-UI ausschalten, wenn nur der Bedienteil-Bus angeschlossen ist):
 
 | ESP | Einträge |
 |---|---|
 | ESP32 DevKit | keine (Standard-Pins); nur Bedienteil-Bus: `DEFAULT_LIN_ENABLED false` |
-| ESP32-S3 | `CI_SLP_PIN 6`; nur Bedienteil-Bus zusätzlich `DEFAULT_LIN_ENABLED false` |
-| ESP32-C3 | `CI_SLP_PIN 6` und `DEFAULT_LIN_ENABLED false` (für die Steuerung) |
+| ESP32-S3 | keine (Standard-Pins); nur Bedienteil-Bus: `DEFAULT_LIN_ENABLED false` |
+| ESP32-C3 | `DEFAULT_LIN_ENABLED false` (für die Steuerung) |
 
-Beispiel ESP32-S3, nur Bedienteil-Bus:
+Beispiel, nur Bedienteil-Bus:
 
 ```cpp
-#define CI_SLP_PIN           6
 #define DEFAULT_LIN_ENABLED  false   // only the panel bus transceiver is fitted
 ```
 
@@ -138,7 +137,7 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 
 | Einstellung | Wert |
 |---|---|
-| Board | ESP32 DevKit (Release-Datei `alde-node-esp32`); ESP32-S3 und ESP32-C3 gehen auch (siehe *Welcher ESP*) |
+| Board | ESP32 DevKit (Release-Datei `alde-node-esp32`) oder ESP32-S3 (`alde-node-esp32s3`, Board *ESP32S3 Dev Module*, USB CDC On Boot an); ESP32-C3 geht auch (siehe *Welcher ESP*) |
 | Zusätzliche Bibliotheken | keine |
 | Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`) |
 

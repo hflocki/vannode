@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.8.0"
+#define FW_VERSION            "0.8.1"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -100,21 +100,24 @@
 // ============================================================
 // PINS (defaults per chip, override in config_local.h)
 //   ESP32 (classic)  heater bus RX 16, panel bus RX 26 / TX 25
-//   ESP32-S3         heater bus RX 16, panel bus RX 4 / TX 5 (no GPIO 25, GPIO 26 is flash)
-//   ESP32-C3         only ONE bus at a time (two UARTs): heater bus RX 3 or panel bus RX 4 / TX 5
+//   ESP32-S3         heater bus RX 16, panel bus RX 4 / TX 5 / SLP 6 (no GPIO 25, GPIO 26 is flash)
+//   ESP32-C3         only ONE bus at a time (two UARTs): heater bus RX 3 or panel bus RX 4 / TX 5 / SLP 6
 // ============================================================
 #if CONFIG_IDF_TARGET_ESP32
 #define ALDE_DEF_LIN_RX 16
 #define ALDE_DEF_CI_RX  26
 #define ALDE_DEF_CI_TX  25
+#define ALDE_DEF_CI_SLP -1     // SLP tied high on the module
 #elif CONFIG_IDF_TARGET_ESP32C3
 #define ALDE_DEF_LIN_RX 3
 #define ALDE_DEF_CI_RX  4
 #define ALDE_DEF_CI_TX  5
+#define ALDE_DEF_CI_SLP 6
 #else
 #define ALDE_DEF_LIN_RX 16
 #define ALDE_DEF_CI_RX  4
 #define ALDE_DEF_CI_TX  5
+#define ALDE_DEF_CI_SLP 6
 #endif
 
 // ============================================================
@@ -156,7 +159,7 @@
 #define CI_TX_PIN             ALDE_DEF_CI_TX    // TXD of the panel bus transceiver
 #endif
 #ifndef CI_SLP_PIN
-#define CI_SLP_PIN            -1     // SLP/NSLP of the 2nd transceiver if wired to the ESP (driven HIGH), -1 = not wired
+#define CI_SLP_PIN            ALDE_DEF_CI_SLP   // SLP/NSLP of the panel bus transceiver (driven HIGH), -1 = not wired
 #endif
 #ifndef CI_BAUD
 #define CI_BAUD               19200

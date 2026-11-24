@@ -97,6 +97,13 @@ jobs:
             fqbn: esp32:esp32:esp32:PartitionScheme=min_spiffs
             sketch: firmware/alde/camper_alde
             libs: ''
+          # Same firmware for ESP32-S3 boards (panel bus RX 4 / TX 5 / SLP 6, see the alde README)
+          - device: alde
+            target: esp32s3
+            fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs
+            sketch: firmware/alde/camper_alde
+            libs: ''
+            noweb: 1
           - device: io
             target: esp32c3
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs

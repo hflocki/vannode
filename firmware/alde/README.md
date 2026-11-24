@@ -52,13 +52,11 @@ Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-A
 
 ### Welcher ESP
 
-| Chip | Heizbus | Bedienteil-Bus | Standard-Pins |
+| Chip | Heizbus und Bedienteil-Bus | Release-Datei | Hinweis |
 |---|---|---|---|
-| **ESP32 DevKit (WROOM-32)** – Empfehlung | ✓ | ✓ gleichzeitig | Heizbus RX 16 · Bedienteil RX 26 / TX 25 |
-| ESP32-S3 | ✓ | ✓ gleichzeitig | Heizbus RX 16 · Bedienteil RX 4 / TX 5 (GPIO 25 fehlt, 26 gehört zum Flash) |
-| ESP32-C3 | entweder … | … oder (nur ein freier UART) | Heizbus RX 3 · Bedienteil RX 4 / TX 5 |
-
-Andere Pins in `config_local.h` (`LIN_RX_PIN`, `CI_RX_PIN`, `CI_TX_PIN`, `LIN_SLP_PIN`, `CI_SLP_PIN`). Am C3 für die Steuerung den Heizbus ausschalten (Web-UI → Einstellungen → Heizbus).
+| **ESP32 DevKit (WROOM-32)** – Empfehlung | beide gleichzeitig | ✓ `alde-node-esp32` | Standard-Pins passen, kein eigenes Kompilieren nötig |
+| ESP32-S3 | beide gleichzeitig | – selbst kompilieren | GPIO 25 gibt es nicht, GPIO 26–37 je nach Modul für Flash/PSRAM belegt |
+| ESP32-C3 | nur **einer** von beiden (ein freier UART) | – selbst kompilieren | für die Steuerung den Heizbus ausschalten (Web-UI → Einstellungen → Heizbus) |
 
 ### Verdrahtung
 
@@ -71,28 +69,55 @@ Andere Pins in `config_local.h` (`LIN_RX_PIN`, `CI_RX_PIN`, `CI_TX_PIN`, `LIN_SL
 
 TX und SLP (ESP → Modul) brauchen eigentlich keinen Wandler, der TJA1020 schaltet ab ca. 2 V. Sie über denselben Wandler zu führen, schadet aber nicht; ein BSS138-Wandler schafft 19200 Baud problemlos.
 
-**Beispiel: nur Bedienteil-Bus mit Pegelwandler** (klassischer ESP32, ein LIN-Modul):
+**Pins je ESP** (GPIO-Nummern):
 
-| Von | Nach |
+| Leitung | ESP32 DevKit | ESP32-S3 | ESP32-C3 |
+|---|---|---|---|
+| 5 V (vom Step-down) | VIN / 5V | 5V (5V0) | 5V |
+| 3,3 V | 3V3 | 3V3 | 3V3 |
+| Bedienteil-Bus RX | 26 | 4 | 4 |
+| Bedienteil-Bus TX | 25 | 5 | 5 |
+| Bedienteil-Bus SLP | – (SLP fest an HV) | 6 | 6 |
+| Heizbus RX | 16 | 16 | 3 (nur ohne Bedienteil-Bus) |
+| Heizbus SLP | – (SLP fest an HV) | – (SLP fest an HV) | – (SLP fest an HV) |
+
+**Pegelwandler** (4 Kanäle; LV-Seite = ESP mit 3,3 V, HV-Seite = LIN-Modul mit 5 V):
+
+| Pegelwandler | ESP-Seite (LV) | Modul-Seite (HV) |
+|---|---|---|
+| LV / HV | ESP 3V3 | ESP 5V |
+| GND | ESP GND | LIN-Modul GND |
+| Kanal 1 | Bedienteil-Bus RX | LIN-Modul (Bedienteil) RX |
+| Kanal 2 | Bedienteil-Bus TX | LIN-Modul (Bedienteil) TX |
+| Kanal 3 | Bedienteil-Bus SLP (S3, C3) | LIN-Modul (Bedienteil) SLP |
+| Kanal 4 | Heizbus RX | LIN-Modul (Heizbus) RX |
+
+Nur Bedienteil-Bus (ein LIN-Modul): Kanal 4 bleibt frei. Am ESP32 DevKit bleibt Kanal 3 frei und SLP des Moduls kommt direkt an HV. INH am Modul bleibt frei.
+
+| Weitere Leitungen | Nach |
 |---|---|
-| ESP32 VIN (5 V) | Pegelwandler HV |
-| ESP32 3V3 | Pegelwandler LV |
-| ESP32 GND | Pegelwandler GND und LIN-Modul GND |
-| ESP32 GPIO16 | Pegelwandler LV1 – HV1 → LIN-Modul RX |
-| ESP32 GPIO17 | Pegelwandler LV2 – HV2 → LIN-Modul TX |
-| ESP32 GPIO25 | Pegelwandler LV3 – HV3 → LIN-Modul SLP |
-| 12 V Bordnetz | LIN-Modul 12 V (über einen Step-down auch ESP32 VIN) |
-| Bedienteil LIN / Masse | LIN-Modul LIN / GND |
+| 12 V Bordnetz | LIN-Modul 12V, über den Step-down 12 V → 5 V auch ESP 5V |
+| gelbe RJ12-Buchse: Pin 4 LIN, Pin 2 Masse | LIN-Modul (Bedienteil) LIN / GND |
+| rote RJ12-Buchse per Splitter: Pin 4 LIN, Pin 2 Masse | LIN-Modul (Heizbus) LIN / GND |
 
-VIN führt nur 5 V, wenn der ESP über USB oder einen Step-down versorgt wird. Dazu in `config_local.h`:
+Der 5V-Pin führt nur 5 V, wenn der ESP über USB oder einen Step-down versorgt wird.
+
+**`config_local.h` je ESP** (nur beim Selbst-Kompilieren; für das ESP32 DevKit mit der Release-Datei nicht nötig):
+
+| ESP | Einträge |
+|---|---|
+| ESP32 DevKit | keine (Standard-Pins); nur Bedienteil-Bus: `DEFAULT_LIN_ENABLED false` |
+| ESP32-S3 | `CI_SLP_PIN 6`; nur Bedienteil-Bus zusätzlich `DEFAULT_LIN_ENABLED false` |
+| ESP32-C3 | `CI_SLP_PIN 6` und `DEFAULT_LIN_ENABLED false` (für die Steuerung) |
+
+Beispiel ESP32-S3, nur Bedienteil-Bus:
 
 ```cpp
-#define CI_RX_PIN            16
-#define CI_TX_PIN            17
-#define CI_SLP_PIN           25
-#define LIN_RX_PIN           4       // heater bus is off; keeps it away from GPIO16
-#define DEFAULT_LIN_ENABLED  false
+#define CI_SLP_PIN           6
+#define DEFAULT_LIN_ENABLED  false   // only the panel bus transceiver is fitted
 ```
+
+Andere Pins gehen ebenfalls (`LIN_RX_PIN`, `CI_RX_PIN`, `CI_TX_PIN`, `LIN_SLP_PIN`, `CI_SLP_PIN`), etwa die Belegung RX 16 / TX 17 / SLP 25 an einem ESP32 DevKit – dann aber `LIN_RX_PIN` von 16 weg legen.
 
 Allgemein:
 

@@ -84,7 +84,7 @@ firmware/_template/
 ├── ANLEITUNG.md                 diese Anleitung (wird nicht mitkopiert)
 ├── README.md                    README des neuen Geräts (mit TODOs)
 ├── CHANGELOG.md                 Änderungen je Version (Text der Releases)
-├── LICENSE                      MIT
+├── LICENSE                      GNU GPL v3 (Zusatzbedingungen in NOTICE.md)
 ├── tools/new_device.py          Kopier-Skript (wird nicht mitkopiert)
 └── camper_example/
     ├── camper_example.ino       setup()/loop(), OTA, serielle Befehle

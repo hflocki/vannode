@@ -50,7 +50,8 @@ String self(const char* sub) { return settings.prefixSelf + "/" + sub; }
 // Topic prefixes of the VanNode devices (their discovery is left out of the finder)
 std::vector<String> ownPrefixes() {
   return {settings.prefixTank, settings.prefixLevel, settings.prefixHeater, settings.prefixFan, settings.prefixTemp,
-          settings.prefixBattery, settings.prefixBle, settings.prefixBle2, settings.prefixBle3, settings.prefixSelf};
+          settings.prefixBattery, settings.prefixBle, settings.prefixBle2, settings.prefixBle3, settings.prefixAlde,
+          settings.prefixIo, settings.prefixSelf};
 }
 
 bool publish(const String& topic, const String& payload, bool retain = false) {

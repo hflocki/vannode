@@ -22,7 +22,7 @@
 #ifndef UI_LANG
 #define UI_LANG                 "de"
 #endif
-#define FW_VERSION              "2.27.5"
+#define FW_VERSION              "2.27.6"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -110,6 +110,12 @@
 #endif
 #ifndef DEFAULT_PREFIX_TEMP
 #define DEFAULT_PREFIX_TEMP     "camper/temp"
+#endif
+#ifndef DEFAULT_PREFIX_ALDE
+#define DEFAULT_PREFIX_ALDE     "camper/alde"
+#endif
+#ifndef DEFAULT_PREFIX_IO
+#define DEFAULT_PREFIX_IO       "camper/io"
 #endif
 #ifndef DEFAULT_PREFIX_BATTERY
 #define DEFAULT_PREFIX_BATTERY  "camper/battery"

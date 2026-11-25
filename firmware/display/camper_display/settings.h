@@ -79,6 +79,7 @@ struct Settings {
   String   tsKey;           // auth key (tskey-auth-...), "" = sign in with the link on the web page
   String prefixSelf, prefixTank, prefixLevel, prefixHeater, prefixFan, prefixTemp, prefixBattery, prefixBle;
   String prefixBle2, prefixBle3;   // further BLE nodes (ble2, ble3), "" = none; the roof hatch may be on any of them
+  String prefixAlde, prefixIo;     // Alde heater node and IO node, "" = none (kept out of the topic finder discovery)
   uint8_t fanPort = 1;
   // time
   String ntpServer, tz;

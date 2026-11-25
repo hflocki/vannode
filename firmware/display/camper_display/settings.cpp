@@ -83,6 +83,8 @@ void load() {
   settings.prefixBle = prefs.getString("ptbx",  DEFAULT_PREFIX_BLE);
   settings.prefixBle2 = prefs.getString("pbl2", "");
   settings.prefixBle3 = prefs.getString("pbl3", "");
+  settings.prefixAlde = prefs.getString("palde", DEFAULT_PREFIX_ALDE);
+  settings.prefixIo   = prefs.getString("pio",   DEFAULT_PREFIX_IO);
   // Old default topics of the BLE node move along with its firmware 2.5.1: Toolbox camper/toolbox and
   // "tool" (2.17.0 - 2.21.4) camper/tool, camper/tool2, camper/tool3 -> camper/ble, camper/ble2, camper/ble3
   if (settings.prefixBle == "camper/toolbox") settings.prefixBle = DEFAULT_PREFIX_BLE;
@@ -234,6 +236,8 @@ void save() {
   prefs.putString("ptbx",   settings.prefixBle);
   prefs.putString("pbl2",   settings.prefixBle2);
   prefs.putString("pbl3",   settings.prefixBle3);
+  prefs.putString("palde",  settings.prefixAlde);
+  prefs.putString("pio",    settings.prefixIo);
   prefs.putUChar ("fport",  settings.fanPort);
   prefs.putString("ntp",    settings.ntpServer);
   prefs.putString("tz",     settings.tz);

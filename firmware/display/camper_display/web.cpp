@@ -331,6 +331,8 @@ void getSettings(AsyncWebServerRequest* r) {
   d["prefixBle"] = settings.prefixBle;
   d["prefixBle2"] = settings.prefixBle2;
   d["prefixBle3"] = settings.prefixBle3;
+  d["prefixAlde"] = settings.prefixAlde;
+  d["prefixIo"] = settings.prefixIo;
   d["fanPort"] = settings.fanPort;
   d["ntpServer"] = settings.ntpServer;
   d["tz"] = settings.tz;
@@ -497,6 +499,8 @@ bool applySettings(JsonObject o, bool apply) {
   str("prefixBle", settings.prefixBle, false);
   str("prefixBle2", settings.prefixBle2, false);
   str("prefixBle3", settings.prefixBle3, false);
+  str("prefixAlde", settings.prefixAlde, false);
+  str("prefixIo", settings.prefixIo, false);
   str("poToken", settings.poToken, false, true);
   str("poUser", settings.poUser, false, true);
   if (o["poOn"].is<bool>()) settings.poOn = o["poOn"];
@@ -572,6 +576,8 @@ bool applySettings(JsonObject o, bool apply) {
   settings.prefixBle = cleanPrefix(settings.prefixBle);
   settings.prefixBle2 = cleanPrefix(settings.prefixBle2);
   settings.prefixBle3 = cleanPrefix(settings.prefixBle3);
+  settings.prefixAlde = cleanPrefix(settings.prefixAlde);
+  settings.prefixIo = cleanPrefix(settings.prefixIo);
   if (o["fanPort"].is<int>()) settings.fanPort = constrain(o["fanPort"].as<int>(), 0, 1);
 
   if (o["brightness"].is<int>())    settings.brightness = constrain(o["brightness"].as<int>(), 5, 100);

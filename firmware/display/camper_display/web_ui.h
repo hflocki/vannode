@@ -1053,7 +1053,7 @@ function pgSettings(){
    <p class="mu">Basis-Topic je Gerät. Leer lassen, wenn das Gerät nicht vorhanden ist.</p>
    ${inp('prefixTank','Tanks (Wasser/Gas)')}${inp('prefixLevel','Ausrichtung (Levelsensor)')}
    <div class="f2"><div><label>Heizung: Steuerung über</label><select id="heaterSrc"><option value="0">eigene Firmware (heater-node)</option><option value="1">CampMatic-Box</option></select></div>${inp('prefixHeater','Heizung: Basis-Topic','text','camper/heater')}</div>
-   <p class="mu" style="margin-top:-4px">CampMatic: Basis-Topic <code>campmatic/&lt;Gerätenummer&gt;</code>, z. B. <code>campmatic/003</code>. Die Box muss per Bridge auf deinem Broker ankommen (siehe README). Freibrennen gibt es dort nicht.</p>${inp('prefixFan','MaxxFan')}${inp('prefixTemp','Temperaturen (temp-node)')}${inp('prefixBattery','Battery-Node (Batterien)','text','camper/battery')}${inp('prefixBle','BLE-Node (Dachhaube …)','text','camper/ble')}${inp('prefixBle2','BLE-Node 2','text','camper/ble2')}${inp('prefixBle3','BLE-Node 3','text','camper/ble3')}
+   <p class="mu" style="margin-top:-4px">CampMatic: Basis-Topic <code>campmatic/&lt;Gerätenummer&gt;</code>, z. B. <code>campmatic/003</code>. Die Box muss per Bridge auf deinem Broker ankommen (siehe README). Freibrennen gibt es dort nicht.</p>${inp('prefixFan','MaxxFan')}${inp('prefixTemp','Temperaturen (temp-node)')}${inp('prefixBattery','Battery-Node (Batterien)','text','camper/battery')}${inp('prefixBle','BLE-Node (Dachhaube …)','text','camper/ble')}${inp('prefixBle2','BLE-Node 2','text','camper/ble2')}${inp('prefixBle3','BLE-Node 3','text','camper/ble3')}${inp('prefixAlde','Alde-Heizung (alde-node)','text','camper/alde')}${inp('prefixIo','IO-Node (Relais, Eingänge)','text','camper/io')}
    <p class="mu" style="margin-top:-4px">Die Dachhaube wird auf jedem der BLE-Nodes 1, 2 und 3 gefunden. Leer = kein solcher Node.</p>
    <div class="f2"><div><label>MaxxFan-Port</label><select id="fanPort"><option value="0">0 (RJ11)</option><option value="1">1 (RJ45)</option></select></div>${inp('prefixSelf','Eigenes Topic (Display)')}</div></details>
   <details data-g="dev"><summary>Geräte-Links</summary>
@@ -1172,7 +1172,7 @@ function showGroup(g,fromSec){setGroup=g;try{localStorage.setItem('setGroup',g)}
   const sb=$('.savebar');if(sb)sb.style.display=g==='rules'?'none':'';   // automations have their own save button
   if(g==='rules'){if(!rulesLoaded){rulesLoaded=true;loadRules()}else ruleState()}
   const sd=$('#snd');if(g==='dev'&&sd&&!sd.open){sd.open=true}}
-const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs','tsName','tsKey'];
+const FIELDS=['wifiSsid','wifiPass','ip','gateway','subnet','dns','mqttHost','mqttPort','mqttUser','mqttPass','prefixTank','prefixLevel','prefixHeater','prefixFan','prefixTemp','prefixBattery','prefixBle','prefixBle2','prefixBle3','prefixAlde','prefixIo','prefixSelf','dimBrightness','screenTimeout','displayName','hostname','apPass','webUser','webPass','ntpServer','tz','poToken','poUser','wxLat','wxLon','wxName','wxTopic','rtTopic','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpTopic','dpDoor','dpSpeed','dpSecs','tsName','tsKey'];
 async function loadSettings(){
   rulesLoaded=false;
   try{
@@ -1253,7 +1253,7 @@ async function post(url,body){
 }
 // ---- device links editor ----
 let LINKS=[];
-const SUGGEST=[['Tanklevel','tanklevel-node'],['Temperatur','temp-node'],['Truma','heater-node'],['MaxxFan','maxxfan-node'],['Level','level-node'],['Batterie','battery-node']];
+const SUGGEST=[['Tanklevel','tanklevel-node'],['Temperatur','temp-node'],['Truma','heater-node'],['MaxxFan','maxxfan-node'],['Level','level-node'],['Batterie','battery-node'],['BLE','ble-node'],['Alde','alde-node'],['IO','io-node']];
 function renderLinks(){
   const b=$('#lnk');if(!b)return;
   b.innerHTML=LINKS.map((x,i)=>`<div class="row" style="gap:6px;margin:4px 0"><input type="text" data-ln="${i}" value="${esc(x.n)}" placeholder="Name" maxlength="24" style="flex:1;min-width:0"><input type="text" data-lu="${i}" value="${esc(x.u)}" placeholder="http://192.168.8.13/" maxlength="120" style="flex:2;min-width:0"><button class="btn" type="button" data-ld="${i}" title="Entfernen">✕</button></div>`).join('')||'<p class="mu">Noch keine Links.</p>';
@@ -1994,6 +1994,8 @@ vnI18nAdd('en', {
   "BLE-Node (Dachhaube …)": "BLE node (roof hatch …)",
   "Die Dachhaube wird auf jedem der BLE-Nodes 1, 2 und 3 gefunden. Leer = kein solcher Node.": "The roof hatch is found on each of the BLE nodes 1, 2 and 3. Empty = no such node.",
   "Eigenes Topic (Display)": "Own topic (display)",
+  "Alde-Heizung (alde-node)": "Alde heater (alde-node)",
+  "IO-Node (Relais, Eingänge)": "IO node (relays, inputs)",
   "Buttons auf der Seite „Geräte“, die die Web-Oberfläche des jeweiligen Geräts öffnen. Adresse z. B.": "Buttons on the „Devices“ page that open the web interface of each device. Address e.g.",
   "oder": "or",
   "und": "and",

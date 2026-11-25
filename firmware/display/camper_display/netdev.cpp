@@ -115,7 +115,7 @@ String name(const String& id) {
     {"display", "Display"}, {"pocket", "Pocket-Node"}, {"roadbuddy", "Road Buddy"}, {"tanklevel", "Tanks"}, {"level", "Level"},
     {"heater", "Heizung"}, {"truma", "Heizung"}, {"maxxfan", "Dachl\xC3\xBC" "fter"}, {"temp", "Temperatur"},
     {"battery", "Battery-Node"}, {"toolbox", "BLE-Node"}, {"zigbee", "Zigbee"}, {"ble", "BLE-Node"},
-    {"ble2", "BLE-Node 2"}, {"ble3", "BLE-Node 3"},
+    {"ble2", "BLE-Node 2"}, {"ble3", "BLE-Node 3"}, {"alde", "Alde-Heizung"}, {"io", "IO-Node"},
     {"tool", "BLE-Node (alt: tool)"}, {"tool2", "BLE-Node 2 (alt: tool2)"}, {"tool3", "BLE-Node 3 (alt: tool3)"}, {"router", "Router"},
   };
   for (auto& m : MAP) if (id == m[0]) return m[1];

@@ -73,6 +73,9 @@ struct WcsCfg {
     char write[40];        // Write characteristic, empty = E531
     char poll[24];         // Status command, empty = "/SC0/1/-01"
     int32_t poll_s;        // Poll interval in s
+    bool night_auto;       // Night schedule: sleep mode on at night_on, off (and fan on) at night_off
+    char night_on[6];      // "HH:MM", local time of the ESP (NTP, TIME_ZONE)
+    char night_off[6];     // "HH:MM"
 };
 
 static const Field WCS_FIELDS[] = {
@@ -88,6 +91,11 @@ static const Field WCS_FIELDS[] = {
     FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard)"),
     FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt"),
     FLD_INT(WcsCfg, poll_s, "poll_s", "Abfrage alle", "s", 2, 3600, "Standard 5 s"),
+    FLD_BOOL(WcsCfg, night_auto, "night_auto", "Nachtschaltung automatisch",
+             "Schaltet zur Beginn-Zeit den Nachtmodus ein (die Umluft geht dabei aus) und zur Ende-Zeit "
+             "wieder aus und die Umluft ein. Nur zu diesen Zeiten, von Hand Geschaltetes bleibt bis zur nächsten Zeit."),
+    FLD_TEXT(WcsCfg, night_on, "night_on", "Nachtmodus ab", "Uhrzeit HH:MM, Standard 22:00"),
+    FLD_TEXT(WcsCfg, night_off, "night_off", "Nachtmodus bis", "Uhrzeit HH:MM, Standard 08:00 (Umluft startet)"),
 };
 
 static const Entity WCS_ENTITIES[] = {
@@ -139,6 +147,8 @@ public:
         memset(&c, 0, sizeof(c));
         c.zone2 = true;
         c.poll_s = 5;
+        strlcpy(c.night_on, "22:00", sizeof(c.night_on));
+        strlcpy(c.night_off, "08:00", sizeof(c.night_off));
     }
     void onConfigChanged() override {
         if (strcmp(c.mac, lastMac) != 0) {
@@ -152,6 +162,12 @@ public:
         if (n && pollCmd[n - 1] != '\n' && n < sizeof(pollCmd) - 1) { pollCmd[n] = '\n'; pollCmd[n + 1] = '\0'; }
         if (login == WL_FAILED) login = WL_IDLE;   // New password: try again
         if (begun) applyTarget();
+        // Night schedule: parse the times, a new setting is applied at once (night state of now)
+        nightOnMin = parseHm(c.night_on, 22 * 60);
+        nightOffMin = parseHm(c.night_off, 8 * 60);
+        nightLast = -1;
+        nightPending = -1;
+        fanAt = 0;
     }
 
     uint8_t bleUse() const override { return BLE_LINK; }
@@ -192,6 +208,8 @@ public:
             if (!link.write(pollCmd, true)) devlogf(id, "Status request failed");
         }
 
+        nightLoop();
+
         bool avail = available();
         if (avail != lastAvailable) {
             lastAvailable = avail;
@@ -226,6 +244,12 @@ public:
         liveRowNum(o, "Spannung", hasData ? voltage : NAN, 1, "V");
         liveRowNum(o, "Batterie", hasData ? battery : NAN, 0, "%");
         if (hasData) liveRowText(o, "Modus", modeText());
+        if (c.night_auto) {
+            char nt[40];
+            snprintf(nt, sizeof(nt), "%02d:%02d – %02d:%02d%s", nightOnMin / 60, nightOnMin % 60,
+                     nightOffMin / 60, nightOffMin % 60, timeValid() ? "" : " (keine Uhrzeit)");
+            liveRowText(o, "Nachtschaltung", nt);
+        }
         if (errorCode) liveRowText(o, "Fehler", errorLine);
         if (errN) {
             JsonObject l = o["list"].to<JsonObject>();
@@ -418,8 +442,69 @@ private:
         return field;
     }
 
+    // ---- Night schedule ----
+    // "HH:MM" -> minutes of the day, invalid = def
+    static int parseHm(const char* t, int def) {
+        int h, m;
+        char extra;
+        if (sscanf(t, "%d:%d%c", &h, &m, &extra) != 2 || h < 0 || h > 23 || m < 0 || m > 59) return def;
+        return h * 60 + m;
+    }
+    // Night window [on, off), also across midnight; on == off = no window
+    bool inNight(int now) const {
+        if (nightOnMin == nightOffMin) return false;
+        if (nightOnMin < nightOffMin) return now >= nightOnMin && now < nightOffMin;
+        return now >= nightOnMin || now < nightOffMin;
+    }
+    // Switches only when the window changes (and at night once after start / a new setting), so manual
+    // changes stay until the next switching time. A switch that is due while the fridge is not
+    // connected is sent as soon as it is ready again.
+    void nightLoop() {
+        if (fanAt && (long)(millis() - fanAt) >= 0) {
+            fanAt = 0;
+            if (login == WL_OK && hasData && link.canWrite() && !sleepOn() && !(fanKnown && fanOn)) {
+                devlogf(id, "Night schedule: circulation fan on");
+                command("fan", "ON");
+            }
+        }
+        if (!c.night_auto || !timeValid()) return;
+        if (millis() - nightCheck < 5000 && nightLast >= 0) return;
+        nightCheck = millis();
+        time_t t = time(nullptr);
+        struct tm tm;
+        localtime_r(&t, &tm);
+        int8_t want = inNight(tm.tm_hour * 60 + tm.tm_min) ? 1 : 0;
+        if (want != nightLast) {
+            // First check after start / a new setting: only catch up on the night mode, during
+            // the day nothing is touched (a manual setting survives a restart)
+            nightPending = (nightLast >= 0 || want) ? want : -1;
+            nightLast = want;
+        }
+        if (nightPending < 0 || login != WL_OK || !hasData || !link.canWrite()) return;
+        bool on = nightPending == 1;
+        nightPending = -1;
+        if (on) {
+            if (!sleepOn()) {
+                devlogf(id, "Night schedule: sleep mode on");
+                command("night", "ON");
+            }
+        } else {
+            if (sleepOn()) {
+                devlogf(id, "Night schedule: sleep mode off");
+                command("night", "OFF");
+            }
+            fanAt = millis() + 4000;   // Fan on after the mode change has been answered
+            if (!fanAt) fanAt = 1;
+        }
+    }
+
     WcsCfg c;
     BleLink link;
+    int nightOnMin = 22 * 60, nightOffMin = 8 * 60;
+    int8_t nightLast = -1;        // Window state of the last check, -1 = not checked yet
+    int8_t nightPending = -1;     // Switch still to be sent: 1 = night on, 0 = night off
+    unsigned long nightCheck = 0;
+    unsigned long fanAt = 0;      // millis() for "fan on" after the night ends, 0 = none
     bool begun = false;
     char lastMac[18] = "";
     char pollCmd[28] = "";

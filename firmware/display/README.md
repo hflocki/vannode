@@ -149,7 +149,7 @@ Die Webseite liegt als lesbare Datei in `web/index.html`. Nach Änderungen daran
 1. Nach dem ersten Flashen zeigt das Display die Seite **System** mit einem QR-Code. Scannen (oder WLAN `Display-Node-XXXXXX`, Passwort `display1234` – in `config.h` ändern) → die Einstellungsseite öffnet sich.
 2. **WLAN** eintragen (Suchen-Knopf listet Netze), **MQTT-Broker** = IP des RUT956 → *Einstellungen speichern*. Das Display startet neu und verbindet sich.
 3. Danach ist die Webseite unter `http://display-node.local` bzw. der IP erreichbar; die System-Seite am Display zeigt die Adresse auch als QR-Code.
-4. Unter **Topics der Geräte** prüfen, ob die Basis-Topics zu deinen Geräten passen (Standard: `camper/tanklevel`, `camper/level`, `camper/heater`, `camper/maxxfan`, `camper/temp`, `camper/battery`; MaxxFan-Port 0/1). Leeres Feld = Gerät nicht vorhanden.
+4. Unter **Topics der Geräte** prüfen, ob die Basis-Topics zu deinen Geräten passen (Standard: `camper/tanklevel`, `camper/level`, `camper/heater`, `camper/maxxfan`, `camper/temp`, `camper/battery`, `camper/ble`, `camper/alde`, `camper/io`; MaxxFan-Port 0/1). Leeres Feld = Gerät nicht vorhanden. Alde-Heizung und IO-Node zeigt das Display noch nicht an; das Feld blendet ihre Home-Assistant-Anmeldungen in der Discovery des Topic-Finders aus.
 5. Optional unter **System** ein Web-Passwort setzen – dann sind Einstellungen und Firmware-Update geschützt. Die Bedienseiten bleiben im eigenen WLAN offen.
 
 ## Seiten und Kacheln

@@ -64,7 +64,7 @@ Passt zu den anderen Projekten:
 - **Verlauf der letzten 24 h** als Kurven auf der Webseite: Temperaturen, Ladestand bzw. Spannung der Batterien
 - **Warnungen für eigene Kacheln**, z. B. Landstrom über eine Zigbee-Messzange: Wert unter/über einer Grenze oder keine Daten mehr
 - Eigene MQTT-Topics für Helligkeit, Bildschirm an/aus und Seitenwechsel (z. B. aus Home Assistant)
-- **Tailscale (Beta):** Das Display kann selbst ins Tailnet, Webseite und eigener Broker sind dann von unterwegs erreichbar, siehe [Fernzugriff mit Tailscale](#fernzugriff-mit-tailscale-beta)
+- **Tailscale:** Das Display kann selbst ins Tailnet, Webseite und eigener Broker sind dann von unterwegs erreichbar, siehe [Fernzugriff mit Tailscale](#fernzugriff-mit-tailscale)
 
 ## Ordner
 
@@ -95,7 +95,7 @@ docs/                      Screenshots
 | `icons.*` | Symbole und Auswahl für die Temperatur- und Batterie-Kachel |
 | `weather.*` | Wetter von Open-Meteo (eigener Task), GPS-Position per MQTT, Wetter-Warnungen |
 | `depart.*` | Abfahrtscheck: Fahrt aus dem GPS des Routers, Tür, Markise, Kontakte |
-| `tailscale.*` | Tailscale (Beta): startet microlink, Status und Anmelde-Link für die Webseite |
+| `tailscale.*` | Tailscale: startet microlink, Status und Anmelde-Link für die Webseite |
 | `src/microlink/` | [microlink](https://github.com/CamM2325/microlink) 2.3.0 (MIT) mit wireguard-lwip (BSD-3-Clause), Tailscale-kompatibler Client; Herkunft und Anpassungen in `src/microlink/README.md` |
 | `font_de_*.c` | Montserrat mit Umlauten + Font-Awesome-Icons, erzeugt mit `tools/make_fonts.py` |
 | `logo_img.c` | VanNode-Symbol für Kopfzeile und QR-Code, erzeugt mit `tools/logo/make_logo.py` im Repo |
@@ -254,11 +254,11 @@ Die Seite **Dachhaube** zeigt den Zustand („Zu“, „Offen 40 %“, „Regen�
 
 Einschalten: *Einstellungen → 🖥 Anzeige → Seiten & Symbolleiste*, Haken bei **Dachhaube** (ab Werk aus). Die kleine Kachel für die Übersicht gibt es unter *Kacheln der Übersicht* → **Dachhaube**; sie zeigt den Zustand bzw. die Öffnung in %, gelb, solange die Haube offen ist. Antippen öffnet die Seite, das geht nur, wenn die Seite eingeschaltet ist. Basis-Topic unter *Topics der Geräte → BLE-Node* (Standard `camper/ble`, bis 2.21.4 `camper/tool` – wird beim Start umgestellt; leer = kein BLE-Node). Eine zweite Haube (`rvtech2`) zeigt das Display noch nicht.
 
-## Fernzugriff mit Tailscale (Beta)
+## Fernzugriff mit Tailscale
 
 Das Display kann selbst in dein [Tailscale](https://tailscale.com)-Netz (Tailnet): Webseite, Live-Werte und ein eingeschalteter eigener Broker sind dann von unterwegs unter seiner 100.x-Adresse erreichbar – ohne Portfreigabe am Router und ohne zusätzlichen Rechner im Camper. Grundlage ist [microlink](https://github.com/CamM2325/microlink) (MIT), ein unabhängiger, Tailscale-kompatibler Client für den ESP32. Er stammt nicht von Tailscale Inc. und kann nur einen Teil dessen, was der offizielle Client kann.
 
-- **Einschalten:** *Einstellungen → Verbindung → Tailscale (Beta)*, Haken setzen, speichern. Ab Werk aus; jede Änderung in dieser Karte startet das Display neu.
+- **Einschalten:** *Einstellungen → Verbindung → Tailscale*, Haken setzen, speichern. Ab Werk aus; jede Änderung in dieser Karte startet das Display neu.
 - **Anmelden per Link (ohne Auth-Key):** Nach dem Neustart steht in der Karte *Anmelde-Link öffnen*. Link öffnen und mit dem Tailscale-Konto bestätigen, das Display verbindet sich von selbst. Danach in der Tailscale-Verwaltung beim Display **Disable key expiry** wählen: Läuft der Schlüssel ab, kann sich das Display nicht selbst erneuern und muss neu angemeldet werden.
 - **Anmelden mit Auth-Key:** In der Tailscale-Verwaltung einen Auth-Key erzeugen und im Feld *Auth-Key* eintragen. Der Key liegt nur im Display (NVS), nicht im Repo und nicht in der Sicherungsdatei.
 - **Gerätename im Tailnet:** leer = Hostname (`display-node`). Mit MagicDNS ist das Display dann auch unter `http://display-node/` erreichbar.
@@ -363,7 +363,7 @@ Die Einstellungen sind in Gruppen geteilt, oben umschaltbar (die letzte Wahl mer
 | 🖥 Anzeige | Display (Helligkeit, Dimmen, Anzeigename) · Seiten & Symbolleiste · Home am Display · Home auf der Webseite · eigene Seiten & MQTT-Kacheln |
 | 📡 Sensoren & Geräte | Sensoren (Zigbee/Bluetooth) · Topics der Geräte (inkl. Heizung/CampMatic) · Geräte-Links · Topic-Finder |
 | ⚡ Automationen | Regeln mit eigenem Speichern-Knopf, siehe [Automationen](#automationen) |
-| 🔌 Verbindung | WLAN · MQTT-Broker · Tailscale (Beta) |
+| 🔌 Verbindung | WLAN · MQTT-Broker · Tailscale |
 | 🌦 Dienste | Wetter · Pushover |
 | 🔧 System | Gerätename, Login (immer an, ab Werk `admin` / `admin`; vergessen: `noauth` über USB), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
 

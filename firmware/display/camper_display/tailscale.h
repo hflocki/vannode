@@ -3,7 +3,7 @@
 // GNU GPL v3 with additional terms (section 7); third-party parts keep their own license.
 // See LICENSE and NOTICE.md. NO WARRANTY - use at your own risk (disclaimer in NOTICE.md).
 #pragma once
-// Tailscale on the display (beta, off by default).
+// Tailscale on the display (off by default).
 //
 // Puts the display into a tailnet with microlink (src/microlink, MIT, an independent
 // Tailscale-compatible client for ESP32). The web page, the WebSocket and the emergency

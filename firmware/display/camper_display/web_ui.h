@@ -1076,7 +1076,7 @@ function pgSettings(){
    <p class="mu" id="brkFbHint" style="margin-top:-4px" hidden>Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter <i>Ersatz-Broker</i> die <b>IP-Adresse des Displays</b> eintragen, dann wechseln sie mit.</p>
    <p class="mu" style="margin-top:-4px">Für Camper ohne Router mit Broker oder zum Testen: Das Display ist dann selbst der MQTT-Broker (Port wie oben, Benutzer und Passwort wie oben gelten für alle Geräte, leer = ohne Anmeldung). Das Feld <i>Broker</i> wird dann nicht gebraucht. Bei den anderen Geräten als Broker die <b>IP-Adresse des Displays</b> eintragen, am besten mit fester IP (Einstellungen → WLAN). Gespeicherte Nachrichten (retained) hält das Display nur im Speicher: Nach einem Neustart senden die Geräte ihre Werte von selbst neu, das dauert ein paar Sekunden. Ab Werk aus, Änderung startet das Display neu.</p>
    <p class="mu" id="brkst" hidden></p></details>
-  <details data-g="net" id="tssec"><summary>Tailscale (Beta)</summary>
+  <details data-g="net" id="tssec"><summary>Tailscale</summary>
    <p class="mu">Bringt das Display in dein Tailnet: Webseite und eigener Broker sind dann von unterwegs unter seiner 100.x-Adresse erreichbar, ohne Portfreigabe am Router. Gilt nur für das Display selbst, nicht für die anderen Geräte. Ab Werk aus, jede Änderung startet das Display neu.</p>
    <label class="chk"><input type="checkbox" id="tsOn"> Tailscale einschalten</label>
    <div class="f2">${inp('tsName','Gerätename im Tailnet (leer = Hostname)','text','display-node')}${inp('tsKey','Auth-Key (optional)','password','tskey-auth-…')}</div>
@@ -2135,7 +2135,6 @@ vnI18nAdd('en', {
   'Nur als Ersatz-Broker (bereit, wenn der Broker oben nicht erreichbar ist)': 'Fallback broker only (ready when the broker above cannot be reached)',
   'Das Display verbindet sich normal mit dem Broker oben. Ist er 2 Minuten nicht erreichbar, wechselt es auf den eigenen Broker und zurück, sobald er wieder da ist. Bei den anderen Geräten unter': 'The display normally connects to the broker above. If it cannot be reached for 2 minutes, the display switches to its own broker and back as soon as the broker returns. On the other devices enter under',
   'die': 'the', 'IP-Adresse des Displays': 'IP address of the display', 'eintragen, dann wechseln sie mit.': ', then they switch along.',
-  'Tailscale (Beta)': 'Tailscale (beta)',
   'Bringt das Display in dein Tailnet: Webseite und eigener Broker sind dann von unterwegs unter seiner 100.x-Adresse erreichbar, ohne Portfreigabe am Router. Gilt nur für das Display selbst, nicht für die anderen Geräte. Ab Werk aus, jede Änderung startet das Display neu.': 'Puts the display into your tailnet: the web page and the own broker are then reachable from anywhere under its 100.x address, without port forwarding on the router. Only the display itself, not the other devices. Off by default, every change restarts the display.',
   'Tailscale einschalten': 'Switch on Tailscale',
   'Gerätename im Tailnet (leer = Hostname)': 'Device name in the tailnet (empty = hostname)',

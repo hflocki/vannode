@@ -22,7 +22,7 @@
 #ifndef UI_LANG
 #define UI_LANG                 "de"
 #endif
-#define FW_VERSION              "2.27.6"
+#define FW_VERSION              "2.27.7"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -85,7 +85,7 @@
 #ifndef PUSH_TASK_STACK
 #define PUSH_TASK_STACK         (6 * 1024 + 512)
 #endif
-// Tailscale (beta, tailscale.h): switched on in the web UI, off by default.
+// Tailscale (tailscale.h): switched on in the web UI, off by default.
 // 0 leaves microlink out of the firmware (saves flash; the settings card then says so).
 #ifndef WITH_TAILSCALE
 #define WITH_TAILSCALE          1

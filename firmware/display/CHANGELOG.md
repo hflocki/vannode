@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `display-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 2.27.7 | **Tailscale ist kein Beta mehr:** Die Karte heißt jetzt *Einstellungen → Verbindung → Tailscale*, läuft seit einigen Tagen stabil. Funktion unverändert, ab Werk weiter aus; microlink bleibt ein unabhängiger, Tailscale-kompatibler Client (nicht von Tailscale Inc.). |
 | 2.27.6 | **Topics der neuen Nodes:** Unter *Topics der Geräte* gibt es jetzt *Alde-Heizung* (`camper/alde`) und *IO-Node* (`camper/io`). Ihre Home-Assistant-Anmeldungen sind damit in der Discovery des Topic-Finders ausgeblendet wie bei den anderen VanNode-Geräten. In der Geräteliste heißen sie „Alde-Heizung“ und „IO-Node“, bei den Geräte-Links gibt es Vorschläge für ble-node, alde-node und io-node. |
 | 2.27.5 | **Rund 12 kB mehr freier interner RAM:** Die Stacks der eigenen Tasks sind auf den gemessenen Bedarf plus Reserve verkleinert: Webserver 8 statt 16 kB (nur in der fertigen .bin aus dem Release, siehe README), Wetter 9 statt 12 kB, Pushover 6,5 statt 8 kB. |
 | 2.27.4 | **Tailscale braucht rund 14 kB weniger internen RAM:** Die Stacks der vier microlink-Tasks sind auf den gemessenen Bedarf plus etwa 2 kB Reserve verkleinert (zusammen 27,5 statt 42 kB). Die Stack-Reserve in der Tailscale-Karte zeigt jetzt auch die eigenen Tasks des Displays (Wetter, Pushover, Webserver) als Grundlage für die nächsten Einsparungen. |

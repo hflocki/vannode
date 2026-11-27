@@ -890,7 +890,31 @@ nav button .ico{display:inline-flex}
           ),
         );
         const box = el("div");
-        for (const f of fieldsOf(p)) box.append(field(f, p.cfg[f.k]));
+        // Expert fields (x, FF_EXPERT in plugin.h) sit in their own block behind a switch.
+        // The switch is not saved; it starts on when one of these fields is not empty.
+        const fs = fieldsOf(p);
+        const xs = fs.filter((f) => f.x);
+        for (const f of fs) if (!f.x) box.append(field(f, p.cfg[f.k]));
+        if (xs.length) {
+          const xbox = el("div");
+          for (const f of xs) xbox.append(field(f, p.cfg[f.k]));
+          const used = xs.some((f) => (f.t == "text" || f.t == "mac") && String(p.cfg[f.k] ?? "").trim() !== "");
+          xbox.hidden = !used;
+          const sw = el("input", {
+            type: "checkbox",
+            checked: used,
+            on: { change: (e) => (xbox.hidden = !e.target.checked) },
+          });
+          box.append(
+            el(
+              "div",
+              { className: "f" },
+              el("label", { style: "display:flex;gap:8px;align-items:center" }, sw, "Expertenmodus"),
+              el("small", {}, "Zeigt Einstellungen, die nur bei Problemen nötig sind (z. B. Bluetooth-UUIDs). Leer lassen = Standard."),
+            ),
+            xbox,
+          );
+        }
         c.append(box);
         c.append(
           el("button", {
@@ -2150,8 +2174,14 @@ function connect() {
   "Standard 5 s": "Default 5 s",
   "Kühlfach": "Fridge compartment",
   "Gefrierfach": "Freezer",
-  "Zweite Zone": "Second zone",
-  "Kühlschrank mit zweitem Fach / Gefrierfach": "Fridge with second compartment / freezer",
+  "Expertenmodus": "Expert mode",
+  "Zeigt Einstellungen, die nur bei Problemen nötig sind (z. B. Bluetooth-UUIDs). Leer lassen = Standard.": "Shows settings that are only needed for troubleshooting (e.g. Bluetooth UUIDs). Leave empty = default.",
+  "Der Kühlschrank hat ein Kühlfach.": "The fridge has a fridge compartment.",
+  "Der Kühlschrank hat ein Gefrierfach.": "The fridge has a freezer.",
+  "Beide an = zwei Zonen: Zone 1 Gefrierfach, Zone 2 Kühlfach.": "Both on = two zones: zone 1 freezer, zone 2 fridge compartment.",
+  "Nur eins an = eine Zone (Zone 1).": "Only one on = one zone (zone 1).",
+  "Leer = Gefrierfach bzw. bei nur einem Fach dessen Name.": "Empty = freezer, or with one compartment its name.",
+  "Leer = Kühlfach. Nur mit beiden Fächern.": "Empty = fridge compartment. Only with both compartments.",
   "Name Zone 1": "Name zone 1",
   "Name Zone 2": "Name zone 2",
   "Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …": "Display only, the MQTT topics stay zone1 / temp1 …",

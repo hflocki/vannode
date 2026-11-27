@@ -33,7 +33,7 @@ const M = {
       // devices with a Bluetooth connection
       P('rvtech', 'rvtech', 'Dachhaube RV Tech', 2, {name: 'Dachhaube', mac: MAC(1), pin: '', pos_rain: 12, pos_vent: 0, pos_fav: 0}),
       P('pump', 'pump', 'Wasserpumpe CaraWater', 2, {name: 'Wasserpumpe', mac: MAC(2), model: 'ISP 15'}),
-      P('fridge', 'fridge', 'Kühlschrank WCS', 2, {name: 'Kühlschrank', mac: MAC(3), pin: '', zone2: true, name1: '', name2: '',
+      P('fridge', 'fridge', 'Kühlschrank WCS', 2, {name: 'Kühlschrank', mac: MAC(3), pin: '', fridge: true, zone2: true, name1: '', name2: '',
         service: '', notify: '', write: '', poll: '', poll_s: 5, night_auto: true, night_on: '22:00', night_off: '08:00'}),
       P('wipro', 'wipro', 'Alarm WiPro III (nur lesen)', 2, {name: 'Alarmanlage', mac: MAC(4), pin: '',
         names: 'Tür vorn,Tür hinten,Heckklappe,Fenster', service: '', notify: ''}),
@@ -69,13 +69,14 @@ const M = {
              {k: 'model', l: 'Modell', t: 'text', max: 23, h: 'Nur Anzeige in Home Assistant, z. B. ISP 15'}],
       fridge: [{k: 'mac', l: 'Kühlschrank-MAC', t: 'mac', h: 'Über "Suchen" aus der Liste wählen'},
                {k: 'pin', l: 'App-Passwort', t: 'text', max: 7, h: 'Das Passwort der WCS-App (Werkseinstellung 1234). Leer = 1234. Keine Bluetooth-Kopplung nötig.'},
-               {k: 'zone2', l: 'Zweite Zone', t: 'bool', h: 'Kühlschrank mit zweitem Fach / Gefrierfach'},
-               {k: 'name1', l: 'Name Zone 1', t: 'text', max: 23, h: 'Leer = Gefrierfach (bei einer Zone: Innenraum). Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …'},
-               {k: 'name2', l: 'Name Zone 2', t: 'text', max: 23, h: 'Leer = Kühlfach'},
-               {k: 'service', l: 'Service-UUID', t: 'text', max: 39, h: 'Leer = E530 (Standard), * = alle Services'},
-               {k: 'notify', l: 'Notify-UUID', t: 'text', max: 39, h: 'Leer = E532 (Standard), * = jede, die senden kann'},
-               {k: 'write', l: 'Write-UUID', t: 'text', max: 39, h: 'Leer = E531 (Standard)'},
-               {k: 'poll', l: 'Abfragebefehl', t: 'text', max: 39, h: 'Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt'},
+               {k: 'fridge', l: 'Kühlfach', t: 'bool', h: 'Der Kühlschrank hat ein Kühlfach.'},
+               {k: 'zone2', l: 'Gefrierfach', t: 'bool', h: 'Der Kühlschrank hat ein Gefrierfach. Beide an = zwei Zonen: Zone 1 Gefrierfach, Zone 2 Kühlfach. Nur eins an = eine Zone (Zone 1).'},
+               {k: 'name1', l: 'Name Zone 1', t: 'text', max: 23, h: 'Leer = Gefrierfach bzw. bei nur einem Fach dessen Name. Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …'},
+               {k: 'name2', l: 'Name Zone 2', t: 'text', max: 23, h: 'Leer = Kühlfach. Nur mit beiden Fächern.'},
+               {k: 'service', l: 'Service-UUID', t: 'text', max: 39, h: 'Leer = E530 (Standard), * = alle Services', x: true},
+               {k: 'notify', l: 'Notify-UUID', t: 'text', max: 39, h: 'Leer = E532 (Standard), * = jede, die senden kann', x: true},
+               {k: 'write', l: 'Write-UUID', t: 'text', max: 39, h: 'Leer = E531 (Standard)', x: true},
+               {k: 'poll', l: 'Abfragebefehl', t: 'text', max: 39, h: 'Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt', x: true},
                {k: 'poll_s', l: 'Abfrage alle', t: 'int', min: 2, max: 3600, u: 's', h: 'Standard 5 s'},
                {k: 'night_auto', l: 'Nachtschaltung automatisch', t: 'bool', h: 'Schaltet zur Beginn-Zeit den Nachtmodus ein (die Umluft geht dabei aus) und zur Ende-Zeit wieder aus und die Umluft ein. Nur zu diesen Zeiten, von Hand Geschaltetes bleibt bis zur nächsten Zeit.'},
                {k: 'night_on', l: 'Nachtmodus ab', t: 'text', max: 5, h: 'Uhrzeit HH:MM, Standard 22:00'},
@@ -1499,7 +1500,31 @@ nav button .ico{display:inline-flex}
           ),
         );
         const box = el("div");
-        for (const f of fieldsOf(p)) box.append(field(f, p.cfg[f.k]));
+        // Expert fields (x, FF_EXPERT in plugin.h) sit in their own block behind a switch.
+        // The switch is not saved; it starts on when one of these fields is not empty.
+        const fs = fieldsOf(p);
+        const xs = fs.filter((f) => f.x);
+        for (const f of fs) if (!f.x) box.append(field(f, p.cfg[f.k]));
+        if (xs.length) {
+          const xbox = el("div");
+          for (const f of xs) xbox.append(field(f, p.cfg[f.k]));
+          const used = xs.some((f) => (f.t == "text" || f.t == "mac") && String(p.cfg[f.k] ?? "").trim() !== "");
+          xbox.hidden = !used;
+          const sw = el("input", {
+            type: "checkbox",
+            checked: used,
+            on: { change: (e) => (xbox.hidden = !e.target.checked) },
+          });
+          box.append(
+            el(
+              "div",
+              { className: "f" },
+              el("label", { style: "display:flex;gap:8px;align-items:center" }, sw, "Expertenmodus"),
+              el("small", {}, "Zeigt Einstellungen, die nur bei Problemen nötig sind (z. B. Bluetooth-UUIDs). Leer lassen = Standard."),
+            ),
+            xbox,
+          );
+        }
         c.append(box);
         c.append(
           el("button", {
@@ -2759,8 +2784,14 @@ function connect() {
   "Standard 5 s": "Default 5 s",
   "Kühlfach": "Fridge compartment",
   "Gefrierfach": "Freezer",
-  "Zweite Zone": "Second zone",
-  "Kühlschrank mit zweitem Fach / Gefrierfach": "Fridge with second compartment / freezer",
+  "Expertenmodus": "Expert mode",
+  "Zeigt Einstellungen, die nur bei Problemen nötig sind (z. B. Bluetooth-UUIDs). Leer lassen = Standard.": "Shows settings that are only needed for troubleshooting (e.g. Bluetooth UUIDs). Leave empty = default.",
+  "Der Kühlschrank hat ein Kühlfach.": "The fridge has a fridge compartment.",
+  "Der Kühlschrank hat ein Gefrierfach.": "The fridge has a freezer.",
+  "Beide an = zwei Zonen: Zone 1 Gefrierfach, Zone 2 Kühlfach.": "Both on = two zones: zone 1 freezer, zone 2 fridge compartment.",
+  "Nur eins an = eine Zone (Zone 1).": "Only one on = one zone (zone 1).",
+  "Leer = Gefrierfach bzw. bei nur einem Fach dessen Name.": "Empty = freezer, or with one compartment its name.",
+  "Leer = Kühlfach. Nur mit beiden Fächern.": "Empty = fridge compartment. Only with both compartments.",
   "Name Zone 1": "Name zone 1",
   "Name Zone 2": "Name zone 2",
   "Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …": "Display only, the MQTT topics stay zone1 / temp1 …",

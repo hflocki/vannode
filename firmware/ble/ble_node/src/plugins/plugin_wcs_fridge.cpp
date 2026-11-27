@@ -65,8 +65,10 @@
 struct WcsCfg {
     char mac[18];
     char pin[8];           // App password (digits), empty = factory default 1234
-    bool zone2;            // Fridge has a second zone (freezer)
-    char name1[24];        // Display name of zone 1, empty = "Gefrierfach" / "Innenraum"
+    bool fridge;           // Fridge has a fridge compartment
+    bool freezer;          // Fridge has a freezer (JSON key "zone2": before 2.8.2 "second zone")
+                           // Both = two zones (zone 1 freezer, zone 2 fridge), one = zone 1 only
+    char name1[24];        // Display name of zone 1, empty = "Gefrierfach" / "Kühlfach" (see zoneName())
     char name2[24];        // Display name of zone 2, empty = "Kühlfach"
     char service[40];      // GATT service UUID, empty = E530, "*" = all services
     char notify[40];       // Notify characteristic, empty = E532, "*" = every one that can notify
@@ -82,14 +84,19 @@ static const Field WCS_FIELDS[] = {
     FLD_MAC(WcsCfg, mac, "mac", "Kühlschrank-MAC", "Über \"Suchen\" aus der Liste wählen"),
     FLD_TEXT(WcsCfg, pin, "pin", "App-Passwort", "Das Passwort der WCS-App (Werkseinstellung 1234). "
                                             "Leer = 1234. Keine Bluetooth-Kopplung nötig."),
-    FLD_BOOL(WcsCfg, zone2, "zone2", "Zweite Zone", "Kühlschrank mit zweitem Fach / Gefrierfach"),
-    FLD_TEXT(WcsCfg, name1, "name1", "Name Zone 1", "Leer = Gefrierfach (bei einer Zone: Innenraum). "
+    // The key of "freezer" stays "zone2": old settings (zone2 = second compartment) keep their meaning
+    FLD_BOOL(WcsCfg, fridge, "fridge", "Kühlfach", "Der Kühlschrank hat ein Kühlfach."),
+    FLD_BOOL(WcsCfg, freezer, "zone2", "Gefrierfach", "Der Kühlschrank hat ein Gefrierfach. "
+                                       "Beide an = zwei Zonen: Zone 1 Gefrierfach, Zone 2 Kühlfach. "
+                                       "Nur eins an = eine Zone (Zone 1)."),
+    FLD_TEXT(WcsCfg, name1, "name1", "Name Zone 1", "Leer = Gefrierfach bzw. bei nur einem Fach dessen Name. "
                                               "Nur die Anzeige, die MQTT-Topics bleiben zone1 / temp1 …"),
-    FLD_TEXT(WcsCfg, name2, "name2", "Name Zone 2", "Leer = Kühlfach"),
-    FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = E530 (Standard), * = alle Services"),
-    FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = E532 (Standard), * = jede, die senden kann"),
-    FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard)"),
-    FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt"),
+    FLD_TEXT(WcsCfg, name2, "name2", "Name Zone 2", "Leer = Kühlfach. Nur mit beiden Fächern."),
+    // Expert settings: only shown with "Expertenmodus" in the web UI
+    fieldExpert(FLD_TEXT(WcsCfg, service, "service", "Service-UUID", "Leer = E530 (Standard), * = alle Services")),
+    fieldExpert(FLD_TEXT(WcsCfg, notify, "notify", "Notify-UUID", "Leer = E532 (Standard), * = jede, die senden kann")),
+    fieldExpert(FLD_TEXT(WcsCfg, write, "write", "Write-UUID", "Leer = E531 (Standard)")),
+    fieldExpert(FLD_TEXT(WcsCfg, poll, "poll", "Abfragebefehl", "Leer = /SC0/1/-01 (Standard). \\r und \\n erlaubt")),
     FLD_INT(WcsCfg, poll_s, "poll_s", "Abfrage alle", "s", 2, 3600, "Standard 5 s"),
     FLD_BOOL(WcsCfg, night_auto, "night_auto", "Nachtschaltung automatisch",
              "Schaltet zur Beginn-Zeit den Nachtmodus ein (die Umluft geht dabei aus) und zur Ende-Zeit "
@@ -145,12 +152,14 @@ public:
     void* cfg() override { return &c; }
     void setDefaults() override {
         memset(&c, 0, sizeof(c));
-        c.zone2 = true;
+        c.fridge = true;
+        c.freezer = true;
         c.poll_s = 5;
         strlcpy(c.night_on, "22:00", sizeof(c.night_on));
         strlcpy(c.night_off, "08:00", sizeof(c.night_off));
     }
     void onConfigChanged() override {
+        if (!c.fridge && !c.freezer) c.fridge = true;   // At least one compartment
         if (strcmp(c.mac, lastMac) != 0) {
             strlcpy(lastMac, c.mac, sizeof(lastMac));
             hasData = false;
@@ -190,6 +199,7 @@ public:
         if (link.changes != lastLinkChanges) {
             lastLinkChanges = link.changes;
             lineLen = 0;
+            zoneHint = false;
             if (login != WL_FAILED) login = WL_IDLE;
             // An error is reported again after the next connect if it is still active
             errorCode = 0;
@@ -232,9 +242,9 @@ public:
         else strlcpy(sub, "Soll –", sizeof(sub));
         // Set point with - / + in 1 °C steps instead of a slider
         JsonObject z = liveZone(o, zoneName(1), hasData ? temp1 : NAN, 0, "°C", sub,
-                                c.zone2 && ctl && zonesKnown ? "zone1" : nullptr, (zones & 1) != 0);
+                                twoZones() && ctl && zonesKnown ? "zone1" : nullptr, (zones & 1) != 0);
         if (ctl && !isnan(set1)) liveZoneStep(z, "target1", (int)lroundf(set1), WCS_SET_MIN, WCS_SET_MAX);
-        if (c.zone2) {
+        if (twoZones()) {
             if (hasData && !isnan(set2)) snprintf(sub, sizeof(sub), "Soll %.0f °C", set2);
             else strlcpy(sub, "Soll –", sizeof(sub));
             z = liveZone(o, zoneName(2), hasData ? temp2 : NAN, 0, "°C", sub,
@@ -260,7 +270,7 @@ public:
         }
         if (limitsKnown) {
             char lim[40];
-            if (c.zone2) snprintf(lim, sizeof(lim), "%d…%d / %d…%d °C", min1, max1, min2, max2);
+            if (twoZones()) snprintf(lim, sizeof(lim), "%d…%d / %d…%d °C", min1, max1, min2, max2);
             else snprintf(lim, sizeof(lim), "%d…%d °C", min1, max1);
             liveRowText(o, "Grenzen laut Gerät", lim);
         }
@@ -271,10 +281,10 @@ public:
             if (fanKnown) liveCtrl(o, "switch", "fan", "Umluft")["v"] = fanOn;
             liveCtrl(o, "switch", "night", "Nachtmodus")["v"] = sleepOn();
             char ql[48];
-            if (c.zone2) snprintf(ql, sizeof(ql), "Schnellkühlen %s", zoneName(1));
+            if (twoZones()) snprintf(ql, sizeof(ql), "Schnellkühlen %s", zoneName(1));
             else strlcpy(ql, "Schnellkühlen", sizeof(ql));
             liveCtrl(o, "switch", "quick1", ql)["v"] = quickOn(0);
-            if (c.zone2) {
+            if (twoZones()) {
                 snprintf(ql, sizeof(ql), "Schnellkühlen %s", zoneName(2));
                 liveCtrl(o, "switch", "quick2", ql)["v"] = quickOn(1);
             }
@@ -296,7 +306,7 @@ public:
     bool entityActive(const Entity& e) override {
         if (!strcmp(e.key, "temp2") || !strcmp(e.key, "set2") || !strcmp(e.key, "target2") ||
             !strcmp(e.key, "quick2") ||
-            !strcmp(e.key, "zone1") || !strcmp(e.key, "zone2")) return c.zone2;
+            !strcmp(e.key, "zone1") || !strcmp(e.key, "zone2")) return twoZones();
         return true;
     }
     // "{1}" / "{2}" in the entity names become the zone names from the settings
@@ -323,9 +333,9 @@ public:
         if (fanKnown) out.onoff("fan", fanOn);
         out.onoff("night", sleepOn());
         out.onoff("quick1", quickOn(0));
-        if (c.zone2) out.onoff("quick2", quickOn(1));
+        if (twoZones()) out.onoff("quick2", quickOn(1));
         if (doorKnown) out.onoff("doorheat", doorOn);
-        if (c.zone2) {
+        if (twoZones()) {
             if (zonesKnown) {
                 out.onoff("zone1", (zones & 1) != 0);
                 out.onoff("zone2", (zones & 2) != 0);
@@ -534,6 +544,7 @@ private:
     bool doorKnown = false;
     int zones = 0;                // Zones running (status field 11): bit 1 = zone 1, bit 2 = zone 2
     bool zonesKnown = false;
+    bool zoneHint = false;        // Zone count hint logged in this connection
     int min1 = WCS_SET_MIN, max1 = WCS_SET_MAX, min2 = WCS_SET_MIN, max2 = WCS_SET_MAX;
     bool limitsKnown = false;   // f15..f18 received (shown and logged only)
     int rawLim[4] = {0, 0, 0, 0};
@@ -695,12 +706,15 @@ private:
     // Quick cooling of zone 0 / 1: digit "3" in the mode field
     bool quickOn(int z) const { return strlen(mode) == 2 && mode[z] == '3'; }
 
+    // Two zones only with both compartments switched on
+    bool twoZones() const { return c.fridge && c.freezer; }
+
     // Compartment names from the settings; defaults: with two zones zone 1 is the
-    // freezer, zone 2 the fridge
+    // freezer, zone 2 the fridge; with one zone the compartment that is switched on
     const char* zoneName(int zone) const {
         if (zone == 2) return c.name2[0] ? c.name2 : "Kühlfach";
         if (c.name1[0]) return c.name1;
-        return c.zone2 ? "Gefrierfach" : "Innenraum";
+        return c.freezer ? "Gefrierfach" : "Kühlfach";
     }
 
     const char* modeText() const {
@@ -709,7 +723,7 @@ private:
             static char b[48];
             if (mode[0] == '3' && mode[1] == '3') return "Schnellkühlen beide Fächer";
             if (mode[0] == '3') {
-                if (!c.zone2) return "Schnellkühlen";
+                if (!twoZones()) return "Schnellkühlen";
                 snprintf(b, sizeof(b), "Schnellkühlen %s", zoneName(1));
                 return b;
             }
@@ -872,7 +886,12 @@ private:
         strlcpy(oldMode, mode, sizeof(oldMode));
 
         int v;
-        if (toInt(tok[0], v) && !c.zone2 && v == 2) devlogf(id, "Fridge reports 2 zones: enable \"Zweite Zone\"");
+        // Number of zones does not match the settings: hint once per connection
+        if (toInt(tok[0], v) && !zoneHint && (v == 2) != twoZones() && (v == 1 || v == 2)) {
+            zoneHint = true;
+            if (v == 2) devlogf(id, "Fridge reports 2 zones: switch on \"Kühlfach\" and \"Gefrierfach\"");
+            else devlogf(id, "Fridge reports 1 zone: switch off \"Kühlfach\" or \"Gefrierfach\"");
+        }
         if (toInt(tok[1], v)) powerOn = v == 1;
         if (toInt(tok[2], v)) unit = v == 2 ? 2 : 1;
         temp1 = toInt(tok[3], v) ? toCelsius(v) : NAN;

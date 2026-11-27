@@ -249,6 +249,7 @@ void pluginSchemaToJson(Plugin* p, JsonArray arr) {
         if (f[i].unit) o["u"] = fixed(f[i].unit);
         if (f[i].options) o["o"] = fixed(f[i].options);
         if (f[i].help) o["h"] = fixed(f[i].help);
+        if (f[i].flags & FF_EXPERT) o["x"] = true;
     }
 }
 

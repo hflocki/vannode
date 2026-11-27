@@ -107,7 +107,7 @@
 #ifndef UI_LANG
 #define UI_LANG               "de"
 #endif
-#define FW_VERSION            "2.8.1"
+#define FW_VERSION            "2.8.2"
 #define FW_DEVICE             "ble"       // device id in the firmware marker (fwcheck.h); up to 2.5.0 "toolbox",
                                           // so devices with 2.5.0 or older need one Arduino IDE upload
 #define NODE_TITLE            "BLE Node"  // web page without index.html.gz, Home Assistant model, serial

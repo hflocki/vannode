@@ -284,14 +284,14 @@ Jedes Plugin hat eine eigene ID: `rvtech` (Dachhaube), `pump` (CaraWater), `frid
 | `…/cmd/shelly/output/set` | `ON` / `OFF` schaltet den Ausgang des Shelly (nicht retained) |
 | `…/blesensor/v1` … `v3`, `rssi`, `raw` | Eigener BLE-Sensor: die eingetragenen Werte, Signal, Rohdaten (Hex) |
 
-**Kühlschrank** (`fridge`). Die Topics heißen nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welches Fach das ist, legen die Felder *Name Zone 1/2* fest (leer = Gefrierfach / Kühlfach, bei einer Zone Innenraum).
+**Kühlschrank** (`fridge`). Die Topics heißen nach der Zone (`…1` = Zone 1, `…2` = Zone 2); welche Fächer es gibt, legen die Schalter *Kühlfach* und *Gefrierfach* fest (beide = Zone 1 Gefrierfach, Zone 2 Kühlfach; nur eins = nur Zone 1), die Felder *Name Zone 1/2* nur die Anzeige.
 
 | Topic | Inhalt |
 | --- | --- |
 | `…/fridge/temp1`, `temp2`, `set1`, `set2` | Ist- und Soll-Temperatur in °C |
 | `…/fridge/voltage`, `battery` | Spannung in V, Batterie in % (laut Kühlschrank) |
 | `…/fridge/fan`, `night` | `ON` / `OFF`: Umluft (im Nachtmodus aus), Nachtmodus |
-| `…/fridge/zone1`, `zone2` | `ON` / `OFF`: Zone läuft (nur mit „Zweite Zone“) |
+| `…/fridge/zone1`, `zone2` | `ON` / `OFF`: Zone läuft (nur mit beiden Fächern) |
 | `…/fridge/quick1`, `quick2`, `doorheat` | `ON` / `OFF`: Schnellkühlen Zone 1 / 2, Türheizung |
 | `…/fridge/error` | aktueller Fehler: E1 Unterspannung, E2 Lüfter, E3 Anlauf Kompressor, E4 Kompressor, E5 Kompressorsteuerung, E6 Temperaturfühler, E7 Tür offen |
 | `…/fridge/error_last` | letzter Fehler mit Zeit, bleibt nach dem Ende stehen |

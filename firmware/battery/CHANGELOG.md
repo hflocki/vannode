@@ -4,6 +4,7 @@ Neueste Version oben. Der Abschnitt einer Version erscheint beim Tag `battery-v<
 
 | Version | Änderungen |
 | --- | --- |
+| 2.7.1 | Gemeinsamer Bluetooth-Kern mit dem ble-node 2.8.2: Plugins können Einstellungen als Experten-Einstellung kennzeichnen, die Webseite zeigt sie erst mit dem Schalter *Expertenmodus*. Für die Batterie-Plugins ändert sich nichts. |
 | 2.7.0 | **Ersatz-Broker:** neues Feld *Ersatz-Broker* in den MQTT-Einstellungen (`IP` oder `IP:Port`, leer = aus). Ist der Broker 2 Minuten nicht erreichbar, verbindet sich das Gerät mit dem Ersatz-Broker (z. B. dem Display mit eingeschaltetem Broker), prüft alle 5 Minuten, ob der Broker wieder da ist, und wechselt dann zurück. Wechsel stehen bei den Ereignissen, solange der Ersatz-Broker benutzt wird, zeigt die Karte *Ereignisse* einen Hinweis; `/api/system` meldet `mqttfb`. |
 | 2.6.8 | Gemeinsamer Bluetooth-Kern mit dem ble-node 2.7.0 (Schreiben auf weitere Kennlinien eines verbundenen Geräts, für Shelly im ble-node). **Webseite auf Englisch:** `#define UI_LANG "en"` in `config_local.h` (vor dem Flashen); ohne Eintrag bleibt alles Deutsch (die Release-.bin ist Deutsch). |
 | 2.6.7 | **Behoben: Seite blieb auf iPhone/iPad (Safari) nach dem Login leer bzw. ohne Live-Werte.** Safari schickt die Anmeldung beim WebSocket nicht mit. Die Seite holt sich jetzt nach dem Login einen Schlüssel (`/api/wstoken`, gemeinsamer Baustein `wsauth.h`) und öffnet den WebSocket damit; andere Browser gehen wie bisher. Gemeinsamer BLE-Kern wie ble 2.6.6. |

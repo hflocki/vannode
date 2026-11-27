@@ -51,14 +51,21 @@ struct Field {
     const char* unit;      // Web UI only (nullptr = none)
     const char* options;   // F_SELECT: "A|B|C"
     const char* help;      // Hint below the input (nullptr = none)
+    uint8_t flags;         // FF_* (0 = none); the FLD_* macros leave it 0
 };
 
-#define FLD_TEXT(S, m, key, label, help)  {key, label, F_TEXT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(((S*)0)->m), 0, 0, 0, nullptr, nullptr, help}
-#define FLD_MAC(S, m, key, label, help)   {key, label, F_MAC, (uint16_t)offsetof(S, m), (uint16_t)sizeof(((S*)0)->m), 0, 0, 0, nullptr, nullptr, help}
-#define FLD_FLOAT(S, m, key, label, unit, mn, mx, st, help) {key, label, F_FLOAT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(float), mn, mx, st, unit, nullptr, help}
-#define FLD_INT(S, m, key, label, unit, mn, mx, help) {key, label, F_INT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(int32_t), mn, mx, 1, unit, nullptr, help}
-#define FLD_BOOL(S, m, key, label, help)  {key, label, F_BOOL, (uint16_t)offsetof(S, m), (uint16_t)sizeof(bool), 0, 1, 1, nullptr, nullptr, help}
-#define FLD_SELECT(S, m, key, label, opts, help) {key, label, F_SELECT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(uint8_t), 0, 0, 1, nullptr, opts, help}
+// Field flags
+#define FF_EXPERT    0x01   // Web UI shows the field only with the "Expertenmodus" switch on
+
+// Marks a field as expert setting: fieldExpert(FLD_TEXT(...))
+constexpr Field fieldExpert(Field f) { f.flags |= FF_EXPERT; return f; }
+
+#define FLD_TEXT(S, m, key, label, help)  {key, label, F_TEXT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(((S*)0)->m), 0, 0, 0, nullptr, nullptr, help, 0}
+#define FLD_MAC(S, m, key, label, help)   {key, label, F_MAC, (uint16_t)offsetof(S, m), (uint16_t)sizeof(((S*)0)->m), 0, 0, 0, nullptr, nullptr, help, 0}
+#define FLD_FLOAT(S, m, key, label, unit, mn, mx, st, help) {key, label, F_FLOAT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(float), mn, mx, st, unit, nullptr, help, 0}
+#define FLD_INT(S, m, key, label, unit, mn, mx, help) {key, label, F_INT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(int32_t), mn, mx, 1, unit, nullptr, help, 0}
+#define FLD_BOOL(S, m, key, label, help)  {key, label, F_BOOL, (uint16_t)offsetof(S, m), (uint16_t)sizeof(bool), 0, 1, 1, nullptr, nullptr, help, 0}
+#define FLD_SELECT(S, m, key, label, opts, help) {key, label, F_SELECT, (uint16_t)offsetof(S, m), (uint16_t)sizeof(uint8_t), 0, 0, 1, nullptr, opts, help, 0}
 
 // ---- Home Assistant entities --------------------------------------------
 enum EntityKind : uint8_t {

@@ -28,6 +28,7 @@
 // BINARY_KEYS become binary sensors), plus WiFi signal, status and a "send now" button.
 // Values of the heater bus only with lin_enabled, values of the external panel bus only
 // with ci_mode 1 or 2, control entities (number, switch, selects) only with ci_mode 2.
+// With the Truma iNet X connection (config.link) the panel bus entities are always on.
 
 #define HA_NODE_ID  "camper_alde"
 
@@ -342,7 +343,10 @@ void mqttPublishDiscovery() {
         const ValueDef& v = VALUES[i];
         bool isBinary;
         const char* binClass = binaryClass(v.key, &isBinary);
-        bool off = v.ci ? (config.ci_mode == 0 || config.ci_mode == 3 || !sensorCiPossible()) : !sensorLinActive();
+        uint8_t cm = sensorCiMode();
+        bool off = v.ci ? (cm == 0 || cm == 3 || !sensorCiPossible()) : !sensorLinActive();
+        // Not reported over the iNet X panel
+        if (sensorInetx() && (!strcmp(v.key, "pump") || !strcmp(v.key, "ac_input"))) off = true;
         if (off) {
             removeEntity(isBinary ? "binary_sensor" : "sensor", v.key);
             continue;
@@ -350,7 +354,7 @@ void mqttPublishDiscovery() {
         if (isBinary) publishBinary(v.name, v.key, binClass, v.icon);
         else publishSensor(v.name, v.key, topic(v.key), v.unit, v.devClass, v.icon, v.decimals, true);
     }
-    publishControls(config.ci_mode == 2 && sensorCiPossible());
+    publishControls(sensorCiMode() == 2 && sensorCiPossible());
     publishSensor("WLAN Signal", "rssi", topic("rssi"), "dBm", "signal_strength", "mdi:wifi", 0, true);
     publishSensor("Status", "status", topic("status"), "", nullptr, "mdi:check-circle", -1, false);
     publishButton("Jetzt senden", "measure", "measure", "mdi:refresh");

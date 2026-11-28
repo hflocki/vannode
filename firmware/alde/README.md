@@ -23,6 +23,8 @@ Der Heizbus ist bisher nur an der Compact 3020 HE dekodiert; an der 3030 kann er
 
 Auf dem Heizbus ist das Bedienteil Master, dort lässt sich nichts steuern (ausführlich: [CONTROL-NOT-SOLVED.md](https://github.com/Mellowgroup-dk/alde-3020he-lin/blob/main/docs/CONTROL-NOT-SOLVED.md)). Am externen Anschluss ist das Bedienteil dagegen Slave und nimmt Befehle an – so wie von einem Fremd-Bedienteil. Der Bedienteil-Bus ist ab Werk **aus**.
 
+**Ohne Verkabelung:** Hängt die Alde an einem **Truma-iNet-X-Panel**, kann sich der Node stattdessen per **Bluetooth** mit dem Panel verbinden (Anschluss „BLE (Truma iNet X)“, siehe [unten](#anschluss-ble-truma-inet-x-experimentell)) – experimentell, noch nicht im Fahrzeug getestet.
+
 Teil des Verbunds [VanNode](../../README.md): eigene **Web-Oberfläche**, Home-Assistant-Discovery, Updates ohne USB.
 
 ## Funktionen
@@ -138,7 +140,7 @@ Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, Littl
 | Einstellung | Wert |
 |---|---|
 | Board | ESP32 DevKit (Release-Datei `alde-node-esp32`) oder ESP32-S3 (`alde-node-esp32s3`, Board *ESP32S3 Dev Module*, USB CDC On Boot an); ESP32-C3 geht auch (siehe *Welcher ESP*) |
-| Zusätzliche Bibliotheken | keine |
+| Zusätzliche Bibliotheken | NimBLE-Arduino 2.5.1 (h2zero), auch wenn nur LIN genutzt wird |
 | Web-Oberfläche | einmalig über das Upload-Formular (`http://<ip>/` → `data/index.html.gz`) |
 
 ## Updates ohne USB
@@ -175,12 +177,43 @@ Ist nur der Bedienteil-Bus verdrahtet: **Einstellungen → Heizbus** ausschalten
 | Reiter | Inhalt |
 |---|---|
 | Live | Werte, Heizung steuern (bei „Lesen und steuern“) |
-| Alde | Heizbus und Bedienteil-Bus: Modus, Heizung, Heizstab-Höchststufe |
+| Alde | Anschluss (LIN-Bus / BLE Truma iNet X, Koppeln), Heizbus und Bedienteil-Bus: Modus, Heizung, Heizstab-Höchststufe |
 | MQTT, WiFi | Verbindungen |
 | Einstellungen | Firmware-Update, Über VanNode, Ereignisse, Schalter **Debug**, Neustart |
 | Debug | nur mit Debug oder im Modus „Nur mithören“: Bus-Statistik, Mithör-Tabelle, Log-Fenster |
 
 **Debug** (Reiter Einstellungen) schreibt zusätzlich jede Signaländerung am Heizbus und die Frames am Bedienteil-Bus ins Log (dasselbe wie der serielle Befehl `sig`). Das Log liegt im RAM (16 kB, älteste Zeilen fallen raus) und ist nach einem Neustart leer. **Herunterladen** speichert es als `.log`-Datei, vorne mit Firmware-Version, Einstellungen (ohne WLAN-, MQTT- und Zugangsdaten) und Bus-Statistik – so bitte an die Entwicklung schicken. **Zustand ins Log** schreibt alle aktuellen Werte dazu (wie der serielle Befehl `read`).
+
+## Anschluss BLE (Truma iNet X, experimentell)
+
+Für Fahrzeuge, in denen die Alde von einem **Truma-iNet-X-Panel** bedient wird: Der Node verbindet sich per Bluetooth mit dem Panel – so wie die Truma-App – und braucht **keinen LIN-Transceiver und keine Verkabelung** außer der Stromversorgung. Der ESP muss nur in Funkreichweite des Panels sein.
+
+**Umschalten:** Web-UI → **Alde → Anschluss** → „BLE (Truma iNet X)“ → Speichern. Das Gerät startet neu; die LIN-Busse werden dann gar nicht geöffnet. Zurück geht es genauso mit „LIN-Bus“.
+
+**Koppeln (einmalig):**
+
+1. Am Panel (oder in der Truma-App) **„Gerät hinzufügen“** öffnen.
+2. Im Reiter **Alde** auf **Koppeln** drücken. Für 3 Minuten darf der Node sich koppeln („Just Works“, ohne PIN), danach verbindet er sich nach jedem Neustart von selbst.
+3. Das Panel speichert nur wenige Kopplungen (etwa 4). Ist es voll, dort eine alte löschen. **Kopplung löschen** im Web-UI entfernt nur die Seite des ESP – am Panel dann ebenfalls löschen.
+
+**Was der Node dabei macht:** verbinden, anmelden (das Panel vergibt eine Bus-Adresse), die Themen der Heizung abonnieren, sich als „VanNode Alde“ ausweisen und alle Geräte am Panel nach ihren Werten fragen. Danach meldet das Panel jede Änderung von selbst; alle 45 s fragt der Node etwas Kleines nach, damit die Verbindung als lebendig gilt. Die Uhr des Panels wird nicht gestellt (der Node kennt keine Uhrzeit).
+
+| Wert / Befehl | Am Panel-Bus |
+|---|---|
+| Sollwert | `AirHeating.TgtTemp` der Alde (Zehntelgrad) – der Wert, auf den die Alde regelt |
+| Raum, Außen | `AirHeating.Temp`, `AirHeating.ExtTemp` |
+| Gas, Heizstab-Stufe | `EnergySrc.GasLevel`, `EnergySrc.ElectricLevel` (0–3 kW, begrenzt durch „Heizstab höchstens“) |
+| Warmwasser aus / an / Boost | `WaterHeating.Active`, `WaterHeating.BoostMode` |
+| Heizung an / aus | `RoomClimate.Mode` des Panels (3 = Heizen, 0 = aus) |
+| Störung | `ErrorReset.ErrCode` der Alde (Liste nicht leer) |
+
+Es gehen dieselben MQTT-Topics und Home-Assistant-Entitäten raus wie beim Bedienteil-Bus im Modus „Lesen und steuern“; nur Umwälzpumpe und 230 V gibt es hier nicht. Gesendet wird nur, was sich vom gemeldeten Stand unterscheidet, und immer an das Gerät, das den Wert meldet.
+
+Das Panel wechselt seine Bluetooth-Adresse regelmäßig. Der ESP benutzt deshalb selbst eine private Adresse, damit er das gekoppelte Panel unter der neuen Adresse wiedererkennt. Klappt das Wiederverbinden nach dem Koppeln nicht, testweise `#define INETX_PRIVACY 0` in `config_local.h` setzen und neu koppeln.
+
+Den Stand der Verbindung zeigen der Reiter **Alde** und der Reiter **Debug** (Zustand, Kopplung, Nachrichten, Bus-Adressen). Mit **Debug** an steht jede Nachricht als Hex im Log – bei Problemen bitte das Log herunterladen und schicken.
+
+Grundlage ist die Beschreibung des Protokolls im Home-Assistant-Projekt [truma-inet-x-to-alde-3020](https://github.com/darenshaw/truma-inet-x-to-alde-3020) (GPL-3.0); die Umsetzung hier ist eigener Code (`inetx_proto.*`, `inetx.*`, Host-Test `tests/inetx_test.cpp`).
 
 ### Wer ist Master auf dem Bedienteil-Bus? (Mithören)
 

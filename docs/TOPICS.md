@@ -189,6 +189,8 @@ Werte vom Heizbus (passiv mitgelesen, nur wenn der Heizbus in den Einstellungen 
 
 Unbekannte Werte werden verworfen (sie werden nie zu „aus“). Vor jedem Befehl meldet sich der Node am Bedienteil an und liest den Stand; gesendet wird nur, was sich ändert, und nie, solange das Bedienteil beschäftigt ist oder eine Störung meldet.
 
+**Anschluss BLE (Truma iNet X):** dieselben Topics und Befehle, die Werte kommen dann vom iNet-X-Panel (Sollwert `AirHeating.TgtTemp`, Raum `AirHeating.Temp`, Außen `AirHeating.ExtTemp`, Gas / Heizstab `EnergySrc.*`, Warmwasser `WaterHeating.Active` / `BoostMode`, Heizung an `RoomClimate.Mode` ≠ 0, Störung `ErrorReset.ErrCode`). `…/pump` und `…/ac_input` fehlen, `…/ci_ok` = `1`, solange das Panel verbunden ist.
+
 ## Dachlüfter `camper/maxxfan`
 
 `p<n>` ist der Anschluss am VanTurtle-Board (`p1`, `p2`). Zustände sind retained.

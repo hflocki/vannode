@@ -21,6 +21,7 @@
 #include "evlog.h"
 #include "alde_ci_sniff.h"
 #include "dbglog.h"
+#include "inetx.h"
 #include <ArduinoJson.h>
 
 // Order = index into sensorData.values[]. Keys listed in BINARY_KEYS (mqtt_ha.cpp)
@@ -72,6 +73,8 @@ static HardwareSerial& ciSerial = Serial1;
 #endif
 
 static bool linActive = false;            // heater bus opened at boot (config.lin_enabled)
+static bool inetxMode = false;            // connection is BLE to a Truma iNet X panel (config.link at boot)
+static InetxModel ix;                     // last copy of the iNet X values
 
 static AldeLin lin;
 static unsigned long lastPublish = 0;
@@ -120,7 +123,16 @@ static void logSignal(uint8_t pid, const uint8_t* d, int n) {
     dbglogf("[SIG] %02X (len=%d): %s\n", pid, n, hex);
 }
 
+bool sensorInetx() {
+    return inetxMode;
+}
+
+uint8_t sensorCiMode() {
+    return inetxMode ? 2 : config.ci_mode;
+}
+
 bool sensorCiOk() {
+    if (inetxMode) return inetxReady();
     return ciActiveMode > 0 && ciActiveMode != 3 && ciLastOk != 0 && millis() - ciLastOk < CI_TIMEOUT_MS;
 }
 
@@ -155,6 +167,7 @@ bool sensorLinActive() {
 }
 
 bool sensorCiPossible() {
+    if (inetxMode) return true;
     return !CI_SHARED_UART || !linActive;
 }
 
@@ -405,8 +418,8 @@ static void ciLoop(unsigned long now) {
 const char* sensorControl(const AldeCiCommand& cmd) {
     static char msg[48];
     if (!sensorCiPossible()) return "ESP32-C3: Steuerung nur mit ausgeschaltetem Heizbus";
-    if (config.ci_mode != 2) return "Steuerung ist aus (Einstellungen → Bedienteil-Bus)";
-    if (!sensorCiOk()) return "Keine Verbindung zum Bedienteil";
+    if (sensorCiMode() != 2) return "Steuerung ist aus (Einstellungen → Bedienteil-Bus)";
+    if (!sensorCiOk()) return inetxMode ? "Keine Verbindung zum iNet-X-Panel" : "Keine Verbindung zum Bedienteil";
     if (aldeCiCommandEmpty(cmd)) return "Kein Befehl";
     if (cmd.hasTarget && !(cmd.target >= 5.0f && cmd.target <= 30.0f)) return "Sollwert 5-30 °C";
     if (cmd.gas > 1) return "Gas: 0 oder 1";
@@ -417,6 +430,17 @@ const char* sensorControl(const AldeCiCommand& cmd) {
     }
     if (cmd.water > 2) return "Warmwasser: 0 = aus, 1 = an, 2 = Boost";
     if (cmd.power > 1) return "Heizung: 0 = aus, 1 = an";
+    if (inetxMode) {
+        InetxCommand c;
+        inetxCommandClear(c);
+        c.hasTarget = cmd.hasTarget;
+        c.target = cmd.target;
+        c.gas = cmd.gas;
+        c.el_level = cmd.el_level;
+        c.water = cmd.water;
+        c.power = cmd.power;
+        return inetxControl(c);
+    }
     portENTER_CRITICAL(&cmdMux);
     if (cmd.hasTarget) { pendingCmd.hasTarget = true; pendingCmd.target = cmd.target; }
     if (cmd.gas >= 0) pendingCmd.gas = cmd.gas;
@@ -436,6 +460,15 @@ void sensorInit() {
     aldeCiCommandClear(pendingCmd);
     aldeCiCommandClear(activeCmd);
 
+    inetxMode = config.link == LINK_INETX;
+    inetxModelClear(ix);
+    if (inetxMode) {
+        // No LIN at all: neither UART is opened, the values come from the iNet X panel
+        linActive = false;
+        dbglogf("[INETX] Connection: Truma iNet X panel over Bluetooth LE");
+        inetxBegin();
+        return;
+    }
     linActive = config.lin_enabled;
     if (!linActive) {
         dbglogf("[LIN] Heater bus switched off (only the panel bus transceiver fitted)");
@@ -464,6 +497,24 @@ static void copyReadings(unsigned long now) {
     const float N = NAN;
     const bool h = linActive;   // heater bus switched off: its values stay unknown
     const AldeCiState& c = ciState;
+    if (inetxMode) {
+        // Heater bus values do not exist here; the panel bus slots take the iNet X values
+        bool v = inetxSnapshot(ix) && inetxReady();   // like the LIN panel bus: no values while disconnected
+        int wm = inetxWaterMode(ix);
+        const float isrc[] = {
+            N, N, N, N, N, N, N, N, N, N, N, N, N, N, N,
+            v ? ix.target : N, v ? ix.room : N, v ? ix.outdoor : N,
+            v ? ix.gas : N, v ? ix.el_level : N, (v && wm >= 0) ? (float)wm : N,
+            N,                                                      // circulation pump: not reported
+            (v && !isnan(ix.room_mode)) ? (ix.room_mode != 0 ? 1.0f : 0.0f) : N,
+            v ? ix.error : N,
+            N,                                                      // 230 V: not reliable on this bus
+            inetxReady() ? 1.0f : 0.0f,
+        };
+        static_assert(sizeof(isrc) / sizeof(isrc[0]) == sizeof(VALUES) / sizeof(VALUES[0]), "VALUES[] and isrc[] differ");
+        for (uint8_t i = 0; i < VALUE_COUNT; i++) sensorData.values[i] = isrc[i];
+        return;
+    }
     const float src[] = {
         h ? r.room : N, h ? r.setpoint : N, h ? r.glycol : N, h ? r.water : N,
         h ? r.hotwater_target : N, h ? r.pcb : N, h ? r.battery : N, h ? r.mains_current : N,
@@ -501,7 +552,12 @@ void sensorLoop() {
     }
 
     static bool lastCiOk = false;
-    ciLoop(now);
+    if (inetxMode) {
+        if (inetxTakeChanged()) ciChanged = true;
+        if (inetxReady()) ciLastOk = now;
+    } else {
+        ciLoop(now);
+    }
     now = millis();
     bool ciOk = sensorCiOk();
     if (ciOk != lastCiOk) { lastCiOk = ciOk; ciChanged = true; }
@@ -587,6 +643,7 @@ void sensorDebugJson(JsonObject o) {
         c["busy"] = ciState.busy;
         c["error"] = ciState.error;
     }
+    if (inetxMode) inetxStatusJson(o["inetx"].to<JsonObject>());
     o["detail"] = logDetail();
 }
 

@@ -7,7 +7,7 @@ const M = {
     wifi_ssid: 'Camper-WLAN', wifi_tx_power: 70, ap_ssid: 'Alde-Node-A1B2C3', ap_always: false,
     mqtt_server: '192.168.1.1', mqtt_port: 1883, mqtt_user: '', mqtt_prefix: 'camper/alde', web_user: 'admin',
     interval: 10, ci_mode: 2, ci_function: 1, el_max: 1, lin_enabled: true, lin_active: true, debug: true,
-    ci_ok: true, ci_possible: true, one_uart: false
+    ci_ok: true, ci_possible: true, one_uart: false, link: 0, link_active: 0, ci_eff: 2
   },
   // panel state, changed by /api/control
   panel: {target: 21.0, gas: 1, el: 1, water: 1},
@@ -25,6 +25,9 @@ const M = {
     if (path === '/api/config' && method === 'POST') {
       // the device answers lin_enabled changes with a restart, the mockup applies them at once
       if ('lin_enabled' in b) M.save({lin_active: b.lin_enabled});
+      // connection LIN / iNet X: the device restarts, the mockup switches at once
+      if ('link' in b) M.save({link_active: +b.link, lin_active: +b.link ? false : M.cfg.lin_enabled, ci_eff: +b.link ? 2 : +M.cfg.ci_mode});
+      if ('ci_mode' in b && !+M.cfg.link_active) M.save({ci_eff: +b.ci_mode});
       return undefined;                         // default handling in core.js
     }
     if (path === '/api/control') {
@@ -35,6 +38,13 @@ const M = {
       return {status: 'ok'};
     }
     if (path === '/api/measure') return {status: 'ok'};
+    // Truma iNet X over BLE
+    const inetx = () => ({state: M.pairUntil > Date.now() ? 'Koppeln (Panel im Kopplungsmodus?)' : 'Verbunden', ready: true,
+      bonds: 1, pairing: Math.max(0, Math.round(((M.pairUntil || 0) - Date.now()) / 1000)), peer: '4d:6b:5f:62:51:68', rssi: -67,
+      rx: 40 + M.up(), tx: 31, refused: 0, commands: 2, connects: 1, last_rx: 3, addr: '0502', heater: '0404', supplier: 'Alde', dropped: 0});
+    if (path === '/api/inetx') return {active: !!+M.cfg.link_active, inetx: inetx()};
+    if (path === '/api/inetx_pair') { M.pairUntil = Date.now() + 180000; return {status: 'ok'}; }
+    if (path === '/api/inetx_forget') return {status: 'ok'};
     // debug tab
     if (path === '/api/log') return M.log.join('\n') + '\n';
     if (path === '/api/log_clear') { M.log = []; return {status: 'ok'}; }
@@ -45,6 +55,8 @@ const M = {
     }
     if (path === '/api/debug') {
       const ci = +M.cfg.ci_mode;
+      if (+M.cfg.link_active) return {lin: {active: false}, ci: {mode: ci, possible: true, ok: true}, inetx: inetx(),
+                                       detail: !!M.cfg.debug, uptime: M.up(), heap: 151000};
       return {lin: {active: true, ok: true, frames_ok: M.reads, frames_bad: 2, empty: 0, age: 0},
               ci: {mode: ci, possible: true, ok: ci === 1 || ci === 2, polls_ok: M.up(), polls_bad: 3, commands: 2, registered: 812,
                    raw: '7E FE 5E DE 9E 29 00 00', busy: false, error: false},
@@ -84,7 +96,7 @@ const M = {
       ['ac_input', '230 V', '', 0, 1], ['ci_ok', 'Bedienteil-Bus', '', 0, +M.cfg.ci_mode === 3 ? null : 1]];
     const lin = M.cfg.lin_active !== false && M.cfg.lin_active !== 'false';
     return {values: vals.map(([key, name, unit, dec, v]) => ({key, name, unit, dec, v})),
-            ok: lin || +M.cfg.ci_mode === 1 || +M.cfg.ci_mode === 2, age: 0, reads: M.reads, errors: 2,
+            ok: lin || !!+M.cfg.link_active || +M.cfg.ci_mode === 1 || +M.cfg.ci_mode === 2, age: 0, reads: M.reads, errors: 2,
             wifi: 'Verbunden', rssi: -61, mqtt: true, uptime: M.up(), heap: 182000, wifi_drops: 0, wifi_reason: '--'};
   }
 };

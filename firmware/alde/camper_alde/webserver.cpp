@@ -13,6 +13,7 @@
 #include "mqttfb.h"
 #include "alde_ci_sniff.h"
 #include "dbglog.h"
+#include "inetx.h"
 #include "wsauth.h"
 
 #include <WiFi.h>
@@ -33,6 +34,8 @@
 //   GET  /api/log        debug log as text, POST /api/log_clear empties it
 //   GET  /api/debug      bus statistics for the debug tab, POST /api/debug_dump writes the
 //                        state of all values into the debug log
+//   GET  /api/inetx      Truma iNet X connection: state, bond, counters
+//   POST /api/inetx_pair allow bonding for 3 minutes, POST /api/inetx_forget deletes the bond
 //   POST /api/restart
 //   WS   /ws             live values every WS_UPDATE_MS
 
@@ -100,6 +103,7 @@ static void setDefaults() {
     config.lin_enabled = DEFAULT_LIN_ENABLED;
     config.el_max = DEFAULT_EL_MAX;
     config.debug = false;
+    config.link = DEFAULT_LINK;
 }
 
 static bool isNumber(JsonVariantConst v) {
@@ -341,6 +345,28 @@ void webserverInit() {
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
 
+    server.on("/api/inetx", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        JsonDocument d;
+        d["active"] = sensorInetx();
+        if (sensorInetx()) inetxStatusJson(d["inetx"].to<JsonObject>());
+        String out;
+        serializeJson(d, out);
+        request->send(200, "application/json", out);
+    });
+    server.on("/api/inetx_pair", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        if (!sensorInetx()) { sendError(request, "iNet X is not the active connection"); return; }
+        inetxPairArm();
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+    server.on("/api/inetx_forget", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!auth(request)) return;
+        if (!sensorInetx()) { sendError(request, "iNet X is not the active connection"); return; }
+        inetxForget();
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+
     server.on("/api/restart", HTTP_POST, [](AsyncWebServerRequest* request) {
         if (!auth(request)) return;
         evlog::add("Neustart über die Web-Oberfläche");
@@ -448,6 +474,9 @@ static void handleApiGetConfig(AsyncWebServerRequest* request) {
     doc["el_max"] = config.el_max;
     doc["debug"] = config.debug;
     doc["ci_possible"] = sensorCiPossible();
+    doc["link"] = config.link;
+    doc["link_active"] = sensorInetx() ? LINK_INETX : LINK_LIN;   // differs from link until the restart
+    doc["ci_eff"] = sensorCiMode();
     doc["one_uart"] = SOC_UART_NUM <= 2;        // ESP32-C3: heater bus OR panel bus
 
     String response;
@@ -506,6 +535,9 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
     if (hasElMax && (newElMax < 0 || newElMax > 3)) { sendError(request, "el_max must be 0-3"); return; }
     bool hasLin = doc["lin_enabled"].is<bool>();
     bool hasDebug = doc["debug"].is<bool>();
+    bool hasLink = isNumber(doc["link"]);
+    int newLink = hasLink ? doc["link"].as<int>() : 0;
+    if (hasLink && newLink != LINK_LIN && newLink != LINK_INETX) { sendError(request, "link must be 0 or 1"); return; }
 
     // ---- Apply ----
     // Empty values clear SSID/server/user; empty passwords are ignored (= keep the stored one)
@@ -561,6 +593,12 @@ static void handleApiSaveConfig(AsyncWebServerRequest* request, uint8_t* data, s
         config.lin_enabled = doc["lin_enabled"].as<bool>();
         evlog::add("Heizbus %s", config.lin_enabled ? "an" : "aus");
         linRestart = true;                        // UARTs are assigned at boot
+    }
+    if (hasLink && newLink != config.link) {
+        config.link = (uint8_t)newLink;
+        evlog::add("Anschluss: %s", newLink == LINK_INETX ? "BLE (Truma iNet X)" : "LIN-Bus");
+        linRestart = true;                        // LIN UARTs or BLE are set up at boot
+        mqttRequestDiscovery();
     }
     if (hasCiMode && newCiMode != config.ci_mode) {
         evlog::add("Bedienteil-Bus: Modus %d", newCiMode);
@@ -633,6 +671,8 @@ void loadConfig() {
     int em = doc["el_max"] | DEFAULT_EL_MAX;
     config.el_max = (em >= 0 && em <= 3) ? (uint8_t)em : DEFAULT_EL_MAX;
     config.debug = doc["debug"] | false;
+    int lk = doc["link"] | DEFAULT_LINK;
+    config.link = (lk == LINK_INETX) ? LINK_INETX : LINK_LIN;
 }
 
 void saveConfig() {
@@ -660,6 +700,7 @@ void saveConfig() {
     doc["lin_enabled"] = config.lin_enabled;
     doc["el_max"] = config.el_max;
     doc["debug"] = config.debug;
+    doc["link"] = config.link;
 
     // Write to a temp file first so a power loss cannot leave a half-written config
     const char* tmpPath = "/config.tmp";

@@ -22,7 +22,7 @@
 // ============================================================
 // GENERAL CONSTANTS
 // ============================================================
-#define FW_VERSION            "0.8.1"
+#define FW_VERSION            "0.9.0"
 #define FW_DEVICE            "alde"   // device id in the firmware marker (fwcheck.h)
 #define DEVICE_NAME           "Alde Node"   // web UI title, HA device name, serial banner
 
@@ -167,6 +167,17 @@
 #ifndef CI_POLL_MS
 #define CI_POLL_MS            1000   // Info poll interval
 #endif
+// ============================================================
+// CONNECTION (setting "Anschluss", change restarts the device)
+//   LINK_LIN    LIN transceivers: heater bus (listen) and / or panel bus (see below)
+//   LINK_INETX  Bluetooth LE to a Truma iNet X panel that runs the Alde (no wiring, inetx.cpp)
+// ============================================================
+#define LINK_LIN    0
+#define LINK_INETX  1
+#ifndef DEFAULT_LINK
+#define DEFAULT_LINK          LINK_LIN
+#endif
+
 #ifndef DEFAULT_CI_MODE
 #define DEFAULT_CI_MODE       0      // 0 = off, 1 = read only (ESP polls as master), 2 = read and control
 #endif
@@ -208,6 +219,7 @@ struct AppConfig {
     bool lin_enabled;      // Heater bus transceiver fitted (change needs a restart)
     uint8_t el_max;        // Highest heating element step a command may set (kW)
     bool debug;            // Debug tab and detailed log (frames, signal changes)
+    uint8_t link;          // LINK_LIN or LINK_INETX (change needs a restart)
 };
 
 // ============================================================

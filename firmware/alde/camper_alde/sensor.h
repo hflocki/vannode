@@ -46,8 +46,14 @@ void sensorDebugJson(JsonObject o);
 // Returns nullptr if accepted, otherwise a German error text for the user.
 const char* sensorControl(const AldeCiCommand& cmd);
 
-// True while the external panel bus answers (ci_mode > 0)
+// True while the external panel bus answers (ci_mode > 0), or the iNet X panel is connected
 bool sensorCiOk();
+
+// Connection chosen at boot: true = Truma iNet X over BLE (config.link, change needs a restart)
+bool sensorInetx();
+
+// Panel bus mode in effect: config.ci_mode, or 2 (read + control) with the iNet X connection
+uint8_t sensorCiMode();
 
 // True if the heater bus was opened at boot (config.lin_enabled)
 bool sensorLinActive();

@@ -90,6 +90,7 @@ added here, under its node, and nowhere else.
 | `firmware/alde` – Alde external panel bus (CI-bus) protocol: frames, registration, command sequence | ported | [daviddootson/alde_3030_plus](https://github.com/daviddootson/alde_3030_plus), Copyright (c) 2026 daviddootson | MIT ([`firmware/alde/LICENSE-alde3030-MIT`](firmware/alde/LICENSE-alde3030-MIT)) |
 | `firmware/alde` – Alde Compact 3020 HE LIN decoding (frame layout, offsets, encodings, plausibility gates) | ported, receive only | [Mellowgroup-dk/alde-3020he-lin](https://github.com/Mellowgroup-dk/alde-3020he-lin), Copyright (c) 2026 Mellowgroup | MIT ([`firmware/alde/LICENSE-alde-MIT`](firmware/alde/LICENSE-alde-MIT)), documentation CC BY 4.0 |
 | `firmware/alde` – panel bus: classic checksum fallback, answer window | reference | [holdestmade/esphome-alde-3020](https://github.com/holdestmade/esphome-alde-3020) | MIT ([`firmware/alde/LICENSE-alde3020-MIT`](firmware/alde/LICENSE-alde3020-MIT)) |
+| `firmware/alde` – Truma iNet X over BLE (`inetx*.cpp`): GATT service, transport, frame layout, session order, Alde topic and parameter names | reference (own implementation, no code taken over) | [darenshaw/truma-inet-x-to-alde-3020](https://github.com/darenshaw/truma-inet-x-to-alde-3020), based on [rpodgorny/hass-truma-inetx](https://github.com/rpodgorny/hass-truma-inetx) | GPL-3.0 |
 
 ### Battery-Node (`firmware/battery`)
 

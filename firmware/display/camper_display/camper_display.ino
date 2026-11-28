@@ -112,7 +112,7 @@ static void serialCommands() {
     if (line == "noauth") {
       settings.webUser = DEFAULT_WEB_USER;
       settings.webPass = DEFAULT_WEB_PASSWORD;
-      settings.webAuth = true;
+      settings.webAuthMode = WA_ALWAYS;
       cfg::save();
       evlog::add("Web-Login über USB auf Werks-Login zurückgesetzt");
       Serial.println("[CMD] Web login reset to " DEFAULT_WEB_USER " / " DEFAULT_WEB_PASSWORD);

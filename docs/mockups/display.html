@@ -9,7 +9,7 @@ const M = {
   id: 'display',
   wsInterval: 2000,
   config: {
-    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********', webAuth: true,
+    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********', webAuthMode: 1,
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
     tsOn: true, tsName: '', tsKey: '', ts: {built: true, on: true, code: 4, ip: '100.101.102.103', peers: 3, name: 'display-node', heap: 112},
@@ -1441,8 +1441,9 @@ function pgSettings(){
   <section data-g="rules">${pgRules()}</section>
   <details data-g="sys" class="fixed" open><summary>System</summary>
    ${inp('hostname','Gerätename (Hostname)')}${inp('apPass','Passwort Setup-WLAN (min. 8 Zeichen)','password')}
-   <label class="chk"><input type="checkbox" id="webAuth" onchange="authHint()"> Login für die Weboberfläche</label>
+   <div><label>Login für die Weboberfläche</label><select id="webAuthMode" onchange="authHint()"><option value="0">Immer</option><option value="1">Nur im WLAN (über Tailscale ohne)</option><option value="2">Aus</option></select></div>
    <div class="f2" id="authRow">${inp('webUser','Web-Benutzer (leer = bleibt)')}${inp('webPass','Web-Passwort (leer = bleibt)','password')}</div>
+   <p class="mu" id="authTs" hidden>Über Tailscale öffnet sich die Seite ohne Login: Wer im Tailnet ist, ist schon angemeldet. Im WLAN fragt sie wie gewohnt. Ist Tailscale nicht verbunden, gilt der Login überall.</p>
    <p class="mu" id="authOn">Ab Werk an (admin / admin). Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login und der Login ist wieder an.</p>
    <p class="mu" id="authOff" hidden>Ohne Login kann jeder im WLAN (und mit Tailscale im Tailnet) die Seite öffnen und alles ändern, auch Firmware hochladen. Nur ausschalten, wenn das Netz abgesichert ist.</p>
    <div class="f2">${inp('ntpServer','Zeitserver')}${inp('tz','Zeitzone (POSIX)')}</div>
@@ -1499,7 +1500,7 @@ async function loadSettings(){
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
     $('#brkOn').checked=!!ST.brkOn;$('#brkFb').checked=!!ST.brkFb;brkHint();
     $('#tsOn').checked=!!ST.tsOn;tsShow(ST.ts);
-    $('#webAuth').checked=ST.webAuth!==false;authHint();
+    $('#webAuthMode').value=String(ST.webAuthMode??(ST.webAuth===false?2:0));authHint();
     $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
@@ -1796,12 +1797,12 @@ function fillOutAwn(){
   $('#awnSrc').innerHTML=opt('','Schalter von Hand',ac)+con.map(n=>opt(n,'Kontakt: '+n,ac)).join('');
 }
 // Web login switch: user / password only with the login on
-function authHint(){const on=$('#webAuth').checked;$('#authRow').hidden=!on;$('#authOn').hidden=!on;$('#authOff').hidden=on}
+function authHint(){const m=+$('#webAuthMode').value,on=m!==2;$('#authRow').hidden=!on;$('#authOn').hidden=!on;$('#authTs').hidden=m!==1;$('#authOff').hidden=on}
 function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
-  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;o.tsOn=$('#tsOn').checked;o.webAuth=$('#webAuth').checked;
+  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;o.tsOn=$('#tsOn').checked;o.webAuthMode=+$('#webAuthMode').value;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;
@@ -2424,6 +2425,10 @@ vnI18nAdd('en', {
   "Aktiv": "Active",
   "Gerätename (Hostname)": "Device name (hostname)",
   "Web-Benutzer (leer = bleibt)": "Web user (empty = kept)",
+  "Login für die Weboberfläche": "Login for the web interface",
+  "Immer": "Always",
+  "Nur im WLAN (über Tailscale ohne)": "Only on WiFi (none over Tailscale)",
+  "Über Tailscale öffnet sich die Seite ohne Login: Wer im Tailnet ist, ist schon angemeldet. Im WLAN fragt sie wie gewohnt. Ist Tailscale nicht verbunden, gilt der Login überall.": "Over Tailscale the page opens without login: whoever is in the tailnet is already signed in. On WiFi it asks as usual. If Tailscale is not connected, the login applies everywhere.",
   "Web-Passwort (leer = bleibt)": "Web password (empty = kept)",
   "Die Anmeldung ist immer an (ab Werk admin / admin). Login vergessen: über USB den Befehl": "The login is always on (factory admin / admin). Forgot the login: send the command",
   "im seriellen Monitor senden, dann gilt wieder der Werks-Login.": "over USB in the serial monitor, then the factory login applies again.",

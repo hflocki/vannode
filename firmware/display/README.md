@@ -284,7 +284,7 @@ Das Display kann selbst in dein [Tailscale](https://tailscale.com)-Netz (Tailnet
 - **Abmelden** (Knopf in der Karte) löscht die Schlüssel des Displays und startet neu, danach neu anmelden. *Werkseinstellungen* löschen sie ebenfalls.
 - **Nur das Display** ist im Tailnet, nicht die anderen Geräte (kein Subnet-Router). Wer alle Geräte von unterwegs erreichen will, braucht weiterhin einen Subnet-Router im Camper-Netz.
 - **Tailnet Lock:** Ist er im Tailnet eingeschaltet, muss das Display von einem Signier-Knoten signiert werden. Bis es verbunden ist, zeigt die Karte dafür den fertigen Befehl `tailscale lock sign nodekey:…`. Vorab signierte Auth-Keys gehen nicht, die kann microlink nicht auswerten. Ungetestet.
-- Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays gilt zusätzlich, solange er eingeschaltet ist.
+- Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays gilt zusätzlich, außer bei *Login: Nur im WLAN* (dann über Tailscale ohne Login) oder *Aus*.
 - Relais (DERP): bevorzugt Frankfurt. Sobald eine direkte Verbindung klappt, läuft der Verkehr direkt.
 - **Speicher:** microlink braucht internen RAM für seine Tasks und die verschlüsselte Verbindung zum Relais. Unter 60 kB freiem internem RAM startet es nicht (Hinweis in der Karte und unter *Ereignisse*). Wird der RAM mit Tailscale knapp, können Wetterabfragen und Pushover fehlschlagen (siehe [Hinweise](#hinweise)) – dann den eigenen Broker oder Tailscale wieder abschalten.
 - **RAM messen:** Die Karte zeigt neben dem freien internen RAM den größten freien Block (Wetter und Pushover brauchen rund 40–50 kB am Stück) und für jede microlink-Task die **Stack-Reserve** (nie benutzter Teil / Größe). Mit diesen Werten lassen sich die Stacks in `src/microlink/ml_arduino_config.h` verkleinern.
@@ -383,7 +383,7 @@ Die Einstellungen sind in Gruppen geteilt, oben umschaltbar (die letzte Wahl mer
 | ⚡ Automationen | Regeln mit eigenem Speichern-Knopf, siehe [Automationen](#automationen) |
 | 🔌 Verbindung | WLAN · MQTT-Broker · Tailscale |
 | 🌦 Dienste | Wetter · Pushover |
-| 🔧 System | Gerätename, Login (Schalter, ab Werk an mit `admin` / `admin`; vergessen: `noauth` über USB setzt ihn zurück und schaltet ihn wieder ein), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
+| 🔧 System | Gerätename, Login (*Immer*, *Nur im WLAN* = über Tailscale ohne Login, oder *Aus*; ab Werk *Immer* mit `admin` / `admin`; vergessen: `noauth` über USB setzt ihn zurück und stellt *Immer* ein), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
 
 **Einstellungen speichern** steht immer unten am Bildschirmrand. Sensoren, eigene Seiten & Kacheln und Automationen haben jeweils einen eigenen Speichern-Knopf. In der Sensorliste ist jeder Sensor eine Zeile mit Typ, Name und aktuellem Wert; Antippen klappt ihn zum Bearbeiten auf.
 

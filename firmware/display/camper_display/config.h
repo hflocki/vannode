@@ -39,7 +39,7 @@
 #ifndef UI_LANG
 #define UI_LANG                 "de"
 #endif
-#define FW_VERSION              "2.28.0"
+#define FW_VERSION              "2.28.1"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns

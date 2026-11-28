@@ -70,10 +70,24 @@ bool     cfgDirty = false;
 
 const char* MASK = "********";
 
+// Request over the Tailscale tunnel: Tailscale connected and the sender in 100.64.0.0/10.
+// A device on the local network cannot fake this: the answer to a 100.x sender goes into the
+// tunnel (microlink routes the whole /10 there), so a spoofed TCP connection never completes,
+// and microlink drops tunnel packets whose sender does not belong to that peer.
+bool fromTailnet(AsyncWebServerRequest* r) {
+  if (!settings.tsOn || !r->client()) return false;
+  IPAddress a = r->client()->remoteIP();
+  if (a.type() != IPv4) return false;
+  if (a[0] != 100 || (a[1] & 0xC0) != 64) return false;
+  return ts::ip().length() > 0;
+}
+
 // Web UI login (HTTP basic auth); factory login admin / admin (config.h).
-// Can be switched off in the settings (webAuth), then every request is let through.
+// settings.webAuthMode: always, only on the local network (not over Tailscale) or off.
 bool loginOk(AsyncWebServerRequest* r) {
-  return !settings.webAuth || r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
+  if (settings.webAuthMode == WA_OFF) return true;
+  if (settings.webAuthMode == WA_LAN && fromTailnet(r)) return true;
+  return r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
 }
 
 bool auth(AsyncWebServerRequest* r) {
@@ -308,7 +322,7 @@ void getSettings(AsyncWebServerRequest* r) {
   d["apPass"] = MASK;
   d["webUser"] = settings.webUser;
   d["webPass"] = settings.webPass.isEmpty() ? "" : MASK;
-  d["webAuth"] = settings.webAuth;
+  d["webAuthMode"] = settings.webAuthMode;
   d["wifiSsid"] = settings.wifiSsid;
   d["wifiPass"] = settings.wifiPass.isEmpty() ? "" : MASK;
   d["staticIp"] = settings.staticIp;
@@ -449,7 +463,14 @@ bool applySettings(JsonObject o, bool apply) {
     if (apply) settings.links = json;
   }
   if (settings.displayName.length() > 32) settings.displayName = settings.displayName.substring(0, 32);
-  if (o["webAuth"].is<bool>() && apply) settings.webAuth = o["webAuth"];
+  if (apply) {
+    if (o["webAuthMode"].is<int>()) {
+      int m = o["webAuthMode"];
+      if (m >= WA_ALWAYS && m <= WA_OFF) settings.webAuthMode = m;
+    } else if (o["webAuth"].is<bool>()) {   // backup from 2.28.0
+      settings.webAuthMode = o["webAuth"].as<bool>() ? WA_ALWAYS : WA_OFF;
+    }
+  }
   // Empty user or password keeps the stored one
   if (!(o["webUser"].is<const char*>() && String(o["webUser"].as<const char*>()).length() == 0))
     str("webUser", settings.webUser, false);

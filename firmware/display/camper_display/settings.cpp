@@ -51,7 +51,10 @@ void load() {
   settings.apPass       = prefs.getString("appass", DEFAULT_AP_PASSWORD);
   settings.webUser      = prefs.getString("wusr",   DEFAULT_WEB_USER);
   settings.webPass      = prefs.getString("wpw",    DEFAULT_WEB_PASSWORD);
-  settings.webAuth      = prefs.getBool  ("wauth",  true);
+  // "wamode" since 2.28.1; before only "wauth" (on / off)
+  settings.webAuthMode  = prefs.isKey("wamode") ? prefs.getUChar("wamode", WA_ALWAYS)
+                                                : (prefs.getBool("wauth", true) ? WA_ALWAYS : WA_OFF);
+  if (settings.webAuthMode > WA_OFF) settings.webAuthMode = WA_ALWAYS;
   // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
   // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
   if (settings.webUser.isEmpty() || settings.webPass.isEmpty() || settings.webPass == "vannode2026") {
@@ -211,7 +214,8 @@ void save() {
   prefs.putString("appass", settings.apPass);
   prefs.putString("wusr",   settings.webUser);
   prefs.putString("wpw",    settings.webPass);
-  prefs.putBool  ("wauth",  settings.webAuth);
+  prefs.putUChar ("wamode", settings.webAuthMode);
+  prefs.putBool  ("wauth",  settings.webAuthMode != WA_OFF);   // for a downgrade to 2.28.0
   prefs.putString("ssid",   settings.wifiSsid);
   prefs.putString("wpass",  settings.wifiPass);
   prefs.putBool  ("sip",    settings.staticIp);

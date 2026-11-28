@@ -27,6 +27,13 @@ const int8_t PRIO_OFF     = -3;   // shown on the display, but no push message
 // User tile types
 enum TileType : uint8_t { TILE_VALUE = 0, TILE_SWITCH = 1, TILE_BUTTON = 2, TILE_SLIDER = 3 };
 
+// Web UI login (settings.webAuthMode)
+enum WebAuthMode : uint8_t {
+  WA_ALWAYS = 0,   // always ask for user / password
+  WA_LAN    = 1,   // only on the local network; requests over Tailscale (100.64.0.0/10) need none
+  WA_OFF    = 2,   // never: the page is open to everyone in the network
+};
+
 struct Tile {
   String  name;
   uint8_t page = 0;         // index into Settings::pages
@@ -64,7 +71,7 @@ struct Settings {
   String links;         // web page "Geräte": JSON [{"n":"Tanklevel","u":"http://..."}], max. MAX_LINKS   // shown centered in the header, e.g. what this panel is ("" = none)
   String apPass;
   String webUser, webPass;
-  bool   webAuth = true;   // web UI login on (off = page open to everyone in the network)
+  uint8_t webAuthMode = 0;  // web UI login: WA_ALWAYS, WA_LAN (not over Tailscale), WA_OFF
   // wifi
   String wifiSsid, wifiPass;
   bool   staticIp = false;

@@ -4,7 +4,7 @@ const M = {
   id: 'display',
   wsInterval: 2000,
   config: {
-    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********', webAuth: true,
+    hostname: 'display-node', displayName: 'Camper', apPass: '********', webUser: 'admin', webPass: '********', webAuthMode: 1,
     wifiSsid: 'Camper-WLAN', wifiPass: '********', staticIp: false, ip: '', gateway: '', subnet: '', dns: '',
     mqttHost: '192.168.1.1', mqttPort: 1883, mqttUser: '', mqttPass: '',
     tsOn: true, tsName: '', tsKey: '', ts: {built: true, on: true, code: 4, ip: '100.101.102.103', peers: 3, name: 'display-node', heap: 112},

@@ -12,8 +12,25 @@
 #endif
 // =====================================================================
 //  Display Node - Guition ESP32-4848S040 (4", 480x480, ESP32-S3)
+//              or ESP32-8048S070C (7", 800x480, ESP32-S3, capacitive touch)
 //  Wall panel + web page, both fed live from the MQTT broker
 // =====================================================================
+
+// ---- Board ---------------------------------------------------------------
+// 1 = Guition ESP32-4848S040 (4", 480 x 480, default)
+// 2 = ESP32-8048S070C (7", 800 x 480 landscape, GT911); the release build "esp32s3-7" sets it
+#define BOARD_4848S040          1
+#define BOARD_8048S070          2
+#ifndef DISPLAY_BOARD
+#define DISPLAY_BOARD           BOARD_4848S040
+#endif
+#if DISPLAY_BOARD != BOARD_4848S040 && DISPLAY_BOARD != BOARD_8048S070
+#error "DISPLAY_BOARD: 1 = ESP32-4848S040, 2 = ESP32-8048S070C"
+#endif
+// Hardware name of the release file (display-node-<FW_HW>-v<version>.bin), see fw_config.h
+#if DISPLAY_BOARD == BOARD_8048S070 && !defined(FW_HW)
+#define FW_HW                   "esp32s3-7"
+#endif
 
 #define FW_NAME                 "display-node"
 // Language of the web page: "de" (default) or "en". Set it in config_local.h before the
@@ -22,7 +39,7 @@
 #ifndef UI_LANG
 #define UI_LANG                 "de"
 #endif
-#define FW_VERSION              "2.27.7"
+#define FW_VERSION              "2.28.0"
 #define FW_DEVICE               "display"   // device id in the firmware marker (fwcheck.h)
 #ifndef WIFI_TRIAL_MS
 #define WIFI_TRIAL_MS           50000   // a changed WiFi must connect this fast, else the old one returns
@@ -33,15 +50,24 @@
 #define STATIC_IP_FALLBACK_MS   180000  // static IP, WiFi ok but no MQTT this long -> DHCP until restart
 #endif
 #ifndef DEV_TILE_COLS
-#define DEV_TILE_COLS           4   // sensor tiles per row on Sensoren / Energie / Extra (3 .. 5; 5 = names wrap to two short lines)
+// sensor tiles per row on Sensoren / Energie / Extra (4": 3 .. 5, 5 = names wrap to two short lines; 7": up to 8)
+#if DISPLAY_BOARD == BOARD_8048S070
+#define DEV_TILE_COLS           6
+#else
+#define DEV_TILE_COLS           4
+#endif
 #endif
 #ifndef DEFAULT_WEB_TILES
 // home of the web page: fixed slots per group (Tanks 4, Klima 4, Temperatur 2, Energie 2, Fahrzeug 4), "none" = empty
 #define DEFAULT_WEB_TILES       "water,grey,gas,none,heater,fan,heki,weather,temp,none,bat,none,level,actors,lights,switches"
 #endif
-// Home grid of the panel: columns x rows (4" panel: 3 x 3; a larger display may use more)
+// Home grid of the panel: columns x rows (4" panel: 3 x 3; 7" panel: 5 x 3, same tile size)
 #ifndef OV_COLS
+#if DISPLAY_BOARD == BOARD_8048S070
+#define OV_COLS                 5
+#else
 #define OV_COLS                 3
+#endif
 #endif
 #ifndef OV_ROWS
 #define OV_ROWS                 3
@@ -49,7 +75,11 @@
 #define OV_SLOTS                (OV_COLS * OV_ROWS)
 
 #ifndef DEFAULT_OV_TILES
+#if DISPLAY_BOARD == BOARD_8048S070
+#define DEFAULT_OV_TILES        "water,grey,gas,heater,level,fan,temp,bat,weather,status"   // 7": two full rows of 5
+#else
 #define DEFAULT_OV_TILES        "water,grey,gas,heater,level,fan,temp,bat,status"   // overview tiles in order
+#endif
 #endif
 #ifndef MAX_LINKS
 #define MAX_LINKS               16      // device links on the web page (name + URL)
@@ -286,7 +316,136 @@
 #define MAX_TILES               40
 #endif
 
-// ---- Display hardware: Guition ESP32-4848S040 (ST7701S RGB + GT911) -----
+// ---- Display hardware -----------------------------------------------------
+#if DISPLAY_BOARD == BOARD_8048S070
+// ESP32-8048S070C: 7" 800 x 480 RGB panel (no init sequence needed) + GT911 touch.
+// Pins and timing as in the Arduino_GFX device list (ESP32_8048S070).
+#ifndef LCD_WIDTH
+#define LCD_WIDTH               800
+#endif
+#ifndef LCD_HEIGHT
+#define LCD_HEIGHT              480
+#endif
+#ifndef LCD_BL_PIN
+#define LCD_BL_PIN              2
+#endif
+#ifndef LCD_DE
+#define LCD_DE                  41
+#endif
+#ifndef LCD_VSYNC
+#define LCD_VSYNC               40
+#endif
+#ifndef LCD_HSYNC
+#define LCD_HSYNC               39
+#endif
+#ifndef LCD_PCLK
+#define LCD_PCLK                42
+#endif
+// Some board revisions have red and blue swapped: LCD_SWAP_RB 1 if red shows as blue
+#ifndef LCD_SWAP_RB
+#define LCD_SWAP_RB             0
+#endif
+#if LCD_SWAP_RB
+#define LCD_RB_A0 15
+#define LCD_RB_A1 7
+#define LCD_RB_A2 6
+#define LCD_RB_A3 5
+#define LCD_RB_A4 4
+#define LCD_RB_B0 14
+#define LCD_RB_B1 21
+#define LCD_RB_B2 47
+#define LCD_RB_B3 48
+#define LCD_RB_B4 45
+#else
+#define LCD_RB_A0 14
+#define LCD_RB_A1 21
+#define LCD_RB_A2 47
+#define LCD_RB_A3 48
+#define LCD_RB_A4 45
+#define LCD_RB_B0 15
+#define LCD_RB_B1 7
+#define LCD_RB_B2 6
+#define LCD_RB_B3 5
+#define LCD_RB_B4 4
+#endif
+#ifndef LCD_R0
+#define LCD_R0 LCD_RB_A0
+#endif
+#ifndef LCD_R1
+#define LCD_R1 LCD_RB_A1
+#endif
+#ifndef LCD_R2
+#define LCD_R2 LCD_RB_A2
+#endif
+#ifndef LCD_R3
+#define LCD_R3 LCD_RB_A3
+#endif
+#ifndef LCD_R4
+#define LCD_R4 LCD_RB_A4
+#endif
+#ifndef LCD_G0
+#define LCD_G0 9
+#endif
+#ifndef LCD_G1
+#define LCD_G1 46
+#endif
+#ifndef LCD_G2
+#define LCD_G2 3
+#endif
+#ifndef LCD_G3
+#define LCD_G3 8
+#endif
+#ifndef LCD_G4
+#define LCD_G4 16
+#endif
+#ifndef LCD_G5
+#define LCD_G5 1
+#endif
+#ifndef LCD_B0
+#define LCD_B0 LCD_RB_B0
+#endif
+#ifndef LCD_B1
+#define LCD_B1 LCD_RB_B1
+#endif
+#ifndef LCD_B2
+#define LCD_B2 LCD_RB_B2
+#endif
+#ifndef LCD_B3
+#define LCD_B3 LCD_RB_B3
+#endif
+#ifndef LCD_B4
+#define LCD_B4 LCD_RB_B4
+#endif
+#ifndef LCD_PCLK_HZ
+#define LCD_PCLK_HZ             12000000
+#endif
+// Sync timing: polarity, front porch, pulse width, back porch
+#ifndef LCD_HSYNC_TIMING
+#define LCD_HSYNC_TIMING        0, 180, 30, 16
+#endif
+#ifndef LCD_VSYNC_TIMING
+#define LCD_VSYNC_TIMING        0, 12, 13, 10
+#endif
+#ifndef LCD_PCLK_NEG
+#define LCD_PCLK_NEG            1
+#endif
+// Bounce buffer in internal RAM (pixels, 0 = off). Against flicker / shifted picture when WiFi
+// and PSRAM are busy, e.g. LCD_WIDTH * 10; costs 2 x 2 bytes per pixel of internal RAM.
+#ifndef LCD_BOUNCE_PX
+#define LCD_BOUNCE_PX           0
+#endif
+#ifndef TOUCH_SDA
+#define TOUCH_SDA               19
+#endif
+#ifndef TOUCH_SCL
+#define TOUCH_SCL               20
+#endif
+#ifndef TOUCH_RST
+#define TOUCH_RST               38      // -1 = not wired
+#endif
+
+#else   // BOARD_4848S040
+// Guition ESP32-4848S040: ST7701S RGB panel (init over 3-wire SPI) + GT911 touch
 #ifndef LCD_WIDTH
 #define LCD_WIDTH               480
 #endif
@@ -373,17 +532,39 @@
 #ifndef LCD_INIT_TYPE
 #define LCD_INIT_TYPE           9
 #endif
-// 0..3, rotates drawing and touch together (wall mount orientation)
-#ifndef LCD_ROTATION
-#define LCD_ROTATION            0
-#endif
 
+#ifndef LCD_HSYNC_TIMING
+#define LCD_HSYNC_TIMING        1, 10, 8, 50
+#endif
+#ifndef LCD_VSYNC_TIMING
+#define LCD_VSYNC_TIMING        1, 10, 8, 20
+#endif
+#ifndef LCD_PCLK_NEG
+#define LCD_PCLK_NEG            0
+#endif
+#ifndef LCD_BOUNCE_PX
+#define LCD_BOUNCE_PX           0
+#endif
 #ifndef TOUCH_SDA
 #define TOUCH_SDA               19
 #endif
 #ifndef TOUCH_SCL
 #define TOUCH_SCL               45
 #endif
+#ifndef TOUCH_RST
+#define TOUCH_RST               -1
+#endif
+#endif  // DISPLAY_BOARD
+
+// 0..3, rotates drawing and touch together (wall mount orientation).
+// 7" panel: only 0 or 2 (the pages are laid out for landscape)
+#ifndef LCD_ROTATION
+#define LCD_ROTATION            0
+#endif
+#if DISPLAY_BOARD == BOARD_8048S070 && (LCD_ROTATION & 1)
+#error "LCD_ROTATION: the 7\" panel only supports 0 or 2"
+#endif
+
 #ifndef TOUCH_I2C_HZ
 #define TOUCH_I2C_HZ            400000
 #endif

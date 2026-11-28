@@ -51,6 +51,7 @@ void load() {
   settings.apPass       = prefs.getString("appass", DEFAULT_AP_PASSWORD);
   settings.webUser      = prefs.getString("wusr",   DEFAULT_WEB_USER);
   settings.webPass      = prefs.getString("wpw",    DEFAULT_WEB_PASSWORD);
+  settings.webAuth      = prefs.getBool  ("wauth",  true);
   // Factory login if none is stored (up to 2026-11 empty = open) or if it is still the factory
   // login of the first 2026-11 releases (password vannode2026). A login set by the user stays.
   if (settings.webUser.isEmpty() || settings.webPass.isEmpty() || settings.webPass == "vannode2026") {
@@ -210,6 +211,7 @@ void save() {
   prefs.putString("appass", settings.apPass);
   prefs.putString("wusr",   settings.webUser);
   prefs.putString("wpw",    settings.webPass);
+  prefs.putBool  ("wauth",  settings.webAuth);
   prefs.putString("ssid",   settings.wifiSsid);
   prefs.putString("wpass",  settings.wifiPass);
   prefs.putBool  ("sip",    settings.staticIp);

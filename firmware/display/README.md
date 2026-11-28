@@ -2,11 +2,11 @@
 > **IN ENTWICKLUNG – kein fertiges Projekt.** Am echten LIN-Bus (Truma) noch nicht getestet. Nutzung auf eigenes Risiko.
 
 
-# Display Node – Guition 4" Wandpanel + Webseite per MQTT
+# Display Node – 4"- oder 7"-Wandpanel + Webseite per MQTT
 
 > **Achtung:** Ohne Gewähr, Nutzung auf eigene Gefahr – siehe [Haftungsausschluss](../../README.md#haftungsausschluss--nutzung-auf-eigene-gefahr). Warnungen am Display und per Pushover können falsch sein, zu spät kommen oder ausbleiben.
 
-Firmware für das **Guition ESP32-4848S040** (4", 480×480 Touch, ESP32-S3, 16 MB Flash, 8 MB PSRAM). Das Display hängt fest an der Wand und zeigt alle Camper-Werte gesammelt an; dieselben Seiten gibt es zusätzlich als **Webseite** direkt vom Display – z. B. auf Handy oder Tablet im Bett. Beide werden live über **MQTT** versorgt und können steuern. Reines **Arduino**, ohne ESPHome und ohne Home Assistant als Voraussetzung.
+Firmware für das **Guition ESP32-4848S040** (4", 480×480 Touch, ESP32-S3, 16 MB Flash, 8 MB PSRAM), wahlweise für das **ESP32-8048S070C** (7", 800×480, kapazitiver Touch, sonst gleiche Ausstattung; neu, siehe [7"-Panel](#7-panel-esp32-8048s070c)). Das Display hängt fest an der Wand und zeigt alle Camper-Werte gesammelt an; dieselben Seiten gibt es zusätzlich als **Webseite** direkt vom Display – z. B. auf Handy oder Tablet im Bett. Beide werden live über **MQTT** versorgt und können steuern. Reines **Arduino**, ohne ESPHome und ohne Home Assistant als Voraussetzung.
 
 Passt zu den anderen Projekten:
 
@@ -115,6 +115,22 @@ docs/                      Screenshots
 - Hochkant/quer montiert: `LCD_ROTATION` (0–3). Touch dreht mit; falls Tipps trotzdem daneben liegen: `TOUCH_SWAP_XY` / `TOUCH_INVERT_X` / `TOUCH_INVERT_Y`.
 - Versorgung im Camper über einen 12→5-V-Wandler auf den 5-V-Eingang des Boards (bzw. die 86-Box-Netzteilvariante nicht an 12 V hängen).
 
+### 7"-Panel (ESP32-8048S070C)
+
+Dieselbe Firmware läuft auch auf dem **ESP32-8048S070C** (7", 800×480 quer, RGB-Panel ohne Init, GT911-Touch). Nur die Variante **C** (kapazitiv); die Variante R (resistiver Touch) wird nicht unterstützt. Belegung wie in der Arduino_GFX-Vorlage `ESP32_8048S070`:
+
+| Funktion | GPIO |
+| --- | --- |
+| Hintergrundlicht | 2 |
+| RGB | DE 41, VSYNC 40, HSYNC 39, PCLK 42 |
+| Touch GT911 (I2C) | SDA 19, SCL 20, Reset 38 |
+
+- Fertige Firmware: `display-node-esp32s3-7-v….bin`. In der Arduino IDE `#define DISPLAY_BOARD 2` in `config_local.h` (Vorlage: `config_local.h.example`) und **USB CDC On Boot: Disabled**, sonst wie in der Tabelle unten. Der Touch sitzt auf den USB-Pins 19/20; Flashen und serieller Monitor laufen über den USB-Anschluss mit dem CH340.
+- Die Seiten sind dieselben wie am 4", nur breiter. *Home am Display* hat 5 × 3 Plätze (gleiche Kachelgröße), die Sensorseiten 6 Kacheln pro Zeile.
+- Rot und Blau vertauscht (je nach Board-Revision): `#define LCD_SWAP_RB 1` in `config_local.h`.
+- Flackert oder verrutscht das Bild bei viel WLAN-Verkehr: `#define LCD_BOUNCE_PX (LCD_WIDTH * 10)` (kostet 32 kB internen RAM) oder `LCD_PCLK_HZ` etwas kleiner.
+- Nur quer: `LCD_ROTATION` 0 oder 2.
+
 ## Arduino IDE
 
 Board-Paket, gemeinsame Bibliotheken, Board-Einstellungen, erstes Flashen, LittleFS-Plugin und Hilfe bei Upload-Problemen: **[docs/ARDUINO.md](../../docs/ARDUINO.md)**. Hier nur, was für dieses Gerät gilt.
@@ -130,6 +146,8 @@ Das Display weicht von den anderen Geräten ab (16 MB Flash, PSRAM, eigenes Part
 | Partition Scheme | 16M Flash (3MB APP/9.9MB FATFS) |
 | Upload Speed | 921600 |
 | Zusätzliche Bibliotheken | GFX Library for Arduino 1.6.0, lvgl **9.2.2** |
+
+Für das 7"-Panel: **USB CDC On Boot: Disabled** und `DISPLAY_BOARD 2`, siehe [7"-Panel](#7-panel-esp32-8048s070c).
 
 **LVGL-Konfiguration:** `lv_conf.h` in den Arduino-Bibliotheksordner kopieren, **neben** den Ordner `lvgl` (nicht hinein):
 
@@ -186,7 +204,7 @@ Die Webseite des Displays lässt sich wie eine App auf den Startbildschirm legen
 - **iPhone/iPad (Safari):** Seite öffnen → Teilen → *Zum Home-Bildschirm*. Startet danach im eigenen Fenster.
 - **Android (Chrome):** Seite öffnen → Menü ⋮ → *Zum Startbildschirm hinzufügen*. Über `http://` legt Chrome nur eine Verknüpfung an, die im Browser öffnet; ein eigenes App-Fenster gibt es bei Chrome nur über `https://`.
 - Unterwegs geht das über Tailscale genauso (Adresse des Displays im Tailnet statt der lokalen).
-- Der Login bleibt: Beim ersten Start fragt die App nach Benutzer und Passwort der Webseite. Ohne Netz zeigt sie nichts an, es gibt keine Offline-Kopie.
+- Ist der Login an, fragt die App beim ersten Start nach Benutzer und Passwort der Webseite. Ohne Netz zeigt sie nichts an, es gibt keine Offline-Kopie.
 - Kommt das Handy aus dem Ruhezustand zurück, baut die Seite die Verbindung von selbst neu auf (keine alten Werte mehr nach dem Aufwachen).
 
 ### Warnung an einer Kachel (z. B. Landstrom)
@@ -266,7 +284,7 @@ Das Display kann selbst in dein [Tailscale](https://tailscale.com)-Netz (Tailnet
 - **Abmelden** (Knopf in der Karte) löscht die Schlüssel des Displays und startet neu, danach neu anmelden. *Werkseinstellungen* löschen sie ebenfalls.
 - **Nur das Display** ist im Tailnet, nicht die anderen Geräte (kein Subnet-Router). Wer alle Geräte von unterwegs erreichen will, braucht weiterhin einen Subnet-Router im Camper-Netz.
 - **Tailnet Lock:** Ist er im Tailnet eingeschaltet, muss das Display von einem Signier-Knoten signiert werden. Bis es verbunden ist, zeigt die Karte dafür den fertigen Befehl `tailscale lock sign nodekey:…`. Vorab signierte Auth-Keys gehen nicht, die kann microlink nicht auswerten. Ungetestet.
-- Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays bleibt zusätzlich aktiv.
+- Die Zugriffsregeln (ACL) des Tailnets gelten auch für das Display. Der Web-Login des Displays gilt zusätzlich, solange er eingeschaltet ist.
 - Relais (DERP): bevorzugt Frankfurt. Sobald eine direkte Verbindung klappt, läuft der Verkehr direkt.
 - **Speicher:** microlink braucht internen RAM für seine Tasks und die verschlüsselte Verbindung zum Relais. Unter 60 kB freiem internem RAM startet es nicht (Hinweis in der Karte und unter *Ereignisse*). Wird der RAM mit Tailscale knapp, können Wetterabfragen und Pushover fehlschlagen (siehe [Hinweise](#hinweise)) – dann den eigenen Broker oder Tailscale wieder abschalten.
 - **RAM messen:** Die Karte zeigt neben dem freien internen RAM den größten freien Block (Wetter und Pushover brauchen rund 40–50 kB am Stück) und für jede microlink-Task die **Stack-Reserve** (nie benutzter Teil / Größe). Mit diesen Werten lassen sich die Stacks in `src/microlink/ml_arduino_config.h` verkleinern.
@@ -365,7 +383,7 @@ Die Einstellungen sind in Gruppen geteilt, oben umschaltbar (die letzte Wahl mer
 | ⚡ Automationen | Regeln mit eigenem Speichern-Knopf, siehe [Automationen](#automationen) |
 | 🔌 Verbindung | WLAN · MQTT-Broker · Tailscale |
 | 🌦 Dienste | Wetter · Pushover |
-| 🔧 System | Gerätename, Login (immer an, ab Werk `admin` / `admin`; vergessen: `noauth` über USB), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
+| 🔧 System | Gerätename, Login (Schalter, ab Werk an mit `admin` / `admin`; vergessen: `noauth` über USB setzt ihn zurück und schaltet ihn wieder ein), Zeit, Firmware-Update, Sichern/Wiederherstellen, Neustart (immer aufgeklappt) |
 
 **Einstellungen speichern** steht immer unten am Bildschirmrand. Sensoren, eigene Seiten & Kacheln und Automationen haben jeweils einen eigenen Speichern-Knopf. In der Sensorliste ist jeder Sensor eine Zeile mit Typ, Name und aktuellem Wert; Antippen klappt ihn zum Bearbeiten auf.
 

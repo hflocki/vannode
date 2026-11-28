@@ -64,6 +64,7 @@ struct Settings {
   String links;         // web page "Geräte": JSON [{"n":"Tanklevel","u":"http://..."}], max. MAX_LINKS   // shown centered in the header, e.g. what this panel is ("" = none)
   String apPass;
   String webUser, webPass;
+  bool   webAuth = true;   // web UI login on (off = page open to everyone in the network)
   // wifi
   String wifiSsid, wifiPass;
   bool   staticIp = false;

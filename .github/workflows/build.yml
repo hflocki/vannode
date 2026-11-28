@@ -126,6 +126,15 @@ jobs:
             libs: https://github.com/moononournation/Arduino_GFX.git#v1.6.0 https://github.com/lvgl/lvgl.git#v9.2.2
             # web server task 8 kB instead of 16 kB (measured use about 3 kB), saves internal RAM
             flags: -DCONFIG_ASYNC_TCP_STACK_SIZE=8192
+          # Same firmware for the 7" ESP32-8048S070C (800 x 480). No USB CDC: the touch sits on
+          # GPIO 19 / 20 (USB pins), the serial monitor runs over the CH340 on this board
+          - device: display
+            target: esp32s3-7
+            fqbn: esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,PartitionScheme=app3M_fat9M_16MB
+            sketch: firmware/display/camper_display
+            libs: https://github.com/moononournation/Arduino_GFX.git#v1.6.0 https://github.com/lvgl/lvgl.git#v9.2.2
+            flags: -DCONFIG_ASYNC_TCP_STACK_SIZE=8192 -DDISPLAY_BOARD=2
+            noweb: 1
           - device: ble
             target: esp32c3
             fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs

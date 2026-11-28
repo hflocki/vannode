@@ -70,9 +70,14 @@ bool     cfgDirty = false;
 
 const char* MASK = "********";
 
-// Web UI login (HTTP basic auth), always on; factory login admin / admin (config.h)
+// Web UI login (HTTP basic auth); factory login admin / admin (config.h).
+// Can be switched off in the settings (webAuth), then every request is let through.
+bool loginOk(AsyncWebServerRequest* r) {
+  return !settings.webAuth || r->authenticate(settings.webUser.c_str(), settings.webPass.c_str());
+}
+
 bool auth(AsyncWebServerRequest* r) {
-  if (r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return true;
+  if (loginOk(r)) return true;
   r->requestAuthentication();
   return false;
 }
@@ -303,6 +308,7 @@ void getSettings(AsyncWebServerRequest* r) {
   d["apPass"] = MASK;
   d["webUser"] = settings.webUser;
   d["webPass"] = settings.webPass.isEmpty() ? "" : MASK;
+  d["webAuth"] = settings.webAuth;
   d["wifiSsid"] = settings.wifiSsid;
   d["wifiPass"] = settings.wifiPass.isEmpty() ? "" : MASK;
   d["staticIp"] = settings.staticIp;
@@ -443,7 +449,8 @@ bool applySettings(JsonObject o, bool apply) {
     if (apply) settings.links = json;
   }
   if (settings.displayName.length() > 32) settings.displayName = settings.displayName.substring(0, 32);
-  // Login stays on: empty user or password keeps the stored one
+  if (o["webAuth"].is<bool>() && apply) settings.webAuth = o["webAuth"];
+  // Empty user or password keeps the stored one
   if (!(o["webUser"].is<const char*>() && String(o["webUser"].as<const char*>()).length() == 0))
     str("webUser", settings.webUser, false);
   if (!(o["webPass"].is<const char*>() && o["webPass"].as<const char*>()[0] == '\0'))
@@ -824,7 +831,7 @@ void getScan(AsyncWebServerRequest* r) {
 // ---- OTA upload ----------------------------------------------------------------
 // Checked and written by fwcheck (wrong device / chip, .merged.bin ... are refused early)
 void otaUpload(AsyncWebServerRequest* r, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
-  if (!r->authenticate(settings.webUser.c_str(), settings.webPass.c_str())) return;
+  if (!loginOk(r)) return;
   if (index == 0) {
     Serial.printf("[ota] upload %s\n", filename.c_str());
     fwcheck::begin(r->contentLength(), r->hasParam("force"));
@@ -857,7 +864,7 @@ void begin() {
   // The page's WebSocket also takes commands: only with the web login. Most browsers send it along
   // with the upgrade, Safari does not: the page then opens /ws?t=<token from /api/wstoken> (wsauth.h)
   ws.handleHandshake([](AsyncWebServerRequest* r) {
-    return r->authenticate(settings.webUser.c_str(), settings.webPass.c_str()) || wsauth::tokenOk(r);
+    return loginOk(r) || wsauth::tokenOk(r);
   });
   server.addHandler(&ws);
   server.on("/api/wstoken", HTTP_GET, [](AsyncWebServerRequest* r) {

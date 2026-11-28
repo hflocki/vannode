@@ -560,7 +560,7 @@ function bindSystem(){
 }
 // devices in the network: <root>/+/status and <root>/+/info, collected by the display
 let devTimer=0;
-const HW_NAMES={esp32:'ESP32',esp32c3:'ESP32-C3',esp32s3:'ESP32-S3',esp32c6:'ESP32-C6',esp8266:'ESP8266',atoms3:'AtomS3',core2:'Core2'};
+const HW_NAMES={esp32:'ESP32',esp32c3:'ESP32-C3',esp32s3:'ESP32-S3','esp32s3-7':'ESP32-S3 7″',esp32c6:'ESP32-C6',esp8266:'ESP8266',atoms3:'AtomS3',core2:'Core2'};
 const upTxt=s=>s<3600?Math.floor(s/60)+' min':s<86400?Math.floor(s/3600)+' h '+Math.floor(s%3600/60)+' min':Math.floor(s/86400)+' d '+Math.floor(s%86400/3600)+' h';
 async function loadDevices(){
   const b=$('#sy_dev');if(!b)return;
@@ -1131,8 +1131,10 @@ function pgSettings(){
   <section data-g="rules">${pgRules()}</section>
   <details data-g="sys" class="fixed" open><summary>System</summary>
    ${inp('hostname','Gerätename (Hostname)')}${inp('apPass','Passwort Setup-WLAN (min. 8 Zeichen)','password')}
-   <div class="f2">${inp('webUser','Web-Benutzer (leer = bleibt)')}${inp('webPass','Web-Passwort (leer = bleibt)','password')}</div>
-   <p class="mu">Die Anmeldung ist immer an (ab Werk admin / admin). Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login.</p>
+   <label class="chk"><input type="checkbox" id="webAuth" onchange="authHint()"> Login für die Weboberfläche</label>
+   <div class="f2" id="authRow">${inp('webUser','Web-Benutzer (leer = bleibt)')}${inp('webPass','Web-Passwort (leer = bleibt)','password')}</div>
+   <p class="mu" id="authOn">Ab Werk an (admin / admin). Login vergessen: über USB den Befehl <code>noauth</code> im seriellen Monitor senden, dann gilt wieder der Werks-Login und der Login ist wieder an.</p>
+   <p class="mu" id="authOff" hidden>Ohne Login kann jeder im WLAN (und mit Tailscale im Tailnet) die Seite öffnen und alles ändern, auch Firmware hochladen. Nur ausschalten, wenn das Netz abgesichert ist.</p>
    <div class="f2">${inp('ntpServer','Zeitserver')}${inp('tz','Zeitzone (POSIX)')}</div>
    <p class="mu" id="sysinfo"></p>
    </details>
@@ -1187,6 +1189,7 @@ async function loadSettings(){
     LINKS=(ST.links||[]).map(x=>({n:x.n,u:x.u}));renderLinks();
     $('#brkOn').checked=!!ST.brkOn;$('#brkFb').checked=!!ST.brkFb;brkHint();
     $('#tsOn').checked=!!ST.tsOn;tsShow(ST.ts);
+    $('#webAuth').checked=ST.webAuth!==false;authHint();
     $('#warnWake').checked=!!ST.warnWake;$('#dimLogo').checked=ST.dimLogo!==false;$('#wxOn').checked=!!ST.wxOn;$('#wxEvery').value=String(ST.wxEvery||60);
     $('#slt').innerHTML=$('#slb').innerHTML='';renderSlots();
     $('#poOn').checked=!!ST.poOn;$('#poClear').checked=ST.poClear!==false;$('#wnFrostOn').checked=!!ST.wnFrostOn;$('#dpOn').checked=ST.dpOn!==false;$('#dpDoorInv').checked=!!ST.dpDoorInv;$('#dpCont').checked=ST.dpCont!==false;fillOutAwn();$('#wnHystT').value=cnum(ST.wnHystT??1,1);$('#poPrio').value=String(ST.poPrio||0);PO_CATS.forEach(c=>{const v=(ST.poCat||{})[c[0]];$('#pc_'+c[0]).value=String(v??3)});$('#poRetry').value=ST.poRetry??300;$('#poExpire').value=ST.poExpire??3600;
@@ -1482,11 +1485,13 @@ function fillOutAwn(){
   if(ac&&!con.includes(ac))con.push(ac);
   $('#awnSrc').innerHTML=opt('','Schalter von Hand',ac)+con.map(n=>opt(n,'Kontakt: '+n,ac)).join('');
 }
+// Web login switch: user / password only with the login on
+function authHint(){const on=$('#webAuth').checked;$('#authRow').hidden=!on;$('#authOn').hidden=!on;$('#authOff').hidden=on}
 function saveSettings(){
   const o={};FIELDS.forEach(f=>{const e=document.getElementById(f);if(e)o[f]=e.value});
   ['mqttPort','dimBrightness','screenTimeout','wxGust','wxGustHyst','wnWater','wnGas','wnBat','wnHystPct','wnFrost','fgLimit','poQuiet','awnGust','dpSpeed','dpSecs'].forEach(f=>o[f]=parseInt(o[f])||0);
   o.wnFrostOn=$('#wnFrostOn').checked;o.dpOn=$('#dpOn').checked;o.dpDoorInv=$('#dpDoorInv').checked;o.dpCont=$('#dpCont').checked;o.outName=$('#outName').value;o.fgName=$('#fgName').value;o.awnSrc=$('#awnSrc').value;o.wnHystT=parseFloat(String($('#wnHystT').value).replace(',','.'))||0;
-  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;o.tsOn=$('#tsOn').checked;
+  o.brkOn=$('#brkOn').checked;o.brkFb=$('#brkFb').checked;o.tsOn=$('#tsOn').checked;o.webAuth=$('#webAuth').checked;
   o.warnWake=$('#warnWake').checked;o.dimLogo=$('#dimLogo').checked;o.wxOn=$('#wxOn').checked;o.wxEvery=+$('#wxEvery').value;
   o.ovTempSel=readSlots('slt',SLOTS_T);o.ovBatSel=readSlots('slb',SLOTS_B);
   o.heaterSrc=+$('#heaterSrc').value;
@@ -2112,6 +2117,9 @@ vnI18nAdd('en', {
   "Web-Passwort (leer = bleibt)": "Web password (empty = kept)",
   "Die Anmeldung ist immer an (ab Werk admin / admin). Login vergessen: über USB den Befehl": "The login is always on (factory admin / admin). Forgot the login: send the command",
   "im seriellen Monitor senden, dann gilt wieder der Werks-Login.": "over USB in the serial monitor, then the factory login applies again.",
+  "Ab Werk an (admin / admin). Login vergessen: über USB den Befehl": "On by default (admin / admin). Forgot the login: send the command",
+  "im seriellen Monitor senden, dann gilt wieder der Werks-Login und der Login ist wieder an.": "over USB in the serial monitor, then the factory login applies and the login is on again.",
+  "Ohne Login kann jeder im WLAN (und mit Tailscale im Tailnet) die Seite öffnen und alles ändern, auch Firmware hochladen. Nur ausschalten, wenn das Netz abgesichert ist.": "Without login, anyone on the WiFi (and with Tailscale in the tailnet) can open the page and change everything, including uploading firmware. Only switch off if the network is secured.",
   "· ESP32-S3 · Platz * kB": "· ESP32-S3 · space * kB",
   "Also WiFi, IP and device name übernehmen": "Also restore WiFi, IP and device name",
   "Auch WLAN, IP und Gerätename übernehmen": "Also restore WiFi, IP and device name",

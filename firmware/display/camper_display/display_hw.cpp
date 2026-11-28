@@ -14,16 +14,22 @@
 namespace {
 
 // ---- panel ---------------------------------------------------------------
-Arduino_DataBus* bus = new Arduino_SWSPI(GFX_NOT_DEFINED, LCD_SPI_CS, LCD_SPI_SCK, LCD_SPI_MOSI, GFX_NOT_DEFINED);
-
 Arduino_ESP32RGBPanel* rgbpanel = new Arduino_ESP32RGBPanel(
     LCD_DE, LCD_VSYNC, LCD_HSYNC, LCD_PCLK,
     LCD_R0, LCD_R1, LCD_R2, LCD_R3, LCD_R4,
     LCD_G0, LCD_G1, LCD_G2, LCD_G3, LCD_G4, LCD_G5,
     LCD_B0, LCD_B1, LCD_B2, LCD_B3, LCD_B4,
-    1, 10, 8, 50,       // hsync polarity, front porch, pulse width, back porch
-    1, 10, 8, 20,       // vsync polarity, front porch, pulse width, back porch
-    0, LCD_PCLK_HZ, false, 0, 0, 0);
+    LCD_HSYNC_TIMING,   // hsync polarity, front porch, pulse width, back porch
+    LCD_VSYNC_TIMING,   // vsync polarity, front porch, pulse width, back porch
+    LCD_PCLK_NEG, LCD_PCLK_HZ, false, 0, 0, LCD_BOUNCE_PX);
+
+#if DISPLAY_BOARD == BOARD_8048S070
+// 7" panel: plain RGB, no init sequence
+Arduino_RGB_Display* gfx = new Arduino_RGB_Display(
+    LCD_WIDTH, LCD_HEIGHT, rgbpanel, LCD_ROTATION, true);
+#else
+// 4" panel: ST7701 init over 3-wire SPI
+Arduino_DataBus* bus = new Arduino_SWSPI(GFX_NOT_DEFINED, LCD_SPI_CS, LCD_SPI_SCK, LCD_SPI_MOSI, GFX_NOT_DEFINED);
 
 #if LCD_INIT_TYPE == 1
 #define ST7701_INIT st7701_type1_init_operations
@@ -34,6 +40,7 @@ Arduino_ESP32RGBPanel* rgbpanel = new Arduino_ESP32RGBPanel(
 Arduino_RGB_Display* gfx = new Arduino_RGB_Display(
     LCD_WIDTH, LCD_HEIGHT, rgbpanel, LCD_ROTATION, true,
     bus, GFX_NOT_DEFINED, ST7701_INIT, sizeof(ST7701_INIT));
+#endif
 
 // ---- backlight / screen timeout -----------------------------------------
 bool     awake = true;
@@ -70,6 +77,14 @@ void gtWrite(uint16_t reg, uint8_t val) {
 }
 
 bool gtBegin() {
+#if TOUCH_RST >= 0
+  // Hardware reset; INT is left alone, the address is found by the scan below
+  pinMode(TOUCH_RST, OUTPUT);
+  digitalWrite(TOUCH_RST, LOW);
+  delay(10);
+  digitalWrite(TOUCH_RST, HIGH);
+  delay(60);
+#endif
   Wire.begin(TOUCH_SDA, TOUCH_SCL, TOUCH_I2C_HZ);
   for (uint8_t a : {0x5D, 0x14}) {
     Wire.beginTransmission(a);
@@ -112,8 +127,11 @@ void gtPoll() {
         case 3: { int16_t t = x; x = LCD_HEIGHT - 1 - y; y = t; break; }
         default: break;
       }
-      lastX = constrain(x, 0, LCD_WIDTH - 1);
-      lastY = constrain(y, 0, LCD_HEIGHT - 1);
+      // logical size: width and height swap with rotation 1 / 3
+      const int16_t lw = (LCD_ROTATION & 1) ? LCD_HEIGHT : LCD_WIDTH;
+      const int16_t lh = (LCD_ROTATION & 1) ? LCD_WIDTH : LCD_HEIGHT;
+      lastX = constrain(x, 0, lw - 1);
+      lastY = constrain(y, 0, lh - 1);
       lastPressed = true;
     }
   } else {

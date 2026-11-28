@@ -72,7 +72,7 @@ flowchart LR
 | [`firmware/maxxfan`](firmware/maxxfan) | ESP32-C3 + VanTurtle | MaxxFan-Dachlüfter | `camper/maxxfan` |
 | [`firmware/level`](firmware/level) | ESP32 + BNO085 | Längs-/Querneigung und Keilhöhe für jedes Rad (basiert auf dem [Levelsensor von klehnst](https://github.com/klehnst/ESP32-Adrafruit-BNO085-HomeAssistant-Caravan-Levelsensor-MQTT), MIT) | `camper/level` |
 | [`firmware/omg`](firmware/omg) | ESP32 / ESP32-C3 | Bluetooth-Thermometer (Govee, Ruuvi, Xiaomi …) über OpenMQTTGateway | `camper/OMG` |
-| [`firmware/display`](firmware/display) | Guition ESP32-4848S040 | 4"-Wandpanel + gleiche Webseite fürs Handy, zeigt und steuert alles, Wetter, Warnungen, Pushover | `camper/display` |
+| [`firmware/display`](firmware/display) | Guition ESP32-4848S040 oder ESP32-8048S070C | 4"- oder 7"-Wandpanel + gleiche Webseite fürs Handy, zeigt und steuert alles, Wetter, Warnungen, Pushover | `camper/display` |
 | [`firmware/pocket`](firmware/pocket) | M5Stack Core2 | kleines mobiles Akku-Display mit Magnet (Cockpit, Küche, beim Wasserfüllen): Ausrichtung, Wasser, Gas, Temperaturen, Batterien; bis 1.5.8 „Road Buddy“ | `camper/pocket` (nur Empfänger) |
 
 Nicht in diesem Repo: **Router-Daten (GPS, Mobilfunk)** sendet der RUT956 selbst per MQTT, siehe [Router-Daten im Display-README](firmware/display/README.md#router-daten-rut956).

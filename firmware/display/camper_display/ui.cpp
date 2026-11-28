@@ -1468,8 +1468,10 @@ void buildFan(lv_obj_t* tab) {
   static const B row1[] = {{LV_SYMBOL_POWER "  Ein", "on_off"}, {"Schließen", "close"}, {"Auto", "auto"}};
   static const B row2[] = {{LV_SYMBOL_DOWN "  Langsamer", "slower"}, {LV_SYMBOL_UP "  Schneller", "faster"}};
   static const B row3[] = {{LV_SYMBOL_REFRESH "  Richtung", "direction"}, {"Sync AUS", "sync_off"}};
-  for (auto& b : row1) button(tab, b.txt, 146, 76, onFanBtn, (void*)b.key, C_CARD);
-  for (auto& b : row2) button(tab, b.txt, 225, 76, onFanBtn, (void*)b.key, C_CARD);
+  // three / two buttons per row over the page width (4": 146 / 225 px, gap 10)
+  const int w3 = (PAGE_W - 20 - 20) / 3, w2 = (PAGE_W - 20 - 10) / 2;
+  for (auto& b : row1) button(tab, b.txt, w3, 76, onFanBtn, (void*)b.key, C_CARD);
+  for (auto& b : row2) button(tab, b.txt, w2, 76, onFanBtn, (void*)b.key, C_CARD);
 
   lv_obj_t* sc = card(tab, PAGE_W - 20, 96);
   fSpeedLbl = label(sc, &font_de_18, C_MUTED, "Stufe");
@@ -1484,7 +1486,7 @@ void buildFan(lv_obj_t* tab) {
   lv_obj_add_event_cb(fSpeed, onFanSpeed, LV_EVENT_RELEASED, nullptr);
   lv_obj_add_event_cb(fSpeed, onFanSpeedDrag, LV_EVENT_VALUE_CHANGED, nullptr);
 
-  for (auto& b : row3) button(tab, b.txt, 225, 64, onFanBtn, (void*)b.key, C_CARD, &font_de_18);
+  for (auto& b : row3) button(tab, b.txt, w2, 64, onFanBtn, (void*)b.key, C_CARD, &font_de_18);
 }
 
 void buildHeki(lv_obj_t* tab) {

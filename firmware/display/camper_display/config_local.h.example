@@ -4,6 +4,12 @@
 // everything here wins over the defaults in config.h.
 #pragma once
 
+// ---- Board -----------------------------------------------------------
+// 7" ESP32-8048S070C (800 x 480) instead of the 4" ESP32-4848S040. Arduino IDE: USB CDC On Boot
+// "Disabled" (the touch uses GPIO 19 / 20). Red and blue swapped: LCD_SWAP_RB 1
+// #define DISPLAY_BOARD 2
+// #define LCD_SWAP_RB   1
+
 // ---- Passwords -------------------------------------------------------
 #define DEFAULT_AP_PASSWORD     "my-ap-password"   // setup access point, min. 8 characters
 #define DEFAULT_OTA_PASSWORD    "my-ota-password"  // Arduino IDE network port
